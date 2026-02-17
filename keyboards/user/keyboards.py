@@ -102,7 +102,7 @@ def main_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="⏯ Запуск отслеживания")],
-            [KeyboardButton(text="Проверка группы на наличие ключевых слов")],
+            [KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов")],
             [KeyboardButton(text="🤖 AI поиск"), KeyboardButton(text="📥 Получить базу")],
             [KeyboardButton(text="📘 Инструкция по использованию")],
             [KeyboardButton(text="⚙ Настройки")]

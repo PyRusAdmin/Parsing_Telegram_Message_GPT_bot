@@ -56,7 +56,7 @@ async def main() -> None:
         register_handlers_pars_ai()  # Ищет группы и каналы с помощью ИИ
         register_handlers_post_doc()  # Выдает пользователю документацию к проекту
         register_connect_account_handler()  # Подключение аккаунта
-        register_handlers_checking_group_for_keywords()  # Проверка группы на наличие ключевых слов
+        register_handlers_checking_group_for_keywords()  # 🔍 Проверка группы на наличие ключевых слов
         register_handlers_delete()  # Удаление групп из базы данных пользователя
 
         """

@@ -158,7 +158,7 @@ async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
     return await sync_to_async(_batch_update, thread_sensitive=True)()
 
 
-@router.message(F.text == "Присвоить язык")
+@router.message(F.text == "🌐 Присвоить язык")
 async def language_detection(message):
     """Присвоение языка группам"""
 
@@ -231,4 +231,4 @@ async def language_detection(message):
 
 
 def register_handlers_languages():
-    router.message.register(language_detection, F.text == "Присвоить язык")
+    router.message.register(language_detection, F.text == "🌐 Присвоить язык")

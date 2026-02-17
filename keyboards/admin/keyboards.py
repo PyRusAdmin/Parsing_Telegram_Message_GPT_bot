@@ -10,7 +10,7 @@ def main_admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="⏯ Запуск отслеживания")],
-            [KeyboardButton(text="Проверка группы на наличие ключевых слов")],
+            [KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов")],
             [KeyboardButton(text="🤖 AI поиск"), KeyboardButton(text="📥 Получить базу")],
             [KeyboardButton(text="📘 Инструкция по использованию")],
             [KeyboardButton(text="⚙ Настройки")],
@@ -31,7 +31,7 @@ def admin_keyboard():
             [KeyboardButton(text="🔄 Актуализация базы данных")],
             [KeyboardButton(text="🏷️ Присвоить категорию")],
             [KeyboardButton(text="✅ Проверка аккаунтов")],
-            [KeyboardButton(text="Присвоить язык")],
+            [KeyboardButton(text="🌐 Присвоить язык")],
             [KeyboardButton(text="🔙 Назад")]
         ],
         resize_keyboard=True,
