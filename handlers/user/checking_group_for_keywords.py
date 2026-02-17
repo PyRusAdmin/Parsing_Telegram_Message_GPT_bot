@@ -16,10 +16,10 @@ from system.dispatcher import api_id, api_hash
 from system.dispatcher import router
 
 
-@router.message(F.text == "🔍 Проверка группы на наличие ключевых слов")
+@router.message(F.text == "Проверка группы на наличие ключевых слов")
 async def checking_group_for_keywords(message: Message, state: FSMContext):
     """
-    Обработчик команды "🔍 Проверка группы на наличие ключевых слов".
+    Обработчик команды "Проверка группы на наличие ключевых слов".
 
     Принимает данные от пользователи и начинает процесс проверки группы на наличие ключевых слов.
 
@@ -224,4 +224,4 @@ async def parse_group_for_keywords(url, keyword, message: Message):
 
 def register_handlers_checking_group_for_keywords():
     """Регистрирует обработчики для проверки группы на наличие ключевых слов."""
-    router.message.register(checking_group_for_keywords, F.text == "🔍 Проверка группы на наличие ключевых слов")
+    router.message.register(checking_group_for_keywords, F.text == "Проверка группы на наличие ключевых слов")

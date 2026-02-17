@@ -256,7 +256,7 @@ async def export_supergroups(message: Message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "📥 Получить базу")
+@router.message(F.text == "Получить базу")
 async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
     Обрабатывает запрос пользователя на получение базы Telegram-групп и каналов.
@@ -277,9 +277,9 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
         "Вот что вы можете сделать:\n\n"
 
         "🔹 <b>📥 Получить всю базу</b> — получите полный список всех сохранённых групп и каналов в формате Excel.\n"
-        "🔹 <b>📥 Получить базу Каналов</b> — получите список всех сохранённых каналов в формате Excel.\n"
-        "🔹 <b>📥 Получить базу Групп (супергрупп)</b> — получите список всех сохранённых супергрупп в формате Excel.\n"
-        "🔹 <b>📥 Получить базу Обычных чатов (группы старого типа)</b> — получите список всех сохранённых обычных чатов (групп старого типа) в формате Excel.\n"
+        "🔹 <b>Получить базу Каналов</b> — получите список всех сохранённых каналов в формате Excel.\n"
+        "🔹 <b>Получить базу Групп (супергрупп)</b> — получите список всех сохранённых супергрупп в формате Excel.\n"
+        "🔹 <b>Получить базу Обычных чатов (группы старого типа)</b> — получите список всех сохранённых обычных чатов (групп старого типа) в формате Excel.\n"
         "🔹 Выбрать категорию для получения базы\n\n"
 
         "🔸 Нажмите <b>🔙 Назад</b>, чтобы вернуться в главное меню."
@@ -417,10 +417,10 @@ async def handle_category_selection(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(F.text == "🤖 AI поиск")
+@router.message(F.text == "AI поиск")
 async def ai_search(message: Message, state: FSMContext):
     """
-    Обработчик команды "📥 Получить базу".
+    Обработчик команды "Получить базу".
 
     Очищает состояние FSM, получает данные пользователя, логирует действие
     и запрашивает у пользователя ключевое слово для поиска групп через AI.
@@ -588,8 +588,8 @@ def register_handlers_pars_ai():
     Регистрирует обработчики для AI-поиска и экспорта Telegram-групп и каналов.
 
     Добавляет в маршрутизатор (router) следующие обработчики:
-        1. search_menu — отображает меню поиска по нажатию кнопки "📥 Получить базу".
-        2. start_ai_search — запускает процесс AI-поиска по нажатию "🤖 AI поиск".
+        1. search_menu — отображает меню поиска по нажатию кнопки "Получить базу".
+        2. start_ai_search — запускает процесс AI-поиска по нажатию "AI поиск".
         3. process_ai_search_keyword — обрабатывает ввод ключевого слова в состоянии MyStates.entering_keyword_ai_search.
         4. export_all_groups — экспортирует всю базу групп и каналов в XLSX.
         5. export_channels — экспортирует только каналы.
@@ -603,8 +603,8 @@ def register_handlers_pars_ai():
 
     :return: None
     """
-    router.message.register(handle_enter_keyword_menu, F.text == "📥 Получить базу")
-    router.message.register(ai_search, F.text == "🤖 AI поиск")
+    router.message.register(handle_enter_keyword_menu, F.text == "Получить базу")
+    router.message.register(ai_search, F.text == "AI поиск")
     router.message.register(export_all_groups, F.text == "📥 Вся база")
     router.message.register(export_channels, F.text == "📥 База каналов")
     router.message.register(export_supergroups, F.text == "📥 База групп")

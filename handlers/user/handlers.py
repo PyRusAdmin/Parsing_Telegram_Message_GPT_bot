@@ -221,10 +221,10 @@ async def handle_language_selection(message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "⚙ Настройки")
+@router.message(F.text == "Настройки")
 async def handle_settings_menu(message, state: FSMContext):
     """
-    Обработчик команды "⚙ Настройки".
+    Обработчик команды "Настройки".
 
     Отображает меню настроек с возможностью смены языка интерфейса.
     Не требует предварительной настройки аккаунта.
