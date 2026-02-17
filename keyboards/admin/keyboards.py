@@ -14,7 +14,7 @@ def main_admin_keyboard():
             [KeyboardButton(text="🤖 AI поиск"), KeyboardButton(text="📥 Получить базу")],
             [KeyboardButton(text="📘 Инструкция по использованию")],
             [KeyboardButton(text="⚙ Настройки")],
-            [KeyboardButton(text="Панель администратора")]
+            [KeyboardButton(text="🛡️ Панель администратора")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз

@@ -60,9 +60,9 @@ async def main() -> None:
         register_handlers_delete()  # Удаление групп из базы данных пользователя
 
         """
-        Панель администратора
+        🛡️ Панель администратора
         """
-        register_handlers_admin_panel()  # Панель администратора
+        register_handlers_admin_panel()  # 🛡️ Панель администратора
         register_handlers_log()  # Логирование
         register_handlers_checking_group_for_ai()  # Присвоение категории группам / каналам
         register_checking_accounts()  # ✅ Проверка аккаунтов
