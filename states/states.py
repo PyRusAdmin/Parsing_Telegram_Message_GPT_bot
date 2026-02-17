@@ -12,9 +12,7 @@ class MyStates(StatesGroup):
     waiting_username_group = State()  # Ожидание ввода одного или нескольких @username групп для отслеживания
     entering_keyword = State()  # Ожидание ввода одного или нескольких ключевых слов для поиска
     entering_group = State()  # Ожидание ввода @username технической группы для пересылки сообщений
-
     entering_keyword_ai_search = State()  # Ожидание ввода темы/ключевого слова для AI-поиска групп и каналов
-
     del_username_groups = State()
 
 
