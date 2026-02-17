@@ -15,7 +15,7 @@ from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
 from locales.locales import get_text
 from states.states import MyStates, ExportStates
-from system.dispatcher import router
+from system.dispatcher import router, api_id, api_hash
 
 
 def clean_group_name(name):
@@ -445,6 +445,52 @@ async def ai_search(message: Message, state: FSMContext):
     await state.set_state(MyStates.entering_keyword_ai_search)
 
 
+import os
+import random
+import logging
+from telethon import TelegramClient
+
+
+async def start_random_client(api_id: int, api_hash: str, session_dir: str = 'accounts/parsing'):
+    """
+    Запускает Telegram-клиент с случайной сессией из указанной папки.
+
+    :param api_id: API ID для Telegram
+    :param api_hash: API Hash для Telegram
+    :param session_dir: Папка с .session файлами
+    :return: Авторизованный TelegramClient или None, если не удалось
+    """
+    # Получаем все .session файлы (без расширения)
+    session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
+
+    if not session_files:
+        raise FileNotFoundError(f"Нет доступных .session файлов в папке {session_dir}")
+
+    # Случайно выбираем сессию
+    chosen_session_name = random.choice(session_files)
+    session_path = os.path.join(session_dir, chosen_session_name)
+
+    print(f"Используется сессия: {chosen_session_name}")
+    logging.info(f"Используется сессия: {chosen_session_name}")
+
+    client = TelegramClient(
+        session=session_path,
+        api_id=api_id,
+        api_hash=api_hash,
+        system_version="4.16.30-vxCUSTOM"
+    )
+
+    await client.connect()
+
+    if not await client.is_user_authorized():
+        logging.error("Клиент не авторизован. Запустите сначала авторизацию.")
+        await client.disconnect()
+        return None
+
+    logging.info("Телеграм-клиент запущен.")
+    return client
+
+
 @router.message(MyStates.entering_keyword_ai_search)
 async def handle_enter_keyword(message: Message, state: FSMContext):
     """
@@ -489,9 +535,11 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         saved_groups = []
 
+        client = await start_random_client(api_id=api_id, api_hash=api_hash)
+
         for group_name in group_names:
             # Ищем в Telegram
-            results = await search_groups_in_telegram([group_name])
+            results = await search_groups_in_telegram(client=client, group_names=[group_name])
             logger.info(f"Найдено {len(results)} групп для '{group_name}'")
 
             # Сохраняем результаты в БД

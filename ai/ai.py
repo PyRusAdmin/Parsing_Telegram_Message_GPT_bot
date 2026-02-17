@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import os
-import random
 
 import groq
 from groq import AsyncGroq
 from loguru import logger
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
-from telethon.sync import TelegramClient, functions
+from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
 from core.config import GROQ_API_KEY
 from core.proxy_config import setup_proxy
-from system.dispatcher import api_id, api_hash
 
 
 async def category_assignment(user_input: str) -> str:
@@ -103,13 +100,14 @@ async def get_groq_response(user_input):
         return ""
 
 
-async def search_groups_in_telegram(group_names):
+async def search_groups_in_telegram(client, group_names):
     """
     Асинхронно ищет публичные группы и каналы в Telegram по заданным названиям.
 
     Для каждого названия выполняется поиск через Telegram API, и из результатов
     отбираются только каналы (Channel), содержащие совпадения по названию.
 
+    :param client: (TelegramClient) Экземпляр клиентского объекта Telegram
     :param group_names: list[str] Список строк с названиями групп для поиска.
 
     Returns:
@@ -127,35 +125,31 @@ async def search_groups_in_telegram(group_names):
         - Использует Telethon для низкоуровневого взаимодействия с Telegram API.
     """
 
-    # Путь к папке с аккаунтами
-    session_dir = 'accounts/parsing'
-
-    # Получаем все .session файлы (без расширения .session)
-    session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
-
-    if not session_files:
-        raise FileNotFoundError("Нет доступных .session файлов в папке accounts/parsing")
-
-    # Случайно выбираем сессию
-    chosen_session_name = random.choice(session_files)
-    session_path = os.path.join(session_dir, chosen_session_name)
-
-    print(f"Используется сессия: {chosen_session_name}")
-
-    client = TelegramClient(
-        session=session_path,
-        api_id=api_id,
-        api_hash=api_hash,
-        system_version="4.16.30-vxCUSTOM"
-    )
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
-        await client.disconnect()
-        return []
-
-    logger.info("Телеграм-клиент запущен.")
+    # # Путь к папке с аккаунтами
+    # session_dir = 'accounts/parsing'
+    # # Получаем все .session файлы (без расширения .session)
+    # session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
+    # if not session_files:
+    #     raise FileNotFoundError("Нет доступных .session файлов в папке accounts/parsing")
+    # # Случайно выбираем сессию
+    # chosen_session_name = random.choice(session_files)
+    # session_path = os.path.join(session_dir, chosen_session_name)
+    # print(f"Используется сессия: {chosen_session_name}")
+    #
+    # client = TelegramClient(
+    #     session=session_path,
+    #     api_id=api_id,
+    #     api_hash=api_hash,
+    #     system_version="4.16.30-vxCUSTOM"
+    # )
+    # await client.connect()
+    #
+    # if not await client.is_user_authorized():
+    #     logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
+    #     await client.disconnect()
+    #     return []
+    #
+    # logger.info("Телеграм-клиент запущен.")
 
     found_groups = []
 
@@ -219,7 +213,7 @@ async def search_groups_in_telegram(group_names):
         except Exception as e:
             logger.exception(f"Ошибка при поиске '{name}': {e}")
 
-    await client.disconnect()
+    # await client.disconnect()
     logger.info("Телеграм-клиент отключён.")
     return found_groups
 
