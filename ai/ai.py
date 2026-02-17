@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import os
 
 import groq
 from groq import AsyncGroq
 from loguru import logger
-from openai import OpenAI
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError
 from telethon.sync import TelegramClient, functions
-from telethon.tl.types import Channel
 
 from account_manager.parser import determine_telegram_chat_type
 from core.config import GROQ_API_KEY
