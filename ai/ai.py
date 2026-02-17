@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import os
+import random
 
 import groq
 from groq import AsyncGroq
 from loguru import logger
-from telethon.errors import FloodWaitError, UsernameNotOccupiedError
+from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
 from telethon.sync import TelegramClient, functions
 
 from account_manager.parser import determine_telegram_chat_type
@@ -124,8 +126,28 @@ async def search_groups_in_telegram(group_names):
         - Пропускает пустые строки в списке запросов.
         - Использует Telethon для низкоуровневого взаимодействия с Telegram API.
     """
-    client = TelegramClient('accounts/ai/215617551_telethon', api_id, api_hash,
-                            system_version="4.16.30-vxCUSTOM")
+
+    # Путь к папке с аккаунтами
+    session_dir = 'accounts/parsing'
+
+    # Получаем все .session файлы (без расширения .session)
+    session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
+
+    if not session_files:
+        raise FileNotFoundError("Нет доступных .session файлов в папке accounts/parsing")
+
+    # Случайно выбираем сессию
+    chosen_session_name = random.choice(session_files)
+    session_path = os.path.join(session_dir, chosen_session_name)
+
+    print(f"Используется сессия: {chosen_session_name}")
+
+    client = TelegramClient(
+        session=session_path,
+        api_id=api_id,
+        api_hash=api_hash,
+        system_version="4.16.30-vxCUSTOM"
+    )
     await client.connect()
 
     if not await client.is_user_authorized():
@@ -145,7 +167,7 @@ async def search_groups_in_telegram(group_names):
 
         try:
             # ✅ Используем SearchRequest для поиска по названию
-            search_results = await client(functions.contacts.SearchRequest(q=name, limit=15))
+            search_results = await client(functions.contacts.SearchRequest(q=name, limit=10))
 
             # Обрабатываем результаты
             for chat in search_results.chats:
@@ -187,6 +209,8 @@ async def search_groups_in_telegram(group_names):
                 #         'telegram_id': chat.telegram_id
                 #     })
 
+        except FrozenMethodInvalidError:
+            logger.warning('Аккаунт заморожен!')
         except UsernameNotOccupiedError:
             logger.warning(f"Группа '{name}' не найдена.")
         except FloodWaitError as e:
