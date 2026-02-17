@@ -249,10 +249,10 @@ async def handle_settings_menu(message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "⏯ Запуск отслеживания")
+@router.message(F.text == "Запуск отслеживания")
 async def handle_start_tracking(message, state: FSMContext):
     """
-    Обработчик команды "⏯ Запуск отслеживания".
+    Обработчик команды "Запуск отслеживания".
 
     Проверяет наличие подключенного Telegram-аккаунта (.session файл) у пользователя.
     Если аккаунт найден, запускает процесс фильтрации сообщений с помощью `filter_messages`.

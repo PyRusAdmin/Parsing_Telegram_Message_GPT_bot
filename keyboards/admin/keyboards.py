@@ -9,12 +9,13 @@ def main_admin_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="⏯ Запуск отслеживания")],
-            [KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов")],
-            [KeyboardButton(text="🤖 AI поиск"), KeyboardButton(text="📥 Получить базу")],
-            [KeyboardButton(text="📘 Инструкция по использованию")],
-            [KeyboardButton(text="⚙ Настройки")],
-            [KeyboardButton(text="🛡️ Панель администратора")]
+            [KeyboardButton(text="Запуск отслеживания", icon_custom_emoji_id="5438489737125975601")],
+            [KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", icon_custom_emoji_id="5247057031789040703")],
+            [KeyboardButton(text="🤖 AI поиск", icon_custom_emoji_id="5357314052072692864"),
+             KeyboardButton(text="📥 Получить базу", icon_custom_emoji_id="5443127283898405358")],
+            [KeyboardButton(text="📘 Инструкция по использованию", icon_custom_emoji_id="5332724926216428039")],
+            [KeyboardButton(text="⚙ Настройки", icon_custom_emoji_id="5341715473882955310")],
+            [KeyboardButton(text="🛡️ Панель администратора", icon_custom_emoji_id="5368461927452258024")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
