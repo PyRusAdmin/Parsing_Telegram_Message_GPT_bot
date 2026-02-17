@@ -124,33 +124,6 @@ async def search_groups_in_telegram(client, group_names):
         - Пропускает пустые строки в списке запросов.
         - Использует Telethon для низкоуровневого взаимодействия с Telegram API.
     """
-
-    # # Путь к папке с аккаунтами
-    # session_dir = 'accounts/parsing'
-    # # Получаем все .session файлы (без расширения .session)
-    # session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
-    # if not session_files:
-    #     raise FileNotFoundError("Нет доступных .session файлов в папке accounts/parsing")
-    # # Случайно выбираем сессию
-    # chosen_session_name = random.choice(session_files)
-    # session_path = os.path.join(session_dir, chosen_session_name)
-    # print(f"Используется сессия: {chosen_session_name}")
-    #
-    # client = TelegramClient(
-    #     session=session_path,
-    #     api_id=api_id,
-    #     api_hash=api_hash,
-    #     system_version="4.16.30-vxCUSTOM"
-    # )
-    # await client.connect()
-    #
-    # if not await client.is_user_authorized():
-    #     logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
-    #     await client.disconnect()
-    #     return []
-    #
-    # logger.info("Телеграм-клиент запущен.")
-
     found_groups = []
 
     for name in group_names:
@@ -191,17 +164,6 @@ async def search_groups_in_telegram(client, group_names):
                         'link': link
                     }
                 )
-                # logger.info(
-                #     f'{telegram_id}, {group_hash}, {name}, {username}, {description}, {participants}, {category}, {group_type}, {language}, {link}')
-                # if isinstance(chat, Channel) and chat.title:
-                #     found_groups.append({
-                #         'name': chat.title,
-                #         'username': f"@{chat.username}" if chat.username else "нет юзернейма",
-                #         'link': f"https://t.me/{chat.username}" if chat.username else "недоступна",
-                #         'participants': chat.participants_count if hasattr(chat,
-                #                                                            'participants_count') else 'неизвестно',
-                #         'telegram_id': chat.telegram_id
-                #     })
 
         except FrozenMethodInvalidError:
             logger.warning('Аккаунт заморожен!')
