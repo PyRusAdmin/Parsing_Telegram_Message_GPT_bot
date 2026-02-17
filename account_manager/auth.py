@@ -91,7 +91,7 @@ async def connect_client_test(path, available_sessions):
 
 async def checking_accounts(message, path):
     """
-    Проверка аккаунтов на валидность
+    ✅ Проверка аккаунтов на валидность
     :param message: (Message) Входящее сообщение от администратора.
     :param path: (str) Путь к папке с сессиями.
     :return: (list) Список доступных сессий.
@@ -138,10 +138,10 @@ class CheckingAccountsValidity:
 
     async def checking_accounts_for_validity(self):
         """
-        Проверка аккаунтов на валидность
+        ✅ Проверка аккаунтов на валидность
 
         :return:
         """
         available_sessions = await self.get_available_sessions()
-        # Проверка аккаунтов на валидность из папки parsing
+        # ✅ Проверка аккаунтов на валидность из папки parsing
         await connect_client_test(available_sessions=available_sessions, path=self.path)

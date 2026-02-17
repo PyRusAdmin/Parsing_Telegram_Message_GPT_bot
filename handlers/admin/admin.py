@@ -53,7 +53,7 @@ async def admin_panel(message: Message, state: FSMContext):
                 "👋 <b>Добро пожаловать в панель администратора!</b>\n\n"
                 "Вот что вы можете сделать:\n\n"
                 "📁 <b>Получить лог-файл</b> — просмотреть журнал ошибок и событий бота за последнее время. Полезно для диагностики.\n\n"
-                "🔄 <b>Актуализация базы данных</b> — обновить информацию о группах и каналах: проверить их текущий тип (группа/канал) и получить актуальные ID.\n\n"
+                "🔄 <b>🔄 Актуализация базы данных</b> — обновить информацию о группах и каналах: проверить их текущий тип (группа/канал) и получить актуальные ID.\n\n"
             ),
             parse_mode="HTML",
             reply_markup=admin_keyboard(),
@@ -62,10 +62,10 @@ async def admin_panel(message: Message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "Актуализация базы данных")
+@router.message(F.text == "🔄 Актуализация базы данных")
 async def update_db(message: Message):
     """
-    Актуализация базы данных:
+    🔄 Актуализация базы данных:
     обновление ID и типа групп/каналов.
 
     Последовательность действий:
@@ -84,7 +84,7 @@ async def update_db(message: Message):
      :param message: (Message) Входящее сообщение от администратора.
      :return: None
      """
-    available_sessions = await checking_accounts(  # Проверка аккаунтов на валидность
+    available_sessions = await checking_accounts(  # ✅ Проверка аккаунтов на валидность
         message=message,  # Отправка сообщений в чат
         path="accounts/parsing"  # Путь к папке с сессиями
     )
@@ -344,4 +344,4 @@ def register_handlers_admin_panel():
     :return: None
     """
     router.message.register(admin_panel)  # Админ панель
-    router.message.register(update_db)  # Актуализация базы данных (c пометкой Группа или Канал)
+    router.message.register(update_db)  # 🔄 Актуализация базы данных (c пометкой Группа или Канал)

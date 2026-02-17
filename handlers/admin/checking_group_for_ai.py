@@ -10,7 +10,7 @@ from database.database import TelegramGroup, db
 from system.dispatcher import router
 
 
-@router.message(F.text == "Присвоить категорию")
+@router.message(F.text == "🏷️ Присвоить категорию")
 async def checking_group_for_ai_db(message: Message):
     """
     Присваивает категории группам/каналам с помощью ИИ (Groq + Llama).
@@ -113,4 +113,4 @@ Username: {group.username or 'Неизвестен'}
 
 def register_handlers_checking_group_for_ai():
     """Регистрирует обработчики для проверки группы на наличие ключевых слов."""
-    router.message.register(checking_group_for_ai_db, F.text == "Присвоить категорию")
+    router.message.register(checking_group_for_ai_db, F.text == "🏷️ Присвоить категорию")

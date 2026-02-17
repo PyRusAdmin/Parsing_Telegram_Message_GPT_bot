@@ -27,10 +27,10 @@ def admin_keyboard():
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Получить лог файл")],
-            [KeyboardButton(text="Актуализация базы данных")],
-            [KeyboardButton(text="Присвоить категорию")],
-            [KeyboardButton(text="Проверка аккаунтов")],
+            [KeyboardButton(text="📄 Получить лог файл")],
+            [KeyboardButton(text="🔄 Актуализация базы данных")],
+            [KeyboardButton(text="🏷️ Присвоить категорию")],
+            [KeyboardButton(text="✅ Проверка аккаунтов")],
             [KeyboardButton(text="Присвоить язык")],
             [KeyboardButton(text="🔙 Назад")]
         ],

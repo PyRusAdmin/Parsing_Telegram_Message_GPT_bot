@@ -65,7 +65,7 @@ async def main() -> None:
         register_handlers_admin_panel()  # Панель администратора
         register_handlers_log()  # Логирование
         register_handlers_checking_group_for_ai()  # Присвоение категории группам / каналам
-        register_checking_accounts()  # Проверка аккаунтов
+        register_checking_accounts()  # ✅ Проверка аккаунтов
         register_handlers_languages()  # Присвоение языка группам / каналам
 
         await dp.start_polling(bot)

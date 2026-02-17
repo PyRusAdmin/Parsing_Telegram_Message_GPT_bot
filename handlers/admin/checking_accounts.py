@@ -8,9 +8,9 @@ from account_manager.auth import checking_accounts
 from system.dispatcher import router
 
 
-@router.message(F.text == "Проверка аккаунтов")
+@router.message(F.text == "✅ Проверка аккаунтов")
 async def checking_accounts_handler(message: Message, state: FSMContext):
-    """Проверка аккаунтов на валидность"""
+    """✅ Проверка аккаунтов на валидность"""
     try:
         await state.clear()  # Сбрасываем текущее состояние FSM
 
@@ -22,9 +22,9 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
         ]
 
         for path in path_accounts:
-            logger.info(f"Проверка аккаунтов в папке {path}")
+            logger.info(f"✅ Проверка аккаунтов в папке {path}")
 
-            available_sessions = await checking_accounts(  # Проверка аккаунтов на валидность
+            available_sessions = await checking_accounts(  # ✅ Проверка аккаунтов на валидность
                 message=message,  # Отправка сообщений в чат
                 path=path  # Путь к папке с сессиями
             )
