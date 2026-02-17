@@ -574,7 +574,7 @@ async def ai_search_global(message: Message, state: FSMContext):
 async def handle_enter_keyword(message: Message, state: FSMContext):
     """
     Обработчик ввода ключевого слова (или списка) для AI-поиска.
-    Поддерживает ввод нескольких запросов через \n, запятую или точку с запятой.
+    Каждый запрос обрабатывается через ОТДЕЛЬНЫЙ случайный аккаунт.
     """
     telegram_user = message.from_user
     user_input = message.text.strip()
@@ -590,25 +590,22 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    processing_msg = await message.answer(f"🔍 Ищу по {len(search_terms)} запросам...")
+    processing_msg = await message.answer(f"🔍 Обрабатываю {len(search_terms)} запросов...")
+
+    all_saved_groups = []
+    successful_queries = 0
 
     try:
-        # 🔁 Запускаем ОДИН случайный клиент на все запросы (эффективно)
-        client = await start_random_client(api_id=api_id, api_hash=api_hash)
-        if not client:
-            await processing_msg.delete()
-            await message.answer(
-                "❌ Не удалось подключиться к Telegram. Попробуйте ещё раз.",
-                reply_markup=back_keyboard()
-            )
-            await state.clear()
-            return
-
-        all_saved_groups = []
-
-        # 🔄 Обрабатываем каждый запрос последовательно
+        # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
         for idx, term in enumerate(search_terms, 1):
-            logger.info(f"[{idx}/{len(search_terms)}] Обработка запроса: '{term}'")
+            logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
+
+            # 🎲 Запускаем НОВЫЙ случайный клиент для этого запроса
+            client = await start_random_client(api_id=api_id, api_hash=api_hash)
+            if not client:
+                logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
+                await message.answer(f"⚠️ Пропущено: '{term}' (нет доступных аккаунтов)")
+                continue
 
             try:
                 # Получаем варианты названий от AI
@@ -621,11 +618,16 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                     for line in answer.splitlines()
                     if line.strip() and len(clean_group_name(line)) > 2
                 ]
-                logger.info(f"Получено {len(group_names)} названий для '{term}'")
+
+                if not group_names:
+                    logger.info(f"⚪ Нет названий для '{term}' после очистки")
+                    continue
+
+                logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
 
                 # Ищем группы в Telegram
                 results = await search_groups_in_telegram(client=client, group_names=group_names)
-                logger.info(f"Найдено {len(results)} групп для '{term}'")
+                logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
 
                 # Сохраняем в БД
                 for group_data in results:
@@ -633,15 +635,27 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                     if saved_group:
                         all_saved_groups.append(saved_group)
 
-                # Небольшая пауза между запросами (защита от лимитов)
-                if idx < len(search_terms):
-                    await asyncio.sleep(1)
+                successful_queries += 1
+
+                # 📊 Обновляем статус в Telegram (опционально)
+                if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
+                    await processing_msg.edit_text(
+                        f"🔍 Обработано {idx}/{len(search_terms)}: {successful_queries} успешно"
+                    )
 
             except Exception as e:
                 logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
-                continue  # Продолжаем с другими запросами
+                continue  # Продолжаем со следующим запросом
 
-        await client.disconnect()
+            finally:
+                # 🔌 Обязательно отключаем клиент после каждого запроса
+                await client.disconnect()
+                logger.info(f"🔌 Клиент для '{term}' отключён")
+
+                # Пауза между запросами (защита от лимитов API и Telegram)
+                if idx < len(search_terms):
+                    await asyncio.sleep(2)
+
         await processing_msg.delete()
 
         # 📤 Отправляем результаты
@@ -655,7 +669,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             await message.answer_document(
                 document=excel_file,
-                caption=f"📄 Найдено по {len(search_terms)} запросам: <b>{', '.join(search_terms)}</b>",
+                caption=f"📄 Найдено {len(all_saved_groups)} групп по {successful_queries}/{len(search_terms)} запросам",
                 parse_mode="HTML"
             )
             logger.info(f"✅ Отправлено {len(all_saved_groups)} групп пользователю {telegram_user.id}")
