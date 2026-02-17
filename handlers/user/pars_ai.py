@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import io
+import logging
+import os
+import random
 import re
 from datetime import datetime
 
@@ -9,6 +12,7 @@ from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
 from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from telethon import TelegramClient
 
 from ai.ai import get_groq_response, search_groups_in_telegram
 from database.database import User, TelegramGroup
@@ -417,6 +421,9 @@ async def handle_category_selection(message: Message, state: FSMContext):
     await state.clear()
 
 
+"""Одиночный AI поиск"""
+
+
 @router.message(F.text == "AI поиск")
 async def ai_search(message: Message, state: FSMContext):
     """
@@ -443,52 +450,6 @@ async def ai_search(message: Message, state: FSMContext):
         reply_markup=back_keyboard()
     )
     await state.set_state(MyStates.entering_keyword_ai_search)
-
-
-import os
-import random
-import logging
-from telethon import TelegramClient
-
-
-async def start_random_client(api_id: int, api_hash: str, session_dir: str = 'accounts/parsing'):
-    """
-    Запускает Telegram-клиент с случайной сессией из указанной папки.
-
-    :param api_id: API ID для Telegram
-    :param api_hash: API Hash для Telegram
-    :param session_dir: Папка с .session файлами
-    :return: Авторизованный TelegramClient или None, если не удалось
-    """
-    # Получаем все .session файлы (без расширения)
-    session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
-
-    if not session_files:
-        raise FileNotFoundError(f"Нет доступных .session файлов в папке {session_dir}")
-
-    # Случайно выбираем сессию
-    chosen_session_name = random.choice(session_files)
-    session_path = os.path.join(session_dir, chosen_session_name)
-
-    print(f"Используется сессия: {chosen_session_name}")
-    logging.info(f"Используется сессия: {chosen_session_name}")
-
-    client = TelegramClient(
-        session=session_path,
-        api_id=api_id,
-        api_hash=api_hash,
-        system_version="4.16.30-vxCUSTOM"
-    )
-
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        logging.error("Клиент не авторизован. Запустите сначала авторизацию.")
-        await client.disconnect()
-        return None
-
-    logging.info("Телеграм-клиент запущен.")
-    return client
 
 
 @router.message(MyStates.entering_keyword_ai_search)
@@ -581,6 +542,170 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             reply_markup=back_keyboard()
         )
     await state.clear()  # Завершаем текущее состояние машины состояния
+
+
+"""Глобальный AI поиск"""
+
+
+@router.message(F.text == "Глобальный AI поиск")
+async def ai_search_global(message: Message, state: FSMContext):
+    """
+    Обработчик команды "Глобальный AI поиск".
+
+    Очищает состояние FSM, получает данные пользователя, логирует действие
+    и запрашивает у пользователя ключевое слово для поиска групп через AI.
+    Переводит пользователя в состояние ожидания ввода (MyStates.entering_keyword_ai_search).
+
+    :param message: (Message) Входящее сообщение от пользователя.
+    :param state: (FSMContext) Контекст машины состояний, сбрасывается при входе.
+    :return: None
+    """
+    await state.clear()  # Сбрасывает состояние
+
+    telegram_user = message.from_user
+    user = User.get(User.user_id == telegram_user.id)
+
+    logger.info(
+        f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню глобального поиска групп")
+
+    await message.answer(
+        get_text(user.language, "enter_keyword"),
+        reply_markup=back_keyboard()
+    )
+    await state.set_state(MyStates.entering_keyword_ai_search_global)
+
+@router.message(MyStates.entering_keyword_ai_search_global)
+async def handle_enter_keyword(message: Message, state: FSMContext):
+    """
+    Обработчик ввода ключевого слова для AI-поиска групп и каналов.
+
+    Получает запрос от пользователя, генерирует варианты названий через Groq API,
+    ищет соответствующие группы в Telegram, сохраняет их в базу данных и отправляет
+    результаты пользователю в виде XLSX-файла.
+
+    В процессе показывает статус "Ищу...", удаляет его после завершения и отправляет
+    сводку и файл.
+
+    Обрабатывает ошибки и пустые результаты.
+
+    - Использует `get_groq_response` для генерации названий.
+    - Использует `search_groups_in_telegram` для поиска в Telegram.
+    - Результаты сохраняются через `save_group_to_db`.
+    - Файл создаётся через `create_excel_file` и отправляется как документ.
+
+    :param message: (Message) Входящее сообщение с ключевым словом.
+    :param state: (FSMContext) Контекст машины состояний, сбрасывается после обработки.
+    :return: None
+
+    Raises:
+        Exception: Перехватывается локально, логируется и преобразуется в пользовательское сообщение.
+    """
+
+    telegram_user = message.from_user
+    user_input = message.text.strip()
+    # Отправляем сообщение о начале поиска
+    processing_msg = await message.answer("🔍 Ищу группы и каналы...")
+
+    try:
+        # Получаем ответ от AI
+        answer = await get_groq_response(user_input)
+        logger.info(f"Ответ от Groq: {answer}")
+
+        # Разбиваем ответ на строки и очищаем
+        group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
+        group_names = [name for name in group_names if len(name) > 2]
+        logger.info(f"Получено {len(group_names)} названий: {group_names}")
+
+        saved_groups = []
+
+        client = await start_random_client(api_id=api_id, api_hash=api_hash)
+
+        for group_name in group_names:
+            # Ищем в Telegram
+            results = await search_groups_in_telegram(client=client, group_names=[group_name])
+            logger.info(f"Найдено {len(results)} групп для '{group_name}'")
+
+            # Сохраняем результаты в БД
+            for group_data in results:
+                saved_group = save_group_to_db(group_data)
+                if saved_group:
+                    saved_groups.append(saved_group)
+
+        # Удаляем сообщение о поиске
+        await processing_msg.delete()
+
+        # Отправляем результаты пользователю
+        if saved_groups:
+
+            # Создаём Excel-файл
+            excel_bytes = create_excel_file(saved_groups)
+            filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            excel_file = BufferedInputFile(excel_bytes, filename=filename)
+
+            summary = format_summary_message(len(saved_groups))
+            await message.answer(summary, parse_mode="HTML")
+            # Отправляем CSV файл
+            await message.answer_document(
+                document=excel_file,
+                caption=f"📄 Результаты поиска по запросу: <b>{user_input}</b>",
+                parse_mode="HTML"
+            )
+            logger.info(f"Отправлено {len(saved_groups)} групп пользователю {telegram_user.id} в Excel файле")
+        else:
+            await message.answer(
+                "❌ К сожалению, по вашему запросу ничего не найдено. Попробуйте другие ключевые слова.",
+                reply_markup=back_keyboard()
+            )
+    except Exception as e:
+        logger.error(f"Ошибка при обработке запроса: {e}")
+        await processing_msg.delete()
+        await message.answer(
+            "❌ Произошла ошибка при поиске. Попробуйте ещё раз.",
+            reply_markup=back_keyboard()
+        )
+    await state.clear()  # Завершаем текущее состояние машины состояния
+
+
+
+
+async def start_random_client(api_id: int, api_hash: str, session_dir: str = 'accounts/parsing'):
+    """
+    Запускает Telegram-клиент с случайной сессией из указанной папки.
+
+    :param api_id: API ID для Telegram
+    :param api_hash: API Hash для Telegram
+    :param session_dir: Папка с .session файлами
+    :return: Авторизованный TelegramClient или None, если не удалось
+    """
+    # Получаем все .session файлы (без расширения)
+    session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
+
+    if not session_files:
+        raise FileNotFoundError(f"Нет доступных .session файлов в папке {session_dir}")
+
+    # Случайно выбираем сессию
+    chosen_session_name = random.choice(session_files)
+    session_path = os.path.join(session_dir, chosen_session_name)
+
+    print(f"Используется сессия: {chosen_session_name}")
+    logging.info(f"Используется сессия: {chosen_session_name}")
+
+    client = TelegramClient(
+        session=session_path,
+        api_id=api_id,
+        api_hash=api_hash,
+        system_version="4.16.30-vxCUSTOM"
+    )
+
+    await client.connect()
+
+    if not await client.is_user_authorized():
+        logging.error("Клиент не авторизован. Запустите сначала авторизацию.")
+        await client.disconnect()
+        return None
+
+    logging.info("Телеграм-клиент запущен.")
+    return client
 
 
 def register_handlers_pars_ai():

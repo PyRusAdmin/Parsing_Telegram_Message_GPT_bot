@@ -42,6 +42,15 @@ def main_admin_keyboard():
                     style='primary'
                 )
             ],
+
+            [
+                KeyboardButton(
+                    text="Глобальный AI поиск",
+                    icon_custom_emoji_id="5357314052072692864",
+                    style='primary'
+                )
+            ],
+
             [
                 KeyboardButton(
                     text="Инструкция по использованию",
