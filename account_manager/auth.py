@@ -3,6 +3,7 @@ import asyncio
 import csv
 import os
 import os.path
+import random
 from pathlib import Path
 
 from aiogram.types import Message
@@ -15,6 +16,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
+from core.config import session_dir
 from database.database import delete_account_from_db, write_account_to_db
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 
@@ -238,16 +240,9 @@ class CheckingAccountsValidity:
                 await client.connect()
                 me = await client.get_me()
 
-                # if not me:
-                #     logger.info(f"❌ Аккаунт {file_name} не валидный")
-                #     await client.disconnect()
-                #     continue
-
                 phone = me.phone or ""
                 logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
-                # await self.app_logger.log_and_display(
-                #     message=f"✅ Аккаунт добавлен: | ID: {me.id} | Phone: {phone}"
-                # )
+
                 # Записываем в базу данных
                 write_account_to_db(
                     session_string=session_string,
@@ -268,7 +263,6 @@ class CheckingAccountsValidity:
         Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
         :return: client - клиент Telethon
         """
-
         client = TelegramClient(self.path, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
 
         await client.connect()
@@ -332,6 +326,36 @@ class CheckingAccountsValidity:
 
             if client.is_connected():
                 await client.disconnect()  # отключаемся, если подключены
+
+    async def start_random_client(self):
+        """
+        Запускает Telegram-клиент с случайной сессией из указанной папки.
+
+        :return: Авторизованный TelegramClient или None, если не удалось
+        """
+
+        # Случайно выбираем сессию
+        chosen_session_name = random.choice(session_files)
+        session_path = os.path.join(session_dir, chosen_session_name)
+
+        logger.info(f"Используется сессия: {chosen_session_name}")
+
+        client = TelegramClient(
+            session=session_path,
+            api_id=api_id,
+            api_hash=api_hash,
+            system_version="4.16.30-vxCUSTOM"
+        )
+
+        await client.connect()
+
+        if not await client.is_user_authorized():
+            logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
+            await client.disconnect()
+            return None
+
+        logger.info("Телеграм-клиент запущен.")
+        return client, session_path
 
     async def checking_accounts(self):
         """

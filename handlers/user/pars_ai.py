@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import io
-import logging
-import os
-import random
 import re
 from datetime import datetime
 
@@ -15,10 +12,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError
 from peewee import fn
-from telethon import TelegramClient
 
 from ai.ai import get_groq_response, search_groups_in_telegram
-from core.config import session_dir, api_id, api_hash
+from core.config import api_id, api_hash
 from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
 from locales.locales import get_text
@@ -784,44 +780,6 @@ def parse_search_input(user_input: str) -> list[str]:
             seen.add(cleaned)
 
     return result
-
-
-async def start_random_client(api_id: int, api_hash: str):
-    """
-    Запускает Telegram-клиент с случайной сессией из указанной папки.
-
-    :param api_id: API ID для Telegram
-    :param api_hash: API Hash для Telegram
-    :return: Авторизованный TelegramClient или None, если не удалось
-    """
-    # Получаем все .session файлы (без расширения)
-    session_files = [f[:-8] for f in os.listdir(session_dir) if f.endswith('.session')]
-
-    if not session_files:
-        raise FileNotFoundError(f"Нет доступных .session файлов в папке {session_dir}")
-
-    # Случайно выбираем сессию
-    chosen_session_name = random.choice(session_files)
-    session_path = os.path.join(session_dir, chosen_session_name)
-
-    logging.info(f"Используется сессия: {chosen_session_name}")
-
-    client = TelegramClient(
-        session=session_path,
-        api_id=api_id,
-        api_hash=api_hash,
-        system_version="4.16.30-vxCUSTOM"
-    )
-
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        logging.error("Клиент не авторизован. Запустите сначала авторизацию.")
-        await client.disconnect()
-        return None
-
-    logging.info("Телеграм-клиент запущен.")
-    return client, session_path
 
 
 def register_handlers_pars_ai():
