@@ -50,12 +50,12 @@ async def receive_session_file(message: Message, state: FSMContext):
         await message.bot.download(document, destination=file_path)
         await message.answer(f"✅ Файл сохранён: `{safe_file_name}`\n\nПроверяю аккаунт...")
 
-        # ✅ Извлекаем имя сессии без расширения
-        session_name = file_path.stem
-
+        # ✅ Извлекаем имя сессии без расширения (путь без .session)
+        session_path_without_ext = str(file_path.with_suffix(""))
+        logger.debug(session_path_without_ext)
         # ✅ Проверяем валидность аккаунта
-        checker = CheckingAccountsValidity(message=message, path=str(sessions_dir))
-        client = await checker.connect_client(session_name=session_name)
+        checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
+        client = await checker.connect_client()
 
         if client:
             me = await client.get_me()

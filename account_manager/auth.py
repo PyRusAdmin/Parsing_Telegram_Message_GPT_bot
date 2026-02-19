@@ -263,20 +263,19 @@ class CheckingAccountsValidity:
             logger.exception(e)
 
     # === Подключение клиента Telethon ===
-    async def connect_client(self, session_name):
+    async def connect_client(self):
         """
         Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
-        :param session_name: имя сессии Telethon
         :return: client - клиент Telethon
         """
 
-        client = TelegramClient(session_name, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
+        client = TelegramClient(self.path, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
 
         await client.connect()
 
         # === Проверка авторизации ===
         if not await client.is_user_authorized():
-            logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
+            logger.error(f"⚠️ Сессия {self.path} недействительна — требуется повторный вход.")
             await self.message.answer(
                 "⚠️ Сессия аккаунта недействительна (session файл не валидный) — требуется повторный вход. Отправьте валидный файл сессии",
                 reply_markup=menu_launch_tracking_keyboard()
