@@ -666,8 +666,10 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         for idx, term in enumerate(search_terms, 1):
             logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
 
-            # 🎲 Запускаем НОВЫЙ случайный клиент для этого запроса
-            client = await start_random_client(api_id=api_id, api_hash=api_hash)
+            # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+            checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
+            client = await checker.start_random_client()
+
             if not client:
                 logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
                 await message.answer(f"⚠️ Пропущено: '{term}' (нет доступных аккаунтов)")

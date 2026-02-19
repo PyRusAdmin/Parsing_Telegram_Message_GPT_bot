@@ -332,7 +332,7 @@ class CheckingAccountsValidity:
 
     async def start_random_client(self):
         """
-        Запускает Telegram-клиент с случайной сессией из указанной папки.
+        Запускает Telegram-клиент со случайной сессией из указанной папки.
 
         :return: Авторизованный TelegramClient или None, если не удалось
         """
