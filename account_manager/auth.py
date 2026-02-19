@@ -56,10 +56,9 @@ class CheckingAccountsValidity:
         await self.connect_client_test(available_sessions=available_sessions, path=self.path)
 
     # === Подключение клиента Telethon ===
-    async def connect_client(self, session_name, user):
+    async def connect_client(self, session_name):
         """
         Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
-        :param user: Пользователь из базы данных, для определения языка пользователя
         :param session_name: имя сессии Telethon
         :return: client - клиент Telethon
         """

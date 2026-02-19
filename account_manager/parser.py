@@ -435,9 +435,7 @@ async def filter_messages(message, user_id, user, session_path):
     stop_flags[str(user_id)] = stop_event
 
     try:
-
         # Проверка на наличие подключенного аккаунта у пользователя для избежания ошибки
-
         checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
         client = await checker.connect_client(
             session_name=session_path.replace(".session", ""),

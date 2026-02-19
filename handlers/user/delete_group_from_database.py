@@ -87,7 +87,6 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
     client = await checker.connect_client(
         session_name=session_path.replace(".session", ""),
-        user=user,
     )  # <-- ✅ подключаемся к клиенту Telethon
     await unsubscribe(client, username_to_search, message)
 

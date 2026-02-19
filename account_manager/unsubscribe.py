@@ -14,7 +14,7 @@ async def unsubscribe(client, username_to_search, message):
     Отписываемся от группы 
     
     :param message:
-    :param client: клиент телеграма
+    :param client: клиент Telegram
     :param username_to_search:
     :return: 
     """

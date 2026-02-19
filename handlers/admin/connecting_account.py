@@ -59,7 +59,7 @@ async def receive_session_file(message: Message, state: FSMContext):
 
         # ✅ Проверяем валидность аккаунта
         checker = CheckingAccountsValidity(message=message, path=str(sessions_dir))
-        client = await checker.connect_client(session_name=session_name, user=message.from_user)
+        client = await checker.connect_client(session_name=session_name)
 
         if client:
             me = await client.get_me()
