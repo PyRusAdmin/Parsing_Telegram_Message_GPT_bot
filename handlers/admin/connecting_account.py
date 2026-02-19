@@ -149,38 +149,38 @@ async def receive_session_file(message: Message, state: FSMContext):
             )
 
             # ✅ Обновляем сообщение с результатом очистки
-            cleanup_summary = ""
-            if cleanup_result["parsing_dir_deleted"]:
-                cleanup_summary += "🗑️ Папка `accounts/parsing` удалена\n"
-            if cleanup_result["root_files_deleted"] > 0:
-                cleanup_summary += f"🗑️ Удалено файлов из корня: {cleanup_result['root_files_deleted']}\n"
-            if cleanup_result["errors"]:
-                cleanup_summary += f"⚠️ Ошибки: {len(cleanup_result['errors'])}\n"
+            # cleanup_summary = ""
+            # if cleanup_result["parsing_dir_deleted"]:
+            #     cleanup_summary += "🗑️ Папка `accounts/parsing` удалена\n"
+            # if cleanup_result["root_files_deleted"] > 0:
+            #     cleanup_summary += f"🗑️ Удалено файлов из корня: {cleanup_result['root_files_deleted']}\n"
+            # if cleanup_result["errors"]:
+            #     cleanup_summary += f"⚠️ Ошибки: {len(cleanup_result['errors'])}\n"
 
-            if cleanup_summary:
-                await message.answer(
-                    f"📊 <b>Обработка завершена!</b>\n",
-                    # f"✅ Успешно: {success_count}\n"
-                    # f"❌ Ошибки: {fail_count}\n\n"
-                    # f"<b>🧹 Результат очистки:</b>\n"
-                    # f"{cleanup_summary}\n"
-                    # f"Можете отправить ещё файлы или нажать «Назад»",
-                    parse_mode="HTML",
-                    reply_markup=back_keyboard()
-                )
-            else:
-                await message.answer(
-                    f"📊 <b>Обработка завершена!</b>\n",
-                    # f"✅ Успешно: {success_count}\n"
-                    # f"❌ Ошибки: {fail_count}\n\n"
-                    # f"✅ Временные файлы уже очищены.\n"
-                    # f"Можете отправить ещё файлы или нажать «Назад»",
-                    parse_mode="HTML",
-                    reply_markup=back_keyboard()
-                )
+            # if cleanup_summary:
+            await message.answer(
+                f"📊 <b>Обработка завершена!</b>\n",
+                # f"✅ Успешно: {success_count}\n"
+                # f"❌ Ошибки: {fail_count}\n\n"
+                # f"<b>🧹 Результат очистки:</b>\n"
+                # f"{cleanup_summary}\n"
+                # f"Можете отправить ещё файлы или нажать «Назад»",
+                parse_mode="HTML",
+                reply_markup=back_keyboard()
+            )
+            # else:
+            # await message.answer(
+            #     f"📊 <b>Обработка завершена!</b>\n",
+            # f"✅ Успешно: {success_count}\n"
+            # f"❌ Ошибки: {fail_count}\n\n"
+            # f"✅ Временные файлы уже очищены.\n"
+            # f"Можете отправить ещё файлы или нажать «Назад»",
+            # parse_mode="HTML",
+            # reply_markup=back_keyboard()
+            # )
 
-            # ✅ Очищаем очередь в состоянии
-            await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
+        # ✅ Очищаем очередь в состоянии
+        await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
 
 
 def cleanup_session_files(parsing_dir: str = "accounts/parsing", root_dirs: list[str] | None = None):
