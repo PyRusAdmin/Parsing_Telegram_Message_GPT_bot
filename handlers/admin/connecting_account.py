@@ -73,17 +73,13 @@ async def receive_session_file(message: Message, state: FSMContext):
         # ✅ Создаём папку для временного хранения
         sessions_dir = Path("accounts/parsing")
         sessions_dir.mkdir(parents=True, exist_ok=True)
-
         # ✅ Санитизация имени файла
         safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
         file_path = sessions_dir / safe_file_name
-
         # ✅ Скачиваем файл
         await message.bot.download(document, destination=file_path)
-
         # ✅ Извлекаем путь без расширения для Telethon
         session_path_without_ext = str(file_path.with_suffix(""))
-
         # ✅ Проверяем валидность аккаунта
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
         client = await checker.connect_client()
@@ -94,27 +90,21 @@ async def receive_session_file(message: Message, state: FSMContext):
             first_name = me.first_name or ""
 
             # ✅ Конвертируем в StringSession и сохраняем в БД
-
             session_string = StringSession.save(client.session)
             write_account_to_db(session_string=session_string, phone_number=phone)
-
             await client.disconnect()
-
             # ✅ Удаляем временный .session файл
             if file_path.exists():
                 file_path.unlink()
-
             # ✅ Обновляем статистику
             success_count += 1
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
-
             # ✅ Отправляем результат для этого файла
             await message.answer(
                 f"✅ <b>{safe_file_name}</b> — успешно!\n"
                 f"📱 {phone} | 👤 {first_name}",
                 parse_mode="HTML"
             )
-
         else:
             # ❌ Файл не валиден — удаляем
             if file_path.exists():
