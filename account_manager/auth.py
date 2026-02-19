@@ -193,7 +193,7 @@ class CheckingAccountsValidity:
         :param exception: Исключение, вызвавшее бан
         :return: None
         """
-        await self.app_logger.log_and_display(message=f"⛔ Аккаунт banned: {session_name}. {str(exception)}")
+        logger.info(f"⛔ Аккаунт banned: {session_name}. {str(exception)}")
         await telegram_client.disconnect()
         await delete_account_from_db(session_string=session_name)
 
