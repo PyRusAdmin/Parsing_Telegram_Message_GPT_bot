@@ -101,7 +101,7 @@ async def get_groq_response(user_input):
         return ""
 
 
-async def search_groups_in_telegram(client, group_names, session_name):
+async def search_groups_in_telegram(client, group_names):
     """
     Асинхронно ищет публичные группы и каналы в Telegram по списку названий.
     При заморозке аккаунта сразу прекращает весь поиск.
@@ -157,15 +157,7 @@ async def search_groups_in_telegram(client, group_names, session_name):
 
         except FrozenMethodInvalidError:
             logger.warning(f'❄️ Аккаунт заморожен при поиске "{name}"!')
-            account_frozen = True
             await client.disconnect()
-            try:
-                os.remove(f"{session_dir}/{session_name}.session")
-                logger.info(f"Сессия {session_name} удалена (заморозка)")
-            except FileNotFoundError:
-                pass
-            except Exception as del_err:
-                logger.error(f"Не удалось удалить сессию: {del_err}")
             break  # ← КРИТИЧНО: прекращаем весь поиск
 
         except UsernameNotOccupiedError:

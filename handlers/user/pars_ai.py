@@ -13,6 +13,7 @@ from openpyxl.styles import Font
 from peewee import IntegrityError
 from peewee import fn
 
+from account_manager.auth import CheckingAccountsValidity
 from ai.ai import get_groq_response, search_groups_in_telegram
 from core.config import api_id, api_hash
 from database.database import User, TelegramGroup
@@ -555,14 +556,14 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         saved_groups = []
 
-        client, session_path = await start_random_client(api_id=api_id, api_hash=api_hash)
+        checker = CheckingAccountsValidity(message=message, path=path)
+        client = await checker.start_random_client()
 
         for group_name in group_names:
             # Ищем в Telegram
             results = await search_groups_in_telegram(
                 client=client,
-                group_names=[group_name],
-                session_name=session_path
+                group_names=[group_name]
             )
             logger.info(f"Найдено {len(results)} групп для '{group_name}'")
 
@@ -665,7 +666,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
 
             # 🎲 Запускаем НОВЫЙ случайный клиент для этого запроса
-            client, session_path = await start_random_client(api_id=api_id, api_hash=api_hash)
+            client = await start_random_client(api_id=api_id, api_hash=api_hash)
             if not client:
                 logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
                 await message.answer(f"⚠️ Пропущено: '{term}' (нет доступных аккаунтов)")
@@ -692,8 +693,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 # Ищем группы в Telegram
                 results = await search_groups_in_telegram(
                     client=client,
-                    group_names=group_names,
-                    session_name=session_path
+                    group_names=group_names
                 )
                 logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
 

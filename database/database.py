@@ -55,7 +55,6 @@ def getting_account():
     Получение аккаунтов из базы данных
     :return: Список аккаунтов из базы данных
     """
-
     records = []
     for record in Account.select(Account.session_string):
         records.append(record.session_string)

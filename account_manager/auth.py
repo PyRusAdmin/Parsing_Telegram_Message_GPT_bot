@@ -16,8 +16,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from core.config import session_dir
-from database.database import delete_account_from_db, write_account_to_db
+from database.database import delete_account_from_db, write_account_to_db, getting_account
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 
 mobile_device = {
@@ -334,17 +333,20 @@ class CheckingAccountsValidity:
         :return: Авторизованный TelegramClient или None, если не удалось
         """
 
+        records = getting_account()
         # Случайно выбираем сессию
-        chosen_session_name = random.choice(session_files)
-        session_path = os.path.join(session_dir, chosen_session_name)
-
+        chosen_session_name = random.choice(records)
         logger.info(f"Используется сессия: {chosen_session_name}")
 
         client = TelegramClient(
-            session=session_path,
+            StringSession(chosen_session_name),
             api_id=api_id,
             api_hash=api_hash,
-            system_version="4.16.30-vxCUSTOM"
+            device_model=mobile_device["device_model"],
+            system_version=mobile_device["system_version"],
+            app_version=mobile_device["app_version"],
+            lang_code=mobile_device["lang_code"],
+            system_lang_code=mobile_device["system_lang_code"],
         )
 
         await client.connect()
@@ -355,7 +357,7 @@ class CheckingAccountsValidity:
             return None
 
         logger.info("Телеграм-клиент запущен.")
-        return client, session_path
+        return client
 
     async def checking_accounts(self):
         """
