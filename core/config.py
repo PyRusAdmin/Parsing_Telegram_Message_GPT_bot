@@ -33,3 +33,5 @@ proxy_ip = config['proxy_data']['ip']
 
 # Язык локализации интерфейса бота
 language = config['localization']['language']
+
+session_dir: str = 'accounts/parsing'  # Указываем путь к папкам с данными пользователей и их чатами

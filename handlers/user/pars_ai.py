@@ -18,6 +18,7 @@ from peewee import fn
 from telethon import TelegramClient
 
 from ai.ai import get_groq_response, search_groups_in_telegram
+from core.config import session_dir
 from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
 from locales.locales import get_text
@@ -348,7 +349,7 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
         "🔹 <b>Получить базу Обычных чатов (группы старого типа)</b> — получите список всех сохранённых обычных чатов (групп старого типа) в формате Excel.\n"
         "🔹 Выбрать категорию для получения базы\n\n"
 
-        "🔸 Нажмите <b>🔙 Назад</b>, чтобы вернуться в главное меню."
+        "🔸 Нажмите <b>Назад</b>, чтобы вернуться в главное меню."
     )
     await message.answer(
         text=text,
@@ -378,7 +379,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
     selected_category = message.text.strip()
 
     # Проверка на кнопку "Назад"
-    if selected_category == "🔙 Назад":
+    if selected_category == "Назад":
         await message.answer("❌ Отменено.", reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
@@ -558,11 +559,15 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         saved_groups = []
 
-        client = await start_random_client(api_id=api_id, api_hash=api_hash)
+        client, session_path = await start_random_client(api_id=api_id, api_hash=api_hash)
 
         for group_name in group_names:
             # Ищем в Telegram
-            results = await search_groups_in_telegram(client=client, group_names=[group_name])
+            results = await search_groups_in_telegram(
+                client=client,
+                group_names=[group_name],
+                session_name=session_path
+            )
             logger.info(f"Найдено {len(results)} групп для '{group_name}'")
 
             # Сохраняем результаты в БД
@@ -664,7 +669,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
 
             # 🎲 Запускаем НОВЫЙ случайный клиент для этого запроса
-            client = await start_random_client(api_id=api_id, api_hash=api_hash)
+            client, session_path = await start_random_client(api_id=api_id, api_hash=api_hash)
             if not client:
                 logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
                 await message.answer(f"⚠️ Пропущено: '{term}' (нет доступных аккаунтов)")
@@ -689,7 +694,11 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
 
                 # Ищем группы в Telegram
-                results = await search_groups_in_telegram(client=client, group_names=group_names)
+                results = await search_groups_in_telegram(
+                    client=client,
+                    group_names=group_names,
+                    session_name=session_path
+                )
                 logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
 
                 # Сохраняем в БД
@@ -777,13 +786,12 @@ def parse_search_input(user_input: str) -> list[str]:
     return result
 
 
-async def start_random_client(api_id: int, api_hash: str, session_dir: str = 'accounts/parsing'):
+async def start_random_client(api_id: int, api_hash: str):
     """
     Запускает Telegram-клиент с случайной сессией из указанной папки.
 
     :param api_id: API ID для Telegram
     :param api_hash: API Hash для Telegram
-    :param session_dir: Папка с .session файлами
     :return: Авторизованный TelegramClient или None, если не удалось
     """
     # Получаем все .session файлы (без расширения)
@@ -796,7 +804,6 @@ async def start_random_client(api_id: int, api_hash: str, session_dir: str = 'ac
     chosen_session_name = random.choice(session_files)
     session_path = os.path.join(session_dir, chosen_session_name)
 
-    print(f"Используется сессия: {chosen_session_name}")
     logging.info(f"Используется сессия: {chosen_session_name}")
 
     client = TelegramClient(
@@ -814,7 +821,7 @@ async def start_random_client(api_id: int, api_hash: str, session_dir: str = 'ac
         return None
 
     logging.info("Телеграм-клиент запущен.")
-    return client
+    return client, session_path
 
 
 def register_handlers_pars_ai():

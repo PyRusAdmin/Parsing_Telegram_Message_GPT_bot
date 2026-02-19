@@ -42,7 +42,7 @@ async def log(message: Message, state: FSMContext):
         document=document,  # Файл логов для отправки
         caption=f"📄 Лог файл с ошибками.",  # Текст под файлом
         parse_mode="HTML",  # Режим разметки для капшна
-        reply_markup=back_keyboard(),  # Клавиатура с кнопкой «🔙 Назад»
+        reply_markup=back_keyboard(),  # Клавиатура с кнопкой «Назад»
     )
 
 

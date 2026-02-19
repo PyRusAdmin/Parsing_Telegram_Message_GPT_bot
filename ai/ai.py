@@ -9,7 +9,7 @@ from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMeth
 from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
-from core.config import GROQ_API_KEY
+from core.config import GROQ_API_KEY, session_dir
 from core.proxy_config import setup_proxy
 
 
@@ -101,89 +101,97 @@ async def get_groq_response(user_input):
         return ""
 
 
-async def search_groups_in_telegram(client, group_names):
+async def search_groups_in_telegram(client, group_names, session_name):
     """
-    Асинхронно ищет публичные группы и каналы в Telegram по заданным названиям.
-
-    Для каждого названия выполняется поиск через Telegram API, и из результатов
-    отбираются только каналы (Channel), содержащие совпадения по названию.
-
-    :param client: (TelegramClient) Экземпляр клиентского объекта Telegram
-    :param group_names: list[str] Список строк с названиями групп для поиска.
-
-    Returns:
-        list[dict]: Список словарей с информацией о найденных группах. Каждый словарь содержит:
-            - 'name' (str): Название группы.
-            - 'username' (str): Юзернейм группы (с @) или "нет юзернейма".
-            - 'link' (str): Ссылка на группу или "недоступна".
-            - 'participants' (int or str): Количество участников или "неизвестно".
-            - 'telegram_id' (int): Уникальный идентификатор чата в Telegram.
-
-    Notes:
-        - Требует предварительной авторизации клиента Telegram.
-        - Обрабатывает ошибки FloodWaitError, приостанавливая выполнение на указанное время.
-        - Пропускает пустые строки в списке запросов.
-        - Использует Telethon для низкоуровневого взаимодействия с Telegram API.
+    Асинхронно ищет публичные группы и каналы в Telegram по списку названий.
+    При заморозке аккаунта сразу прекращает весь поиск.
     """
     found_groups = []
+    account_frozen = False
 
     for name in group_names:
-        if not name.strip():
+        if not name or not name.strip():
+            continue
+
+        if account_frozen:
+            logger.warning(f"Аккаунт заморожен. Пропускаем '{name}'")
             continue
 
         logger.info(f"Ищу группу: '{name}'")
 
+        # Проверяем, подключён ли клиент
+        if not client.is_connected():
+            try:
+                await client.connect()
+            except Exception as e:
+                logger.error(f"Не удалось подключить клиента: {e}")
+                break
+
         try:
-            # ✅ Используем SearchRequest для поиска по названию
             search_results = await client(functions.contacts.SearchRequest(q=name, limit=10))
 
-            # Обрабатываем результаты
             for chat in search_results.chats:
-                logger.info(chat)
-                telegram_id = chat.id
-                group_hash = chat.access_hash
-                name = chat.title or ''
-                username = f"@{chat.username}"
-                description = ''
-                participants = chat.participants_count
-                category = ''
-                group_type = determine_telegram_chat_type(entity=chat)
-                language = ''
-                link = f"https://t.me/{chat.username}"
+                if not hasattr(chat, 'title') or not chat.title:
+                    continue
 
-                found_groups.append(
-                    {
-                        'telegram_id': telegram_id,
-                        'group_hash': group_hash,
-                        'name': name,
-                        'username': username,
-                        'description': description,
-                        'participants': participants,
-                        'category': category,
-                        'group_type': group_type,
-                        'language': language,
-                        'link': link
-                    }
-                )
+                telegram_id = chat.id
+                group_hash = getattr(chat, 'access_hash', None)
+                title = chat.title
+                username = f"@{chat.username}" if getattr(chat, 'username', None) else None
+                link = f"https://t.me/{chat.username}" if username else None
+                participants = getattr(chat, 'participants_count', 0)
+                group_type = determine_telegram_chat_type(entity=chat)
+
+                found_groups.append({
+                    'telegram_id': telegram_id,
+                    'group_hash': group_hash,
+                    'name': title,
+                    'username': username,
+                    'description': '',
+                    'participants': participants,
+                    'category': '',
+                    'group_type': group_type,
+                    'language': '',
+                    'link': link
+                })
 
         except FrozenMethodInvalidError:
-            logger.warning('Аккаунт заморожен!')
-
+            logger.warning(f'❄️ Аккаунт заморожен при поиске "{name}"!')
+            account_frozen = True
+            await client.disconnect()
             try:
-                os.remove(f"{path}/{session_name}.session")
+                os.remove(f"{session_dir}/{session_name}.session")
+                logger.info(f"Сессия {session_name} удалена (заморозка)")
             except FileNotFoundError:
-                pass  # файл уже удалён
+                pass
+            except Exception as del_err:
+                logger.error(f"Не удалось удалить сессию: {del_err}")
+            break  # ← КРИТИЧНО: прекращаем весь поиск
 
         except UsernameNotOccupiedError:
-            logger.warning(f"Группа '{name}' не найдена.")
+            logger.warning(f"Группа '{name}' не найдена (UsernameNotOccupiedError)")
+
         except FloodWaitError as e:
-            logger.error(f"Слишком много запросов. Ждём {e.seconds} секунд.")
-            await asyncio.sleep(e.seconds + 1)
+            logger.warning(f"FloodWait {e.seconds} сек при поиске '{name}'. Ждём...")
+            await asyncio.sleep(e.seconds + 2)
+
         except Exception as e:
+            if "disconnected" in str(e).lower() or "cannot send" in str(e).lower():
+                logger.error("Клиент отключён. Прекращаем поиск.")
+                break
             logger.exception(f"Ошибка при поиске '{name}': {e}")
 
-    # await client.disconnect()
-    logger.info("Телеграм-клиент отключён.")
+    # Финальное отключение (на всякий случай)
+    try:
+        if client.is_connected():
+            await client.disconnect()
+            logger.info("Телеграм-клиент отключён.")
+    except Exception as e:
+        logger.exception(e)
+
+    if account_frozen:
+        logger.error("🔴 Поиск полностью остановлен из-за заморозки аккаунта.")
+
     return found_groups
 
 

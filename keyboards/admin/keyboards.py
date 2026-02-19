@@ -89,7 +89,8 @@ def admin_keyboard():
             [KeyboardButton(text="🏷️ Присвоить категорию")],
             [KeyboardButton(text="✅ Проверка аккаунтов")],
             [KeyboardButton(text="🌐 Присвоить язык")],
-            [KeyboardButton(text="🔙 Назад")]
+            [KeyboardButton(text="Подключение аккаунта")],
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз

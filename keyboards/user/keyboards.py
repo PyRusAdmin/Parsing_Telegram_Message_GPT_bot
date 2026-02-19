@@ -18,7 +18,7 @@ def search_group_ai():
             [KeyboardButton(text="📥 Вся база")],
             [KeyboardButton(text="📥 База каналов"), KeyboardButton(text="📥 База групп")],
             [KeyboardButton(text="Выбрать категорию")],
-            [KeyboardButton(text="🔙 Назад")],
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -47,7 +47,7 @@ def get_categories_keyboard():
             [KeyboardButton(text="Кулинария и еда")],
             [KeyboardButton(text="Мода и красота")],
             [KeyboardButton(text="Хобби и творчество")],
-            [KeyboardButton(text="🔙 Назад")],
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -124,7 +124,7 @@ def menu_launch_tracking_keyboard():
 
     Layout:
         [🛑 Остановить отслеживание]
-        [🔙 Назад]
+        [Назад]
 
     Notes:
         - Отображает текущее состояние (отслеживание активно).
@@ -133,7 +133,7 @@ def menu_launch_tracking_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🛑 Остановить отслеживание")],
-            [KeyboardButton(text="🔙 Назад")],
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -158,7 +158,7 @@ def settings_keyboard():
         [🔁 Обновить список] [🔍 Ввод ключевого слова]
         [🔐 Подключить аккаунт] [📤 Подключить группу для сообщений]
         [🌐 Сменить язык]
-        [🔙 Назад]
+        [Назад]
 
     Notes:
         - Клавиатура подстраивается по размеру и остаётся видимой после использования.
@@ -170,7 +170,7 @@ def settings_keyboard():
             [KeyboardButton(text="🔍 Список ключевых слов"), KeyboardButton(text="🌐 Ссылки для отслеживания")],
             [KeyboardButton(text="🔐 Подключить аккаунт"), KeyboardButton(text="📤 Подключить группу для сообщений")],
             [KeyboardButton(text="🌐 Сменить язык")],
-            [KeyboardButton(text="🔙 Назад")]
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -183,7 +183,7 @@ def connect_keyboard_account():
         keyboard=[
             [KeyboardButton(text="🔐 Подключить аккаунт")],
             [KeyboardButton(text="🔐 Подключить свободный аккаунт")],
-            [KeyboardButton(text="🔙 Назад")]
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -197,7 +197,7 @@ def connect_grup_keyboard_tech():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📤 Подключить группу для сообщений")],
-            [KeyboardButton(text="🔙 Назад")]
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -206,7 +206,7 @@ def connect_grup_keyboard_tech():
 
 def back_keyboard():
     """
-    Создаёт простую клавиатуру с одной кнопкой 🔙 Назад.
+    Создаёт простую клавиатуру с одной кнопкой Назад.
 
     Используется в подменю для возврата в предыдущее меню (например, настройки, ввод данных).
     Упрощает навигацию по интерфейсу бота.
@@ -215,7 +215,7 @@ def back_keyboard():
         ReplyKeyboardMarkup: Объект клавиатуры с кнопкой возврата.
 
     Layout:
-        [🔙 Назад]
+        [Назад]
 
     Notes:
         - Клавиатура подстраивается по размеру и остаётся видимой.
@@ -223,7 +223,7 @@ def back_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔙 Назад")]
+            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
