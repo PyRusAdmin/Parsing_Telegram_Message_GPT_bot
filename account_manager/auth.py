@@ -55,12 +55,6 @@ class CheckingAccountsValidity:
         # ✅ Проверка аккаунтов на валидность из папки parsing
         await self.connect_client_test(available_sessions=available_sessions, path=self.path)
 
-    # async def check_single_account(self):
-    #     """
-    #     Проверка аккаунта подключаемого пользователем
-    #     """
-    #     pass
-
     # === Подключение клиента Telethon ===
     async def connect_client(self, session_name, user):
         """
@@ -138,8 +132,6 @@ class CheckingAccountsValidity:
         ✅ Проверка аккаунтов на валидность
         :return: (list) Список доступных сессий.
         """
-
-        # checking_accounts_validity = CheckingAccountsValidity(message, path)
         await self.checking_accounts_for_validity()
         available_sessions = await self.get_available_sessions()
         return available_sessions
