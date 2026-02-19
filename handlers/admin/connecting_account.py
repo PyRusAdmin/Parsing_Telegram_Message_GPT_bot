@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import shutil
 from pathlib import Path
 
 from aiogram import F
@@ -6,8 +7,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger
 from telethon.sessions import StringSession
-from database.database import write_account_to_db
+
 from account_manager.auth import CheckingAccountsValidity
+from database.database import write_account_to_db
 from keyboards.user.keyboards import back_keyboard
 from states.states import MyStates
 from system.dispatcher import router
@@ -135,11 +137,117 @@ async def receive_session_file(message: Message, state: FSMContext):
                 f"📊 <b>Обработка завершена!</b>\n"
                 f"✅ Успешно: {success_count}\n"
                 f"❌ Ошибки: {fail_count}\n\n"
-                f"Можете отправить ещё файлы или нажать «Назад»"
+                f"🧹 Очищаю временные файлы..."
             )
-            await message.answer(summary, parse_mode="HTML", reply_markup=back_keyboard())
-            # ✅ Очищаем очередь, но оставляем состояние для приёма новых файлов
+            # Отправляем сообщение с началом очистки
+            cleanup_msg = await message.answer(summary, parse_mode="HTML")
+
+            # ✅ Запускаем очистку
+            cleanup_result = cleanup_session_files(
+                parsing_dir="accounts/parsing",
+                root_dirs=[".", "accounts", "data", "sessions"]  # Укажите ваши корневые папки
+            )
+
+            # ✅ Обновляем сообщение с результатом очистки
+            cleanup_summary = ""
+            if cleanup_result["parsing_dir_deleted"]:
+                cleanup_summary += "🗑️ Папка `accounts/parsing` удалена\n"
+            if cleanup_result["root_files_deleted"] > 0:
+                cleanup_summary += f"🗑️ Удалено файлов из корня: {cleanup_result['root_files_deleted']}\n"
+            if cleanup_result["errors"]:
+                cleanup_summary += f"⚠️ Ошибки: {len(cleanup_result['errors'])}\n"
+
+            if cleanup_summary:
+                await message.answer(
+                    f"📊 <b>Обработка завершена!</b>\n",
+                    # f"✅ Успешно: {success_count}\n"
+                    # f"❌ Ошибки: {fail_count}\n\n"
+                    # f"<b>🧹 Результат очистки:</b>\n"
+                    # f"{cleanup_summary}\n"
+                    # f"Можете отправить ещё файлы или нажать «Назад»",
+                    parse_mode="HTML",
+                    reply_markup=back_keyboard()
+                )
+            else:
+                await message.answer(
+                    f"📊 <b>Обработка завершена!</b>\n",
+                    # f"✅ Успешно: {success_count}\n"
+                    # f"❌ Ошибки: {fail_count}\n\n"
+                    # f"✅ Временные файлы уже очищены.\n"
+                    # f"Можете отправить ещё файлы или нажать «Назад»",
+                    parse_mode="HTML",
+                    reply_markup=back_keyboard()
+                )
+
+            # ✅ Очищаем очередь в состоянии
             await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
+
+
+def cleanup_session_files(parsing_dir: str = "accounts/parsing", root_dirs: list[str] | None = None):
+    """
+    Полная очистка временных .session файлов
+
+    :param parsing_dir: Папка с временными сессиями (будет удалена полностью)
+    :param root_dirs: Список корневых папок для поиска "забытых" .session файлов
+    :return: dict со статистикой очистки
+    """
+    result = {
+        "parsing_dir_deleted": False,
+        "root_files_deleted": 0,
+        "errors": []
+    }
+
+    # ✅ 1. Удаляем папку accounts/parsing целиком
+    try:
+        parsing_path = Path(parsing_dir)
+        if parsing_path.exists() and parsing_path.is_dir():
+            shutil.rmtree(parsing_path)
+            logger.info(f"🗑️ Папка удалена: {parsing_dir}")
+            result["parsing_dir_deleted"] = True
+        else:
+            logger.debug(f"Папка {parsing_dir} не существует — пропускаем")
+    except Exception as e:
+        error_msg = f"Ошибка удаления {parsing_dir}: {e}"
+        logger.exception(error_msg)
+        result["errors"].append(error_msg)
+
+    # ✅ 2. Очищаем корневые папки от "забытых" .session файлов
+    dirs_to_scan = root_dirs or [".", "accounts", "data"]  # Папки для сканирования по умолчанию
+
+    for root_dir in dirs_to_scan:
+        try:
+            root_path = Path(root_dir)
+            if not root_path.exists():
+                continue
+
+            # Ищем .session файлы ТОЛЬКО в этой папке (не рекурсивно!)
+            for session_file in root_path.glob("*.session"):
+                # ❌ Пропускаем важные системные файлы, если нужно
+                if session_file.name.startswith("bot_session") or session_file.name.startswith("main_"):
+                    logger.debug(f"⏭️ Пропущен системный файл: {session_file.name}")
+                    continue
+
+                # ✅ Удаляем найденный файл
+                session_file.unlink()
+                result["root_files_deleted"] += 1
+                logger.info(f"🗑️ Удалён файл из корня: {session_file.name}")
+
+        except Exception as e:
+            error_msg = f"Ошибка очистки папки {root_dir}: {e}"
+            logger.exception(error_msg)
+            result["errors"].append(error_msg)
+
+    # ✅ Логируем итог
+    if result["parsing_dir_deleted"] or result["root_files_deleted"] > 0:
+        logger.success(
+            f"🧹 Очистка завершена: "
+            f"parsing_dir={'✅' if result['parsing_dir_deleted'] else '⏭️'}, "
+            f"root_files={result['root_files_deleted']}"
+        )
+    else:
+        logger.debug("🧹 Нечего очищать — папки и файлы уже удалены")
+
+    return result
 
 
 def register_handlers_admin_connect_account():
