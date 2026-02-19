@@ -18,12 +18,12 @@ from peewee import fn
 from telethon import TelegramClient
 
 from ai.ai import get_groq_response, search_groups_in_telegram
-from core.config import session_dir
+from core.config import session_dir, api_id, api_hash
 from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
 from locales.locales import get_text
 from states.states import MyStates, ExportStates
-from system.dispatcher import router, api_id, api_hash
+from system.dispatcher import router
 
 
 def clean_group_name(name):

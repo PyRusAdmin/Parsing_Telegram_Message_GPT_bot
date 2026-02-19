@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import configparser
+import os
+
+from dotenv import load_dotenv
 
 
 def read_config_file():
@@ -35,3 +38,10 @@ proxy_ip = config['proxy_data']['ip']
 language = config['localization']['language']
 
 session_dir: str = 'accounts/parsing'  # Указываем путь к папкам с данными пользователей и их чатами
+
+# Загружаем переменные окружения
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+api_id = os.getenv("ID")
+api_hash = os.getenv("HASH")

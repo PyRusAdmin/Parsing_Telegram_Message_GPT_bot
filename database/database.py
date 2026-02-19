@@ -247,7 +247,6 @@ def clean_telegram_id_duplicates():
     return deleted_count
 
 
-
 def getting_number_records_database():
     """Получает количество записей в базе данных о найденных группах пользователями"""
     return TelegramGroup.select().count()
