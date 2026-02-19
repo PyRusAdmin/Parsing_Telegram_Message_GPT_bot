@@ -7,7 +7,6 @@ from aiogram.types import Message
 from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
-from database.database import User
 from keyboards.user.keyboards import back_keyboard
 from states.states import MyStates
 from system.dispatcher import router
@@ -21,14 +20,14 @@ async def admin_connecting_account(message: Message, state: FSMContext):
     telegram_id = message.from_user.id
 
     # Проверка, что это админ (можно по ID или по полю в БД)
-    try:
-        user = User.get(User.user_id == telegram_id)
-        if not user.is_admin:  # если у тебя есть такое поле
-            await message.answer("⛔ У вас нет прав администратора.")
-            return
-    except:
-        await message.answer("⛔ Только администраторы могут подключать аккаунты.")
-        return
+    # try:
+    #     user = User.get(User.user_id == telegram_id)
+    #     if not user.is_admin:  # если у тебя есть такое поле
+    #         await message.answer("⛔ У вас нет прав администратора.")
+    #         return
+    # except:
+    #     await message.answer("⛔ Только администраторы могут подключать аккаунты.")
+    #     return
 
     await state.set_state(MyStates.waiting_for_session_file)
 
