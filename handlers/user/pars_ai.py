@@ -6,13 +6,15 @@ import os
 import random
 import re
 from datetime import datetime
-from peewee import fn
+
 from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
 from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from peewee import IntegrityError
+from peewee import fn
 from telethon import TelegramClient
 
 from ai.ai import get_groq_response, search_groups_in_telegram
@@ -39,64 +41,77 @@ def clean_group_name(name):
     return cleaned
 
 
-def save_group_to_db(group_data):
+def save_group_to_db(group_data: dict):
     """
     Сохраняет или обновляет информацию о группе в централизованной базе данных.
 
-    Использует хеш для проверки существования группы. При наличии обновляет поля,
-    при отсутствии — создаёт новую запись. Поля 'participants' и 'description'
-    обновляются при каждом нахождении группы.
+    Приоритет проверки:
+    1. telegram_id (уникальное поле)
+    2. group_hash (fallback, если telegram_id = None)
 
-    Функция является частью механизма deduplication и предотвращает дублирование записей.
+    При наличии записи — обновляет все поля (включая participants, description и т.д.).
+    При отсутствии — создаёт новую запись.
 
-    :param group_data : (dict) Словарь с информацией о группе (название, username, участники и т.д.).
-    :return TelegramGroup or None: Экземпляр сохранённой модели или None при ошибке.
-    :raise Exception: Логируется при ошибках работы с БД (например, нарушение ограничений).
+    :param group_data: (dict) Словарь с данными группы
+    :return: TelegramGroup or None
     """
     try:
         telegram_id = group_data.get('telegram_id')
         group_hash = group_data.get('group_hash')
-        name = group_data.get('name')
-        username = group_data.get('username')
-        description = group_data.get('description')
-        participants = group_data.get('participants')
-        category = group_data.get('category')
-        group_type = group_data.get('group_type')
-        language = group_data.get('language')
-        link = group_data.get('link')
-        date_added = datetime.now()
-        # Проверяем, существует ли уже такая группа
-        existing = TelegramGroup.get_or_none(TelegramGroup.group_hash == group_hash)
+
+        # ========== 1. Проверяем по telegram_id (основной способ) ==========
+        if telegram_id is not None:
+            existing = TelegramGroup.get_or_none(TelegramGroup.telegram_id == telegram_id)
+        else:
+            # ========== 2. Fallback — проверяем по group_hash ==========
+            existing = TelegramGroup.get_or_none(TelegramGroup.group_hash == group_hash)
 
         if existing:
-            # Обновляем данные
+            # Обновляем существующую запись
             existing.telegram_id = telegram_id
-            existing.name = name
-            existing.username = username
-            existing.description = description
-            existing.participants = participants
-            existing.link = link
-            existing.date_added = date_added
+            existing.group_hash = group_hash
+            existing.name = group_data.get('name')
+            existing.username = group_data.get('username')
+            existing.description = group_data.get('description')
+            existing.participants = group_data.get('participants', 0)
+            existing.category = group_data.get('category')
+            existing.group_type = group_data.get('group_type')
+            existing.language = group_data.get('language', '')
+            existing.link = group_data.get('link')
+            # date_added оставляем оригинальным (дата первого добавления)
+            # Если хочешь обновлять на "последнее обнаружение" — раскомментируй:
+            # existing.date_added = datetime.now()
+
             existing.save()
-            logger.info(f"Обновлена группа: {group_data['name']}")
+            logger.info(f"🔄 Обновлена существующая группа: {existing.name} (telegram_id={telegram_id})")
             return existing
+
         else:
             # Создаём новую запись
             new_group = TelegramGroup.create(
                 telegram_id=telegram_id,
                 group_hash=group_hash,
-                name=name,
-                username=username,
-                description=description,
-                participants=participants,
-                category=category,
-                group_type=group_type,
-                language=language,
-                link=link,
-                date_added=date_added
+                name=group_data.get('name'),
+                username=group_data.get('username'),
+                description=group_data.get('description'),
+                participants=group_data.get('participants', 0),
+                category=group_data.get('category'),
+                group_type=group_data.get('group_type'),
+                language=group_data.get('language', ''),
+                link=group_data.get('link'),
+                # date_added автоматически поставится по default в модели
             )
-            logger.info(f"Добавлена новая группа: {group_data['name']}")
+            logger.info(f"✅ Добавлена новая группа: {new_group.name} (telegram_id={telegram_id})")
             return new_group
+
+    except IntegrityError as e:
+        if "telegram_groups.telegram_id" in str(e):
+            logger.warning(f"Попытка создать дубль по telegram_id. Уже обработано выше.")
+            # На всякий случай пробуем обновить ещё раз
+            return save_group_to_db(group_data)  # рекурсия 1 раз — безопасно
+        else:
+            logger.exception(f"Неизвестная IntegrityError при сохранении: {e}")
+            return None
 
     except Exception as e:
         logger.exception(f"Ошибка при сохранении группы: {e}")
@@ -526,7 +541,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         Exception: Перехватывается локально, логируется и преобразуется в пользовательское сообщение.
     """
 
-    telegram_user = message.from_user
+    # telegram_user = message.from_user
     user_input = message.text.strip()
     # Отправляем сообщение о начале поиска
     processing_msg = await message.answer("🔍 Ищу группы и каналы...")
@@ -575,7 +590,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 caption=f"📄 Результаты поиска по запросу: <b>{user_input}</b>",
                 parse_mode="HTML"
             )
-            logger.info(f"Отправлено {len(saved_groups)} групп пользователю {telegram_user.id} в Excel файле")
+            logger.info(f"Отправлено {len(saved_groups)} групп пользователю {message.from_user.id} в Excel файле")
         else:
             await message.answer(
                 "❌ К сожалению, по вашему запросу ничего не найдено. Попробуйте другие ключевые слова.",
@@ -588,7 +603,9 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             "❌ Произошла ошибка при поиске. Попробуйте ещё раз.",
             reply_markup=back_keyboard()
         )
-    await state.clear()  # Завершаем текущее состояние машины состояния
+    finally:
+        await client.disconnect()
+        await state.clear()  # Завершаем текущее состояние машины состояния
 
 
 """Глобальный AI поиск"""

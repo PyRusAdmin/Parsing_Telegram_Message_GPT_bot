@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 from peewee import SqliteDatabase, Model, IntegerField, CharField, AutoField, TextField, DateTimeField
+from peewee import fn
 
 db = SqliteDatabase('data/bot.db', timeout=30,
                     pragmas={'journal_mode': 'wal', 'cache_size': 4096, 'synchronous': 'NORMAL'},
@@ -199,6 +200,52 @@ class TelegramGroup(BaseModel):
 
     class Meta:
         table_name = 'telegram_groups'
+
+
+def clean_telegram_id_duplicates():
+    """Удаляет все дубликаты по telegram_id, оставляя самую свежую запись"""
+    deleted_count = 0
+
+    # Находим все telegram_id с дублями
+    duplicates = (
+        TelegramGroup
+        .select(
+            TelegramGroup.telegram_id,
+            fn.COUNT(TelegramGroup.id).alias("cnt")
+        )
+        .where(TelegramGroup.telegram_id.is_null(False))
+        .group_by(TelegramGroup.telegram_id)
+        .having(fn.COUNT(TelegramGroup.id) > 1)
+    )
+
+    for dup in duplicates:
+        tid = dup.telegram_id
+
+        # Оставляем самую новую запись
+        keep = (
+            TelegramGroup
+            .select(TelegramGroup.id)
+            .where(TelegramGroup.telegram_id == tid)
+            .order_by(TelegramGroup.date_added.desc())
+            .limit(1)
+            .get()
+        )
+
+        # Удаляем все остальные
+        deleted = (
+            TelegramGroup
+            .delete()
+            .where(
+                (TelegramGroup.telegram_id == tid) &
+                (TelegramGroup.id != keep.id)
+            )
+            .execute()
+        )
+        deleted_count += deleted
+
+    print(f"✅ Очищено дубликатов по telegram_id: {deleted_count}")
+    return deleted_count
+
 
 
 def getting_number_records_database():

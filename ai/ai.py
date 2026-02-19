@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import os
 
 import groq
 from groq import AsyncGroq
@@ -167,6 +168,12 @@ async def search_groups_in_telegram(client, group_names):
 
         except FrozenMethodInvalidError:
             logger.warning('Аккаунт заморожен!')
+
+            try:
+                os.remove(f"{path}/{session_name}.session")
+            except FileNotFoundError:
+                pass  # файл уже удалён
+
         except UsernameNotOccupiedError:
             logger.warning(f"Группа '{name}' не найдена.")
         except FloodWaitError as e:
