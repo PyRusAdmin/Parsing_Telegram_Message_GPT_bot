@@ -30,9 +30,13 @@ mobile_device = {
 
 class CheckingAccountsValidity:
 
-    def __init__(self, message: Message, path: str):
+    def __init__(self, message: Message, path: str | None = None):
+        """
+        :param message: Сообщение для отправки уведомлений (опционально)
+        :param path: Путь к папке с .session файлами (опционально, нужен только для проверки файловых сессий)
+        """
         self.message = message
-        self.path = path
+        self.path = Path(path) if path else None  # ✅ path теперь опционален
 
     async def scanning_folder_for_session_files(self):
         """

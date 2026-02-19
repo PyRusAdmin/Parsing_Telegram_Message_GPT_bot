@@ -556,7 +556,8 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         saved_groups = []
 
-        checker = CheckingAccountsValidity(message=message, path=path)
+        # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+        checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
         client = await checker.start_random_client()
 
         for group_name in group_names:
