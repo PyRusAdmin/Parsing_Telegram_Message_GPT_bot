@@ -7,10 +7,11 @@ from peewee import Model, CharField
 from peewee import SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField
 from peewee import fn
 
-db = SqliteDatabase('data/bot.db', timeout=30,
-                    pragmas={'journal_mode': 'wal', 'cache_size': 4096, 'synchronous': 'NORMAL'},
-                    autocommit=True  # ✅ Важно!
-                    )
+db = SqliteDatabase(
+    'data/bot.db', timeout=30,
+    pragmas={'journal_mode': 'wal', 'cache_size': 4096, 'synchronous': 'NORMAL'},
+    autocommit=True  # ✅ Важно!
+)
 
 
 class BaseModel(Model):

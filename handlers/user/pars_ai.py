@@ -15,7 +15,6 @@ from peewee import fn
 
 from account_manager.auth import CheckingAccountsValidity
 from ai.ai import get_groq_response, search_groups_in_telegram
-from core.config import api_id, api_hash
 from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
 from locales.locales import get_text

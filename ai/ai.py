@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import os
 
 import groq
 from groq import AsyncGroq
@@ -9,7 +8,7 @@ from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMeth
 from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
-from core.config import GROQ_API_KEY, session_dir
+from core.config import GROQ_API_KEY
 from core.proxy_config import setup_proxy
 
 
