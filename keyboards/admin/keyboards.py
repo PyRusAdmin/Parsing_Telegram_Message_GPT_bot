@@ -84,12 +84,9 @@ def admin_keyboard():
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📄 Получить лог файл")],
-            [KeyboardButton(text="🔄 Актуализация базы данных")],
-            [KeyboardButton(text="🏷️ Присвоить категорию")],
-            [KeyboardButton(text="✅ Проверка аккаунтов")],
-            [KeyboardButton(text="🌐 Присвоить язык")],
-            [KeyboardButton(text="Подключение аккаунта")],
+            [KeyboardButton(text="📄 Получить лог файл"), KeyboardButton(text="🔄 Актуализация базы данных")],
+            [KeyboardButton(text="🏷️ Присвоить категорию"), KeyboardButton(text="✅ Проверка аккаунтов")],
+            [KeyboardButton(text="🌐 Присвоить язык"), KeyboardButton(text="Подключение аккаунта")],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,

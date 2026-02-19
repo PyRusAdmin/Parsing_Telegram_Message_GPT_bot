@@ -9,6 +9,7 @@ from database.database import clean_telegram_id_duplicates
 from handlers.admin.admin import register_handlers_admin_panel
 from handlers.admin.checking_accounts import register_checking_accounts
 from handlers.admin.checking_group_for_ai import register_handlers_checking_group_for_ai
+from handlers.admin.connecting_account import register_handlers_admin_connect_account
 from handlers.admin.language_detection import register_handlers_languages
 from handlers.admin.post_log import register_handlers_log
 from handlers.user.checking_group_for_keywords import register_handlers_checking_group_for_keywords
@@ -73,6 +74,7 @@ async def main() -> None:
         register_handlers_checking_group_for_ai()  # Присвоение категории группам / каналам
         register_checking_accounts()  # ✅ Проверка аккаунтов
         register_handlers_languages()  # Присвоение языка группам / каналам
+        register_handlers_admin_connect_account()  # Подключение аккаунтов админом бота
 
         await dp.start_polling(bot)
 
