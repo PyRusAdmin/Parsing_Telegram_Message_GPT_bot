@@ -6,10 +6,68 @@ from groq import AsyncGroq
 from loguru import logger
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
 from telethon.sync import functions
-
+from openai import OpenAI
 from account_manager.parser import determine_telegram_chat_type
-from core.config import GROQ_API_KEY
+from core.config import GROQ_API_KEY, OPENROUTER_API_KEY
 from core.proxy_config import setup_proxy
+
+
+async def category_assignment_openrouter(user_input: str, semaphore: asyncio.Semaphore | None = None) -> str:
+    """
+    Назначает категорию с помощью OpenRouter.
+
+    :param user_input: Контекст для анализа
+    :param semaphore: Опциональный семафор для ограничения конкуренции
+    :return: Название категории или "Не определена"
+    """
+    # Если передан семафор — используем его для контроля конкуренции
+    if semaphore:
+        async with semaphore:
+            return await _do_request(user_input)
+    return await _do_request(user_input)
+
+
+async def _do_request(user_input: str) -> str:
+    """Внутренняя функция — непосредственно запрос к API"""
+    setup_proxy()
+
+    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "<OPENROUTER_API_KEY>":
+        logger.error("❌ OPENROUTER_API_KEY не настроен!")
+        return "Не определена"
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
+        api_key=OPENROUTER_API_KEY,
+    )
+
+    prompt = (
+        f"На основе следующих данных о Telegram-группе или канале:\n\n{user_input}\n\n"
+        "Выбери ОДНУ наиболее подходящую категорию из списка ниже. "
+        "Ответь ТОЛЬКО названием категории, без пояснений, кавычек и знаков препинания.\n\n"
+        "Список категорий:\n"
+        "Инвестиции\nФинансы и личный бюджет\nКриптовалюты и блокчейн\n"
+        "Бизнес и предпринимательство\nМаркетинг и продвижение\nТехнологии и IT\n"
+        "Образование и саморазвитие\nРабота и карьера\nНедвижимость\n"
+        "Здоровье и медицина\nПутешествия\nАвто и транспорт\nШоппинг и скидки\n"
+        "Развлечения и досуг\nПолитика и общество\nНаука и исследования\n"
+        "Спорт и фитнес\nКулинария и еда\nМода и красота\nХобби и творчество"
+    )
+
+    try:
+        # ✅ Используем async-метод openai>=1.0
+        chat_completion = client.chat.completions.create(
+            model="meta-llama/llama-3.2-3b-instruct",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=20,
+            timeout=30
+        )
+        result = chat_completion.choices[0].message.content.strip().strip('".')
+        logger.debug(f"✅ Категория: '{result}'")
+        return result
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка API: {type(e).__name__}: {e}")
+        return "Не определена"
 
 
 async def category_assignment(user_input: str) -> str:

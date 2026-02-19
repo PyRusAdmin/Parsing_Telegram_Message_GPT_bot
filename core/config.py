@@ -28,6 +28,9 @@ username = config['telegram_settings']['username']
 # Ключ API для сервиса Groq (используется в AI-модели)
 GROQ_API_KEY = config['API_Groq']['GROQ_API_KEY']
 
+OPENROUTER_API_KEY = config['OPENROUTER_API_KEY']['OPENROUTER_API_KEY']
+
+
 # Данные прокси-сервера для обхода блокировок
 proxy_user = config['proxy_data']['user']
 proxy_password = config['proxy_data']['password']

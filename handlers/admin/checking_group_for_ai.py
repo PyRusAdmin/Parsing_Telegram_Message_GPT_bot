@@ -5,110 +5,115 @@ from aiogram import F
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from ai.ai import category_assignment
 from database.database import TelegramGroup, db
 from system.dispatcher import router
 
 
 @router.message(F.text == "🏷️ Присвоить категорию")
 async def checking_group_for_ai_db(message: Message):
-    """
-    Присваивает категории группам/каналам с помощью ИИ (Groq + Llama).
+    """Обработка групп в 10 параллельных задач"""
 
-    Последовательность:
-    - Находит все записи с пустой категорией;
-    - Для каждой собирает контекст: название, описание, username;
-    - Отправляет в ИИ;
-    - Сохраняет полученную категорию.
-
-    Особенности:
-    - Обновляется ТОЛЬКО поле `category`;
-    - Ошибки логируются, обработка продолжается;
-    - Каждые 20 обновлений — прогресс в чат.
-
-     :param message: (Message) Входящее сообщение от администратора.
-     :return: None
-     """
-    await message.answer("🧠 Запуск присвоения категорий с помощью ИИ...")
+    status_msg = await message.answer("🧠 Запуск присвоения категорий с помощью ИИ...")
 
     try:
-        # Убедимся, что БД подключена
         if db.is_closed():
             db.connect()
 
-        # Получаем группы без категории
+        # Получаем группы без категории (ограничиваем батч для стабильности)
         groups_to_update = list(TelegramGroup.select().where(
             (TelegramGroup.username.is_null(False)) &
             (TelegramGroup.category == '')
-        ))
+        ).limit(200))  # ✅ Не более 200 за один запуск
 
         total_count = len(groups_to_update)
-        logger.info(f"Найдено {total_count} групп без категории")
+        if total_count == 0:
+            await status_msg.edit_text("✅ Все группы уже имеют категории!")
+            return
 
-        # Отправляем начальное сообщение
-        await message.answer(f"🔄 Будет обработано: {total_count} групп")
+        logger.info(f"📦 Найдено {total_count} групп для обработки")
+        await status_msg.edit_text(f"🔄 Обрабатываю {total_count} групп в 10 потоков...")
 
-        processed = 0
-        updated = 0
-        errors = 0
+        # 🎯 Семафор: максимум 10 одновременных запросов к API
+        semaphore = asyncio.Semaphore(10)
 
-        for group in groups_to_update:
-            try:
-                await asyncio.sleep(1)
+        # 📊 Счётчики (защищены asyncio.Lock для потокобезопасности)
+        counters = {"processed": 0, "updated": 0, "errors": 0}
+        lock = asyncio.Lock()
 
-                # Собираем контекст для ИИ
-                context = f"""
-Название: {group.name or 'Без названия'}
-Описание: {group.description or 'Без описания'}
-Username: {group.username or 'Неизвестен'}
-Тип: {group.group_type or 'Неизвестен'}
-                """.strip()
+        # 🔄 Создаём задачи для всех групп
+        tasks = [
+            process_group_async(group, semaphore, counters, lock)
+            for group in groups_to_update
+        ]
 
-                # Получаем категорию от ИИ
-                category = await category_assignment(context)
-                category = category.strip().strip('".')  # чистим кавычки и лишние символы
+        # 🚀 Запускаем все задачи параллельно
+        await asyncio.gather(*tasks, return_exceptions=True)
 
-                # Обновляем ТОЛЬКО категорию
-                TelegramGroup.update(
-                    category=category
-                ).where(TelegramGroup.telegram_id == group.telegram_id).execute()
-
-                updated += 1
-                logger.info(f"[{processed + 1}/{total_count}] Категория для {group.username}: {category}")
-
-                # Отправляем прогресс каждые 20
-                if (processed + 1) % 20 == 0:
-                    await message.answer(
-                        f"📊 Прогресс: {processed + 1}/{total_count}\n"
-                        f"✅ Успешно: {updated}\n"
-                        f"❌ Ошибок: {errors}"
-                    )
-
-                processed += 1
-                await asyncio.sleep(1)  # уважаем API Groq
-
-            except Exception as e:
-                errors += 1
-                logger.exception(f"Ошибка при обработке {group.username}: {e}")
-                continue
-
-        # Финальное сообщение
-        await message.answer(
-            f"✅ Присвоение категорий завершено!\n\n"
-            f"📊 Всего: {processed}/{total_count}\n"
-            f"✅ Успешно: {updated}\n"
-            f"❌ Ошибок: {errors}"
+        # 📋 Финальный отчёт
+        await status_msg.edit_text(
+            f"✅ Обработка завершена!\n\n"
+            f"📊 Всего: {counters['processed']}/{total_count}\n"
+            f"✅ Присвоено: {counters['updated']}\n"
+            f"❌ Ошибок: {counters['errors']}\n\n"
+            f"💡 Запустите ещё раз для следующей партии."
         )
 
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
-        await message.answer(f"❌ Критическая ошибка: {e}")
-
+        logger.exception(f"❌ Критическая ошибка: {e}")
+        await status_msg.edit_text(f"❌ Ошибка: {e}")
     finally:
         if not db.is_closed():
             db.close()
 
-        logger.info("Актуализация завершена.")
+
+async def process_group_async(group, semaphore: asyncio.Semaphore, counters: dict, lock: asyncio.Lock):
+    """
+    Обрабатывает одну группу: получает категорию и обновляет БД.
+    Вызывается внутри asyncio.gather().
+    """
+    from ai.ai import category_assignment_openrouter  # Локальный импорт для избежания циклов
+
+    try:
+        # 🧩 Собираем контекст
+        context = (
+            f"Название: {group.name or 'Без названия'}\n"
+            f"Описание: {group.description or 'Без описания'}\n"
+            f"Username: @{group.username}\n"
+            f"Тип: {group.group_type or 'Неизвестен'}"
+        )
+
+        # 🤖 Получаем категорию (с семафором внутри)
+        category = await category_assignment_openrouter(context, semaphore)
+        category = category.strip().strip('".')
+
+        # 💾 Обновляем БД (только если категория валидна)
+        if category and category.lower() not in ["не определена", "undefined", ""]:
+            TelegramGroup.update(category=category).where(
+                TelegramGroup.telegram_id == group.telegram_id
+            ).execute()
+            success = True
+        else:
+            success = False
+
+        # 🔒 Безопасное обновление счётчиков
+        async with lock:
+            counters["processed"] += 1
+            if success:
+                counters["updated"] += 1
+            else:
+                counters["errors"] += 1
+
+            # 📈 Прогресс каждые 20 обработанных
+            if counters["processed"] % 20 == 0:
+                logger.info(f"📊 Прогресс: {counters['processed']}/{counters['total'] if 'total' in counters else '?'}")
+
+        logger.debug(f"✅ {group.username}: {category if success else 'пропущено'}")
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка {group.username}: {e}")
+        async with lock:
+            counters["processed"] += 1
+            counters["errors"] += 1
 
 
 def register_handlers_checking_group_for_ai():
