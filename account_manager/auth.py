@@ -63,12 +63,11 @@ class CheckingAccountsValidity:
         pass
 
     # === Подключение клиента Telethon ===
-    async def connect_client(self, session_name, user, message):
+    async def connect_client(self, session_name, user):
         """
         Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
         :param user: Пользователь из базы данных, для определения языка пользователя
         :param session_name: имя сессии Telethon
-        :param message: сообщение от пользователя
         :return: client - клиент Telethon
         """
 
@@ -78,7 +77,7 @@ class CheckingAccountsValidity:
         # === Проверка авторизации ===
         if not await client.is_user_authorized():
             logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
-            await message.answer(
+            await self.message.answer(
                 get_text(user.language, "account_missing_2"),
                 reply_markup=menu_launch_tracking_keyboard()
             )

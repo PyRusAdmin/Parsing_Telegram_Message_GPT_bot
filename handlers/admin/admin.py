@@ -13,7 +13,7 @@ from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 from telethon.tl.functions.channels import GetFullChannelRequest
 
-from account_manager.auth import checking_accounts
+from account_manager.auth import CheckingAccountsValidity
 from account_manager.parser import determine_telegram_chat_type
 from core.config import api_id, api_hash
 from database.database import TelegramGroup, db
@@ -85,10 +85,9 @@ async def update_db(message: Message):
      :param message: (Message) Входящее сообщение от администратора.
      :return: None
      """
-    available_sessions = await checking_accounts(  # ✅ Проверка аккаунтов на валидность
-        message=message,  # Отправка сообщений в чат
-        path="accounts/parsing"  # Путь к папке с сессиями
-    )
+    checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
+    # ✅ Проверка аккаунтов на валидность
+    available_sessions = await checker.checking_accounts()
 
     await message.answer("✅ Проверка завершена.")
 

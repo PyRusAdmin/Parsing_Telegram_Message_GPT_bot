@@ -11,7 +11,7 @@ from telethon.errors import (
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 from telethon.tl.types import Chat
 
-from account_manager.auth import connect_client
+from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from database.database import (
     create_groups_model, create_keywords_model, create_group_model, TelegramGroup, get_user_channel_usernames,
@@ -438,10 +438,10 @@ async def filter_messages(message, user_id, user, session_path):
 
         # Проверка на наличие подключенного аккаунта у пользователя для избежания ошибки
 
-        client = await connect_client(
+        checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
+        client = await checker.connect_client(
             session_name=session_path.replace(".session", ""),
-            user=user,
-            message=message
+            user=user
         )  # <-- ✅ подключаемся к клиенту Telethon
 
         # ✅ Сохраняем активный клиент

@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from account_manager.auth import checking_accounts
+from account_manager.auth import CheckingAccountsValidity
 from system.dispatcher import router
 
 
@@ -23,11 +23,9 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
 
         for path in path_accounts:
             logger.info(f"✅ Проверка аккаунтов в папке {path}")
-
-            available_sessions = await checking_accounts(  # ✅ Проверка аккаунтов на валидность
-                message=message,  # Отправка сообщений в чат
-                path=path  # Путь к папке с сессиями
-            )
+            # ✅ Проверка аккаунтов на валидность
+            checker = CheckingAccountsValidity(message=message, path=path)
+            available_sessions = await checker.checking_accounts()
             await message.answer(
                 f"🔍 Найдено аккаунтов: {len(available_sessions)} в папке {path}\n"
                 f"📱 Аккаунты: {', '.join([s.split('/')[-1] for s in available_sessions])}"

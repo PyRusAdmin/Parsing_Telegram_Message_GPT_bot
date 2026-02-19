@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from account_manager.auth import connect_client
+from account_manager.auth import CheckingAccountsValidity
 from account_manager.session import find_session_file
 from account_manager.unsubscribe import unsubscribe
 from database.database import create_groups_model, User
@@ -84,10 +84,10 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
         )
         return  # Правильный способ прервать выполнение обработчика
 
-    client = await connect_client(
+    checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
+    client = await checker.connect_client(
         session_name=session_path.replace(".session", ""),
         user=user,
-        message=message
     )  # <-- ✅ подключаемся к клиенту Telethon
     await unsubscribe(client, username_to_search, message)
 

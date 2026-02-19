@@ -62,25 +62,32 @@ async def receive_session_file(message: Message, state: FSMContext):
 
         # Проверяем валидность аккаунта
         checker = CheckingAccountsValidity(message=message, path=file_path)
-        result = checker.check_single_account(file_path)  # подставь свой метод, если называется иначе
+        client = checker.connect_client(session_name, user)  # подставь свой метод, если называется иначе
 
-        if result.get("valid", False):
-            await message.answer(
-                f"✅ Аккаунт успешно подключён!\n"
-                f"📱 Номер: {result.get('phone', 'неизвестно')}\n"
-                f"👤 Имя: {result.get('first_name', '')}",
-                reply_markup=back_keyboard()
-            )
-            logger.success(f"Новая сессия добавлена: {document.file_name}")
-        else:
-            await message.answer(
-                f"❌ Аккаунт не прошёл проверку:\n{result.get('error', 'Неизвестная ошибка')}\n\n"
-                f"Можете попробовать другой файл.",
-                reply_markup=back_keyboard()
-            )
-            # Удаляем невалидный файл
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        me = await client.get_me()
+        phone = me.phone or ""
+        logger.success(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone} прошел проверку")
+        await message.answer(
+            "Аккаунт успешно подключен",
+            reply_markup=back_keyboard()
+        )
+        # if result.get("valid", False):
+        #     await message.answer(
+        #         f"✅ Аккаунт успешно подключён!\n"
+        #         f"📱 Номер: {result.get('phone', 'неизвестно')}\n"
+        #         f"👤 Имя: {result.get('first_name', '')}",
+        #         reply_markup=back_keyboard()
+        #     )
+        #     logger.success(f"Новая сессия добавлена: {document.file_name}")
+        # else:
+        #     await message.answer(
+        #         f"❌ Аккаунт не прошёл проверку:\n{result.get('error', 'Неизвестная ошибка')}\n\n"
+        #         f"Можете попробовать другой файл.",
+        #         reply_markup=back_keyboard()
+        #     )
+        #     Удаляем невалидный файл
+        # if os.path.exists(file_path):
+        #     os.remove(file_path)
 
     except Exception as e:
         logger.exception(e)
