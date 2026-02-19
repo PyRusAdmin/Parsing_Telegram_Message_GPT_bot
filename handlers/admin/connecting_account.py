@@ -69,6 +69,8 @@ async def receive_session_file(message: Message, state: FSMContext):
 
             await client.disconnect()
 
+            await checker.handle_get_directory_path()
+
             await message.answer(
                 f"✅ Аккаунт успешно подключён!\n"
                 f"📱 Номер: `{phone}`\n"
@@ -76,6 +78,9 @@ async def receive_session_file(message: Message, state: FSMContext):
                 reply_markup=back_keyboard()
             )
             logger.success(f"Новая сессия добавлена: {phone}.session | ID: {me.id}")
+
+
+
         else:
             # ❌ Если проверка не прошла — удаляем файл
             if file_path.exists():

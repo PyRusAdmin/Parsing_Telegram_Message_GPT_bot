@@ -15,7 +15,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from database.database import delete_account_from_db
+from database.database import delete_account_from_db, write_account_to_db
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 
 mobile_device = {
@@ -197,6 +197,71 @@ class CheckingAccountsValidity:
         await telegram_client.disconnect()
         await delete_account_from_db(session_string=session_name)
 
+    async def handle_get_directory_path(self):
+        """
+        Обработчик события выбора session файлов
+
+        Открывает диалоговое окно для выбора session файлов и подключает их к базе данных.
+        """
+        try:
+            # Создаем клиент с обычной сессией
+            client = TelegramClient(
+                session=self.path,
+                api_id=api_id,
+                api_hash=api_hash,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"],
+            )
+
+            try:
+                await client.connect()
+
+                # Преобразуем в StringSession
+                session_string = StringSession.save(client.session)
+                await client.disconnect()
+
+                # Переподключаемся через StringSession
+                client = TelegramClient(
+                    StringSession(session_string),
+                    api_id=api_id,
+                    api_hash=api_hash,
+                    device_model=mobile_device["device_model"],
+                    system_version=mobile_device["system_version"],
+                    app_version=mobile_device["app_version"],
+                    lang_code=mobile_device["lang_code"],
+                    system_lang_code=mobile_device["system_lang_code"],
+                )
+
+                await client.connect()
+                me = await client.get_me()
+
+                # if not me:
+                #     logger.info(f"❌ Аккаунт {file_name} не валидный")
+                #     await client.disconnect()
+                #     continue
+
+                phone = me.phone or ""
+                logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+                # await self.app_logger.log_and_display(
+                #     message=f"✅ Аккаунт добавлен: | ID: {me.id} | Phone: {phone}"
+                # )
+                # Записываем в базу данных
+                write_account_to_db(
+                    session_string=session_string,
+                    phone_number=phone
+                )
+                await client.disconnect()
+
+            except Exception as error:
+                logger.exception(error)
+                await client.disconnect()
+
+        except Exception as e:
+            logger.exception(e)
+
     # === Подключение клиента Telethon ===
     async def connect_client(self, session_name):
         """
@@ -206,6 +271,7 @@ class CheckingAccountsValidity:
         """
 
         client = TelegramClient(session_name, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
+
         await client.connect()
 
         # === Проверка авторизации ===

@@ -18,6 +18,13 @@ class BaseModel(Model):
         database = db
 
 
+def init_database():
+    """Инициализация БД и создание таблиц"""
+    db.connect(reuse_if_open=True)
+    db.create_tables([Account], safe=True)
+    db.close()
+
+
 """Работа с аккаунтами"""
 
 
