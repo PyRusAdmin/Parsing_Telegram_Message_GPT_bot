@@ -2,7 +2,9 @@
 import os
 from datetime import datetime
 
-from peewee import SqliteDatabase, Model, IntegerField, CharField, AutoField, TextField, DateTimeField
+from loguru import logger
+from peewee import Model, CharField
+from peewee import SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField
 from peewee import fn
 
 db = SqliteDatabase('data/bot.db', timeout=30,
@@ -14,6 +16,109 @@ db = SqliteDatabase('data/bot.db', timeout=30,
 class BaseModel(Model):
     class Meta:
         database = db
+
+
+"""Работа с аккаунтами"""
+
+
+class Account(Model):
+    """Модель аккаунта"""
+    session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
+    phone_number = CharField()  # номер телефона аккаунта
+
+    class Meta:
+        database = db
+        table_name = 'account'
+
+
+def write_account_to_db(session_string, phone_number):
+    """
+    Запись аккаунта в базу данных
+    :param phone_number: Номер телефона аккаунта
+    :param session_string: Строка сессии
+    """
+    try:
+        Account.insert(session_string=session_string, phone_number=phone_number).on_conflict(action='IGNORE').execute()
+    except Exception as e:
+        logger.exception(e)
+
+
+def getting_account():
+    """
+    Получение аккаунтов из базы данных
+    :return: Список аккаунтов из базы данных
+    """
+
+    records = []
+    for record in Account.select(Account.session_string):
+        records.append(record.session_string)
+
+    return records
+
+
+async def delete_account_from_db(session_string: str) -> None:
+    """
+    Удаляет аккаунт из таблицы 'account' по session_string.
+    Перед удалением извлекает и логирует номер телефона.
+
+    :param session_string: Строка сессии аккаунта
+    :return: None
+    """
+    try:
+        # Ищем аккаунт по session_string
+        account = Account.get(Account.session_string == session_string)
+        phone_number = account.phone_number
+
+        logger.info(f"Найден аккаунт для удаления: {phone_number}")
+
+        # Удаляем запись
+        account.delete_instance()
+
+        logger.info(f"Аккаунт {phone_number} успешно удалён из базы данных.")
+
+    except Account.DoesNotExist:
+        logger.info(f"Аккаунт с session_string='{session_string}' не найден в базе.")
+    except Exception as e:
+        logger.exception("Ошибка при удалении аккаунта")
+        logger.info(f"Ошибка при удалении аккаунта: {e}")
+
+
+def get_account_list():
+    """
+    Получаем подключенные аккаунты: возвращаем список кортежей (phone, session_string)
+    :return: Список кортежей (phone, session_string)
+    """
+    accounts = []
+    for account in Account.select(Account.phone_number, Account.session_string):
+        accounts.append((account.phone_number, account.session_string))
+
+    return accounts  # Список аккаунтов
+
+
+async def update_phone_by_session(session_string: str, new_phone: str, app_logger) -> bool:
+    """
+    Обновляет номер телефона аккаунта в базе по session_string.
+
+    :param session_string: Строка сессии
+    :param new_phone: Новый номер телефона
+    :param app_logger: Логгер
+    :return: True при успехе, False при ошибке
+    """
+    try:
+        rows_updated = (Account
+                        .update(phone_number=new_phone)
+                        .where(Account.session_string == session_string)
+                        .execute())
+        if rows_updated > 0:
+            await app_logger.log_and_display(f"✅ Номер аккаунта обновлён: {new_phone}")
+            return True
+        else:
+            await app_logger.log_and_display(f"⚠️ Аккаунт с session_string='{session_string}' не найден для обновления")
+            return False
+    except Exception as e:
+        logger.exception("Ошибка при обновлении номера")
+        await app_logger.log_and_display(f"❌ Ошибка обновления номера: {e}")
+        return False
 
 
 def get_user_channel_usernames(user_id: int):

@@ -16,17 +16,13 @@ from system.dispatcher import router
 async def admin_connecting_account(message: Message, state: FSMContext):
     """Админ нажимает кнопку → бот просит .session файл"""
     await state.clear()
-
     telegram_id = message.from_user.id
-
     await state.set_state(MyStates.waiting_for_session_file)
-
     await message.answer(
         "📤 Отправьте мне файл сессии Telethon (должен заканчиваться на `.session`)\n\n"
         "После загрузки бот автоматически проверит аккаунт.",
         reply_markup=back_keyboard()
     )
-
     logger.info(f"Админ {telegram_id} начал добавление новой сессии")
 
 
