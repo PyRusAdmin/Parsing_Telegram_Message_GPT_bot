@@ -164,7 +164,6 @@ async def language_detection(message):
 
     # 1️⃣ Получаем группы для обработки
     groups_to_process = await get_groups_without_language()
-
     if not groups_to_process:
         await message.answer("❌ Нет групп для обработки")
         return
