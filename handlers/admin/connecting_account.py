@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os
+from pathlib import Path
 
 from aiogram import F
 from aiogram.fsm.context import FSMContext
@@ -18,16 +18,6 @@ async def admin_connecting_account(message: Message, state: FSMContext):
     await state.clear()
 
     telegram_id = message.from_user.id
-
-    # Проверка, что это админ (можно по ID или по полю в БД)
-    # try:
-    #     user = User.get(User.user_id == telegram_id)
-    #     if not user.is_admin:  # если у тебя есть такое поле
-    #         await message.answer("⛔ У вас нет прав администратора.")
-    #         return
-    # except:
-    #     await message.answer("⛔ Только администраторы могут подключать аккаунты.")
-    #     return
 
     await state.set_state(MyStates.waiting_for_session_file)
 
@@ -50,50 +40,63 @@ async def receive_session_file(message: Message, state: FSMContext):
             await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
             return
 
-        # Создаём папку accounts/parsing, если её нет
-        sessions_dir = "accounts/parsing"
-        os.makedirs(sessions_dir, exist_ok=True)
-        # Путь для сохранения
-        file_path = os.path.join(sessions_dir, document.file_name)
-        logger.debug(file_path)
-        # Скачиваем файл
+        # ✅ Создаём папку accounts/parsing, если её нет
+        sessions_dir = Path("accounts/parsing")
+        sessions_dir.mkdir(parents=True, exist_ok=True)
+
+        # ✅ Санитизация имени файла (убираем опасные символы)
+        safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
+        file_path = sessions_dir / safe_file_name
+
+        logger.debug(f"Сохраняем файл в: {file_path}")
+
+        # ✅ Скачиваем файл
         await message.bot.download(document, destination=file_path)
-        await message.answer(f"✅ Файл сохранён: `{document.file_name}`\n\nПроверяю аккаунт...")
+        await message.answer(f"✅ Файл сохранён: `{safe_file_name}`\n\nПроверяю аккаунт...")
 
-        # Проверяем валидность аккаунта
-        checker = CheckingAccountsValidity(message=message, path=file_path)
-        client = checker.connect_client(session_name, user)  # подставь свой метод, если называется иначе
+        # ✅ Извлекаем имя сессии без расширения
+        session_name = file_path.stem
 
-        me = await client.get_me()
-        phone = me.phone or ""
-        logger.success(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone} прошел проверку")
-        await message.answer(
-            "Аккаунт успешно подключен",
-            reply_markup=back_keyboard()
-        )
-        # if result.get("valid", False):
-        #     await message.answer(
-        #         f"✅ Аккаунт успешно подключён!\n"
-        #         f"📱 Номер: {result.get('phone', 'неизвестно')}\n"
-        #         f"👤 Имя: {result.get('first_name', '')}",
-        #         reply_markup=back_keyboard()
-        #     )
-        #     logger.success(f"Новая сессия добавлена: {document.file_name}")
-        # else:
-        #     await message.answer(
-        #         f"❌ Аккаунт не прошёл проверку:\n{result.get('error', 'Неизвестная ошибка')}\n\n"
-        #         f"Можете попробовать другой файл.",
-        #         reply_markup=back_keyboard()
-        #     )
-        #     Удаляем невалидный файл
-        # if os.path.exists(file_path):
-        #     os.remove(file_path)
+        # ✅ Проверяем валидность аккаунта
+        checker = CheckingAccountsValidity(message=message, path=str(sessions_dir))
+        client = await checker.connect_client(session_name=session_name, user=message.from_user)
+
+        if client:
+            me = await client.get_me()
+            phone = me.phone or "unknown"
+
+            # ✅ Переименовываем файл сессии в phone.session для удобства
+            new_session_path = sessions_dir / f"{phone}.session"
+            if file_path != new_session_path and not new_session_path.exists():
+                file_path.rename(new_session_path)
+                logger.info(f"📁 Сессия переименована: {safe_file_name} → {phone}.session")
+
+            await client.disconnect()
+
+            await message.answer(
+                f"✅ Аккаунт успешно подключён!\n"
+                f"📱 Номер: `{phone}`\n"
+                f"👤 Имя: `{me.first_name or ''}`",
+                reply_markup=back_keyboard()
+            )
+            logger.success(f"Новая сессия добавлена: {phone}.session | ID: {me.id}")
+        else:
+            # ❌ Если проверка не прошла — удаляем файл
+            if file_path.exists():
+                file_path.unlink()
+            await message.answer(
+                "❌ Аккаунт не прошёл проверку.\n\nМожете попробовать другой файл.",
+                reply_markup=back_keyboard()
+            )
 
     except Exception as e:
-        logger.exception(e)
+        logger.exception(f"Ошибка при обработке сессии: {e}")
+        await message.answer("⚠️ Произошла ошибка при проверке аккаунта.")
     finally:
         await state.clear()
 
 
 def register_handlers_admin_connect_account():
+    """✅ Регистрируем оба хендлера"""
     router.message.register(admin_connecting_account)
+    router.message.register(receive_session_file)

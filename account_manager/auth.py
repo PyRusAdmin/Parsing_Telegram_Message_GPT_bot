@@ -9,7 +9,6 @@ from telethon import TelegramClient
 
 from core.config import api_id, api_hash
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
-from locales.locales import get_text
 
 
 class CheckingAccountsValidity:
@@ -56,11 +55,11 @@ class CheckingAccountsValidity:
         # ✅ Проверка аккаунтов на валидность из папки parsing
         await self.connect_client_test(available_sessions=available_sessions, path=self.path)
 
-    async def check_single_account(self):
-        """
-        Проверка аккаунта подключаемого пользователем
-        """
-        pass
+    # async def check_single_account(self):
+    #     """
+    #     Проверка аккаунта подключаемого пользователем
+    #     """
+    #     pass
 
     # === Подключение клиента Telethon ===
     async def connect_client(self, session_name, user):
@@ -78,7 +77,7 @@ class CheckingAccountsValidity:
         if not await client.is_user_authorized():
             logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
             await self.message.answer(
-                get_text(user.language, "account_missing_2"),
+                "⚠️ Сессия аккаунта недействительна (session файл не валидный) — требуется повторный вход. Отправьте валидный файл сессии",
                 reply_markup=menu_launch_tracking_keyboard()
             )
             return
