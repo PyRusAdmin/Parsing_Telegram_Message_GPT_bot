@@ -18,6 +18,7 @@ class MyStates(StatesGroup):
     entering_keyword_ai_search_global = State()  # Глобальный поиск с помощью AI
 
     waiting_for_session_file = State()  # Ждем файл в формате session
+    processing_sessions = State()  # Обработка очереди файлов (внутреннее)
 
 
 class MyStatesParsing(StatesGroup):

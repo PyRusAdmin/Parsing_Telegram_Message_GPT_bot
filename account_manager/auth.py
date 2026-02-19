@@ -261,30 +261,44 @@ class CheckingAccountsValidity:
             logger.exception(e)
 
     # === Подключение клиента Telethon ===
-    async def connect_client(self):
+    async def connect_client(self) -> TelegramClient | None:
         """
-        Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
-        :return: client - клиент Telethon
+        Подключение клиента Telethon и проверка сессии.
+        Использует self.path (путь к файлу БЕЗ расширения .session)
+        :return: client или None, если сессия невалидна
         """
-        client = TelegramClient(self.path, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
+        if not self.path:
+            logger.error("❌ self.path не установлен для connect_client()")
+            return None
 
-        await client.connect()
+        client = TelegramClient(
+            self.path,  # Telethon сам добавит .session
+            api_id=api_id,
+            api_hash=api_hash,
+            device_model=mobile_device["device_model"],
+            system_version=mobile_device["system_version"],
+            app_version=mobile_device["app_version"],
+            lang_code=mobile_device["lang_code"],
+            system_lang_code=mobile_device["system_lang_code"],
+        )
 
-        # === Проверка авторизации ===
-        if not await client.is_user_authorized():
-            logger.error(f"⚠️ Сессия {self.path} недействительна — требуется повторный вход.")
-            await self.message.answer(
-                "⚠️ Сессия аккаунта недействительна (session файл не валидный) — требуется повторный вход. Отправьте валидный файл сессии",
-                reply_markup=menu_launch_tracking_keyboard()
-            )
-            return
+        try:
+            await client.connect()
 
-        me = await client.get_me()
-        phone = me.phone or ""
-        logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
-        logger.success("✅ Сессия активна, подключение успешно!")
+            if not await client.is_user_authorized():
+                logger.warning(f"⚠️ Сессия {self.path} не авторизована")
+                return None
 
-        return client
+            me = await client.get_me()
+            logger.success(f"✅ Сессия активна: {me.phone or me.id}")
+            return client
+
+        except Exception as e:
+            logger.exception(f"Ошибка подключения к {self.path}: {e}")
+            return None
+        finally:
+            # Не отключаем здесь — это делает вызывающий код после использования
+            pass
 
     # === Подключение клиента Telethon ===
     async def connect_client_test(self, path, available_sessions):
