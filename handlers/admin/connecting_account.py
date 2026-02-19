@@ -132,58 +132,35 @@ async def receive_session_file(message: Message, state: FSMContext):
         )
 
         # ✅ Если это был последний файл в очереди — показываем сводку
-        if processed_count == len(received_files):
-            summary = (
-                f"📊 <b>Обработка завершена!</b>\n"
-                f"✅ Успешно: {success_count}\n"
-                f"❌ Ошибки: {fail_count}\n\n"
-                f"🧹 Очищаю временные файлы..."
-            )
-            # Отправляем сообщение с началом очистки
-            cleanup_msg = await message.answer(summary, parse_mode="HTML")
+        # if processed_count == len(received_files):
+        # summary = (
+        #     f"📊 <b>Обработка завершена!</b>\n"
+        #     f"✅ Успешно: {success_count}\n"
+        #     f"❌ Ошибки: {fail_count}\n\n"
+        #     f"🧹 Очищаю временные файлы..."
+        # )
+        # Отправляем сообщение с началом очистки
+        # cleanup_msg = await message.answer(summary, parse_mode="HTML")
 
+        dir_del = ['accounts/parsing', 'accounts/parsing_grup', 'accounts/ai', 'accounts/free']
+        for dir in dir_del:
             # ✅ Запускаем очистку
-            cleanup_result = cleanup_session_files(
-                parsing_dir="accounts/parsing",
+            cleanup_session_files(
+                parsing_dir=dir,
                 root_dirs=[".", "accounts", "data", "sessions"]  # Укажите ваши корневые папки
             )
 
-            # ✅ Обновляем сообщение с результатом очистки
-            # cleanup_summary = ""
-            # if cleanup_result["parsing_dir_deleted"]:
-            #     cleanup_summary += "🗑️ Папка `accounts/parsing` удалена\n"
-            # if cleanup_result["root_files_deleted"] > 0:
-            #     cleanup_summary += f"🗑️ Удалено файлов из корня: {cleanup_result['root_files_deleted']}\n"
-            # if cleanup_result["errors"]:
-            #     cleanup_summary += f"⚠️ Ошибки: {len(cleanup_result['errors'])}\n"
+        await message.answer(
+            f"📊 <b>Обработка завершена!</b>\n",
+            parse_mode="HTML",
+            reply_markup=back_keyboard()
+        )
 
-            # if cleanup_summary:
-            await message.answer(
-                f"📊 <b>Обработка завершена!</b>\n",
-                # f"✅ Успешно: {success_count}\n"
-                # f"❌ Ошибки: {fail_count}\n\n"
-                # f"<b>🧹 Результат очистки:</b>\n"
-                # f"{cleanup_summary}\n"
-                # f"Можете отправить ещё файлы или нажать «Назад»",
-                parse_mode="HTML",
-                reply_markup=back_keyboard()
-            )
-            # else:
-            # await message.answer(
-            #     f"📊 <b>Обработка завершена!</b>\n",
-            # f"✅ Успешно: {success_count}\n"
-            # f"❌ Ошибки: {fail_count}\n\n"
-            # f"✅ Временные файлы уже очищены.\n"
-            # f"Можете отправить ещё файлы или нажать «Назад»",
-            # parse_mode="HTML",
-            # reply_markup=back_keyboard()
-            # )
-
-        # ✅ Очищаем очередь в состоянии
-        await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
+    # ✅ Очищаем очередь в состоянии
+    await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
 
 
-def cleanup_session_files(parsing_dir: str = "accounts/parsing", root_dirs: list[str] | None = None):
+def cleanup_session_files(parsing_dir: str, root_dirs: list[str] | None = None):
     """
     Полная очистка временных .session файлов
 
@@ -237,17 +214,7 @@ def cleanup_session_files(parsing_dir: str = "accounts/parsing", root_dirs: list
             logger.exception(error_msg)
             result["errors"].append(error_msg)
 
-    # ✅ Логируем итог
-    if result["parsing_dir_deleted"] or result["root_files_deleted"] > 0:
-        logger.success(
-            f"🧹 Очистка завершена: "
-            f"parsing_dir={'✅' if result['parsing_dir_deleted'] else '⏭️'}, "
-            f"root_files={result['root_files_deleted']}"
-        )
-    else:
-        logger.debug("🧹 Нечего очищать — папки и файлы уже удалены")
-
-    return result
+    logger.debug("🧹 Очистка завершена")
 
 
 def register_handlers_admin_connect_account():
