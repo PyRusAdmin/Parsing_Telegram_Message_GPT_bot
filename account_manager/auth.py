@@ -12,96 +12,6 @@ from keyboards.user.keyboards import menu_launch_tracking_keyboard
 from locales.locales import get_text
 
 
-# === Подключение клиента Telethon ===
-async def connect_client(session_name, user, message):
-    """
-    Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
-    :param user: Пользователь из базы данных, для определения языка пользователя
-    :param session_name: имя сессии Telethon
-    :param message: сообщение от пользователя
-    :return: client - клиент Telethon
-    """
-
-    client = TelegramClient(session_name, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
-
-    await client.connect()
-
-    # === Проверка авторизации ===
-    if not await client.is_user_authorized():
-        logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
-        await message.answer(
-            get_text(user.language, "account_missing_2"),
-            reply_markup=menu_launch_tracking_keyboard()
-        )
-        return
-
-    me = await client.get_me()
-    phone = me.phone or ""
-    logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
-
-    logger.info("✅ Сессия активна, подключение успешно!")
-
-    return client
-
-
-# === Подключение клиента Telethon ===
-async def connect_client_test(path, available_sessions):
-    """
-    Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
-    :param available_sessions: список доступных сессий Telethon
-    :param path: путь к папке с сессиями
-    :return: client - клиент Telethon
-    """
-    logger.info(f"🧾 Проверка сессий... {available_sessions}")
-
-    for session_name in available_sessions:
-
-        client = TelegramClient(f"{path}/{session_name}", api_id, api_hash, system_version="4.16.30-vxCUSTOM")
-
-        await client.connect()
-
-        # === Проверка авторизации ===
-        if not await client.is_user_authorized():
-            logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
-            await client.disconnect()
-            await asyncio.sleep(1)  # дать время ОС освободить файл
-            try:
-                os.remove(f"{path}/{session_name}.session")
-            except FileNotFoundError:
-                pass  # файл уже удалён
-
-            continue  # переходим к следующей сессии
-
-        me = await client.get_me()
-        phone = me.phone or ""
-        logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
-        logger.info("✅ Сессия активна, подключение успешно!")
-
-        await asyncio.sleep(1)  # дать время ОС освободить файл
-        await client.disconnect()
-        try:
-            os.rename(f"{path}/{session_name}.session", f"{path}/{phone}.session")
-        except FileExistsError:
-            await client.disconnect()
-            os.remove(f"{path}/{session_name}.session")
-
-        if client.is_connected():
-            await client.disconnect()  # отключаемся, если подключены
-
-
-async def checking_accounts(message, path):
-    """
-    ✅ Проверка аккаунтов на валидность
-    :param message: (Message) Входящее сообщение от администратора.
-    :param path: (str) Путь к папке с сессиями.
-    :return: (list) Список доступных сессий.
-    """
-    checking_accounts_validity = CheckingAccountsValidity(message, path)
-    await checking_accounts_validity.checking_accounts_for_validity()
-    available_sessions = await checking_accounts_validity.get_available_sessions()
-    return available_sessions
-
-
 class CheckingAccountsValidity:
 
     def __init__(self, message: Message, path: str):
@@ -144,4 +54,94 @@ class CheckingAccountsValidity:
         """
         available_sessions = await self.get_available_sessions()
         # ✅ Проверка аккаунтов на валидность из папки parsing
-        await connect_client_test(available_sessions=available_sessions, path=self.path)
+        await self.connect_client_test(available_sessions=available_sessions, path=self.path)
+
+    async def check_single_account(self):
+        """
+        Проверка аккаунта подключаемого пользователем
+        """
+        pass
+
+    # === Подключение клиента Telethon ===
+    async def connect_client(self, session_name, user, message):
+        """
+        Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
+        :param user: Пользователь из базы данных, для определения языка пользователя
+        :param session_name: имя сессии Telethon
+        :param message: сообщение от пользователя
+        :return: client - клиент Telethon
+        """
+
+        client = TelegramClient(session_name, api_id, api_hash, system_version="4.16.30-vxCUSTOM")
+        await client.connect()
+
+        # === Проверка авторизации ===
+        if not await client.is_user_authorized():
+            logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
+            await message.answer(
+                get_text(user.language, "account_missing_2"),
+                reply_markup=menu_launch_tracking_keyboard()
+            )
+            return
+
+        me = await client.get_me()
+        phone = me.phone or ""
+        logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+        logger.success("✅ Сессия активна, подключение успешно!")
+
+        return client
+
+    # === Подключение клиента Telethon ===
+    async def connect_client_test(self, path, available_sessions):
+        """
+        Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
+        :param available_sessions: список доступных сессий Telethon
+        :param path: путь к папке с сессиями
+        :return: client - клиент Telethon
+        """
+        logger.info(f"🧾 Проверка сессий... {available_sessions}")
+
+        for session_name in available_sessions:
+
+            client = TelegramClient(f"{path}/{session_name}", api_id, api_hash, system_version="4.16.30-vxCUSTOM")
+
+            await client.connect()
+
+            # === Проверка авторизации ===
+            if not await client.is_user_authorized():
+                logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
+                await client.disconnect()
+                await asyncio.sleep(1)  # дать время ОС освободить файл
+                try:
+                    os.remove(f"{path}/{session_name}.session")
+                except FileNotFoundError:
+                    pass  # файл уже удалён
+
+                continue  # переходим к следующей сессии
+
+            me = await client.get_me()
+            phone = me.phone or ""
+            logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+            logger.info("✅ Сессия активна, подключение успешно!")
+
+            await asyncio.sleep(1)  # дать время ОС освободить файл
+            await client.disconnect()
+            try:
+                os.rename(f"{path}/{session_name}.session", f"{path}/{phone}.session")
+            except FileExistsError:
+                await client.disconnect()
+                os.remove(f"{path}/{session_name}.session")
+
+            if client.is_connected():
+                await client.disconnect()  # отключаемся, если подключены
+
+    async def checking_accounts(self):
+        """
+        ✅ Проверка аккаунтов на валидность
+        :return: (list) Список доступных сессий.
+        """
+
+        # checking_accounts_validity = CheckingAccountsValidity(message, path)
+        await self.checking_accounts_for_validity()
+        available_sessions = await self.get_available_sessions()
+        return available_sessions
