@@ -6,7 +6,7 @@ import os
 import random
 import re
 from datetime import datetime
-
+from peewee import fn
 from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
@@ -189,9 +189,53 @@ def create_excel_file(groups):
 @router.message(F.text == "📥 Вся база")
 async def export_all_groups(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
-    await state.clear()  # Завершаем текущее состояние машины состояния
+    await state.clear()
+
     try:
-        # Получаем все записи из базы
+        # ====================== ОЧИСТКА ДУБЛИКАТОВ ======================
+        deleted_count = 0
+
+        # Находим все telegram_id, у которых больше одной записи
+        duplicates = (
+            TelegramGroup
+            .select(
+                TelegramGroup.telegram_id,
+                fn.COUNT(TelegramGroup.id).alias('cnt')
+            )
+            .where(TelegramGroup.telegram_id.is_null(False))  # игнорируем NULL
+            .group_by(TelegramGroup.telegram_id)
+            .having(fn.COUNT(TelegramGroup.id) > 1)
+        )
+
+        for dup in duplicates:
+            tid = dup.telegram_id
+
+            # Выбираем запись, которую оставляем (самая свежая)
+            keep_record = (
+                TelegramGroup
+                .select(TelegramGroup.id)
+                .where(TelegramGroup.telegram_id == tid)
+                .order_by(TelegramGroup.date_added.desc())
+                .limit(1)
+                .get()
+            )
+
+            # Удаляем все остальные записи с этим telegram_id
+            deleted = (
+                TelegramGroup
+                .delete()
+                .where(
+                    (TelegramGroup.telegram_id == tid) &
+                    (TelegramGroup.id != keep_record.id)
+                )
+                .execute()
+            )
+            deleted_count += deleted
+
+        if deleted_count > 0:
+            logger.info(f"✅ Перед экспортом очищено {deleted_count} дубликатов по telegram_id")
+
+        # ====================== ЭКСПОРТ ======================
         groups = TelegramGroup.select()
         if not groups:
             await message.answer("📭 База данных пуста.")
@@ -201,7 +245,9 @@ async def export_all_groups(message: Message, state: FSMContext):
         document = BufferedInputFile(excel_bytes, filename="Вся_база.xlsx")
         await message.answer_document(
             document=document,
-            caption=f"📦 Вся база данных Telegram-групп и каналов.\n\n📊 Всего записей: {len(groups)}"
+            caption=f"📦 Вся база данных Telegram-групп и каналов.\n\n"
+                    f"📊 Всего записей: {len(groups)}\n"
+                    f"🧹 Дубликатов удалено перед экспортом: {deleted_count}"
         )
 
     except Exception as e:
