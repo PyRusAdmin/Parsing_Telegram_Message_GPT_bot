@@ -79,8 +79,6 @@ async def receive_session_file(message: Message, state: FSMContext):
             )
             logger.success(f"Новая сессия добавлена: {phone}.session | ID: {me.id}")
 
-
-
         else:
             # ❌ Если проверка не прошла — удаляем файл
             if file_path.exists():
