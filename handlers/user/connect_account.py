@@ -118,16 +118,12 @@ async def handle_account_file(message: Message, state: FSMContext):
     user_folder = os.path.join(os.getcwd(), f"accounts/{message.from_user.id}")
     os.makedirs(user_folder, exist_ok=True)
 
-    # Полный путь к новому файлу
-    new_file_path = os.path.join(user_folder, message.document.file_name)
-
     # 🧹 Удаляем старые файлы .session и .session-journal
     deleted_files = []
     for file_name in os.listdir(user_folder):
         if file_name.endswith(".session") or file_name.endswith(".session-journal"):
-            full_path = os.path.join(user_folder, file_name)
             try:
-                os.remove(full_path)
+                os.remove(os.path.join(user_folder, file_name))
                 deleted_files.append(file_name)
             except Exception as e:
                 logger.error(f"Ошибка при удалении {file_name}: {e}")
@@ -137,7 +133,7 @@ async def handle_account_file(message: Message, state: FSMContext):
 
     # Скачиваем новый файл
     file = await message.bot.get_file(message.document.file_id)
-    await message.bot.download_file(file.file_path, new_file_path)
+    await message.bot.download_file(file.file_path, os.path.join(user_folder, message.document.file_name))
 
     # Ответ пользователю
     msg = f"✅ Аккаунт {message.document.file_name} успешно загружен."
