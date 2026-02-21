@@ -108,39 +108,11 @@ async def handle_account_file(message: Message, state: FSMContext):
     await state.clear()  # Завершаем текущее состояние машины состояния
     logger.info(f"User {message.from_user.id} отправил аккаунт {message.document.file_name}")
 
-    # Проверяем расширение файла
-    # if not message.document.file_name.endswith(".session"):
-    #     await message.answer("⚠️ Пожалуйста, отправьте корректный файл сессии (.session).")
-    #     return
-
-    # Папка пользователя
-    # user_folder = os.path.join(os.getcwd(), f"accounts/{message.from_user.id}")
-    # os.makedirs(user_folder, exist_ok=True)
-    # logger.info(user_folder)
-
-    # 🧹 Удаляем старые файлы .session и .session-journal
-    # deleted_files = []
-    # for file_name in os.listdir(user_folder):
-    #     if file_name.endswith(".session") or file_name.endswith(".session-journal"):
-    #         try:
-    #             os.remove(os.path.join(user_folder, file_name))
-    #             deleted_files.append(file_name)
-    #         except Exception as e:
-    #             logger.error(f"Ошибка при удалении {file_name}: {e}")
-    #
-    # if deleted_files:
-    #     logger.info(f"Удалены старые файлы: {', '.join(deleted_files)}")
-
     # Скачиваем новый файл
     file = await message.bot.get_file(message.document.file_id)
-    logger.info(user_folder)
+    logger.info(file)
     await CheckingAccountsValidity(path=file, message=message).handle_get_directory_path()
-    await message.bot.download_file(file.file_path, os.path.join(user_folder, message.document.file_name))
 
-    # Ответ пользователю
-    # msg = f"✅ Аккаунт {message.document.file_name} успешно загружен."
-    # if deleted_files:
-    #     msg += f"\n♻️ Старые файлы ({', '.join(deleted_files)}) были удалены. Аккаунт обновлен"
     await message.answer(f"✅ Аккаунт {message.document.file_name} успешно загружен.")
 
 
