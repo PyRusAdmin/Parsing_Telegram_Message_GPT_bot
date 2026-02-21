@@ -181,8 +181,14 @@ def connect_keyboard_account():
     """Если у пользователя не подключен аккаунт, то высылаем ему наддую клавиатуру"""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔐 Подключить аккаунт")],
-            [KeyboardButton(text="🔐 Подключить свободный аккаунт")],
+            [KeyboardButton(
+                text="🔐 Подключить аккаунт",
+                style="success"
+            )],
+            [KeyboardButton(
+                text="🔐 Подключить свободный аккаунт",
+                style="success"
+            )],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
