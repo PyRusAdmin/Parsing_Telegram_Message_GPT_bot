@@ -109,14 +109,14 @@ async def handle_account_file(message: Message, state: FSMContext):
     logger.info(f"User {message.from_user.id} отправил аккаунт {message.document.file_name}")
 
     # Проверяем расширение файла
-    if not message.document.file_name.endswith(".session"):
-        await message.answer("⚠️ Пожалуйста, отправьте корректный файл сессии (.session).")
-        return
+    # if not message.document.file_name.endswith(".session"):
+    #     await message.answer("⚠️ Пожалуйста, отправьте корректный файл сессии (.session).")
+    #     return
 
     # Папка пользователя
-    user_folder = os.path.join(os.getcwd(), f"accounts/{message.from_user.id}")
-    os.makedirs(user_folder, exist_ok=True)
-    logger.info(user_folder)
+    # user_folder = os.path.join(os.getcwd(), f"accounts/{message.from_user.id}")
+    # os.makedirs(user_folder, exist_ok=True)
+    # logger.info(user_folder)
 
     # 🧹 Удаляем старые файлы .session и .session-journal
     # deleted_files = []
