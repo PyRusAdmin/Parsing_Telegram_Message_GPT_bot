@@ -29,21 +29,17 @@ async def handle_connect_account(message: Message, state: FSMContext):
     :return: None
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
-    user_tg = message.from_user
-
     # Создаём пользователя с language = "unset", если его нет
     user, created = User.get_or_create(
-        user_id=user_tg.id,
+        user_id=message.from_user.id,
         defaults={
-            "username": user_tg.username,
-            "first_name": user_tg.first_name,
-            "last_name": user_tg.last_name,
+            "username": message.from_user.username,
+            "first_name": message.from_user.first_name,
+            "last_name": message.from_user.last_name,
             "language": "unset"  # ← ключевое: "unset" = язык не выбран
         }
     )
-
-    text = get_text(user.language, "connect_account")
-    await message.answer(text, reply_markup=back_keyboard())
+    await message.answer(get_text(user.language, "connect_account"), reply_markup=back_keyboard())
 
 
 @router.message(F.text == "🔐 Подключить свободный аккаунт")
