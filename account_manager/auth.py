@@ -16,8 +16,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from database.database import delete_account_from_db, write_account_to_db, getting_account
-from keyboards.user.keyboards import menu_launch_tracking_keyboard
+from database.database import delete_account_from_db, write_account_to_db, getting_account, write_account_to_dbs
 
 mobile_device = {
     "device_model": "Pixel 5",
@@ -37,6 +36,7 @@ class CheckingAccountsValidity:
         """
         self.message = message
         self.path = Path(path) if path else None  # ✅ path теперь опционален
+        self.user_id = message.from_user.id
 
     async def scanning_folder_for_session_files(self):
         """
@@ -247,7 +247,8 @@ class CheckingAccountsValidity:
                 logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
 
                 # Записываем в базу данных
-                write_account_to_db(
+                write_account_to_dbs(
+                    user_id=self.user_id,
                     session_string=session_string,
                     phone_number=phone
                 )

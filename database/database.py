@@ -75,14 +75,10 @@ async def delete_account_from_db(session_string: str) -> None:
         # Ищем аккаунт по session_string
         account = Account.get(Account.session_string == session_string)
         phone_number = account.phone_number
-
         logger.info(f"Найден аккаунт для удаления: {phone_number}")
-
         # Удаляем запись
         account.delete_instance()
-
         logger.info(f"Аккаунт {phone_number} успешно удалён из базы данных.")
-
     except Account.DoesNotExist:
         logger.info(f"Аккаунт с session_string='{session_string}' не найден в базе.")
     except Exception as e:
@@ -185,6 +181,29 @@ class User(BaseModel):
     first_name = CharField(null=True)
     last_name = CharField(null=True)
     language = CharField(default="ru")  # "ru" или "en"
+
+def write_account_to_dbs(user_id: int, session_string: str, phone_number: str):
+    AccountsTable = create_accounts_table(user_id)
+    account, created = AccountsTable.get_or_create(
+        session_string=session_string,
+        defaults={"phone_number": phone_number}
+    )
+    if created:
+        logger.info(f"✅ Аккаунт {phone_number} записан в БД.")
+    else:
+        logger.info(f"⚠️ Аккаунт {phone_number} уже существует в БД.")
+
+def create_accounts_table(user_id):
+    class UserAccountsTable(BaseModel):
+        session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
+        phone_number = CharField()  # номер телефона аккаунта
+
+        class Meta:
+            table_name = f"{user_id}_accounts"  # Имя таблицы
+
+    db.connect(reuse_if_open=True)
+    db.create_tables([UserAccountsTable], safe=True)
+    return UserAccountsTable
 
 
 def create_groups_model(user_id):
