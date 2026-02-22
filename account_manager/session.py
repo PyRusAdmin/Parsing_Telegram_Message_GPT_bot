@@ -77,7 +77,6 @@ async def _is_session_valid(session_string: str) -> bool:
     :return: True если сессия выглядит валидной, False если нет
     """
 
-
     # 🔹 Простая проверка: сессия не должна быть пустой и должна иметь правильный формат
     if not session_string or len(session_string) < 50:
         return False
