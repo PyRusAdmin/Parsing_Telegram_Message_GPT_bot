@@ -8,6 +8,7 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger
+from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import User
@@ -127,7 +128,7 @@ async def handle_account_file(message: Message, state: FSMContext):
             await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
             return
 
-        # ✅ 2. Создаём папку для сессий пользователя
+        # ✅ Создаём папку для сессий пользователя
         sessions_dir = creates_temporary_folder_for_accounts()
 
         # ✅ Санитизация имени файла (убираем опасные символы)
@@ -135,37 +136,58 @@ async def handle_account_file(message: Message, state: FSMContext):
         # local_file_path = sessions_dir / safe_name
         local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
 
-        # ✅ 4. Скачиваем файл НА ЛОКАЛЬНЫЙ ДИСК
+        # ✅ Скачиваем файл НА ЛОКАЛЬНЫЙ ДИСК
         # ⚠️ file.file_path — это путь на серверах Telegram, его нельзя использовать напрямую!
         await message.bot.download(document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
 
         await message.answer(f"📥 Файл получен: `{safe_file_name}`\n\n🔍 Проверяю аккаунт...")
 
-        # ✅ 5. Передаём путь БЕЗ расширения .session (Telethon добавит его сам)
+        # ✅ Передаём путь БЕЗ расширения .session (Telethon добавит его сам)
         session_path_without_ext = str(local_file_path.with_suffix(""))
 
-        # ✅ 6. Создаем checker и обрабатываем сессию
-        checker = CheckingAccountsValidity(message=message, path=session_path_without_ext, user_id=user_id)
-        result = await checker.validate_and_save_session()
+        # ✅ Создаем checker и обрабатываем сессию
+        checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
+        client = await checker.connect_client()
 
-        # ✅ 7. Обрабатываем результат
-        if result.get("success"):
-            # Удаляем временный .session файл (он больше не нужен, т.к. есть StringSession в БД)
+        # ✅ Обрабатываем результат
+        # if result.get("success"):
+        # Удаляем временный .session файл (он больше не нужен, т.к. есть StringSession в БД)
+        # if local_file_path.exists():
+        #     local_file_path.unlink()
+        # Также удаляем возможный .session-journal
+        # journal_path = local_file_path.with_suffix(".session-journal")
+        # if journal_path.exists():
+        #     journal_path.unlink()
+        #
+        # await message.answer(
+        #     f"✅ Аккаунт успешно подключён!\n"
+        #     f"📱 Номер: `{result['phone']}`\n"
+        #     f"👤 Имя: `{result['first_name'] or ''}`\n"
+        #     f"🔐 Сессия сохранена в базе данных."
+        # )
+        # logger.success(f"✅ Сессия добавлена в БД: {result['phone']} | User: {user_id}")
+        if client:
+            me = await client.get_me()
+            phone = me.phone or "unknown"
+            first_name = me.first_name or ""
+
+            # ✅ Конвертируем в StringSession и сохраняем в БД
+            session_string = StringSession.save(client.session)
+            write_account_to_db(session_string=session_string, phone_number=phone)
+            await client.disconnect()
+            # ✅ Удаляем временный .session файл
             if local_file_path.exists():
                 local_file_path.unlink()
-                # Также удаляем возможный .session-journal
-                journal_path = local_file_path.with_suffix(".session-journal")
-                if journal_path.exists():
-                    journal_path.unlink()
-
+            # ✅ Обновляем статистику
+            # success_count += 1
+            logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
+            # ✅ Отправляем результат для этого файла
             await message.answer(
-                f"✅ Аккаунт успешно подключён!\n"
-                f"📱 Номер: `{result['phone']}`\n"
-                f"👤 Имя: `{result['first_name'] or ''}`\n"
-                f"🔐 Сессия сохранена в базе данных."
+                f"✅ <b>{safe_file_name}</b> — успешно!\n"
+                f"📱 {phone} | 👤 {first_name}",
+                parse_mode="HTML"
             )
-            logger.success(f"✅ Сессия добавлена в БД: {result['phone']} | User: {user_id}")
         else:
             # ❌ Если ошибка — удаляем файл и сообщаем пользователю
             if local_file_path.exists():
