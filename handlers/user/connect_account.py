@@ -105,8 +105,6 @@ def sanitization_file_name(document, sessions_dir):
     return local_file_path, safe_file_name
 
 
-# handlers/user/connect_account.py
-
 @router.message(F.document)
 async def handle_account_file(message: Message, state: FSMContext):
     """Обработчик приёма файла сессии (.session) от пользователя"""
@@ -138,7 +136,7 @@ async def handle_account_file(message: Message, state: FSMContext):
 
         # ✅ Передаём путь БЕЗ расширения .session
         session_path_without_ext = str(local_file_path.with_suffix(""))
-
+        logger.info(session_path_without_ext)
         # ✅ Создаем checker и обрабатываем сессию
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
         client = await checker.connect_client()
