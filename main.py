@@ -77,7 +77,7 @@ async def main() -> None:
         register_handlers_languages()  # Присвоение языка группам / каналам
         register_handlers_admin_connect_account()  # Подключение аккаунтов админом бота
 
-        await dp.start_polling(bot)
+        await dp.start_polling(bot) # Запуск поллинг обновлений от Telegram
 
     except Exception as e:
         logger.exception(e)

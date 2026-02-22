@@ -2,11 +2,12 @@
 import os
 import random
 import shutil
+from pathlib import Path
 
 from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import User
@@ -83,37 +84,103 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
     )
 
 
+def creates_temporary_folder_for_accounts():
+    """
+    Создание временной папки для аккаунтов пользователя.
+    :return:
+    """
+    sessions_dir = Path("accounts")
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    return sessions_dir
+
+
+def sanitization_file_name(document, sessions_dir):
+    """
+    Очистка имени файла от недопустимых символов (файлов сессии).
+    :return:
+    """
+    safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
+    local_file_path = sessions_dir / safe_file_name
+    return local_file_path, safe_file_name
+
+
 @router.message(F.document)
 async def handle_account_file(message: Message, state: FSMContext):
     """
-    Обработчик приёма файла сессии (.session) от пользователя для подключения аккаунта Telegram.
+    Обработчик приёма файла сессии (.session) от пользователя.
 
-    Функция выполняет следующие действия:
-    1. Сбрасывает текущее состояние FSM.
-    2. Проверяет, что присланный файл имеет расширение .session.
-    3. Создаёт папку пользователя в директории 'accounts/' если её нет.
-    4. Удаляет старые файлы сессий (.session и .session-journal) в папке пользователя.
-    5. Скачивает и сохраняет новый .session-файл.
-    6. Уведомляет пользователя об успешной загрузке (и удалении старых файлов, если было).
-
-    - Принимаются только файлы с расширением '.session'.
-    - Старые сессии удаляются для предотвращения конфликтов.
-    - Файлы хранятся по пути 'accounts/{user_id}/'.
-    - Используется бот API для скачивания файла.
-
-    :param message: (Message) Входящее сообщение с документом от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, используется для сброса состояния.
-    :return: None
+    ✅ Правильный порядок:
+    1. Проверяем расширение .session
+    2. Создаём папку accounts/{user_id}/
+    3. Скачиваем файл на диск через message.bot.download()
+    4. Передаём ЛОКАЛЬНЫЙ путь (без .session) в CheckingAccountsValidity
+    5. Обрабатываем и сохраняем StringSession в БД
     """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    logger.info(f"User {message.from_user.id} отправил аккаунт {message.document.file_name}")
+    try:
+        await state.clear()
+        user_id = message.from_user.id  # получаем id пользователя
+        document = message.document  # получаем файл сессии
+        logger.info(f"User {user_id} отправил файл: {document.file_name}")
 
-    # Скачиваем новый файл
-    file = await message.bot.get_file(message.document.file_id)
-    logger.info(file)
-    await CheckingAccountsValidity(path=file, message=message).handle_get_directory_path()
+        # ✅ Проверяем расширение
+        if not document.file_name.endswith('.session'):
+            await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
+            return
 
-    await message.answer(f"✅ Аккаунт {message.document.file_name} успешно загружен.")
+        # ✅ 2. Создаём папку для сессий пользователя
+        sessions_dir = creates_temporary_folder_for_accounts()
+
+        # ✅ Санитизация имени файла (убираем опасные символы)
+        # safe_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
+        # local_file_path = sessions_dir / safe_name
+        local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
+
+        # ✅ 4. Скачиваем файл НА ЛОКАЛЬНЫЙ ДИСК
+        # ⚠️ file.file_path — это путь на серверах Telegram, его нельзя использовать напрямую!
+        await message.bot.download(document, destination=local_file_path)
+        logger.info(f"✅ Файл скачан: {local_file_path}")
+
+        await message.answer(f"📥 Файл получен: `{safe_file_name}`\n\n🔍 Проверяю аккаунт...")
+
+        # ✅ 5. Передаём путь БЕЗ расширения .session (Telethon добавит его сам)
+        session_path_without_ext = str(local_file_path.with_suffix(""))
+
+        # ✅ 6. Создаем checker и обрабатываем сессию
+        checker = CheckingAccountsValidity(message=message, path=session_path_without_ext, user_id=user_id)
+        result = await checker.validate_and_save_session()
+
+        # ✅ 7. Обрабатываем результат
+        if result.get("success"):
+            # Удаляем временный .session файл (он больше не нужен, т.к. есть StringSession в БД)
+            if local_file_path.exists():
+                local_file_path.unlink()
+                # Также удаляем возможный .session-journal
+                journal_path = local_file_path.with_suffix(".session-journal")
+                if journal_path.exists():
+                    journal_path.unlink()
+
+            await message.answer(
+                f"✅ Аккаунт успешно подключён!\n"
+                f"📱 Номер: `{result['phone']}`\n"
+                f"👤 Имя: `{result['first_name'] or ''}`\n"
+                f"🔐 Сессия сохранена в базе данных."
+            )
+            logger.success(f"✅ Сессия добавлена в БД: {result['phone']} | User: {user_id}")
+        else:
+            # ❌ Если ошибка — удаляем файл и сообщаем пользователю
+            if local_file_path.exists():
+                local_file_path.unlink()
+
+            error_msg = result.get("error", "Неизвестная ошибка")
+            await message.answer(f"❌ Аккаунт не прошёл проверку:\n`{error_msg}`")
+            logger.warning(f"❌ Сессия {safe_file_name} не валидна: {error_msg}")
+
+    except Exception as e:
+        logger.exception(f"Ошибка при обработке сессии пользователя {user_id}: {e}")
+        await message.answer("⚠️ Произошла ошибка при проверке аккаунта. Попробуйте позже.")
+    finally:
+        # ✅ Очищаем состояние FSM
+        await state.clear()
 
 
 def register_connect_account_handler():

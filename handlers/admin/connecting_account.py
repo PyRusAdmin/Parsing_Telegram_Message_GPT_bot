@@ -10,6 +10,7 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import write_account_to_db
+from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
 from keyboards.user.keyboards import back_keyboard
 from states.states import MyStates
 from system.dispatcher import router
@@ -40,7 +41,9 @@ MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну се�
 @router.message(MyStates.waiting_for_session_file, F.document)
 async def receive_session_file(message: Message, state: FSMContext):
     """Получаем .session файл(ы) от админа и обрабатываем по очереди"""
-    document = message.document
+    user_id = message.from_user.id  # получаем id пользователя
+    document = message.document  # получаем файл сессии
+    logger.info(f"User {user_id} отправил файл: {document.file_name}")
 
     # ✅ Проверяем расширение
     if not document.file_name.endswith('.session'):
@@ -73,11 +76,12 @@ async def receive_session_file(message: Message, state: FSMContext):
                              f"📊 В очереди: {total} файл(ов). Обрабатываю...")
     try:
         # ✅ Создаём папку для временного хранения
-        sessions_dir = Path("accounts/parsing")
-        sessions_dir.mkdir(parents=True, exist_ok=True)
+        sessions_dir = creates_temporary_folder_for_accounts()
         # ✅ Санитизация имени файла
-        safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
-        file_path = sessions_dir / safe_file_name
+        # safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
+        # file_path = sessions_dir / safe_file_name
+        file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
+
         # ✅ Скачиваем файл
         await message.bot.download(document, destination=file_path)
         # ✅ Извлекаем путь без расширения для Telethon
