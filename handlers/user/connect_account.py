@@ -122,56 +122,29 @@ async def handle_account_file(message: Message, state: FSMContext):
         user_id = message.from_user.id  # получаем id пользователя
         document = message.document  # получаем файл сессии
         logger.info(f"User {user_id} отправил файл: {document.file_name}")
-
         # ✅ Проверяем расширение
         if not document.file_name.endswith('.session'):
             await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
             return
-
         # ✅ Создаём папку для сессий пользователя
         sessions_dir = creates_temporary_folder_for_accounts()
-
         # ✅ Санитизация имени файла (убираем опасные символы)
-        # safe_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
-        # local_file_path = sessions_dir / safe_name
         local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
-
         # ✅ Скачиваем файл НА ЛОКАЛЬНЫЙ ДИСК
         # ⚠️ file.file_path — это путь на серверах Telegram, его нельзя использовать напрямую!
         await message.bot.download(document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
-
         await message.answer(f"📥 Файл получен: `{safe_file_name}`\n\n🔍 Проверяю аккаунт...")
-
         # ✅ Передаём путь БЕЗ расширения .session (Telethon добавит его сам)
         session_path_without_ext = str(local_file_path.with_suffix(""))
-
         # ✅ Создаем checker и обрабатываем сессию
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
         client = await checker.connect_client()
-
         # ✅ Обрабатываем результат
-        # if result.get("success"):
-        # Удаляем временный .session файл (он больше не нужен, т.к. есть StringSession в БД)
-        # if local_file_path.exists():
-        #     local_file_path.unlink()
-        # Также удаляем возможный .session-journal
-        # journal_path = local_file_path.with_suffix(".session-journal")
-        # if journal_path.exists():
-        #     journal_path.unlink()
-        #
-        # await message.answer(
-        #     f"✅ Аккаунт успешно подключён!\n"
-        #     f"📱 Номер: `{result['phone']}`\n"
-        #     f"👤 Имя: `{result['first_name'] or ''}`\n"
-        #     f"🔐 Сессия сохранена в базе данных."
-        # )
-        # logger.success(f"✅ Сессия добавлена в БД: {result['phone']} | User: {user_id}")
         if client:
             me = await client.get_me()
             phone = me.phone or "unknown"
             first_name = me.first_name or ""
-
             # ✅ Конвертируем в StringSession и сохраняем в БД
             session_string = StringSession.save(client.session)
             write_account_to_db(session_string=session_string, phone_number=phone)
