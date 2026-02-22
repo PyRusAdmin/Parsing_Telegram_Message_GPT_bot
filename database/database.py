@@ -305,19 +305,6 @@ def create_accounts_table(user_id: int):
     return UserAccountsTable  # ✅ Возвращаем класс модели для использования
 
 
-# def create_accounts_table(user_id):
-#     class UserAccountsTable(BaseModel):
-#         session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
-#         phone_number = CharField()  # номер телефона аккаунта
-#
-#         class Meta:
-#             table_name = f"{user_id}_accounts"  # Имя таблицы
-#
-#     db.connect(reuse_if_open=True)
-#     db.create_tables([UserAccountsTable], safe=True)
-#     return UserAccountsTable
-
-
 def create_groups_model(user_id):
     """
     Динамически создаёт модель Peewee для хранения чатов конкретного пользователя.
