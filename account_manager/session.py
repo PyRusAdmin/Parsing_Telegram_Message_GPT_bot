@@ -6,7 +6,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from database.database import get_user_accounts
+from database.database import get_user_accounts, delete_user_account
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 
 
