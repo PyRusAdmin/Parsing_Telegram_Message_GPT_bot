@@ -2,8 +2,10 @@
 import random
 
 from loguru import logger
+from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+from core.config import api_id, api_hash
 from database.database import get_user_accounts
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 
@@ -46,7 +48,7 @@ async def find_session_file(user_id: int, user, message):
                 reply_markup=menu_launch_tracking_keyboard()
             )
             # 🔹 Удаляем невалидную сессию из БД
-            from database.database import delete_user_account
+
             delete_user_account(user_id, session_string)
             # 🔹 Рекурсивно пробуем найти другой аккаунт
             return await find_session_file(user_id, user, message)
@@ -74,8 +76,7 @@ async def _is_session_valid(session_string: str) -> bool:
     :param session_string: Строка сессии Telethon
     :return: True если сессия выглядит валидной, False если нет
     """
-    from telethon import TelegramClient
-    from core.config import api_id, api_hash
+
 
     # 🔹 Простая проверка: сессия не должна быть пустой и должна иметь правильный формат
     if not session_string or len(session_string) < 50:
