@@ -251,35 +251,33 @@ def get_user_accounts(user_id: int) -> list[dict]:
         return []
 
 
-# def delete_user_account(user_id: int, session_string: str) -> bool:
-#     """
-#     Удаляет аккаунт из персональной таблицы пользователя
-#
-#     :param user_id: ID пользователя Telegram
-#     :param session_string: Строка сессии для удаления
-#     :return: True если удалено, False если не найдено или ошибка
-#     """
-#     try:
-#         UserAccountsTable = create_accounts_table(user_id)
-#
-#         deleted = (UserAccountsTable
-#                    .delete()
-#                    .where(UserAccountsTable.session_string == session_string)
-#                    .execute())
-#
-#         if deleted > 0:
-#             logger.info(f"🗑️ Аккаунт удалён из таблицы {user_id}_accounts")
-#             return True
-#         else:
-#             logger.warning(f"⚠️ Аккаунт не найден в таблице {user_id}_accounts")
-#             return False
-#
-#     except Exception as e:
-#         logger.exception(f"❌ Ошибка удаления аккаунта пользователя {user_id}: {e}")
-#         return False
+def delete_user_account(user_id: int, session_string: str) -> bool:
+    """
+    Удаляет аккаунт из персональной таблицы пользователя
 
+    :param user_id: ID пользователя Telegram
+    :param session_string: Строка сессии для удаления
+    :return: True если удалено, False если не найдено или ошибка
+    """
+    try:
+        UserAccountsTable = create_accounts_table(user_id)
 
-# database/database.py
+        deleted = (UserAccountsTable
+                   .delete()
+                   .where(UserAccountsTable.session_string == session_string)
+                   .execute())
+
+        if deleted > 0:
+            logger.info(f"🗑️ Аккаунт удалён из таблицы {user_id}_accounts")
+            return True
+        else:
+            logger.warning(f"⚠️ Аккаунт не найден в таблице {user_id}_accounts")
+            return False
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка удаления аккаунта пользователя {user_id}: {e}")
+        return False
+
 
 def create_accounts_table(user_id: int):
     """
