@@ -16,7 +16,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from database.database import delete_account_from_db, write_account_to_db, getting_account, write_account_to_dbs
+from database.database import delete_account_from_db, getting_account, write_account_to_dbs
 
 mobile_device = {
     "device_model": "Pixel 5",
