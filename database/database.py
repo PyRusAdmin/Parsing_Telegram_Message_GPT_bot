@@ -182,6 +182,7 @@ class User(BaseModel):
     last_name = CharField(null=True)
     language = CharField(default="ru")  # "ru" или "en"
 
+
 def write_account_to_dbs(user_id: int, session_string: str, phone_number: str):
     AccountsTable = create_accounts_table(user_id)
     account, created = AccountsTable.get_or_create(
@@ -192,6 +193,91 @@ def write_account_to_dbs(user_id: int, session_string: str, phone_number: str):
         logger.info(f"✅ Аккаунт {phone_number} записан в БД.")
     else:
         logger.info(f"⚠️ Аккаунт {phone_number} уже существует в БД.")
+
+
+# database/database.py
+
+def write_account_to_user_table(user_id: int, session_string: str, phone_number: str) -> bool:
+    """
+    Записывает аккаунт в персональную таблицу пользователя: {user_id}_accounts
+
+    :param user_id: ID пользователя Telegram
+    :param session_string: Строка сессии Telethon (StringSession)
+    :param phone_number: Номер телефона аккаунта
+    :return: True если успешно, False при ошибке
+    """
+    try:
+        # 🔹 Создаём модель и таблицу для пользователя (если нет)
+        UserAccountsTable = create_accounts_table(user_id)
+
+        # 🔹 Вставляем или обновляем запись (защита от дубликатов)
+        query = (UserAccountsTable
+        .insert(session_string=session_string, phone_number=phone_number)
+        .on_conflict(
+            conflict_target=[UserAccountsTable.session_string],
+            preserve=[UserAccountsTable.phone_number],
+            action="UPDATE"
+        ))
+        query.execute()
+
+        logger.info(f"💾 Аккаунт {phone_number} сохранён в таблицу {user_id}_accounts")
+        return True
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка записи в таблицу {user_id}_accounts: {e}")
+        return False
+
+
+def get_user_accounts(user_id: int) -> list[dict]:
+    """
+    Получает все аккаунты пользователя из его персональной таблицы
+
+    :param user_id: ID пользователя Telegram
+    :return: Список словарей с данными аккаунтов
+    """
+    try:
+        UserAccountsTable = create_accounts_table(user_id)
+
+        accounts = []
+        for account in UserAccountsTable.select():
+            accounts.append({
+                "session_string": account.session_string,
+                "phone_number": account.phone_number
+            })
+        return accounts
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка получения аккаунтов пользователя {user_id}: {e}")
+        return []
+
+
+def delete_user_account(user_id: int, session_string: str) -> bool:
+    """
+    Удаляет аккаунт из персональной таблицы пользователя
+
+    :param user_id: ID пользователя Telegram
+    :param session_string: Строка сессии для удаления
+    :return: True если удалено, False если не найдено или ошибка
+    """
+    try:
+        UserAccountsTable = create_accounts_table(user_id)
+
+        deleted = (UserAccountsTable
+                   .delete()
+                   .where(UserAccountsTable.session_string == session_string)
+                   .execute())
+
+        if deleted > 0:
+            logger.info(f"🗑️ Аккаунт удалён из таблицы {user_id}_accounts")
+            return True
+        else:
+            logger.warning(f"⚠️ Аккаунт не найден в таблице {user_id}_accounts")
+            return False
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка удаления аккаунта пользователя {user_id}: {e}")
+        return False
+
 
 def create_accounts_table(user_id):
     class UserAccountsTable(BaseModel):

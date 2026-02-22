@@ -105,76 +105,99 @@ def sanitization_file_name(document, sessions_dir):
     return local_file_path, safe_file_name
 
 
+# handlers/user/connect_account.py
+
 @router.message(F.document)
 async def handle_account_file(message: Message, state: FSMContext):
-    """
-    Обработчик приёма файла сессии (.session) от пользователя.
+    """Обработчик приёма файла сессии (.session) от пользователя"""
+    user_id = None  # Объявляем заранее для использования в except
 
-    ✅ Правильный порядок:
-    1. Проверяем расширение .session
-    2. Создаём папку accounts/{user_id}/
-    3. Скачиваем файл на диск через message.bot.download()
-    4. Передаём ЛОКАЛЬНЫЙ путь (без .session) в CheckingAccountsValidity
-    5. Обрабатываем и сохраняем StringSession в БД
-    """
     try:
         await state.clear()
-        user_id = message.from_user.id  # получаем id пользователя
-        document = message.document  # получаем файл сессии
+        user_id = message.from_user.id
+        document = message.document
+
         logger.info(f"User {user_id} отправил файл: {document.file_name}")
+
         # ✅ Проверяем расширение
         if not document.file_name.endswith('.session'):
             await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
             return
+
         # ✅ Создаём папку для сессий пользователя
         sessions_dir = creates_temporary_folder_for_accounts()
-        # ✅ Санитизация имени файла (убираем опасные символы)
+
+        # ✅ Санитизация имени файла
         local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
+
         # ✅ Скачиваем файл НА ЛОКАЛЬНЫЙ ДИСК
-        # ⚠️ file.file_path — это путь на серверах Telegram, его нельзя использовать напрямую!
         await message.bot.download(document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
+
         await message.answer(f"📥 Файл получен: `{safe_file_name}`\n\n🔍 Проверяю аккаунт...")
-        # ✅ Передаём путь БЕЗ расширения .session (Telethon добавит его сам)
+
+        # ✅ Передаём путь БЕЗ расширения .session
         session_path_without_ext = str(local_file_path.with_suffix(""))
+
         # ✅ Создаем checker и обрабатываем сессию
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
         client = await checker.connect_client()
+
         # ✅ Обрабатываем результат
         if client:
             me = await client.get_me()
             phone = me.phone or "unknown"
             first_name = me.first_name or ""
-            # ✅ Конвертируем в StringSession и сохраняем в БД
+
+            # ✅ Конвертируем в StringSession
             session_string = StringSession.save(client.session)
-            write_account_to_db(session_string=session_string, phone_number=phone)
+
+            # ✅ 🔥 ЗАПИСЫВАЕМ В ПЕРСОНАЛЬНУЮ ТАБЛИЦУ ПОЛЬЗОВАТЕЛЯ
+            from database.database import write_account_to_user_table
+            success = write_account_to_user_table(
+                user_id=user_id,
+                session_string=session_string,
+                phone_number=phone
+            )
+
             await client.disconnect()
+
             # ✅ Удаляем временный .session файл
             if local_file_path.exists():
                 local_file_path.unlink()
-            # ✅ Обновляем статистику
-            # success_count += 1
-            logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
-            # ✅ Отправляем результат для этого файла
-            await message.answer(
-                f"✅ <b>{safe_file_name}</b> — успешно!\n"
-                f"📱 {phone} | 👤 {first_name}",
-                parse_mode="HTML"
-            )
+
+            if success:
+                logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
+                await message.answer(
+                    f"✅ <b>{safe_file_name}</b> — успешно!\n"
+                    f"📱 {phone} | 👤 {first_name}\n"
+                    f"💾 Сохранено в вашу персональную базу.",
+                    parse_mode="HTML"
+                )
+            else:
+                # Если запись в БД не удалась — всё равно сообщаем, что сессия валидна
+                await message.answer(
+                    f"✅ <b>{safe_file_name}</b> — аккаунт валиден!\n"
+                    f"📱 {phone} | 👤 {first_name}\n"
+                    f"⚠️ Но произошла ошибка при сохранении в базу.",
+                    parse_mode="HTML"
+                )
         else:
-            # ❌ Если ошибка — удаляем файл и сообщаем пользователю
+            # ❌ Если проверка не прошла — удаляем файл
             if local_file_path.exists():
                 local_file_path.unlink()
 
-            error_msg = result.get("error", "Неизвестная ошибка")
-            await message.answer(f"❌ Аккаунт не прошёл проверку:\n`{error_msg}`")
-            logger.warning(f"❌ Сессия {safe_file_name} не валидна: {error_msg}")
+            await message.answer(
+                f"❌ <b>{safe_file_name}</b> — не прошёл проверку.\n"
+                f"Проверьте, что файл сессии актуален и не используется в другом месте.",
+                parse_mode="HTML"
+            )
+            logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {user_id}")
 
     except Exception as e:
         logger.exception(f"Ошибка при обработке сессии пользователя {user_id}: {e}")
         await message.answer("⚠️ Произошла ошибка при проверке аккаунта. Попробуйте позже.")
     finally:
-        # ✅ Очищаем состояние FSM
         await state.clear()
 
 
