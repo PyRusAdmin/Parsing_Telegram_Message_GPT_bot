@@ -23,7 +23,33 @@ def init_database():
     """Инициализация БД и создание таблиц"""
     db.connect(reuse_if_open=True)
     db.create_tables([Account], safe=True)
+    db.create_tables([UserAccountsTable], safe=True)
     db.close()
+
+
+# def create_accounts_table(user_id: int):
+#     """
+#     Создаёт и возвращает модель Peewee для таблицы аккаунтов пользователя.
+#     Таблица создаётся автоматически при первом вызове.
+#     """
+# 🔹 Вложенный класс модели — создаётся заново для каждого user_id
+
+class UserAccountsTable(BaseModel):
+    id = AutoField()  # ✅ Первичный ключ (обязательно!)
+    session_string = CharField(unique=True, max_length=500, index=True)
+    phone_number = CharField(max_length=20, index=True)
+    created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
+
+    class Meta:
+        database = db
+        table_name = f"user_accounts_table"  # Динамическое имя таблицы
+
+
+# 🔹 Создаём таблицу, если не существует
+# db.connect(reuse_if_open=True)
+# db.create_tables([UserAccountsTable], safe=True)
+#
+# return UserAccountsTable  # ✅ Возвращаем класс модели для использования
 
 
 """Работа с аккаунтами"""
@@ -277,30 +303,6 @@ def delete_user_account(user_id: int, session_string: str) -> bool:
     except Exception as e:
         logger.exception(f"❌ Ошибка удаления аккаунта пользователя {user_id}: {e}")
         return False
-
-
-def create_accounts_table(user_id: int):
-    """
-    Создаёт и возвращает модель Peewee для таблицы аккаунтов пользователя.
-    Таблица создаётся автоматически при первом вызове.
-    """
-
-    # 🔹 Вложенный класс модели — создаётся заново для каждого user_id
-    class UserAccountsTable(BaseModel):
-        id = AutoField()  # ✅ Первичный ключ (обязательно!)
-        session_string = CharField(unique=True, max_length=500, index=True)
-        phone_number = CharField(max_length=20, index=True)
-        created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
-
-        class Meta:
-            database = db
-            table_name = f"{user_id}_accounts"  # Динамическое имя таблицы
-
-    # 🔹 Создаём таблицу, если не существует
-    db.connect(reuse_if_open=True)
-    db.create_tables([UserAccountsTable], safe=True)
-
-    return UserAccountsTable  # ✅ Возвращаем класс модели для использования
 
 
 def create_groups_model(user_id):
