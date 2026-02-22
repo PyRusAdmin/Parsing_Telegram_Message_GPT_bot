@@ -80,12 +80,12 @@ async def receive_session_file(message: Message, state: FSMContext):
         # ✅ Санитизация имени файла
         # safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
         # file_path = sessions_dir / safe_file_name
-        file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
+        local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
 
         # ✅ Скачиваем файл
-        await message.bot.download(document, destination=file_path)
+        await message.bot.download(document, destination=local_file_path)
         # ✅ Извлекаем путь без расширения для Telethon
-        session_path_without_ext = str(file_path.with_suffix(""))
+        session_path_without_ext = str(local_file_path.with_suffix(""))
         # ✅ Проверяем валидность аккаунта
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
         client = await checker.connect_client()
@@ -100,8 +100,8 @@ async def receive_session_file(message: Message, state: FSMContext):
             write_account_to_db(session_string=session_string, phone_number=phone)
             await client.disconnect()
             # ✅ Удаляем временный .session файл
-            if file_path.exists():
-                file_path.unlink()
+            if local_file_path.exists():
+                local_file_path.unlink()
             # ✅ Обновляем статистику
             success_count += 1
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
@@ -113,8 +113,8 @@ async def receive_session_file(message: Message, state: FSMContext):
             )
         else:
             # ❌ Файл не валиден — удаляем
-            if file_path.exists():
-                file_path.unlink()
+            if local_file_path.exists():
+                local_file_path.unlink()
             fail_count += 1
             logger.warning(f"❌ Сессия не валидна: {safe_file_name}")
             await message.answer(f"❌ <b>{safe_file_name}</b> — не прошёл проверку", parse_mode="HTML")
@@ -122,8 +122,8 @@ async def receive_session_file(message: Message, state: FSMContext):
     except Exception as e:
         logger.exception(f"Ошибка при обработке {document.file_name}: {e}")
         fail_count += 1
-        if file_path.exists():
-            file_path.unlink()
+        if local_file_path.exists():
+            local_file_path.unlink()
         await message.answer(f"⚠️ <b>{safe_file_name}</b> — ошибка обработки", parse_mode="HTML")
 
     finally:
