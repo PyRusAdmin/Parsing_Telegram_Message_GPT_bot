@@ -36,6 +36,7 @@ def init_database():
 
 class UserAccountsTable(BaseModel):
     id = AutoField()  # ✅ Первичный ключ (обязательно!)
+    user_id = IntegerField(index=True)  # ID пользователя Telegram
     session_string = CharField(unique=True, max_length=500, index=True)
     phone_number = CharField(max_length=20, index=True)
     created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки

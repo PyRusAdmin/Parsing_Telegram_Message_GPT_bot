@@ -117,7 +117,8 @@ async def checking_group_for_ai_db(message: Message):
                 successful_results.append({
                     "telegram_id": result["telegram_id"],
                     "category": result["category"],
-                    "name": next((g["name"] for g in groups_to_process if g["telegram_id"] == result["telegram_id"]), "Unknown")
+                    "name": next((g["name"] for g in groups_to_process if g["telegram_id"] == result["telegram_id"]),
+                                 "Unknown")
                 })
             else:
                 ai_errors += 1
