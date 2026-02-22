@@ -279,17 +279,43 @@ def delete_user_account(user_id: int, session_string: str) -> bool:
         return False
 
 
-def create_accounts_table(user_id):
+# database/database.py
+
+def create_accounts_table(user_id: int):
+    """
+    Создаёт и возвращает модель Peewee для таблицы аккаунтов пользователя.
+    Таблица создаётся автоматически при первом вызове.
+    """
+
+    # 🔹 Вложенный класс модели — создаётся заново для каждого user_id
     class UserAccountsTable(BaseModel):
-        session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
-        phone_number = CharField()  # номер телефона аккаунта
+        id = AutoField()  # ✅ Первичный ключ (обязательно!)
+        session_string = CharField(unique=True, max_length=500, index=True)
+        phone_number = CharField(max_length=20, index=True)
+        created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
 
         class Meta:
-            table_name = f"{user_id}_accounts"  # Имя таблицы
+            database = db
+            table_name = f"{user_id}_accounts"  # Динамическое имя таблицы
 
+    # 🔹 Создаём таблицу, если не существует
     db.connect(reuse_if_open=True)
     db.create_tables([UserAccountsTable], safe=True)
-    return UserAccountsTable
+
+    return UserAccountsTable  # ✅ Возвращаем класс модели для использования
+
+
+# def create_accounts_table(user_id):
+#     class UserAccountsTable(BaseModel):
+#         session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
+#         phone_number = CharField()  # номер телефона аккаунта
+#
+#         class Meta:
+#             table_name = f"{user_id}_accounts"  # Имя таблицы
+#
+#     db.connect(reuse_if_open=True)
+#     db.create_tables([UserAccountsTable], safe=True)
+#     return UserAccountsTable
 
 
 def create_groups_model(user_id):
