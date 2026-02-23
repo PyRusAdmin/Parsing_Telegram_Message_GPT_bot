@@ -65,6 +65,27 @@ def get_tracked_channels_count(user_id: int) -> int:
         return 0
 
 
+def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
+    """
+    Получает все username каналов/групп пользователя по user_id.
+
+    :param user_id: Telegram ID пользователя
+    :return: Кортеж (список username, общее количество)
+    """
+    try:
+        records = (Groups
+                   .select(Groups.username)
+                   .where(Groups.user_id == user_id)
+                   .order_by(Groups.date_added.desc()))
+
+        usernames = [row.username for row in records]
+        return usernames, len(usernames)
+
+    except Exception as e:
+        logger.error(f"Ошибка при получении каналов пользователя {user_id}: {e}")
+        return [], 0
+
+
 """
 Таблица с аккаунтами пользователя пользователей телеграмм бота
 """

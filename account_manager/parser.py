@@ -14,7 +14,7 @@ from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelReq
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from database.database import (
-    create_keywords_model, create_group_model, TelegramGroup, get_user_accounts
+    create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import get_text
@@ -299,6 +299,9 @@ async def join_required_channels(client, user_id, message):
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
     already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
+    # ✅ Приводим к set для операции вычитания
+    db_channels = set(db_channels)
+
     logger.info(f"📊 Всего каналов для подписки: {total_count}, уже подписан на: {len(already_subscribed)}")
     if total_count == 0:
         await message.answer("📭 У вас нет добавленных каналов для отслеживания.")
@@ -332,7 +335,7 @@ async def join_required_channels(client, user_id, message):
             logger.error(f"✉️ Приглашение уже отправлено: {channel}")
         except ValueError:
             logger.error(f"❌ Невалидный username: {channel}")
-            delete_group_by_username(user_id, channel)  # Удаляем невалидный канал / группу
+            # delete_group_by_username(user_id, channel)  # Удаляем невалидный канал / группу
         except Exception as e:
             logger.exception(f"❌ Ошибка при подписке на {channel}: {e}")
 
@@ -369,26 +372,10 @@ async def ensure_joined_target_group(client, message, user_id: int):
 
 
 async def get_user_channels_or_notify(user_id: int, user, message, client):
-    """
-    Получает список каналов/групп пользователя из его персональной таблицы.
-    Если список пуст — отправляет уведомление пользователю, отключает клиент и возвращает None.
-
-    :param user_id: (int) ID пользователя Telegram.
-    :param user: Объект пользователя (с полем `language`).
-    :param message: Aiogram Message для отправки ответа.
-    :param client: Telethon клиент (будет отключён в случае ошибки).
-    :return: list[str] | None: Список username каналов или None, если список пуст.
-    """
-    Groups = create_groups_model(user_id=user_id)
-
-    # Создаём таблицу, если её ещё нет (безопасно благодаря Peewee)
-    if not Groups.table_exists():
-        Groups.create_table()
-
-    channels = [group.username for group in Groups.select()]
+    channels = [group.username for group in Groups.select().where(Groups.user_id == user_id)]
 
     if not channels:
-        logger.warning("⚠️ Список каналов пуст. Добавьте группы в базу данных.")
+        logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
         await client.disconnect()
         await message.answer(
             get_text(user.language, "tracking_launch_error"),

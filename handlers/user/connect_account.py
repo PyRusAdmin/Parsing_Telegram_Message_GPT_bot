@@ -14,11 +14,9 @@ from account_manager.auth import CheckingAccountsValidity
 from database.database import User
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
+from states.states import MyStates
 from system.dispatcher import router
 from database.database import write_account_to_user_table
-
-
-
 
 
 @router.message(F.text == "🔐 Подключить свободный аккаунт")
@@ -84,89 +82,60 @@ def sanitization_file_name(document, sessions_dir):
 
 @router.message(F.text == "🔐 Подключить аккаунт")
 async def handle_connect_account(message: Message, state: FSMContext):
-    """
-    Обработчик команды "🔐 Подключить аккаунт".
-
-    Очищает текущее состояние FSM, регистрирует пользователя в базе данных (если его ещё нет)
-    с языком по умолчанию "unset", и отправляет пользователю сообщение с приглашением
-    🔐 Подключить аккаунт через отправку .session-файла.
-
-    :param message: (Message) Объект входящего сообщения от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
-    :return: None
-    """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    # Создаём пользователя с language = "unset", если его нет
+    await state.clear()
     user, created = User.get_or_create(
         user_id=message.from_user.id,
         defaults={
             "username": message.from_user.username,
             "first_name": message.from_user.first_name,
             "last_name": message.from_user.last_name,
-            "language": "unset"  # ← ключевое: "unset" = язык не выбран
+            "language": "unset"
         }
     )
     await message.answer(get_text(user.language, "connect_account"), reply_markup=back_keyboard())
+    await state.set_state(MyStates.waiting_for_session_file_user)
 
 
-@router.message(F.document)
+# ✅ Фильтр: только документы И только в нужном состоянии
+@router.message(MyStates.waiting_for_session_file_user, F.document)
 async def handle_account_file(message: Message, state: FSMContext):
     """Обработчик приёма файла сессии (.session) от пользователя"""
-    user_id = None  # Объявляем заранее для использования в except
+    user_id = message.from_user.id
+    document = message.document
+    local_file_path = None  # для безопасного удаления в finally
 
     try:
-        await state.clear()
-        user_id = message.from_user.id
-        document = message.document
-
         logger.info(f"User {user_id} отправил файл: {document.file_name}")
 
-        # ✅ Проверяем расширение
+        # ✅ Проверяем расширение — если не .session, остаёмся в состоянии
         if not document.file_name.endswith('.session'):
             await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
-            return
+            return  # state НЕ сбрасываем — ждём правильный файл
 
-        # ✅ Создаём папку для сессий пользователя
         sessions_dir = creates_temporary_folder_for_accounts()
-
-        # ✅ Санитизация имени файла
         local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
 
-        # ✅ Скачиваем файл НА ЛОКАЛЬНЫЙ ДИСК
         await message.bot.download(document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
 
         await message.answer(f"📥 Файл получен: `{safe_file_name}`\n\n🔍 Проверяю аккаунт...")
 
-        # ✅ Передаём путь БЕЗ расширения .session
         session_path_without_ext = str(local_file_path.with_suffix(""))
-        logger.info(session_path_without_ext)
-        # ✅ Создаем checker и обрабатываем сессию
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
         client = await checker.connect_client()
 
-        # ✅ Обрабатываем результат
         if client:
             me = await client.get_me()
             phone = me.phone or "unknown"
             first_name = me.first_name or ""
 
-            # ✅ Конвертируем в StringSession
             session_string = StringSession.save(client.session)
-
-            # ✅ 🔥 ЗАПИСЫВАЕМ В ПЕРСОНАЛЬНУЮ ТАБЛИЦУ ПОЛЬЗОВАТЕЛЯ
-
             write_account_to_user_table(
                 user_id=user_id,
                 session_string=session_string,
                 phone_number=phone
             )
-
             await client.disconnect()
-
-            # ✅ Удаляем временный .session файл
-            if local_file_path.exists():
-                local_file_path.unlink()
 
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
             await message.answer(
@@ -176,21 +145,22 @@ async def handle_account_file(message: Message, state: FSMContext):
                 parse_mode="HTML"
             )
         else:
-            # ❌ Если проверка не прошла — удаляем файл
-            if local_file_path.exists():
-                local_file_path.unlink()
-
+            logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {user_id}")
             await message.answer(
                 f"❌ <b>{safe_file_name}</b> — не прошёл проверку.\n"
                 f"Проверьте, что файл сессии актуален и не используется в другом месте.",
                 parse_mode="HTML"
             )
-            logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {user_id}")
 
     except Exception as e:
         logger.exception(f"Ошибка при обработке сессии пользователя {user_id}: {e}")
         await message.answer("⚠️ Произошла ошибка при проверке аккаунта. Попробуйте позже.")
+
     finally:
+        # ✅ Удаляем временный файл в любом случае
+        if local_file_path and local_file_path.exists():
+            local_file_path.unlink()
+        # ✅ Сбрасываем состояние только в конце
         await state.clear()
 
 

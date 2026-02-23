@@ -20,6 +20,7 @@ class MyStates(StatesGroup):
     waiting_for_session_file = State()  # Ждем файл в формате session
     processing_sessions = State()  # Обработка очереди файлов (внутреннее)
 
+    waiting_for_session_file_user = State()  # Ждем файл в формате session
 
 class MyStatesParsing(StatesGroup):
     get_url = State()  # Ожидание ввода URL для парсинга
