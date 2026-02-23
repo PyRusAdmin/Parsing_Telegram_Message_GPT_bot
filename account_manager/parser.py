@@ -15,7 +15,7 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from database.database import (
     create_groups_model, create_keywords_model, create_group_model, TelegramGroup, get_user_channel_usernames,
-    delete_group_by_username
+    delete_group_by_username, get_user_accounts
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import get_text
@@ -421,28 +421,38 @@ async def filter_messages(message, user_id, user):
     :param message: (Message) Объект сообщения aiogram для взаимодействия с пользователем.
     :param user_id: (int) Идентификатор пользователя Telegram.
     :param user: (User) Модель пользователя из базы данных (для языка и данных).
-    :param session_path: (str) Полный путь к файлу сессии (.session) для авторизации.
     :return: None
     :raises Exception: Логируется при ошибках инициализации или подключения.
     """
-    # user_id = str(user_id)  # <-- ✅ преобразуем в строку
     logger.info(f"🚀 Запуск бота для user_id={str(user_id)}...")
-    logger.info(f"📂 Найден файл сессии: {session_path}")
     # Telethon ожидает session_name без расширения
-
     # ✅ Создаём флаг остановки для этого пользователя
     stop_event = asyncio.Event()
     stop_flags[str(user_id)] = stop_event
 
     try:
         # Проверка на наличие подключенного аккаунта у пользователя для избежания ошибки
-        checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
-        client = await checker.connect_client(
-            session_name=session_path.replace(".session", ""),
-            user=user
-        )  # <-- ✅ подключаемся к клиенту Telethon
+        # Получаем все аккаунты пользователя из его персональной таблицы
+        accounts = get_user_accounts(user_id)
 
+        if not accounts:
+            logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
+            await message.answer(
+                "❌ У вас нет подключённых аккаунтов.\n\n"
+                "Отправьте файл сессии `.session` или нажмите «Подключение аккаунта» в меню.",
+                reply_markup=menu_launch_tracking_keyboard()
+            )
+            return None
+
+        logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
+
+        logger.info(accounts)
+        session_string = accounts[0]['session_string']
+        logger.info(session_string)
         # ✅ Сохраняем активный клиент
+        checker = CheckingAccountsValidity(message=message)
+        client = checker.client_connect_string_session(session_string)
+
         active_clients[str(user_id)] = client
 
         # === Подключаемся к целевой группе для пересылки ===

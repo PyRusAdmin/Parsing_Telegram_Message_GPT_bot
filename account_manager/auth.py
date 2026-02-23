@@ -76,7 +76,7 @@ class CheckingAccountsValidity:
         # ✅ Проверка аккаунтов на валидность из папки parsing
         await self.connect_client_test(available_sessions=available_sessions, path=self.path)
 
-    async def client_connect_string_session(self, session_name: str) -> TelegramClient | None:
+    async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """
         Подключение к Telegram аккаунту через StringSession
 

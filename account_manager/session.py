@@ -21,7 +21,7 @@ async def find_session_file(user_id: int, user, message):
     :return: dict с данными аккаунта {"session_string": str, "phone": str} или None
     """
     try:
-        # 🔹 Получаем все аккаунты пользователя из его персональной таблицы
+        # Получаем все аккаунты пользователя из его персональной таблицы
         accounts = get_user_accounts(user_id)
 
         if not accounts:
@@ -35,12 +35,12 @@ async def find_session_file(user_id: int, user, message):
 
         logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
 
-        # 🔹 Случайным образом выбираем один аккаунт (можно изменить логику выбора)
+        # Случайным образом выбираем один аккаунт (можно изменить логику выбора)
         selected_account = random.choice(accounts)
         session_string = selected_account["session_string"]
         phone = selected_account["phone_number"]
 
-        # 🔹 Быстрая проверка валидности StringSession (опционально, но рекомендуется)
+        # Быстрая проверка валидности StringSession (опционально, но рекомендуется)
         if not await _is_session_valid(session_string):
             logger.warning(f"⚠️ Сессия {phone} не валидна — удаляем из БД")
             await message.answer(
@@ -48,10 +48,9 @@ async def find_session_file(user_id: int, user, message):
                 f"Пожалуйста, подключите аккаунт заново.",
                 reply_markup=menu_launch_tracking_keyboard()
             )
-            # 🔹 Удаляем невалидную сессию из БД
+            # Удаляем невалидную сессию из БД
 
-            # delete_user_account(user_id, session_string)
-            # 🔹 Рекурсивно пробуем найти другой аккаунт
+            # Рекурсивно пробуем найти другой аккаунт
             return await find_session_file(user_id, user, message)
 
         logger.success(f"✅ Выбрана сессия: {phone} (первые 30 символов: {session_string[:30]}...)")
@@ -78,11 +77,11 @@ async def _is_session_valid(session_string: str) -> bool:
     :return: True если сессия выглядит валидной, False если нет
     """
 
-    # 🔹 Простая проверка: сессия не должна быть пустой и должна иметь правильный формат
+    # Простая проверка: сессия не должна быть пустой и должна иметь правильный формат
     if not session_string or len(session_string) < 50:
         return False
 
-    # 🔹 Пробуем создать клиент и подключиться (быстрый тест)
+    # Пробуем создать клиент и подключиться (быстрый тест)
     client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
     try:
