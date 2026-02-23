@@ -78,8 +78,7 @@ async def receive_session_file(message: Message, state: FSMContext):
         # ✅ Создаём папку для временного хранения
         sessions_dir = creates_temporary_folder_for_accounts()
         # ✅ Санитизация имени файла
-        # safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
-        # file_path = sessions_dir / safe_file_name
+
         local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
 
         # ✅ Скачиваем файл
@@ -134,17 +133,6 @@ async def receive_session_file(message: Message, state: FSMContext):
             success_count=success_count,
             fail_count=fail_count
         )
-
-        # ✅ Если это был последний файл в очереди — показываем сводку
-        # if processed_count == len(received_files):
-        # summary = (
-        #     f"📊 <b>Обработка завершена!</b>\n"
-        #     f"✅ Успешно: {success_count}\n"
-        #     f"❌ Ошибки: {fail_count}\n\n"
-        #     f"🧹 Очищаю временные файлы..."
-        # )
-        # Отправляем сообщение с началом очистки
-        # cleanup_msg = await message.answer(summary, parse_mode="HTML")
 
         dir_del = ['accounts/parsing', 'accounts/parsing_grup', 'accounts/ai', 'accounts/free']
         for dir in dir_del:
