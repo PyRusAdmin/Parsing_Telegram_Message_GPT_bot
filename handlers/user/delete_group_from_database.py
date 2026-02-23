@@ -9,7 +9,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.session import find_session_file
 from account_manager.unsubscribe import unsubscribe
-from database.database import create_groups_model, User
+from database.database import User
 from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, connect_keyboard_account
 from states.states import MyStates
 from system.dispatcher import router

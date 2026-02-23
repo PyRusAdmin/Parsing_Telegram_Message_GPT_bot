@@ -24,7 +24,50 @@ def init_database():
     db.connect(reuse_if_open=True)
     db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
+    db.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
     db.close()
+
+
+"""
+Работа с группами пользователя для отслеживания ключевых слов. Все данные пользователей хранится в одной таблице, 
+для удобства масштабирования
+"""
+
+
+class Groups(BaseModel):
+    id = AutoField()  # автоинкремент
+    user_id = IntegerField()
+    username = CharField(null=True)
+    date_added = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = f"users_groups"  # Имя таблицы
+        indexes = (
+            (("user_id", "username"), True),  # один пользователь не добавит один канал дважды
+        )
+
+
+def get_tracked_channels_count(user_id: int) -> int:
+    """
+    Получает количество отслеживаемых каналов для указанного пользователя.
+
+    :param user_id: Telegram ID пользователя
+    :return: Количество отслеживаемых каналов
+    """
+    try:
+        count = (Groups
+                 .select()
+                 .where(Groups.user_id == user_id)
+                 .count())
+        return count
+    except Exception as e:
+        logger.error(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
+        return 0
+
+
+"""
+Таблица с аккаунтами пользователя пользователей телеграмм бота
+"""
 
 
 class UserAccountsTable(BaseModel):
@@ -157,16 +200,16 @@ async def delete_account_from_db(session_string: str) -> None:
         logger.info(f"Ошибка при удалении аккаунта: {e}")
 
 
-def get_account_list():
-    """
-    Получаем подключенные аккаунты: возвращаем список кортежей (phone, session_string)
-    :return: Список кортежей (phone, session_string)
-    """
-    accounts = []
-    for account in Account.select(Account.phone_number, Account.session_string):
-        accounts.append((account.phone_number, account.session_string))
-
-    return accounts  # Список аккаунтов
+# def get_account_list():
+#     """
+#     Получаем подключенные аккаунты: возвращаем список кортежей (phone, session_string)
+#     :return: Список кортежей (phone, session_string)
+#     """
+#     accounts = []
+#     for account in Account.select(Account.phone_number, Account.session_string):
+#         accounts.append((account.phone_number, account.session_string))
+#
+#     return accounts  # Список аккаунтов
 
 
 # async def update_phone_by_session(session_string: str, new_phone: str, app_logger) -> bool:
@@ -195,39 +238,39 @@ def get_account_list():
 #         return False
 
 
-def get_user_channel_usernames(user_id: int):
-    """
-    Возвращает множество username каналов/групп пользователя из БД (в нижнем регистре).
+# def get_user_channel_usernames(user_id: int):
+#     """
+#     Возвращает множество username каналов/групп пользователя из БД (в нижнем регистре).
+#
+#     :param user_id: Telegram user_id
+#     :return: db_channels, total_count
+#     """
+#     Groups = create_groups_model(user_id=user_id)
+#     total_count = Groups.select().count()
+#     db_channels = {
+#         group.username.lower()
+#         for group in (
+#             Groups
+#             .select(Groups.username)
+#             .where(Groups.username.is_null(False))
+#         )
+#     }
+#     return db_channels, total_count
 
-    :param user_id: Telegram user_id
-    :return: db_channels, total_count
-    """
-    Groups = create_groups_model(user_id=user_id)
-    total_count = Groups.select().count()
-    db_channels = {
-        group.username.lower()
-        for group in (
-            Groups
-            .select(Groups.username)
-            .where(Groups.username.is_null(False))
-        )
-    }
-    return db_channels, total_count
 
-
-def delete_group_by_username(user_id: int, channel: str):
-    """
-    Удаляет группу или канал пользователя из БД по username.
-
-    Используется для очистки базы данных от невалидных или недоступных
-    Telegram-групп/каналов (например, если канал удалён или бот потерял доступ).
-
-    :param user_id: (int) Telegram user_id, для которого создана таблица групп
-    :param channel: (str) Username группы/канала без '@'
-    :return: (int) Количество удалённых записей
-    """
-    Groups = create_groups_model(user_id)
-    Groups.delete().where(Groups.username == channel).execute()
+# def delete_group_by_username(user_id: int, channel: str):
+#     """
+#     Удаляет группу или канал пользователя из БД по username.
+#
+#     Используется для очистки базы данных от невалидных или недоступных
+#     Telegram-групп/каналов (например, если канал удалён или бот потерял доступ).
+#
+#     :param user_id: (int) Telegram user_id, для которого создана таблица групп
+#     :param channel: (str) Username группы/канала без '@'
+#     :return: (int) Количество удалённых записей
+#     """
+#     Groups = create_groups_model(user_id)
+#     Groups.delete().where(Groups.username == channel).execute()
 
 
 class User(BaseModel):
@@ -297,38 +340,20 @@ class User(BaseModel):
 #         return False
 
 
-def create_groups_model(user_id):
-    """
-    Динамически создаёт модель Peewee для хранения чатов конкретного пользователя.
-
-    Модель используется для отслеживания списка Telegram-групп и каналов, добавленных пользователем для мониторинга.
-    Создаётся отдельная таблица для каждого пользователя по шаблону 'groups_<user_id>'.
-
-    :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-    :return peewee.Model: Класс модели Peewee с полем `username_chat_channel`.
-
-    Model Fields:
-        username_chat_channel (CharField):
-            Уникальное имя чата (канала) в формате @username или название.
-    """
-
-    class Groups(BaseModel):
-        id = IntegerField(null=True)
-        group_id = CharField(unique=True)
-        group_hash = CharField(unique=True, index=True)
-        name = CharField()
-        username = CharField(null=True, unique=True)  # ← ДОБАВЛЕНО unique=True
-        description = TextField(null=True)
-        participants = IntegerField(default=0)
-        category = CharField(null=True)
-        group_type = CharField()
-        link = CharField()
-        date_added = DateTimeField(default=datetime.now)
-
-        class Meta:
-            table_name = f"{user_id}_groups"  # Имя таблицы
-
-    return Groups  # Возвращаем класс модели
+# def create_groups_model(user_id):
+#     """
+#     Динамически создаёт модель Peewee для хранения чатов конкретного пользователя.
+#
+#     Модель используется для отслеживания списка Telegram-групп и каналов, добавленных пользователем для мониторинга.
+#     Создаётся отдельная таблица для каждого пользователя по шаблону 'groups_<user_id>'.
+#
+#     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
+#     :return peewee.Model: Класс модели Peewee с полем `username_chat_channel`.
+#
+#     Model Fields:
+#         username_chat_channel (CharField):
+#             Уникальное имя чата (канала) в формате @username или название.
+#     """
 
 
 def create_keywords_model(user_id):
@@ -511,20 +536,20 @@ def get_session_count(user_id: int) -> int:
     return len(session_files)
 
 
-def get_tracked_channels_count(user_id: int):
-    """
-    Получение количества подключенных групп для отслеживания ключевых слов
-
-    :param user_id: (int) ID пользователя Telegram.
-    :return int: Количество записей (обычно 0 или 1, так как группа одна).
-    """
-    GroupModel = create_groups_model(user_id)
-
-    # Убедимся, что таблица существует, иначе count() вызовет ошибку
-    if not GroupModel.table_exists():
-        return 0
-
-    return GroupModel.select().count()
+# def get_tracked_channels_count(user_id: int):
+#     """
+#     Получение количества подключенных групп для отслеживания ключевых слов
+#
+#     :param user_id: (int) ID пользователя Telegram.
+#     :return int: Количество записей (обычно 0 или 1, так как группа одна).
+#     """
+#     GroupModel = create_groups_model(user_id)
+#
+#     # Убедимся, что таблица существует, иначе count() вызовет ошибку
+#     if not GroupModel.table_exists():
+#         return 0
+#
+#     return GroupModel.select().count()
 
 
 def get_keywords_count(user_id: int):

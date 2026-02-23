@@ -9,7 +9,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from database.database import User, create_keywords_model, create_groups_model
+from database.database import User, create_keywords_model
 from locales.locales import get_text
 from system.dispatcher import router
 

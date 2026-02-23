@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-from datetime import datetime
 
 from aiogram import F
 from aiogram.exceptions import TelegramForbiddenError
@@ -11,8 +10,8 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from database.database import (
-    User, create_groups_model, getting_number_records_database, get_session_count,
-    get_target_group_count, get_tracked_channels_count, get_keywords_count, TelegramGroup
+    User, getting_number_records_database, get_session_count, get_target_group_count, get_keywords_count,
+    get_tracked_channels_count, Groups
 )
 from keyboards.admin.keyboards import main_admin_keyboard
 from keyboards.user.keyboards import (
@@ -338,68 +337,45 @@ async def handle_refresh_groups_list(message, state: FSMContext):
     await state.set_state(MyStates.waiting_username_group)
 
 
-@router.message(MyStates.waiting_username_group)
-async def handle_group_usernames_input(message, state: FSMContext):
+@router.message(MyStates.waiting_username_group, F.document)
+async def handle_group_usernames_file(message, state: FSMContext, bot):
     """
-    Обработчик ввода списка групп/каналов пользователем.
-
-    Принимает строку с одним или несколькими @username-ами, разделёнными пробелами или переносами строк,
-    и добавляет их в персональную таблицу пользователя. Поддерживает массовую загрузку.
-    Обрабатывает дубликаты и ошибки, формирует отчёт.
-
-    - Используется динамическая модель `create_groups_model` для изоляции данных.
-    - Пустые строки и дубликаты пропускаются.
-    - После обработки состояние сбрасывается и пользователь возвращается в меню.
-
-    :param message: (Message) Входящее сообщение с @username-ами.
-    :param state: (FSMContext) Контекст машины состояний, сбрасывается после обработки.
-    :return: None
-    :raises Exception: Перехватывается локально при ошибках добавления (например, нарушение уникальности).
+    Обработчик загрузки .txt файла со списком групп/каналов.
     """
-    raw_text = message.text.strip()
-    logger.info(f"Пользователь ввёл имя группы: {raw_text}")
+    document = message.document
 
-    # Разбиваем сообщение по пробелам и переносам строк
-    usernames = [u.strip() for u in raw_text.replace("\n", " ").split() if u.strip()]
-    if not usernames:
-        await message.answer("⚠️ Вы не указали ни одной группы.")
-        await state.clear()  # Завершаем текущее состояние машины состояния
+    # Проверяем расширение файла
+    if not document.file_name.endswith(".txt"):
+        await message.answer("⚠️ Поддерживаются только .txt файлы.")
         return
 
-    # Создаём модель с таблицей, уникальной для конкретного пользователя
-    groups = create_groups_model(user_id=message.from_user.id)  # Создаём таблицу для групп
-    # Проверяем, существует ли таблица (если нет — создаём)
-    if not groups.table_exists():
-        groups.create_table()
-        logger.info(f"Создана новая таблица для пользователя {message.from_user.id}")
+    # Скачиваем файл
+    file = await bot.get_file(document.file_id)
+    file_bytes = await bot.download_file(file.file_path)
+    content = file_bytes.read().decode("utf-8")
+
+    # Парсим строки — каждая строка это отдельный username
+    usernames = [line.strip() for line in content.splitlines() if line.strip()]
+
+    if not usernames:
+        await message.answer("⚠️ Файл пуст или не содержит username-ов.")
+        await state.clear()
+        return
 
     added_count = 0
     skipped_count = 0
     errors_count = 0
 
-    # Добавляем каждую группу по очереди
     for username in usernames:
-        try:
-            groups.create(username_chat_channel=username, user_keyword=None)
-            # added.append(username)
+        # Нормализуем — убираем @ если есть, или оставляем как есть
+        username = username if username.startswith("@") else f"@{username}"
 
-            added_count += 1
-            # Добавляем в общую таблицу (если ещё не существует)
-            clean_username = username.lstrip('@')
-            TelegramGroup.get_or_create(
-                group_hash=clean_username,
-                defaults={
-                    "username": clean_username,
-                    "name": "",
-                    "description": "",
-                    "participants": 0,
-                    "category": "",
-                    "group_type": "group",
-                    "link": f"https://t.me/{clean_username}",
-                    "date_added": datetime.now(),
-                    "id": None
-                }
+        try:
+            Groups.create(
+                user_id=message.from_user.id,
+                username=username
             )
+            added_count += 1
 
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):
@@ -408,15 +384,13 @@ async def handle_group_usernames_input(message, state: FSMContext):
                 errors_count += 1
                 logger.error(f"Ошибка при добавлении {username}: {e}")
 
-    # Формируем краткий отчёт
     response = (
         f"✅ Добавлено: {added_count}\n"
         f"⚠️ Уже есть: {skipped_count}\n"
         f"❌ Ошибок: {errors_count}"
     )
     await message.answer(response)
-
-    await state.clear()  # Завершаем текущее состояние машины состояния
+    await state.clear()
 
 
 def register_greeting_handlers():
@@ -442,4 +416,4 @@ def register_greeting_handlers():
     router.message.register(handle_back_to_main_menu)  # обработчик для кнопки Назад
     router.message.register(handle_start_tracking)  # обработчик запуска отслеживания
     router.message.register(handle_refresh_groups_list)  # обработчик запуска 🔁 Обновить список
-    router.message.register(handle_group_usernames_input)  # обработчик ввода username групп
+    router.message.register(handle_group_usernames_file)  # обработчик ввода username групп

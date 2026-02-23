@@ -18,31 +18,7 @@ from system.dispatcher import router
 from database.database import write_account_to_user_table
 
 
-@router.message(F.text == "🔐 Подключить аккаунт")
-async def handle_connect_account(message: Message, state: FSMContext):
-    """
-    Обработчик команды "🔐 Подключить аккаунт".
 
-    Очищает текущее состояние FSM, регистрирует пользователя в базе данных (если его ещё нет)
-    с языком по умолчанию "unset", и отправляет пользователю сообщение с приглашением
-    🔐 Подключить аккаунт через отправку .session-файла.
-
-    :param message: (Message) Объект входящего сообщения от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
-    :return: None
-    """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    # Создаём пользователя с language = "unset", если его нет
-    user, created = User.get_or_create(
-        user_id=message.from_user.id,
-        defaults={
-            "username": message.from_user.username,
-            "first_name": message.from_user.first_name,
-            "last_name": message.from_user.last_name,
-            "language": "unset"  # ← ключевое: "unset" = язык не выбран
-        }
-    )
-    await message.answer(get_text(user.language, "connect_account"), reply_markup=back_keyboard())
 
 
 @router.message(F.text == "🔐 Подключить свободный аккаунт")
@@ -104,6 +80,33 @@ def sanitization_file_name(document, sessions_dir):
     safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
     local_file_path = sessions_dir / safe_file_name
     return local_file_path, safe_file_name
+
+
+@router.message(F.text == "🔐 Подключить аккаунт")
+async def handle_connect_account(message: Message, state: FSMContext):
+    """
+    Обработчик команды "🔐 Подключить аккаунт".
+
+    Очищает текущее состояние FSM, регистрирует пользователя в базе данных (если его ещё нет)
+    с языком по умолчанию "unset", и отправляет пользователю сообщение с приглашением
+    🔐 Подключить аккаунт через отправку .session-файла.
+
+    :param message: (Message) Объект входящего сообщения от пользователя.
+    :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
+    :return: None
+    """
+    await state.clear()  # Завершаем текущее состояние машины состояния
+    # Создаём пользователя с language = "unset", если его нет
+    user, created = User.get_or_create(
+        user_id=message.from_user.id,
+        defaults={
+            "username": message.from_user.username,
+            "first_name": message.from_user.first_name,
+            "last_name": message.from_user.last_name,
+            "language": "unset"  # ← ключевое: "unset" = язык не выбран
+        }
+    )
+    await message.answer(get_text(user.language, "connect_account"), reply_markup=back_keyboard())
 
 
 @router.message(F.document)
