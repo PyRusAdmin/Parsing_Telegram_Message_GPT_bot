@@ -305,7 +305,6 @@ async def handle_start_tracking(message, state: FSMContext):
             message=message,  # сообщение
             user_id=message.from_user.id,  # ID пользователя
             user=user,  # модель пользователя
-            session_path=session_path  # путь к сессии
         )
     except Exception as e:
         logger.exception(e)

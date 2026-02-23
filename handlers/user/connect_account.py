@@ -153,7 +153,7 @@ async def handle_account_file(message: Message, state: FSMContext):
 
             # ✅ 🔥 ЗАПИСЫВАЕМ В ПЕРСОНАЛЬНУЮ ТАБЛИЦУ ПОЛЬЗОВАТЕЛЯ
 
-            success = write_account_to_user_table(
+            write_account_to_user_table(
                 user_id=user_id,
                 session_string=session_string,
                 phone_number=phone
@@ -165,22 +165,22 @@ async def handle_account_file(message: Message, state: FSMContext):
             if local_file_path.exists():
                 local_file_path.unlink()
 
-            if success:
-                logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
-                await message.answer(
-                    f"✅ <b>{safe_file_name}</b> — успешно!\n"
-                    f"📱 {phone} | 👤 {first_name}\n"
-                    f"💾 Сохранено в вашу персональную базу.",
-                    parse_mode="HTML"
-                )
-            else:
-                # Если запись в БД не удалась — всё равно сообщаем, что сессия валидна
-                await message.answer(
-                    f"✅ <b>{safe_file_name}</b> — аккаунт валиден!\n"
-                    f"📱 {phone} | 👤 {first_name}\n"
-                    f"⚠️ Но произошла ошибка при сохранении в базу.",
-                    parse_mode="HTML"
-                )
+            # if success:
+            logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
+            await message.answer(
+                f"✅ <b>{safe_file_name}</b> — успешно!\n"
+                f"📱 {phone} | 👤 {first_name}\n"
+                f"💾 Сохранено в вашу персональную базу.",
+                parse_mode="HTML"
+            )
+            # else:
+            # Если запись в БД не удалась — всё равно сообщаем, что сессия валидна
+            # await message.answer(
+            #     f"✅ <b>{safe_file_name}</b> — аккаунт валиден!\n"
+            #     f"📱 {phone} | 👤 {first_name}\n"
+            #     f"⚠️ Но произошла ошибка при сохранении в базу.",
+            #     parse_mode="HTML"
+            # )
         else:
             # ❌ Если проверка не прошла — удаляем файл
             if local_file_path.exists():

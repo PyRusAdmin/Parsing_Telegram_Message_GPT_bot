@@ -403,7 +403,7 @@ async def get_user_channels_or_notify(user_id: int, user, message, client):
     return channels
 
 
-async def filter_messages(message, user_id, user, session_path):
+async def filter_messages(message, user_id, user):
     """
     Основная функция запуска процесса отслеживания сообщений в Telegram.
 
