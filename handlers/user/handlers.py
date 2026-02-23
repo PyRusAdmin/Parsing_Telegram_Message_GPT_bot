@@ -278,7 +278,12 @@ async def handle_start_tracking(message, state: FSMContext):
         session_dir = os.path.join("accounts", str(message.from_user.id))
         os.makedirs(session_dir, exist_ok=True)
 
-        session_path = await find_session_file(session_dir, user, message)  # <-- ✅ ищем файл сессии
+        session_path = await find_session_file(
+            user_id=message.from_user.id,
+            # session_dir,
+            user=user,
+            message=message
+        )  # <-- ✅ ищем файл сессии
 
         logger.info(session_path)
         if session_path is None:

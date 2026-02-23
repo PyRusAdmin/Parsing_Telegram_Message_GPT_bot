@@ -6,7 +6,8 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from database.database import get_user_accounts, delete_user_account
+from database.database import get_user_accounts
+
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 
 
@@ -49,7 +50,7 @@ async def find_session_file(user_id: int, user, message):
             )
             # 🔹 Удаляем невалидную сессию из БД
 
-            delete_user_account(user_id, session_string)
+            # delete_user_account(user_id, session_string)
             # 🔹 Рекурсивно пробуем найти другой аккаунт
             return await find_session_file(user_id, user, message)
 

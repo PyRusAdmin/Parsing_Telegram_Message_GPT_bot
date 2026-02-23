@@ -54,6 +54,34 @@ def write_account_to_user_table(user_id: int, session_string: str, phone_number:
         logger.exception(e)
 
 
+def get_user_accounts(user_id: int):
+    """
+    Получает все аккаунты пользователя из его персональной таблицы
+
+    :param user_id: ID пользователя Telegram
+    :return: Список словарей с данными аккаунтов
+    """
+    try:
+        accounts = (UserAccountsTable
+                    .select()
+                    .where(UserAccountsTable.user_id == user_id))
+
+        # Преобразуем объекты модели в словари
+        result = [
+            {
+                'user_id': account.user_id,
+                'session_string': account.session_string,
+                'phone_number': account.phone_number,
+                'created_at': account.created_at
+            }
+            for account in accounts
+        ]
+        return result
+    except Exception as e:
+        logger.exception(f"❌ Ошибка получения аккаунтов пользователя {user_id}: {e}")
+        return []
+
+
 # def create_accounts_table(user_id: int):
 #     """
 #     Создаёт и возвращает модель Peewee для таблицы аккаунтов пользователя.
@@ -141,30 +169,30 @@ def get_account_list():
     return accounts  # Список аккаунтов
 
 
-async def update_phone_by_session(session_string: str, new_phone: str, app_logger) -> bool:
-    """
-    Обновляет номер телефона аккаунта в базе по session_string.
-
-    :param session_string: Строка сессии
-    :param new_phone: Новый номер телефона
-    :param app_logger: Логгер
-    :return: True при успехе, False при ошибке
-    """
-    try:
-        rows_updated = (Account
-                        .update(phone_number=new_phone)
-                        .where(Account.session_string == session_string)
-                        .execute())
-        if rows_updated > 0:
-            await app_logger.log_and_display(f"✅ Номер аккаунта обновлён: {new_phone}")
-            return True
-        else:
-            await app_logger.log_and_display(f"⚠️ Аккаунт с session_string='{session_string}' не найден для обновления")
-            return False
-    except Exception as e:
-        logger.exception("Ошибка при обновлении номера")
-        await app_logger.log_and_display(f"❌ Ошибка обновления номера: {e}")
-        return False
+# async def update_phone_by_session(session_string: str, new_phone: str, app_logger) -> bool:
+#     """
+#     Обновляет номер телефона аккаунта в базе по session_string.
+#
+#     :param session_string: Строка сессии
+#     :param new_phone: Новый номер телефона
+#     :param app_logger: Логгер
+#     :return: True при успехе, False при ошибке
+#     """
+#     try:
+#         rows_updated = (Account
+#                         .update(phone_number=new_phone)
+#                         .where(Account.session_string == session_string)
+#                         .execute())
+#         if rows_updated > 0:
+#             await app_logger.log_and_display(f"✅ Номер аккаунта обновлён: {new_phone}")
+#             return True
+#         else:
+#             await app_logger.log_and_display(f"⚠️ Аккаунт с session_string='{session_string}' не найден для обновления")
+#             return False
+#     except Exception as e:
+#         logger.exception("Ошибка при обновлении номера")
+#         await app_logger.log_and_display(f"❌ Ошибка обновления номера: {e}")
+#         return False
 
 
 def get_user_channel_usernames(user_id: int):
@@ -239,29 +267,6 @@ class User(BaseModel):
 
 
 # database/database.py
-
-
-# def get_user_accounts(user_id: int) -> list[dict]:
-#     """
-#     Получает все аккаунты пользователя из его персональной таблицы
-#
-#     :param user_id: ID пользователя Telegram
-#     :return: Список словарей с данными аккаунтов
-#     """
-#     try:
-#         UserAccountsTable = create_accounts_table(user_id)
-#
-#         accounts = []
-#         for account in UserAccountsTable.select():
-#             accounts.append({
-#                 "session_string": account.session_string,
-#                 "phone_number": account.phone_number
-#             })
-#         return accounts
-#
-#     except Exception as e:
-#         logger.exception(f"❌ Ошибка получения аккаунтов пользователя {user_id}: {e}")
-#         return []
 
 
 # def delete_user_account(user_id: int, session_string: str) -> bool:
