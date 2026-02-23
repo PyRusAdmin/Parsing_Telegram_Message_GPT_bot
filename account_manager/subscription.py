@@ -16,6 +16,13 @@ async def subscription_telegram(client, target_username):
     :return: None
     """
     try:
+        await client.get_entity(target_username)
+        logger.info(f"✅ Уже подписаны на группу {target_username}")
+        return
+    except Exception:
+        pass  # Не подписаны, продолжаем подписку
+
+    try:
         logger.info(f"🔗 Попытка присоединиться к целевой группе {target_username}...")
         await client(JoinChannelRequest(target_username))
         logger.success(f"✅ Успешно присоединился к целевой группе {target_username}")

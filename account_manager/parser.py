@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 import asyncio
-from datetime import datetime
 import random
+from datetime import datetime
+
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
-from telethon import events
+from telethon import events, types
 from telethon.errors import (
     FloodWaitError, UserAlreadyParticipantError, InviteRequestSentError, ChannelPrivateError
 )
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
-from telethon.tl.types import Chat
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
@@ -48,18 +48,13 @@ async def join_target_group(client, user_id, message):
     :raises InviteRequestSentError: Если требуется подтверждение приглашения.
     :raises Exception: Логируется при любых других ошибках.
     """
-
     GroupModel = create_group_model(user_id=user_id)
-
     logger.info(f"🔍 Проверяю целевую группу... {GroupModel}")
-
     if not GroupModel.table_exists():
         GroupModel.create_table()
         return None
-
     groups = list(GroupModel.select())
     logger.info(f"🔍 Проверяю целевую группу... {groups}")
-
     if not groups:
         logger.warning(f"❌ Не найдена целевая группа для пользователя {user_id}")
         # Если группа не найдена, то высылаем сообщение пользователю группы, что такой группы нет и клавиатуру для добавления группы для пересылки
@@ -68,7 +63,6 @@ async def join_target_group(client, user_id, message):
             reply_markup=connect_grup_keyboard_tech()
         )
         return None  # Возвращаем None, если группа не найдена
-
     target_username = groups[0].user_group
     if not target_username:
         logger.error(f"❌ Целевая группа имеет пустой username для user_id={user_id}")
@@ -77,13 +71,11 @@ async def join_target_group(client, user_id, message):
             reply_markup=connect_grup_keyboard_tech()
         )
         return None
-
     try:
         await subscription_telegram(client, target_username)  # Подписываемся на группу
         # Получаем ID группы
         entity = await client.get_entity(target_username)
-        return entity.telegram_id
-
+        return entity.id
     except Exception as e:
         logger.exception(f"❌ Не удалось присоединиться к целевой группе {target_username}: {e}")
         return None
@@ -204,7 +196,7 @@ def determine_telegram_chat_type(entity):
         return 'Обычный чат (группа старого типа)'
 
 
-async def get_grup_accaunt(client, message):
+async def get_grup_accaunt(client):
     """
     Собирает и обновляет данные о группах и каналах из аккаунта пользователя.
 
@@ -215,40 +207,48 @@ async def get_grup_accaunt(client, message):
     Добавлена защита от ошибок и ограничений Telegram API.
 
     :param client: (TelegramClient) Активный клиент Telethon.
-    :param message: (Message) Объект сообщения для логирования и контекста.
-    :return: None
+    :return: set — множество username (@username), на которые подписан аккаунт
     """
     subscribed_usernames = set()
 
     try:
         async for dialog in client.iter_dialogs():
             try:
-                entity = await client.get_entity(dialog.telegram_id)
+                # Используем entity напрямую — он уже содержит всю нужную информацию
+                entity = dialog.entity
 
-                # Пропускаем личные чаты
-                if isinstance(entity, Chat):
-                    logger.debug(f"💬 Пропущен личный чат: {dialog.telegram_id}")
+                # Пропускаем личные чаты (User)
+                if isinstance(entity, types.User):
+                    logger.debug(f"💬 Пропущен личный чат: {entity.id}")
                     continue
 
                 # Проверяем, является ли супергруппой или каналом
                 if not getattr(entity, 'megagroup', False) and not getattr(entity, 'broadcast', False):
                     continue
 
+                # Собираем username
                 if entity.username:
                     subscribed_usernames.add(f"@{entity.username.lower()}")
 
-                # Получаем полную информацию
-                full_entity = await client(GetFullChannelRequest(channel=entity))
-                participants_count = full_entity.full_chat.participants_count or 0
+                # Получаем полную информацию через GetFullChannelRequest
+                try:
+                    full_entity = await client(GetFullChannelRequest(channel=entity))
+                    participants_count = full_entity.full_chat.participants_count or 0
+                    description = full_entity.full_chat.about or ""
+                except Exception as e:
+                    logger.warning(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
+                    participants_count = 0
+                    description = ""
+
                 actual_username = f"@{entity.username}" if entity.username else ""
                 link = f"https://t.me/{entity.username}" if entity.username else None
                 title = entity.title or "Без названия"
-                description = full_entity.full_chat.about or ""
                 new_group_type = determine_telegram_chat_type(entity)
 
                 logger.info(
                     f"👥 {participants_count} | 📝 {title} | Тип: {new_group_type} | 🔗 {link} | 💬 {description}")
 
+                # Сохранение или обновление в базе
                 TelegramGroup.insert(
                     group_hash=entity.access_hash,
                     name=title,
@@ -273,14 +273,11 @@ async def get_grup_accaunt(client, message):
                 logger.debug(f"🔄 Обновлена группа: {title}")
 
                 await asyncio.sleep(1)
-            except TypeError as te:
-                logger.warning(f"❌ TypeError при обработке диалога {dialog.telegram_id}: {te}")
-                continue
             except Exception as e:
-                logger.exception(f"⚠️ Ошибка при обработке диалога {dialog.telegram_id}: {e}")
+                logger.exception(f"⚠️ Ошибка при обработке диалога {getattr(entity, 'id', 'unknown')}: {e}")
                 continue
     except Exception as error:
-        logger.exception(f"🔥 Критическая ошибка в forming_a_list_of_groups: {error}")
+        logger.exception(f"🔥 Критическая ошибка в get_grup_accaunt: {error}")
 
     return subscribed_usernames
 
@@ -301,7 +298,7 @@ async def join_required_channels(client, user_id, message):
     :return: None
     """
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
-    already_subscribed = await get_grup_accaunt(client, message)  # Получаем список каналов, где аккаунт уже состоит
+    already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
     logger.info(f"📊 Всего каналов для подписки: {total_count}, уже подписан на: {len(already_subscribed)}")
     if total_count == 0:
@@ -425,16 +422,10 @@ async def filter_messages(message, user_id, user):
     :raises Exception: Логируется при ошибках инициализации или подключения.
     """
     logger.info(f"🚀 Запуск бота для user_id={str(user_id)}...")
-    # Telethon ожидает session_name без расширения
-    # ✅ Создаём флаг остановки для этого пользователя
-    stop_event = asyncio.Event()
-    stop_flags[str(user_id)] = stop_event
-
     try:
         # Проверка на наличие подключенного аккаунта у пользователя для избежания ошибки
         # Получаем все аккаунты пользователя из его персональной таблицы
         accounts = get_user_accounts(user_id)
-
         if not accounts:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
             await message.answer(
@@ -443,37 +434,19 @@ async def filter_messages(message, user_id, user):
                 reply_markup=menu_launch_tracking_keyboard()
             )
             return None
-
         logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
-
-        logger.info(accounts)
-        session_string = accounts[0]['session_string']
-        logger.info(session_string)
         # ✅ Сохраняем активный клиент
         checker = CheckingAccountsValidity(message=message)
-        client = checker.client_connect_string_session(session_string)
-
-        active_clients[str(user_id)] = client
-
+        client = await checker.client_connect_string_session(accounts[0]['session_string'])
         # === Подключаемся к целевой группе для пересылки ===
         target_group_id = await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
-
         # Если не удалось подключиться к целевой группе — выходим
         if not target_group_id:
             return
-
         # === Подключаемся к обязательным каналам ===
         await join_required_channels(client=client, user_id=str(user_id), message=message)
-
-        # ✅ Проверяем, не была ли установлена остановка во время подписки
-        if stop_event.is_set():
-            logger.info("🛑 Остановка до начала прослушивания сообщений.")
-            await message.answer("🛑 Отслеживание остановлено.")
-            return
-
         # === Загружаем список каналов из базы ===
         channels = await get_user_channels_or_notify(user_id=int(user_id), user=user, message=message, client=client)
-
         # Если каналов нет — выходим
         if not channels:
             return
@@ -496,21 +469,8 @@ async def filter_messages(message, user_id, user):
             text="👂 Бот слушает новые сообщения...",
             reply_markup=menu_launch_tracking_keyboard()
         )
-
-        # ✅ Запускаем прослушивание с проверкой флага остановки
-        while not stop_event.is_set():
-            try:
-                # Используем wait_for с небольшим таймаутом для возможности проверки флага
-                await asyncio.wait_for(stop_event.wait(), timeout=1.0)
-                break  # Флаг установлен, выходим
-            except asyncio.TimeoutError:
-                # Таймаут - продолжаем работу
-                pass
-
         logger.info("🛑 Прослушивание остановлено по запросу пользователя.")
         await message.answer("🛑 Отслеживание сообщений остановлено.")
-
-        # await client.run_until_disconnected()
     except Exception as e:
         logger.exception(f"❌ Критическая ошибка в filter_messages: {e}")
     finally:
@@ -520,7 +480,6 @@ async def filter_messages(message, user_id, user):
             if client.is_connected():
                 await client.disconnect()
                 logger.info(f"🛑 Клиент для user_id={str(user_id)} отключён.")
-
         if user_id in stop_flags:
             stop_flags.pop(str(user_id))
             logger.info(f"🗑️ Флаг остановки для user_id={str(user_id)} удалён.")
