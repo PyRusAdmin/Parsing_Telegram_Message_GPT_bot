@@ -16,7 +16,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import api_id, api_hash
-from database.database import delete_account_from_db, getting_account, write_account_to_dbs
+from database.database import delete_account_from_db, getting_account, write_account_to_user_table
 
 mobile_device = {
     "device_model": "Pixel 5",
@@ -247,7 +247,7 @@ class CheckingAccountsValidity:
                 logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
 
                 # Записываем в базу данных
-                write_account_to_dbs(
+                write_account_to_user_table(
                     user_id=self.user_id,
                     session_string=session_string,
                     phone_number=phone

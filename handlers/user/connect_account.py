@@ -15,6 +15,7 @@ from database.database import User
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
 from system.dispatcher import router
+from database.database import write_account_to_user_table
 
 
 @router.message(F.text == "🔐 Подключить аккаунт")
@@ -151,7 +152,7 @@ async def handle_account_file(message: Message, state: FSMContext):
             session_string = StringSession.save(client.session)
 
             # ✅ 🔥 ЗАПИСЫВАЕМ В ПЕРСОНАЛЬНУЮ ТАБЛИЦУ ПОЛЬЗОВАТЕЛЯ
-            from database.database import write_account_to_user_table
+
             success = write_account_to_user_table(
                 user_id=user_id,
                 session_string=session_string,
