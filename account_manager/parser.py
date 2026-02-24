@@ -314,7 +314,9 @@ async def join_required_channels(client, user_id, message):
         )
 
     for channel in list(db_channels - already_subscribed)[:500]:  # Ограничиваем до 500 записей
-        random_delay = random.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        random_delay = random.choice(
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30]
+        )
         try:
             logger.warning(f"🔗 Подписка на {channel}")
             await client(JoinChannelRequest(channel))
@@ -330,7 +332,10 @@ async def join_required_channels(client, user_id, message):
         except FloodWaitError as e:
             logger.error(f"⚠️ FloodWait {e.seconds} сек.")
             await asyncio.sleep(e.seconds)
-            await client(JoinChannelRequest(channel))
+            try:
+                await client(JoinChannelRequest(channel))
+            except InviteRequestSentError:
+                logger.error(f"✉️ Приглашение уже отправлено: {channel}")
         except InviteRequestSentError:
             logger.error(f"✉️ Приглашение уже отправлено: {channel}")
         except ValueError:
