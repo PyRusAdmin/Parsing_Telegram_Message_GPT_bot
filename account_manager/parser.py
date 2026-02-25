@@ -71,7 +71,9 @@ async def join_target_group(client, user_id, message):
         )
         return None
     try:
-        await subscription_telegram(client, target_username)  # Подписываемся на группу
+        target_usernames = f'https://t.me/{target_username.lstrip("@")}'
+        await client(JoinChannelRequest(target_usernames))
+        # await subscription_telegram(client, target_usernames)  # Подписываемся на группу
         # Получаем ID группы
         entity = await client.get_entity(target_username)
         return entity.id
