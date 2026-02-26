@@ -12,7 +12,6 @@ from telethon.errors import (
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
-from account_manager.subscription import subscription_telegram
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups
 )
@@ -448,6 +447,7 @@ async def filter_messages(message, user_id, user):
             )
             return None
         logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
+
         # ✅ Сохраняем активный клиент
         checker = CheckingAccountsValidity(message=message)
         client = await checker.client_connect_string_session(accounts[0]['session_string'])
