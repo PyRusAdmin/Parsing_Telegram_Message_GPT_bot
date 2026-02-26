@@ -76,6 +76,13 @@ async def join_target_group(client, user_id, message):
         # Получаем ID группы
         entity = await client.get_entity(target_username)
         return entity.id
+    except FloodWaitError as e:
+        logger.error(f"⚠️ FloodWait {e.seconds} сек.")
+        await asyncio.sleep(e.seconds)
+        try:
+            await client(JoinChannelRequest(target_usernames))
+        except InviteRequestSentError:
+            logger.error(f"✉️ Приглашение уже отправлено: {target_usernames}")
     except Exception as e:
         logger.exception(f"❌ Не удалось присоединиться к целевой группе {target_username}: {e}")
         return None
