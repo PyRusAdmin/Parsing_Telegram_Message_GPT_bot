@@ -342,7 +342,11 @@ async def join_required_channels(client, user_id, message):
                 160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
                 170, 171, 172, 173, 174, 175, 176, 177, 178, 179,
                 180, 181, 182, 183, 184, 185, 186, 187, 188, 189,
-                190, 191, 192
+                190, 191, 192, 193, 194, 195, 196, 197, 198, 199,
+                200, 201, 202, 203, 204, 205, 206, 207, 208, 209,
+                300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
+                310, 311, 312, 313, 314, 315, 316, 317, 318, 319,
+                320, 321, 322, 323, 324, 325, 326, 327, 328, 329
             ]
         )
         try:
@@ -494,6 +498,11 @@ async def filter_messages(message, user_id, user):
             try:
                 entity = await client.get_entity(target_username)
                 target_group_id = entity.id
+            except FloodWaitError as e:
+                logger.warning(f"FloodWaitError: {e}")
+                await asyncio.sleep(e.value)
+                entity = await client.get_entity(target_username)
+                target_group_id = entity.id
             except Exception as e:
                 logger.exception(f"❌ Не удалось получить целевую группу: {e}")
                 await message.answer(
@@ -502,15 +511,43 @@ async def filter_messages(message, user_id, user):
                 )
                 return
 
-            @client.on(events.NewMessage(chats=channels))
-            async def handle_new_message(event: events.NewMessage.Event):
-                await process_message(
-                    client=client,
-                    message=event.message,
-                    chat_id=event.chat_id,
-                    user_id=str(user_id),
-                    target_group_id=target_group_id
+            # ✅ Резолвим каналы заранее — фильтруем невалидные
+            valid_channels = []
+            for channel in channels:
+                try:
+                    entity = await client.get_input_entity(channel)
+                    logger.info(entity)
+                    valid_channels.append(entity)
+                except ValueError:
+                    logger.warning(f"⚠️ Канал не найден, пропускаем: {channel}")
+                except FloodWaitError as e:
+                    logger.warning(f"⚠️ FloodWait при резолве {channel}: {e.seconds} сек.")
+                    await asyncio.sleep(e.seconds)
+                except Exception as e:
+                    logger.warning(f"⚠️ Ошибка резолва {channel}: {e}")
+
+            if not valid_channels:
+                logger.warning("❌ Нет валидных каналов для прослушивания")
+                await message.answer(
+                    "❌ Ни один канал не удалось подключить. Проверьте список каналов.",
+                    reply_markup=menu_launch_tracking_keyboard()
                 )
+                return
+
+            logger.info(f"✅ Валидных каналов для прослушивания: {len(valid_channels)} из {len(channels)}")
+
+            @client.on(events.NewMessage(chats=valid_channels))
+            async def handle_new_message(event: events.NewMessage.Event):
+                try:
+                    await process_message(
+                        client=client,
+                        message=event.message,
+                        chat_id=event.chat_id,
+                        user_id=str(user_id),
+                        target_group_id=target_group_id
+                    )
+                except Exception as e:
+                    logger.exception(f"Не удалось обработать сообщение: {e}")
 
             logger.info("👂 Бот слушает новые сообщения...")
             await message.answer(
