@@ -416,16 +416,10 @@ async def filter_messages(message, user_id, user):
     """
     Основная функция запуска процесса отслеживания сообщений в Telegram.
 
-    Инициализирует клиент Telethon с помощью сессии пользователя, подключается
-    к целевой группе (для пересылки) и к отслеживаемым каналам, затем начинает
-    слушать новые сообщения. При совпадении с ключевыми словами — пересылает
-    сообщение с контекстом.
-
-    Работает до принудительной остановки (stop_tracking).
-
-    - Использует event-based обработку через `client.on(events.NewMessage)`.
-    - Состояние отслеживания хранится в памяти (`forwarded_messages`).
-    - После остановки клиент корректно отключается.
+    1️⃣ Читает каналы из БД — мгновенно, без запросов к Telegram.
+    2️⃣ Параллельно запускает:
+        - прослушивание новых сообщений (сразу)
+        - подписку на целевую группу и новые каналы (в фоне)
 
     :param message: (Message) Объект сообщения aiogram для взаимодействия с пользователем.
     :param user_id: (int) Идентификатор пользователя Telegram.
@@ -434,7 +428,9 @@ async def filter_messages(message, user_id, user):
     :raises Exception: Логируется при ошибках инициализации или подключения.
     """
     logger.info(f"🚀 Запуск бота для user_id={str(user_id)}...")
+    client = None
     try:
+        # === Проверка аккаунтов ===
         # Проверка на наличие подключенного аккаунта у пользователя для избежания ошибки
         # Получаем все аккаунты пользователя из его персональной таблицы
         accounts = get_user_accounts(user_id)
@@ -448,42 +444,87 @@ async def filter_messages(message, user_id, user):
             return None
         logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
 
+        # === Подключаем клиент ===
         # ✅ Сохраняем активный клиент
         checker = CheckingAccountsValidity(message=message)
         client = await checker.client_connect_string_session(accounts[0]['session_string'])
+        active_clients[str(user_id)] = client
+
         # === Подключаемся к целевой группе для пересылки ===
-        target_group_id = await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
+        # target_group_id = await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
         # Если не удалось подключиться к целевой группе — выходим
-        if not target_group_id:
-            return
-        # === Подключаемся к обязательным каналам ===
-        await join_required_channels(client=client, user_id=str(user_id), message=message)
-        # === Загружаем список каналов из базы ===
+        # if not target_group_id:
+        #     return
+
+        # === 1️⃣ Читаем каналы из БД — быстро, без запросов к Telegram ===
         channels = await get_user_channels_or_notify(user_id=int(user_id), user=user, message=message, client=client)
         # Если каналов нет — выходим
         if not channels:
             return
 
-        # === Обработка новых сообщений ===
-        @client.on(events.NewMessage(chats=channels))
-        async def handle_new_message(event: events.NewMessage.Event):
-            # Обрабатывает входящее сообщение, проверяет его на совпадение с ключевыми словами и пересылает в целевую
-            # группу с контекстом при совпадении.
-            await process_message(
-                client=client,  # <-- ✅ передаем клиент для пересылки
-                message=event.message,  # <-- ✅ передаем сообщение для пересылки
-                chat_id=event.chat_id,  # <-- ✅ передаем chat_id для пересылки
-                user_id=str(user_id),  # <-- ✅ передаем user_id для пересылки
-                target_group_id=target_group_id  # <-- ✅ передаем target_group_id для пересылки
+        # === 2️⃣ Инициализируем флаг остановки ===
+        stop_event = asyncio.Event()
+        stop_flags[str(user_id)] = stop_event
+
+        # === Функция прослушивания — стартует сразу ===
+        async def listen():
+            # Получаем target_group_id из БД (без Telegram запроса) для регистрации хендлера
+            GroupModel = create_group_model(user_id=user_id)
+            if not GroupModel.table_exists():
+                logger.warning("❌ Таблица целевой группы не найдена")
+                return
+            groups = list(GroupModel.select())
+            if not groups:
+                logger.warning("❌ Целевая группа не задана в БД")
+                await message.answer(
+                    "❌ Не найдена целевая группа для пользователя. Подключите группу.",
+                    reply_markup=connect_grup_keyboard_tech()
+                )
+                return
+
+            # Получаем entity целевой группы через Telegram (быстро — один запрос)
+            target_username = groups[0].user_group
+            try:
+                entity = await client.get_entity(target_username)
+                target_group_id = entity.id
+            except Exception as e:
+                logger.exception(f"❌ Не удалось получить целевую группу: {e}")
+                await message.answer(
+                    "❌ Не удалось получить целевую группу. Проверьте подключение.",
+                    reply_markup=connect_grup_keyboard_tech()
+                )
+                return
+
+            @client.on(events.NewMessage(chats=channels))
+            async def handle_new_message(event: events.NewMessage.Event):
+                await process_message(
+                    client=client,
+                    message=event.message,
+                    chat_id=event.chat_id,
+                    user_id=str(user_id),
+                    target_group_id=target_group_id
+                )
+
+            logger.info("👂 Бот слушает новые сообщения...")
+            await message.answer(
+                text="👂 Бот слушает новые сообщения...",
+                reply_markup=menu_launch_tracking_keyboard()
             )
 
-        logger.info("👂 Бот слушает новые сообщения...")
-        await message.answer(
-            text="👂 Бот слушает новые сообщения...",
-            reply_markup=menu_launch_tracking_keyboard()
-        )
-        logger.info("🛑 Прослушивание остановлено по запросу пользователя.")
-        await message.answer("🛑 Отслеживание сообщений остановлено.")
+            # Держим клиент живым до флага остановки
+            await stop_event.wait()
+
+            logger.info(f"🛑 Прослушивание остановлено для user_id={user_id}")
+            await message.answer("🛑 Отслеживание сообщений остановлено.")
+
+        # === Функция подписки — работает параллельно в фоне ===
+        async def subscribe():
+            await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
+            await join_required_channels(client=client, user_id=str(user_id), message=message)
+
+        # 🚀 Запускаем одновременно: прослушивание + подписка
+        await asyncio.gather(listen(), subscribe())
+
     except Exception as e:
         logger.exception(f"❌ Критическая ошибка в filter_messages: {e}")
     finally:
