@@ -441,8 +441,6 @@ async def get_user_channels_or_notify(user_id: int, user, message, client):
     return channels
 
 
-# already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
-
 async def filter_messages(message, user_id, user):
     """
     Основная функция запуска процесса отслеживания сообщений в Telegram.
@@ -480,6 +478,8 @@ async def filter_messages(message, user_id, user):
         checker = CheckingAccountsValidity(message=message)
         client = await checker.client_connect_string_session(accounts[0]['session_string'])
         active_clients[str(user_id)] = client
+
+        already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
         # === Подключаемся к целевой группе для пересылки ===
         # target_group_id = await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
@@ -532,29 +532,27 @@ async def filter_messages(message, user_id, user):
                 return
 
             # ✅ Резолвим каналы заранее — фильтруем невалидные
-            valid_channels = []
-            for channel in channels:
-                try:
-                    entity = await client.get_input_entity(channel)
-                    logger.info(entity)
-                    valid_channels.append(entity)
-                except ValueError:
-                    logger.warning(f"⚠️ Канал не найден, пропускаем: {channel}")
-                except FloodWaitError as e:
-                    logger.warning(f"⚠️ FloodWait при резолве {channel}: {e.seconds} сек.")
-                    await asyncio.sleep(e.seconds)
-                except Exception as e:
-                    logger.warning(f"⚠️ Ошибка резолва {channel}: {e}")
-
-            if not valid_channels:
-                logger.warning("❌ Нет валидных каналов для прослушивания")
-                await message.answer(
-                    "❌ Ни один канал не удалось подключить. Проверьте список каналов.",
-                    reply_markup=menu_launch_tracking_keyboard()
-                )
-                return
-
-            logger.info(f"✅ Валидных каналов для прослушивания: {len(valid_channels)} из {len(channels)}")
+            # valid_channels = []
+            # for channel in channels:
+            #     try:
+            #         entity = await client.get_input_entity(channel)
+            #         logger.info(entity)
+            #         valid_channels.append(entity)
+            #     except ValueError:
+            #         logger.warning(f"⚠️ Канал не найден, пропускаем: {channel}")
+            #     except FloodWaitError as e:
+            #         logger.warning(f"⚠️ FloodWait при резолве {channel}: {e.seconds} сек.")
+            #         await asyncio.sleep(e.seconds)
+            #     except Exception as e:
+            #         logger.warning(f"⚠️ Ошибка резолва {channel}: {e}")
+            # if not valid_channels:
+            #     logger.warning("❌ Нет валидных каналов для прослушивания")
+            #     await message.answer(
+            #         "❌ Ни один канал не удалось подключить. Проверьте список каналов.",
+            #         reply_markup=menu_launch_tracking_keyboard()
+            #     )
+            #     return
+            # logger.info(f"✅ Валидных каналов для прослушивания: {len(valid_channels)} из {len(channels)}")
 
             @client.on(events.NewMessage(chats=channels))
             async def handle_new_message(event: events.NewMessage.Event):
@@ -584,7 +582,12 @@ async def filter_messages(message, user_id, user):
         # === Функция подписки — работает параллельно в фоне ===
         async def subscribe():
             await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
-            await join_required_channels(client=client, user_id=str(user_id), message=message)
+            await join_required_channels(
+                client=client,
+                user_id=str(user_id),
+                message=message,
+                already_subscribed=already_subscribed
+            )
 
         # 🚀 Запускаем одновременно: прослушивание + подписка
         await asyncio.gather(listen(), subscribe())
