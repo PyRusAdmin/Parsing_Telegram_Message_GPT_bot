@@ -136,8 +136,9 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     keywords_lower = [keyword.lower() for keyword in keywords]
 
     # Используем ключевые слова из базы данных
-    if any(keyword in message_text for keyword in keywords_lower):
-        logger.info(f"📌 Найдено совпадение. Пересылаю сообщение ID={message.id}")
+    matched_keyword = next((keyword for keyword in keywords_lower if keyword in message_text), None)
+    if matched_keyword:
+        logger.info(f"📌 Найдено совпадение по ключевому слову '{matched_keyword}'. Пересылаю сообщение ID={message.id}")
         try:
             # Получаем информацию о чате-источнике
             try:
