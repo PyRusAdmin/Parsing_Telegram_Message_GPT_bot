@@ -171,6 +171,7 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                 f"📥 **Новое сообщение**\n\n"
                 f"**Источник:** {chat_title}\n"
                 f"**Ссылка:** {message_link}\n\n"
+                f"**Ключевое слово:** `{matched_keyword}`\n\n"
                 f"**Текст сообщения:**\n{message.message}"
             )
 
