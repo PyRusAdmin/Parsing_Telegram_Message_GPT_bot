@@ -22,6 +22,7 @@ class MyStates(StatesGroup):
 
     waiting_for_session_file_user = State()  # Ждем файл в формате session
 
+
 class MyStatesParsing(StatesGroup):
     get_url = State()  # Ожидание ввода URL для парсинга
     get_keyword = State()  # Ожидание ввода ключевого слова для поиска
