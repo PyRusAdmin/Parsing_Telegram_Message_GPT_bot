@@ -289,7 +289,7 @@ async def get_grup_accaunt(client):
     return subscribed_usernames
 
 
-async def join_required_channels(client, user_id, message):
+async def join_required_channels(client, user_id, message, already_subscribed):
     """
     Подписывает аккаунт Telegram на все отслеживаемые каналы и группы пользователя из базы данных.
 
@@ -302,10 +302,11 @@ async def join_required_channels(client, user_id, message):
     :param client: (TelegramClient) Активный клиент для выполнения запросов.
     :param user_id: (int) Идентификатор пользователя, чьи каналы нужно подключить.
     :param message: (Message) Объект сообщения aiogram для отправки уведомлений.
+    :param already_subscribed: (set) Список каналов, где аккаунт уже состоит.
     :return: None
     """
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
-    already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
+    # already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
     # ✅ Приводим к set для операции вычитания
     db_channels = set(db_channels)
@@ -439,6 +440,8 @@ async def get_user_channels_or_notify(user_id: int, user, message, client):
 
     return channels
 
+
+# already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
 async def filter_messages(message, user_id, user):
     """
