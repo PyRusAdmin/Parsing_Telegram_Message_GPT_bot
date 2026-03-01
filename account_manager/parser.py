@@ -477,8 +477,7 @@ async def filter_messages(message, user_id, user):
         logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
 
         # === Подключаем клиент ===
-        # ✅ Сохраняем активный клиент
-        checker = CheckingAccountsValidity(message=message)
+        checker = CheckingAccountsValidity(message=message)  # ✅ Сохраняем активный клиент
         client = await checker.client_connect_string_session(accounts[0]['session_string'])
         active_clients[str(user_id)] = client
 
