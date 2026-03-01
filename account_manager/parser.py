@@ -554,7 +554,7 @@ async def filter_messages(message, user_id, user):
             #     return
             # logger.info(f"✅ Валидных каналов для прослушивания: {len(valid_channels)} из {len(channels)}")
 
-            @client.on(events.NewMessage(chats=channels))
+            @client.on(events.NewMessage(chats=already_subscribed))
             async def handle_new_message(event: events.NewMessage.Event):
                 try:
                     await process_message(
