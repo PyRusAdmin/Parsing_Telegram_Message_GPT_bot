@@ -170,6 +170,7 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
             context_text = (
                 f"📥 **Новое сообщение**\n\n"
                 f"**Источник:** {chat_title}\n"
+                f"**Чат:** {chat_entity.username}\n"
                 f"**Ссылка:** {message_link}\n\n"
                 f"**Ключевое слово:** `{matched_keyword}`\n\n"
                 f"**Текст сообщения:**\n{message.message}"
@@ -483,12 +484,6 @@ async def filter_messages(message, user_id, user):
 
         already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
-        # === Подключаемся к целевой группе для пересылки ===
-        # target_group_id = await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
-        # Если не удалось подключиться к целевой группе — выходим
-        # if not target_group_id:
-        #     return
-
         # === 1️⃣ Читаем каналы из БД — быстро, без запросов к Telegram ===
         channels = await get_user_channels_or_notify(user_id=int(user_id), user=user, message=message, client=client)
         # Если каналов нет — выходим
@@ -532,29 +527,6 @@ async def filter_messages(message, user_id, user):
                     reply_markup=connect_grup_keyboard_tech()
                 )
                 return
-
-            # ✅ Резолвим каналы заранее — фильтруем невалидные
-            # valid_channels = []
-            # for channel in channels:
-            #     try:
-            #         entity = await client.get_input_entity(channel)
-            #         logger.info(entity)
-            #         valid_channels.append(entity)
-            #     except ValueError:
-            #         logger.warning(f"⚠️ Канал не найден, пропускаем: {channel}")
-            #     except FloodWaitError as e:
-            #         logger.warning(f"⚠️ FloodWait при резолве {channel}: {e.seconds} сек.")
-            #         await asyncio.sleep(e.seconds)
-            #     except Exception as e:
-            #         logger.warning(f"⚠️ Ошибка резолва {channel}: {e}")
-            # if not valid_channels:
-            #     logger.warning("❌ Нет валидных каналов для прослушивания")
-            #     await message.answer(
-            #         "❌ Ни один канал не удалось подключить. Проверьте список каналов.",
-            #         reply_markup=menu_launch_tracking_keyboard()
-            #     )
-            #     return
-            # logger.info(f"✅ Валидных каналов для прослушивания: {len(valid_channels)} из {len(channels)}")
 
             @client.on(events.NewMessage(chats=already_subscribed))
             async def handle_new_message(event: events.NewMessage.Event):
