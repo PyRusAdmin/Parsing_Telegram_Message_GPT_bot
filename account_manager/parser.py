@@ -7,7 +7,7 @@ from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
 from telethon.errors import (
-    FloodWaitError, UserAlreadyParticipantError, InviteRequestSentError, ChannelPrivateError
+    FloodWaitError, UserAlreadyParticipantError, InviteRequestSentError, ChannelPrivateError, MessageIdInvalidError
 )
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 
@@ -178,8 +178,12 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
 
             # Отправляем в целевую группу
             await client.send_message(target_group_id, context_text)
-            await client.forward_messages(target_group_id, message)
-            logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
+            try:
+                await client.forward_messages(target_group_id, message)
+                logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
+            except MessageIdInvalidError:
+                logger.warning(
+                    f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего сообщение было удалено")
 
             forwarded_messages.add(msg_key)
         except Exception as e:
