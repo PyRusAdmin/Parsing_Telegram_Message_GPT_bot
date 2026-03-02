@@ -7,7 +7,8 @@ from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
 from telethon.errors import (
-    FloodWaitError, UserAlreadyParticipantError, InviteRequestSentError, ChannelPrivateError, MessageIdInvalidError
+    FloodWaitError, UserAlreadyParticipantError, InviteRequestSentError, ChannelPrivateError, MessageIdInvalidError,
+    ChatForwardsRestrictedError, MessageTooLongError
 )
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 
@@ -166,24 +167,32 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                 except Exception:
                     message_link = "Ссылка недоступна"
 
-            # Формируем итоговое сообщение с контекстом
-            context_text = (
-                f"📥 **Новое сообщение**\n\n"
-                f"**Источник:** {chat_title}\n"
-                f"**Чат:** @{chat_entity.username}\n"
-                f"**Ссылка:** {message_link}\n\n"
-                f"**Ключевое слово:** `{matched_keyword}`\n\n"
-                f"**Текст сообщения:**\n{message.message}"
-            )
+            try:
+                # Формируем итоговое сообщение с контекстом
+                context_text = (
+                    f"📥 **Новое сообщение**\n\n"
+                    f"**Источник:** {chat_title}\n"
+                    f"**Чат:** @{chat_entity.username}\n"
+                    f"**Ссылка:** {message_link}\n\n"
+                    f"**Ключевое слово:** `{matched_keyword}`\n\n"
+                    f"**Текст сообщения:**\n{message.message}"
+                )
 
-            # Отправляем в целевую группу
-            await client.send_message(target_group_id, context_text)
+                # Отправляем в целевую группу
+                await client.send_message(target_group_id, context_text)
+            except MessageTooLongError:
+                logger.warning(
+                    f"Не удалось отправить сообщение с контекстом, так как оно слишком длинное ({len(context_text)})")
+
             try:
                 await client.forward_messages(target_group_id, message)
                 logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
             except MessageIdInvalidError:
                 logger.warning(
                     f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего сообщение было удалено")
+            except ChatForwardsRestrictedError:
+                logger.warning(
+                    f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего запрещено пересылать сообщения")
 
             forwarded_messages.add(msg_key)
         except Exception as e:
