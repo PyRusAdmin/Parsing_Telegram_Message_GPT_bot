@@ -133,7 +133,7 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     :return: Готовое текстовое сообщение для отправки.
     """
     template = get_text(user_language, "welcome_message_template")
-    version = "0.0.8"
+    version = "0.0.9"
     groups_count = getting_number_records_database()  # Общее число найденных групп
     count = get_session_count(user_id=user_tg_id)  # Сессии пользователя
     group_count = get_target_group_count(user_id=user_tg_id)  # Группы для пересылки
