@@ -11,7 +11,7 @@ from telethon.sync import functions
 from account_manager.parser import determine_telegram_chat_type
 from core.config import GROQ_API_KEY
 from core.config import OPENROUTER_API_KEY
-from core.proxy_config import setup_proxy
+from core.proxy import setup_proxy
 
 
 def category_assignment_sync(group_data: dict) -> dict:
