@@ -23,7 +23,7 @@ def read_config_file():
 config = read_config_file()
 
 # Параметры Telegram аккаунта
-username = config['telegram_settings']['username']
+# username = config['telegram_settings']['username']
 
 # Ключ API для сервиса Groq (используется в AI-модели)
 GROQ_API_KEY = config['API_Groq']['GROQ_API_KEY']
@@ -39,7 +39,7 @@ proxy_ip = config['proxy_data']['ip']
 # Язык локализации интерфейса бота
 language = config['localization']['language']
 
-session_dir: str = 'accounts/parsing'  # Указываем путь к папкам с данными пользователей и их чатами
+# session_dir: str = 'accounts/parsing'  # Указываем путь к папкам с данными пользователей и их чатами
 
 # Загружаем переменные окружения
 load_dotenv()
