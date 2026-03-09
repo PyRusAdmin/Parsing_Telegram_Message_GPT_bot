@@ -1,4 +1,4 @@
-# account_manager/parser.py (или где у вас эта функция)
+# -*- coding: utf-8 -*-
 import random
 
 from loguru import logger
