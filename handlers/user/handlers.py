@@ -331,8 +331,9 @@ async def handle_refresh_groups_list(message, state: FSMContext):
         f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} перешел в меню 🔁 Обновить список")
 
     await message.answer(
-        text=get_text(user.language, "update_list"),  # текст сообщения
-        reply_markup=back_keyboard()  # клавиатура назад
+        text=get_text(user.language, "update_list", ),  # текст сообщения
+        reply_markup=back_keyboard(),  # клавиатура назад
+        parse_mode="HTML"
     )
     await state.set_state(MyStates.waiting_username_group)
 
