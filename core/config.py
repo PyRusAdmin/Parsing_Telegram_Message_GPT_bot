@@ -16,5 +16,3 @@ proxy_user = os.getenv("user")
 proxy_password = os.getenv("password")
 proxy_port = os.getenv("port")
 proxy_ip = os.getenv("ip")
-
-language = os.getenv("language")
