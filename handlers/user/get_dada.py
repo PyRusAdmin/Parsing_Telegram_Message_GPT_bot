@@ -175,42 +175,26 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     создает Excel-файл с данными, отправляет его пользователю через Telegram и удаляет файл с сервера.
     Если данных нет или произошла ошибка, отправляет соответствующее текстовое уведомление.
 
-    - Имя файла генерируется с временной меткой для уникальности.
-    - Данные логируются для аудита.
-    - Используется динамическая модель `create_groups_model`.
-
     :param message: (Message) Входящее сообщение от пользователя, инициировавшего экспорт.
     :param state: (FSMContext) Контекст машины состояний, сбрасывается в начале обработки.
-    :raise Exception: Перехватывается локально при ошибках создания или отправки файла.
-                      Логируется и преобразуется в пользовательское сообщение об ошибке.
     """
-    await state.clear()  # Завершаем текущее состояние машины состояния
+    await state.clear()
     telegram_user = message.from_user
     user = User.get(User.user_id == telegram_user.id)
 
     logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ссылок для отслеживания")
 
-    # Получаем модель таблицы групп для данного пользователя
-    # GroupsModel = create_groups_model(user_id=telegram_user.id)
-    # Проверяем, существует ли таблица
-    # if not GroupsModel.table_exists():
-    #     GroupsModel.create_table()
-    #     await message.answer(get_text(user.language, "no_tracking_links"))
-    #     return
+    # Получаем список username и количество
+    usernames_list, total_count = get_user_channel_usernames(telegram_user.id)
 
-    usernames = get_user_channel_usernames(telegram_user.id)
-
-    # Извлекаем все записи (группы/каналы)
-    # groups = list(GroupsModel.select())
-
-    # if not groups:
-    #     await message.answer(get_text(user.language, "no_tracking_links"))
-    #     return
+    if not usernames_list:
+        await message.answer(get_text(user.language, "no_tracking_links"))
+        return
 
     # Формируем список данных для Excel
     data = []
-    for idx, group in enumerate(usernames, start=1):
-        data.append((idx, group.username_chat_channel))  # Номер и username канала
+    for idx, username in enumerate(usernames_list, start=1):
+        data.append((idx, username))
 
     # Формируем имя файла
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -231,7 +215,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
         await message.answer_document(
             document=document,
             caption=f"🔗 {get_text(user.language, 'tracking_links_export')}\n"
-                    f"Всего записей: {len(data)}"
+                    f"Всего записей: {total_count}"
         )
 
         # Удаляем файл после отправки
