@@ -154,7 +154,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                     logger.info(f"✅ Найдено сообщение с ключевым словом: '{keyword}' — {text.strip()}")
 
                     # ИСПРАВЛЕНО: используем msg.id вместо message.id
-                    logger.info(f"📌 Найдено совпадение. Пересылаю сообщение ID={msg.telegram_id}")
+                    logger.info(f"📌 Найдено совпадение. Пересылаю сообщение ID={msg.id}")
 
                     # Получаем дату сообщения
                     msg_date = msg.date.strftime("%d.%m.%Y %H:%M:%S") if msg.date else "Неизвестно"
