@@ -20,7 +20,7 @@ async def delete_group_from_database(message: Message, state: FSMContext):
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
     await message.answer(
-        "Введите username группы/канала в формате @username для удаления из отслеживания:",
+        "Введите username группы / канала в формате @username для удаления из отслеживания:",
         reply_markup=back_keyboard()
     )
     await state.set_state(MyStates.del_username_groups)
