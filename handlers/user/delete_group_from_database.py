@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
 
 from aiogram import F
 from aiogram.fsm.context import FSMContext
@@ -7,10 +6,9 @@ from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
-from account_manager.session import find_session_file
 from account_manager.unsubscribe import unsubscribe
-from database.database import User, dell_group
-from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, connect_keyboard_account
+from database.database import User, dell_group, get_user_accounts
+from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, menu_launch_tracking_keyboard
 from states.states import MyStates
 from system.dispatcher import router
 
@@ -86,11 +84,27 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     #     )
     #     return  # Правильный способ прервать выполнение обработчика
 
-    checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
-    client = await checker.connect_client(
-        session_name=session_path.replace(".session", ""),
-    )  # <-- ✅ подключаемся к клиенту Telethon
-    await unsubscribe(client, username_to_search, message)
+    # checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
+
+    # Получаем все аккаунты пользователя из его персональной таблицы
+    accounts = get_user_accounts(message.from_user.id)
+
+    if not accounts:
+        logger.warning(f"⚠️ У пользователя {message.from_user.id} нет подключённых аккаунтов в БД")
+        await message.answer(
+            "❌ У вас нет подключённых аккаунтов.\n\n"
+            "Отправьте файл сессии `.session` или нажмите «Подключение аккаунта» в меню.",
+            reply_markup=menu_launch_tracking_keyboard()
+        )
+        return None
+    logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {message.from_user.id}")
+
+    checker = CheckingAccountsValidity(message=message)  # ✅ Сохраняем активный клиент
+    client = await checker.client_connect_string_session(accounts[0]['session_string'])
+    # client = await checker.connect_client(
+    #     session_name=session_path.replace(".session", ""),
+    # )  # <-- ✅ подключаемся к клиенту Telethon
+    await unsubscribe(client, group_username, message)
 
     client.disconnect()
 
