@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from loguru import logger
 from telethon.errors import (
-    UsernameInvalidError, UsernameNotOccupiedError, UserNotParticipantError, ChannelPrivateError
+    UsernameInvalidError, UsernameNotOccupiedError, UserNotParticipantError, ChannelPrivateError, FloodWaitError
 )
-
-from keyboards.user.keyboards import main_menu_keyboard
 
 
 async def unsubscribe(client, username_to_search, message):
@@ -15,30 +13,19 @@ async def unsubscribe(client, username_to_search, message):
     :param client: клиент Telegram
     :param username_to_search: username чата в Telegram
     """
-    # 1. Пытаемся найти чат по username
     try:
-        entity = await client.get_entity(username_to_search)
-        chat_title = getattr(entity, 'title', getattr(entity, 'first_name', 'Без названия'))
-
-        logger.info(f"Найден {chat_title} {username_to_search}")
+        entity = await client.get_entity(username_to_search)  # Пытаемся найти чат по username
+        title = entity.title or ""
+        logger.info(f"Найден {title} {username_to_search}")
+        await client.delete_dialog(username_to_search)  # Отписываемся от чата
+        logger.info(f"Успешная отписка от '{title}' {username_to_search}")
+        await message.answer(f"✅ Отписались от «{title}» ({username_to_search})")
     except (UsernameInvalidError, UsernameNotOccupiedError, ValueError) as e:
-        await message.answer(
-            f"❌ Чат с username {username_to_search} не найден в Telegram. "
-            f"Проверьте правильность написания и убедитесь, что вы состоите в этом чате.",
-            reply_markup=main_menu_keyboard()
-        )
         logger.warning(f"Чат {username_to_search} не найден для пользователя {message.from_user.user_id}: {e}")
         return
+    except FloodWaitError as e:
+        logger.error(f"⚠️ FloodWait {e.seconds} сек.")
+    except (UserNotParticipantError, ChannelPrivateError) as e:
+        logger.warning(f"Пользователь уже не состоит в чате {username_to_search}: {e}")
     except Exception as e:
         logger.exception(e)
-
-    # 2. Отписываемся от чата
-    try:
-        # Универсальный способ для групп и каналов
-        await client.delete_dialog(entity)
-        logger.info(f"Успешная отписка от '{chat_title}' {username_to_search}")
-        await message.answer(f"✅ Отписались от «{chat_title}» ({username_to_search})")
-    except (UserNotParticipantError, ChannelPrivateError) as e:
-        # Пользователь уже не состоит в чате — продолжаем удаление из БД
-        logger.warning(f"Пользователь уже не состоит в чате {username_to_search}: {e}")
-        await message.answer(f"ℹ️ Вы уже не состоите в «{chat_title}» ({username_to_search})")

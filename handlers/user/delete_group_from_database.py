@@ -7,7 +7,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe
-from database.database import User, dell_group, get_user_accounts
+from database.database import dell_group, get_user_accounts
 from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, menu_launch_tracking_keyboard
 from states.states import MyStates
 from system.dispatcher import router
@@ -54,37 +54,17 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
 
     if deletion_result:
         await message.answer(
-            f"✅ Группа {group_username} успешно удалена из отслеживания.",
+            text=f"✅ Группа {group_username} успешно удалена из отслеживания.",
             reply_markup=main_menu_keyboard()
         )
         logger.info(f"Пользователь {message.from_user.id} удалил группу @{group_username}")
     else:
         await message.answer(
-            f"❌ Группа @{group_username} не найдена в вашем списке отслеживаемых.",
+            text=f"❌ Группа @{group_username} не найдена в вашем списке отслеживаемых.",
             reply_markup=main_menu_keyboard()
         )
         logger.warning(f"Попытка удалить несуществующую группу @{group_username} "
                        f"пользователем {message.from_user.id}")
-
-    user = User.get(User.user_id == message.from_user.id)
-
-    # === Папка, где хранятся сессии ===
-    # session_dir = os.path.join("accounts", str(message.from_user.id))
-    # os.makedirs(session_dir, exist_ok=True)
-    #
-    # session_path = await find_session_file(session_dir, user, message)  # <-- ✅ ищем файл сессии
-    #
-    # logger.info(session_path)
-    # if session_path is None:
-    #     logger.warning("Нет подключенного аккаунта")
-    #
-    #     await message.answer(
-    #         text="Нет подключенного аккаунта. Подключите аккаунт.",
-    #         reply_markup=connect_keyboard_account()
-    #     )
-    #     return  # Правильный способ прервать выполнение обработчика
-
-    # checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
 
     # Получаем все аккаунты пользователя из его персональной таблицы
     accounts = get_user_accounts(message.from_user.id)
@@ -101,9 +81,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
 
     checker = CheckingAccountsValidity(message=message)  # ✅ Сохраняем активный клиент
     client = await checker.client_connect_string_session(accounts[0]['session_string'])
-    # client = await checker.connect_client(
-    #     session_name=session_path.replace(".session", ""),
-    # )  # <-- ✅ подключаемся к клиенту Telethon
+
     await unsubscribe(client, group_username, message)
 
     client.disconnect()
