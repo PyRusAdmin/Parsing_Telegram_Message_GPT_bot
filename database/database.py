@@ -164,21 +164,6 @@ def get_user_accounts(user_id: int):
         return []
 
 
-# def create_accounts_table(user_id: int):
-#     """
-#     Создаёт и возвращает модель Peewee для таблицы аккаунтов пользователя.
-#     Таблица создаётся автоматически при первом вызове.
-#     """
-# 🔹 Вложенный класс модели — создаётся заново для каждого user_id
-
-
-# 🔹 Создаём таблицу, если не существует
-# db.connect(reuse_if_open=True)
-# db.create_tables([UserAccountsTable], safe=True)
-#
-# return UserAccountsTable  # ✅ Возвращаем класс модели для использования
-
-
 """Работа с аккаунтами"""
 
 
@@ -239,79 +224,6 @@ async def delete_account_from_db(session_string: str) -> None:
         logger.info(f"Ошибка при удалении аккаунта: {e}")
 
 
-# def get_account_list():
-#     """
-#     Получаем подключенные аккаунты: возвращаем список кортежей (phone, session_string)
-#     :return: Список кортежей (phone, session_string)
-#     """
-#     accounts = []
-#     for account in Account.select(Account.phone_number, Account.session_string):
-#         accounts.append((account.phone_number, account.session_string))
-#
-#     return accounts  # Список аккаунтов
-
-
-# async def update_phone_by_session(session_string: str, new_phone: str, app_logger) -> bool:
-#     """
-#     Обновляет номер телефона аккаунта в базе по session_string.
-#
-#     :param session_string: Строка сессии
-#     :param new_phone: Новый номер телефона
-#     :param app_logger: Логгер
-#     :return: True при успехе, False при ошибке
-#     """
-#     try:
-#         rows_updated = (Account
-#                         .update(phone_number=new_phone)
-#                         .where(Account.session_string == session_string)
-#                         .execute())
-#         if rows_updated > 0:
-#             await app_logger.log_and_display(f"✅ Номер аккаунта обновлён: {new_phone}")
-#             return True
-#         else:
-#             await app_logger.log_and_display(f"⚠️ Аккаунт с session_string='{session_string}' не найден для обновления")
-#             return False
-#     except Exception as e:
-#         logger.exception("Ошибка при обновлении номера")
-#         await app_logger.log_and_display(f"❌ Ошибка обновления номера: {e}")
-#         return False
-
-
-# def get_user_channel_usernames(user_id: int):
-#     """
-#     Возвращает множество username каналов/групп пользователя из БД (в нижнем регистре).
-#
-#     :param user_id: Telegram user_id
-#     :return: db_channels, total_count
-#     """
-#     Groups = create_groups_model(user_id=user_id)
-#     total_count = Groups.select().count()
-#     db_channels = {
-#         group.username.lower()
-#         for group in (
-#             Groups
-#             .select(Groups.username)
-#             .where(Groups.username.is_null(False))
-#         )
-#     }
-#     return db_channels, total_count
-
-
-# def delete_group_by_username(user_id: int, channel: str):
-#     """
-#     Удаляет группу или канал пользователя из БД по username.
-#
-#     Используется для очистки базы данных от невалидных или недоступных
-#     Telegram-групп/каналов (например, если канал удалён или бот потерял доступ).
-#
-#     :param user_id: (int) Telegram user_id, для которого создана таблица групп
-#     :param channel: (str) Username группы/канала без '@'
-#     :return: (int) Количество удалённых записей
-#     """
-#     Groups = create_groups_model(user_id)
-#     Groups.delete().where(Groups.username == channel).execute()
-
-
 class User(BaseModel):
     """
     Модель для хранения основных данных пользователя Telegram.
@@ -334,65 +246,6 @@ class User(BaseModel):
     first_name = CharField(null=True)
     last_name = CharField(null=True)
     language = CharField(default="ru")  # "ru" или "en"
-
-
-# def write_account_to_dbs(user_id: int, session_string: str, phone_number: str):
-#     AccountsTable = create_accounts_table(user_id)
-#     account, created = AccountsTable.get_or_create(
-#         session_string=session_string,
-#         defaults={"phone_number": phone_number}
-#     )
-#     if created:
-#         logger.info(f"✅ Аккаунт {phone_number} записан в БД.")
-#     else:
-#         logger.info(f"⚠️ Аккаунт {phone_number} уже существует в БД.")
-
-
-# database/database.py
-
-
-# def delete_user_account(user_id: int, session_string: str) -> bool:
-#     """
-#     Удаляет аккаунт из персональной таблицы пользователя
-#
-#     :param user_id: ID пользователя Telegram
-#     :param session_string: Строка сессии для удаления
-#     :return: True если удалено, False если не найдено или ошибка
-#     """
-#     try:
-#         UserAccountsTable = create_accounts_table(user_id)
-#
-#         deleted = (UserAccountsTable
-#                    .delete()
-#                    .where(UserAccountsTable.session_string == session_string)
-#                    .execute())
-#
-#         if deleted > 0:
-#             logger.info(f"🗑️ Аккаунт удалён из таблицы {user_id}_accounts")
-#             return True
-#         else:
-#             logger.warning(f"⚠️ Аккаунт не найден в таблице {user_id}_accounts")
-#             return False
-#
-#     except Exception as e:
-#         logger.exception(f"❌ Ошибка удаления аккаунта пользователя {user_id}: {e}")
-#         return False
-
-
-# def create_groups_model(user_id):
-#     """
-#     Динамически создаёт модель Peewee для хранения чатов конкретного пользователя.
-#
-#     Модель используется для отслеживания списка Telegram-групп и каналов, добавленных пользователем для мониторинга.
-#     Создаётся отдельная таблица для каждого пользователя по шаблону 'groups_<user_id>'.
-#
-#     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-#     :return peewee.Model: Класс модели Peewee с полем `username_chat_channel`.
-#
-#     Model Fields:
-#         username_chat_channel (CharField):
-#             Уникальное имя чата (канала) в формате @username или название.
-#     """
 
 
 def create_keywords_model(user_id):
@@ -573,22 +426,6 @@ def get_session_count(user_id: int) -> int:
         if f.endswith(".session")
     ]
     return len(session_files)
-
-
-# def get_tracked_channels_count(user_id: int):
-#     """
-#     Получение количества подключенных групп для отслеживания ключевых слов
-#
-#     :param user_id: (int) ID пользователя Telegram.
-#     :return int: Количество записей (обычно 0 или 1, так как группа одна).
-#     """
-#     GroupModel = create_groups_model(user_id)
-#
-#     # Убедимся, что таблица существует, иначе count() вызовет ошибку
-#     if not GroupModel.table_exists():
-#         return 0
-#
-#     return GroupModel.select().count()
 
 
 def get_keywords_count(user_id: int):

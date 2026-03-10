@@ -35,21 +35,6 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     await state.clear()  # Завершаем текущее состояние машины состояния
     logger.info(f"Пользователь ввёл ссылку для удаления: {group_username}")
 
-    # Создаём модель с таблицей, уникальной для конкретного пользователя
-    # logger.info(f"Создана новая таблица для пользователя {message.from_user.id}")
-
-    # Удаляем группу по username (ищем с учётом @ и без)
-    # username_to_search = group_username.lstrip('@')  # Убираем @ если есть
-
-    # GroupModel = create_groups_model(user_id=message.from_user.id)
-
-    # Попытка найти и удалить
-    # deleted_count = (GroupModel
-    #                  .delete()
-    #                  .where((GroupModel.username == username_to_search) |
-    #                         (GroupModel.username == f"@{username_to_search}"))
-    #                  .execute())
-
     deletion_result = dell_group(user_id=message.from_user.id, username=group_username)
 
     if deletion_result:
