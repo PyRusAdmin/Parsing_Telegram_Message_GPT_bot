@@ -9,14 +9,11 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.errors import (
     FloodWaitError, AuthKeyUnregisteredError, UsernameInvalidError, UsernameNotOccupiedError, TypeNotFoundError
 )
-from telethon.sessions import StringSession
-from telethon.sync import TelegramClient
 from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.parser import determine_telegram_chat_type
-from core.config import api_id, api_hash
-from database.database import TelegramGroup, db
+from database.database import TelegramGroup, db, getting_account
 from keyboards.admin.keyboards import admin_keyboard
 from system.dispatcher import router
 
@@ -85,15 +82,11 @@ async def update_db(message: Message):
      :param message: (Message) Входящее сообщение от администратора.
      :return: None
      """
-    checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
-    # ✅ Проверка аккаунтов на валидность
-    available_sessions = await checker.checking_accounts()
 
-    await message.answer("✅ Проверка завершена.")
+    available_sessions = getting_account()  # Получаем все аккаунты в базе данных
 
     await message.answer(
         f"🔍 Найдено аккаунтов: {len(available_sessions)}\n"
-        f"📱 Аккаунты: {', '.join([s.split('/')[-1] for s in available_sessions])}"
     )
 
     try:
@@ -121,20 +114,12 @@ async def update_db(message: Message):
         # 5. Основной цикл обработки групп
         while processed < total_count and current_session_index < len(available_sessions):
             # Подключаемся к текущему аккаунту
-            session_path = f'accounts/parsing/{available_sessions[current_session_index]}'
-            client = TelegramClient(session_path, api_id, api_hash)
-            await client.connect()
-            session_string = StringSession.save(client.session)
-            # Создаем клиент, используя StringSession и вашу строку
-            client = TelegramClient(
-                StringSession(session_string),
-                api_id=api_id,
-                api_hash=api_hash,
-                system_version="4.16.30-vxCUSTOM"
-            )
 
             try:
-                await client.connect()
+                # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+                checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
+                client = await checker.start_random_client()
+
                 await asyncio.sleep(1)
 
                 current_account = available_sessions[current_session_index].split('/')[-1]
