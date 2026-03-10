@@ -5,12 +5,9 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
-from telethon import TelegramClient
-from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
-from core.config import api_id, api_hash
 from keyboards.user.keyboards import back_keyboard
 from states.states import MyStatesParsing
 from system.dispatcher import router
@@ -25,7 +22,6 @@ async def checking_group_for_keywords(message: Message, state: FSMContext):
 
     :param message: (Message) Объект входящего сообщения от пользователя.
     :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
-    :return: None
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     await message.answer(
@@ -41,9 +37,8 @@ async def checking_group_for_keywords(message: Message, state: FSMContext):
 async def get_url(message: Message, state: FSMContext):
     """
     Обработчик команды "Получить URL".
-    :param message:
-    :param state:
-    :return: None
+    :param message: (Message) Объект входящего сообщения от пользователя.
+    :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
     await state.update_data(url=message.text.strip())  # Сохраняем URL в контекст данных
     await message.answer(
@@ -60,10 +55,9 @@ async def get_url(message: Message, state: FSMContext):
 @router.message(MyStatesParsing.get_keyword)
 async def get_keyword(message: Message, state: FSMContext):
     """
-    J
-    :param message:
-    :param state:
-    :return:
+    Обработчик команды "Получить ключевое слово".
+    :param message: (Message) Объект входящего сообщения от пользователя.
+    :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
     keyword = message.text.strip()  # Получаем ключевое слово из сообщения
     await message.answer(
@@ -79,42 +73,39 @@ async def get_keyword(message: Message, state: FSMContext):
     await parse_group_for_keywords(url=data.get("url"), keyword=data.get("keyword"), message=message)
 
 
-async def create_client_from_session(session_path: str, api_id: int, api_hash: str):
-    """
-    Создаёт подключённого TelegramClient, используя session-файл,
-    затем переходит на StringSession для безопасного хранения в памяти.
-
-    :param session_path: Путь к .session файлу
-    :param api_id: API ID от Telegram
-    :param api_hash: API Hash от Telegram
-    :return: Подключённый клиент TelegramClient
-    """
-
-    # Создаём клиент из файла сессии
-    client = TelegramClient(
-        session_path, api_id, api_hash,
-        system_version="4.16.30-vxCUSTOM"
-    )
-    await client.connect()
-
-    # Сохраняем данные сессии в строку (StringSession)
-    session_string = StringSession.save(client.session)
-
-    # Отключаемся от первого клиента (можно освободить ресурсы при необходимости)
-    await client.disconnect()
-
-    # Создаём новый клиент на основе StringSession (без сохранения на диск)
-    client = TelegramClient(
-        StringSession(session_string),
-        api_id=api_id,
-        api_hash=api_hash,
-        system_version="4.16.30-vxCUSTOM"
-    )
-
-    await client.connect()
-    await asyncio.sleep(1)  # Даём время на стабильное подключение
-
-    return client
+# async def create_client_from_session(session_path: str, api_id: int, api_hash: str):
+#     """
+#     Создаёт подключённого TelegramClient, используя session-файл,
+#     затем переходит на StringSession для безопасного хранения в памяти.
+#
+#     :param session_path: Путь к .session файлу
+#     :param api_id: API ID от Telegram
+#     :param api_hash: API Hash от Telegram
+#     :return: Подключённый клиент TelegramClient
+#     """
+#
+#     Создаём клиент из файла сессии
+# client = TelegramClient(
+#     session_path, api_id, api_hash,
+#     system_version="4.16.30-vxCUSTOM"
+# )
+# await client.connect()
+# Сохраняем данные сессии в строку (StringSession)
+# session_string = StringSession.save(client.session)
+#
+# Отключаемся от первого клиента (можно освободить ресурсы при необходимости)
+# await client.disconnect()
+# Создаём новый клиент на основе StringSession (без сохранения на диск)
+# client = TelegramClient(
+#     StringSession(session_string),
+#     api_id=api_id,
+#     api_hash=api_hash,
+#     system_version="4.16.30-vxCUSTOM"
+# )
+# await client.connect()
+# await asyncio.sleep(1)  # Даём время на стабильное подключение
+#
+# return client
 
 
 async def parse_group_for_keywords(url, keyword, message: Message):
@@ -128,17 +119,21 @@ async def parse_group_for_keywords(url, keyword, message: Message):
     try:
         user_id = message.from_user.id  # Получаем ID пользователя
 
-        checking_accounts_validity = CheckingAccountsValidity(message=message, path="accounts/parsing_grup")
-        await checking_accounts_validity.checking_accounts_for_validity()
-        available_sessions = await checking_accounts_validity.get_available_sessions()
-
+        # checking_accounts_validity = CheckingAccountsValidity(message=message, path="accounts/parsing_grup")
+        # await checking_accounts_validity.checking_accounts_for_validity()
+        # available_sessions = await checking_accounts_validity.get_available_sessions()
         # Подключаемся к текущему аккаунту
-        logger.info(f"Подключаемся к сессии: {f'accounts/parsing_grup/{available_sessions[0]}'}")
-        client = await create_client_from_session(
-            session_path=f'accounts/parsing_grup/{available_sessions[0]}',
-            api_id=api_id,
-            api_hash=api_hash
-        )
+        # logger.info(f"Подключаемся к сессии: {f'accounts/parsing_grup/{available_sessions[0]}'}")
+        # client = await create_client_from_session(
+        #     session_path=f'accounts/parsing_grup/{available_sessions[0]}',
+        #     api_id=api_id,
+        #     api_hash=api_hash
+        # )
+
+        # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+        checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
+        client = await checker.start_random_client()
+
         await subscription_telegram(client, url)
 
         try:
@@ -167,12 +162,14 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                     # Получаем информацию о чате-источнике
                     try:
                         chat_entity = await client.get_entity(url)
-                        chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "username",
-                                                                                    None) or "Неизвестно"
+                        # title = getattr(chat_entity, "title", None) or getattr(chat_entity, "username",
+                        #                                                             None) or "Неизвестно"
+                        title = chat_entity.title or ""
+
                         chat_id = chat_entity.id
                     except Exception as e:
                         logger.warning(f"Не удалось получить название чата: {e}")
-                        chat_title = "Неизвестно"
+                        title = ""
                         chat_id = None
 
                     # Формируем ссылку на сообщение
@@ -196,7 +193,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                     # Отправляем в целевую группу
                     await message.answer(
                         text=(f"📥 <b>Новое сообщение</b>\n\n"
-                              f"<b>Источник:</b> {chat_title}\n"
+                              f"<b>Источник:</b> {title}\n"
                               f"<b>Дата:</b> {msg_date}\n"
                               f"<b>Ссылка:</b> <a href='{message_link}'>Перейти к сообщению</a>\n\n"
                               f"<b>Текст сообщения:</b>\n{display_text}"),
@@ -217,7 +214,10 @@ async def parse_group_for_keywords(url, keyword, message: Message):
             logger.exception(f"❌ Ошибка при парсинге группы: {e}")
             await message.answer("❌ Произошла ошибка при парсинге группы. Проверьте ссылку и доступ к чату.")
         finally:
-            await client.disconnect()
+            if client is not None:
+                await client.disconnect()
+            else:
+                logger.warning("Клиент не был создан или заблокирован")
     except Exception as e:
         logger.exception(e)
 
