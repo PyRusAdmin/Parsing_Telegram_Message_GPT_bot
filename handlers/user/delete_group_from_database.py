@@ -54,7 +54,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
 
     if deletion_result:
         await message.answer(
-            f"✅ Группа @{group_username} успешно удалена из отслеживания.",
+            f"✅ Группа {group_username} успешно удалена из отслеживания.",
             reply_markup=main_menu_keyboard()
         )
         logger.info(f"Пользователь {message.from_user.id} удалил группу @{group_username}")
