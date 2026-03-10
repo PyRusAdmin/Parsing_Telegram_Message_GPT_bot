@@ -82,7 +82,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     checker = CheckingAccountsValidity(message=message)  # ✅ Сохраняем активный клиент
     client = await checker.client_connect_string_session(accounts[0]['session_string'])
 
-    await unsubscribe(client, group_username, message)
+    await unsubscribe(client, group_username)  # Отписываемся от группы или канала по username
 
     client.disconnect()
 

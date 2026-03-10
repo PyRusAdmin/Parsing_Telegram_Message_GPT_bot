@@ -5,11 +5,10 @@ from telethon.errors import (
 )
 
 
-async def unsubscribe(client, username_to_search, message):
+async def unsubscribe(client, username_to_search):
     """
     Отписываемся от группы. Username должен быть в формате @username
-    
-    :param message: объект сообщения от пользователя Telegram
+
     :param client: клиент Telegram
     :param username_to_search: username чата в Telegram
     """
@@ -19,9 +18,8 @@ async def unsubscribe(client, username_to_search, message):
         logger.info(f"Найден {title} {username_to_search}")
         await client.delete_dialog(username_to_search)  # Отписываемся от чата
         logger.info(f"Успешная отписка от '{title}' {username_to_search}")
-        await message.answer(f"✅ Отписались от «{title}» ({username_to_search})")
     except (UsernameInvalidError, UsernameNotOccupiedError, ValueError) as e:
-        logger.warning(f"Чат {username_to_search} не найден для пользователя {message.from_user.user_id}: {e}")
+        logger.warning(f"Чат {username_to_search} не найден для пользователя: {e}")
         return
     except FloodWaitError as e:
         logger.error(f"⚠️ FloodWait {e.seconds} сек.")
