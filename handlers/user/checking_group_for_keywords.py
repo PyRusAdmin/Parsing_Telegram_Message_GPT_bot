@@ -73,41 +73,6 @@ async def get_keyword(message: Message, state: FSMContext):
     await parse_group_for_keywords(url=data.get("url"), keyword=data.get("keyword"), message=message)
 
 
-# async def create_client_from_session(session_path: str, api_id: int, api_hash: str):
-#     """
-#     Создаёт подключённого TelegramClient, используя session-файл,
-#     затем переходит на StringSession для безопасного хранения в памяти.
-#
-#     :param session_path: Путь к .session файлу
-#     :param api_id: API ID от Telegram
-#     :param api_hash: API Hash от Telegram
-#     :return: Подключённый клиент TelegramClient
-#     """
-#
-#     Создаём клиент из файла сессии
-# client = TelegramClient(
-#     session_path, api_id, api_hash,
-#     system_version="4.16.30-vxCUSTOM"
-# )
-# await client.connect()
-# Сохраняем данные сессии в строку (StringSession)
-# session_string = StringSession.save(client.session)
-#
-# Отключаемся от первого клиента (можно освободить ресурсы при необходимости)
-# await client.disconnect()
-# Создаём новый клиент на основе StringSession (без сохранения на диск)
-# client = TelegramClient(
-#     StringSession(session_string),
-#     api_id=api_id,
-#     api_hash=api_hash,
-#     system_version="4.16.30-vxCUSTOM"
-# )
-# await client.connect()
-# await asyncio.sleep(1)  # Даём время на стабильное подключение
-#
-# return client
-
-
 async def parse_group_for_keywords(url, keyword, message: Message):
     """
     Парсит группу на наличие ключевых слов.
@@ -118,17 +83,6 @@ async def parse_group_for_keywords(url, keyword, message: Message):
     """
     try:
         user_id = message.from_user.id  # Получаем ID пользователя
-
-        # checking_accounts_validity = CheckingAccountsValidity(message=message, path="accounts/parsing_grup")
-        # await checking_accounts_validity.checking_accounts_for_validity()
-        # available_sessions = await checking_accounts_validity.get_available_sessions()
-        # Подключаемся к текущему аккаунту
-        # logger.info(f"Подключаемся к сессии: {f'accounts/parsing_grup/{available_sessions[0]}'}")
-        # client = await create_client_from_session(
-        #     session_path=f'accounts/parsing_grup/{available_sessions[0]}',
-        #     api_id=api_id,
-        #     api_hash=api_hash
-        # )
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
@@ -162,8 +116,6 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                     # Получаем информацию о чате-источнике
                     try:
                         chat_entity = await client.get_entity(url)
-                        # title = getattr(chat_entity, "title", None) or getattr(chat_entity, "username",
-                        #                                                             None) or "Неизвестно"
                         title = chat_entity.title or ""
 
                         chat_id = chat_entity.id
