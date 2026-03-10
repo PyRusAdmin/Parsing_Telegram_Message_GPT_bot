@@ -76,10 +76,9 @@ async def get_keyword(message: Message, state: FSMContext):
 async def parse_group_for_keywords(url, keyword, message: Message):
     """
     Парсит группу на наличие ключевых слов.
-    :param url:
-    :param keyword:
+    :param url: (str) Ссылка на группу в Telegram.
+    :param keyword: (str) Ключевое слово для поиска.
     :param message: (telegram.Message) Объект сообщения, отправленный пользователем.
-    :return:
     """
     try:
         user_id = message.from_user.id  # Получаем ID пользователя
