@@ -5,6 +5,7 @@ from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
+from database.database import getting_account
 from system.dispatcher import router
 
 
@@ -14,22 +15,22 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
     try:
         await state.clear()  # Сбрасываем текущее состояние FSM
 
-        path_accounts = [
-            "accounts/parsing",  # Путь к папке с сессиями
-            "accounts/ai",  # Путь к папке с сессиями
-            "accounts/free",  # Путь к папке с сессиями
-            "accounts/parsing_grup"  # Путь к папке с сессиями
-        ]
+        records = getting_account()  # Получаем все аккаунты в базе данных
+        logger.info(f"Получено аккаунтов: {len(records)}")
 
-        for path in path_accounts:
-            logger.info(f"✅ Проверка аккаунтов в папке {path}")
+        await message.answer(f"Аккаунтов для проверки: {len(records)}")
+
+        for session_name in records:
+            logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
+
             # ✅ Проверка аккаунтов на валидность
-            checker = CheckingAccountsValidity(message=message, path=path)
-            available_sessions = await checker.checking_accounts()
-            await message.answer(
-                f"🔍 Найдено аккаунтов: {len(available_sessions)} в папке {path}\n"
-                f"📱 Аккаунты: {', '.join([s.split('/')[-1] for s in available_sessions])}"
+            checker = CheckingAccountsValidity(
+                message=message,
+                # path=path
             )
+
+            await checker.verify_account(session_name)
+
         await message.answer(
             "✅ Проверка аккаунтов завершена"
         )

@@ -214,8 +214,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
         document = FSInputFile(filepath)
         await message.answer_document(
             document=document,
-            caption=f"🔗 {get_text(user.language, 'tracking_links_export')}\n"
-                    f"Всего записей: {total_count}"
+            caption=f"🔗 Всего записей: {total_count}"
         )
 
         # Удаляем файл после отправки
