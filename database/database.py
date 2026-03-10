@@ -36,15 +36,33 @@ def init_database():
 
 class Groups(BaseModel):
     id = AutoField()  # автоинкремент
-    user_id = IntegerField()
-    username = CharField(null=True)
-    date_added = DateTimeField(default=datetime.now)
+    user_id = IntegerField()  # ID пользователя Telegram
+    username = CharField(null=True)  # Username пользователя Telegram
+    date_added = DateTimeField(default=datetime.now)  # Дата добавления группы
 
     class Meta:
         table_name = f"users_groups"  # Имя таблицы
         indexes = (
             (("user_id", "username"), True),  # один пользователь не добавит один канал дважды
         )
+
+
+def dell_group(user_id: int, username: str):
+    """
+    Удаляет группу из отслеживания.
+
+    :param user_id: Telegram ID пользователя
+    :param username: Username группы
+    :return: True, если группа удалена, иначе False
+    """
+    try:
+        (Groups
+         .delete()
+         .where(Groups.user_id == user_id, Groups.username == username)
+         .execute())
+        return True
+    except Exception as e:
+        logger.exception(e)
 
 
 def get_tracked_channels_count(user_id: int) -> int:

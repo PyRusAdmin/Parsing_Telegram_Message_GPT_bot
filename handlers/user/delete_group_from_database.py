@@ -31,19 +31,19 @@ async def delete_group_from_database(message: Message, state: FSMContext):
 @router.message(MyStates.del_username_groups)
 async def del_user_in_db(message: Message, state: FSMContext) -> None:
     """
-    Удаляем пользователя
+    Удаляем группу из отслеживания
     """
     group_username = message.text.strip()
     await state.clear()  # Завершаем текущее состояние машины состояния
-    logger.info(f"Пользователь ввёл ссылку: {group_username}")
+    logger.info(f"Пользователь ввёл ссылку для удаления: {group_username}")
 
     # Создаём модель с таблицей, уникальной для конкретного пользователя
-    logger.info(f"Создана новая таблица для пользователя {message.from_user.id}")
+    # logger.info(f"Создана новая таблица для пользователя {message.from_user.id}")
 
     # Удаляем группу по username (ищем с учётом @ и без)
-    username_to_search = group_username.lstrip('@')  # Убираем @ если есть
+    # username_to_search = group_username.lstrip('@')  # Убираем @ если есть
 
-    GroupModel = create_groups_model(user_id=message.from_user.id)
+    # GroupModel = create_groups_model(user_id=message.from_user.id)
 
     # Попытка найти и удалить
     deleted_count = (GroupModel
