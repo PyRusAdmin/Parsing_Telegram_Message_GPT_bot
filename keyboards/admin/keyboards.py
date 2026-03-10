@@ -80,14 +80,48 @@ def main_admin_keyboard():
 
 def admin_keyboard():
     """
-    Подключает группу для сообщений, в которую будут отправляться уведомления о новых найденных группах.
-    :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи."""
+    Клавиатура панели администратора
+    :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи.
+    """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📄 Получить лог файл"), KeyboardButton(text="🔄 Актуализация базы данных")],
-            [KeyboardButton(text="🏷️ Присвоить категорию"), KeyboardButton(text="✅ Проверка аккаунтов")],
-            [KeyboardButton(text="🌐 Присвоить язык"), KeyboardButton(text="Подключение аккаунта")],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
+            [
+                KeyboardButton(
+                    text="📄 Получить лог файл",
+                    style='primary'
+                ),
+                KeyboardButton(
+                    text="🔄 Актуализация базы данных",
+                    style='primary'
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="🏷️ Присвоить категорию",
+                    style='primary'
+                ),
+                KeyboardButton(
+                    text="✅ Проверка аккаунтов",
+                    style='success'
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="🌐 Присвоить язык",
+                    style='primary'
+                ),
+                KeyboardButton(
+                    text="🔐 Подключение аккаунта",
+                    style='primary'
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="Назад",
+                    icon_custom_emoji_id="5352759161945867747",
+                    style='danger'
+                )
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
