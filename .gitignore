@@ -1,6 +1,7 @@
 /.env
 /.idea/
 /accounts/
+/examples/
 /data/config.ini
 /.gigaide/
 /data/bot.db
