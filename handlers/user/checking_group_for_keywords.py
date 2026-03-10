@@ -173,16 +173,16 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                         chat_id = None
 
                     # Формируем ссылку на сообщение
-                    # Для чатов с username (если есть)
+                    message_link = None  # Инициализируем переменную
                     if chat_id:
                         try:
                             # Для супергрупп/каналов (chat_id начинается с -100)
                             if str(chat_id).startswith("-100"):
                                 # Удаляем префикс -100 и получаем чистый ID
                                 clean_chat_id = str(chat_id)[4:]
-                                message_link = f"https://t.me/c/{clean_chat_id}/{msg.telegram_id}"
+                                message_link = f"https://t.me/c/{clean_chat_id}/{msg.id}"
                             elif hasattr(chat_entity, 'username') and chat_entity.username:
-                                message_link = f"https://t.me/{chat_entity.username}/{msg.telegram_id}"
+                                message_link = f"https://t.me/{chat_entity.username}/{msg.id}"
                         except Exception as e:
                             logger.warning(f"Не удалось создать ссылку на сообщение: {e}")
 
@@ -191,14 +191,23 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                     display_text = text if len(text) <= 500 else text[:500] + "..."
 
                     # Отправляем в целевую группу
-                    await message.answer(
-                        text=(f"📥 <b>Новое сообщение</b>\n\n"
-                              f"<b>Источник:</b> {title}\n"
-                              f"<b>Дата:</b> {msg_date}\n"
-                              f"<b>Ссылка:</b> <a href='{message_link}'>Перейти к сообщению</a>\n\n"
-                              f"<b>Текст сообщения:</b>\n{display_text}"),
-                        parse_mode="HTML"
-                    )
+                    if message_link:
+                        await message.answer(
+                            text=(f"📥 <b>Новое сообщение</b>\n\n"
+                                  f"<b>Источник:</b> {title}\n"
+                                  f"<b>Дата:</b> {msg_date}\n"
+                                  f"<b>Ссылка:</b> <a href='{message_link}'>Перейти к сообщению</a>\n\n"
+                                  f"<b>Текст сообщения:</b>\n{display_text}"),
+                            parse_mode="HTML"
+                        )
+                    else:
+                        await message.answer(
+                            text=(f"📥 <b>Новое сообщение</b>\n\n"
+                                  f"<b>Источник:</b> {title}\n"
+                                  f"<b>Дата:</b> {msg_date}\n"
+                                  f"<b>Текст сообщения:</b>\n{display_text}"),
+                            parse_mode="HTML"
+                        )
                     logger.info(f"✅ Сообщение переслано в целевую группу (ID={user_id})")
 
                 await asyncio.sleep(0.4)
