@@ -63,44 +63,6 @@ class CheckingAccountsValidity:
         self.path = Path(path) if path else None  # ✅ path теперь опционален
         self.user_id = message.from_user.id
 
-    # async def scanning_folder_for_session_files(self):
-    #     """
-    #     Сканируем папку на наличие session-файлов
-    #     :return: Список Path объектов с .session файлами или пустой список, если не найдены.
-    #     """
-    #     sessions_dir = Path(self.path)
-    #     session_files = list(sessions_dir.glob('*.session'))
-    #
-    #     if not session_files:
-    #         await self.message.answer("❌ Не найдено ни одного session-файла в папке accounts/parsing")
-    #         # logger.error("Session-файлы не найдены")
-    #         logger.warning(f"В папке {sessions_dir} не найдено ни одного .session файла.")
-    #         return []
-    #
-    #     logger.info(f"Найдено {len(session_files)} session-файлов.")
-    #     return session_files
-
-    # async def get_available_sessions(self):
-    #     """
-    #     Сканирует указанную папку и возвращает список имён session-файлов без расширения.
-    #
-    #     :return: Список имён сессий (без расширения .session)
-    #     """
-    # session_files = await self.scanning_folder_for_session_files()
-    # available_sessions = [str(f.stem) for f in session_files]
-    # logger.info(f"Найдено {len(available_sessions)} аккаунтов: {available_sessions}")
-    # return available_sessions
-
-    # async def checking_accounts_for_validity(self):
-    #     """
-    #     ✅ Проверка аккаунтов на валидность
-    #
-    #     :return:
-    #     """
-    #     available_sessions = await self.get_available_sessions()
-    #     ✅ Проверка аккаунтов на валидность из папки parsing
-    # await self.connect_client_test(available_sessions=available_sessions, path=self.path)
-    #
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """
         Подключение к Telegram аккаунту через StringSession
@@ -209,78 +171,6 @@ class CheckingAccountsValidity:
         except Exception as error:
             logger.exception(error)
 
-    # async def handle_banned_account(self, telegram_client, session_name, exception):
-    #     """
-    #     Обработка banned аккаунтов.
-    #     telegram_client.disconnect() - Отключение от Telegram.
-    #     working_with_accounts() - Перемещение файла. Исходный путь к файлу - account_folder. Путь к новой папке,
-    #     куда нужно переместить файл - new_account_folder
-    #
-    #     :param telegram_client: Экземпляр клиента Telegram
-    #     :param session_name: Имя аккаунта (session string)
-    #     :param exception: Исключение, вызвавшее бан
-    #     :return: None
-    #     """
-    #     logger.info(f"⛔ Аккаунт banned: {session_name}. {str(exception)}")
-    #     await telegram_client.disconnect()
-    #     await delete_account_from_db(session_string=session_name)
-
-    # async def handle_get_directory_path(self):
-    #     """
-    #     Обработчик события выбора session файлов
-    #
-    #     Открывает диалоговое окно для выбора session файлов и подключает их к базе данных.
-    #     """
-    #     try:
-    #         # Создаем клиент с обычной сессией
-    #         client = TelegramClient(
-    #             session=self.path,
-    #             api_id=api_id,
-    #             api_hash=api_hash,
-    #             device_model=mobile_device["device_model"],
-    #             system_version=mobile_device["system_version"],
-    #             app_version=mobile_device["app_version"],
-    #             lang_code=mobile_device["lang_code"],
-    #             system_lang_code=mobile_device["system_lang_code"],
-    #         )
-    #
-    #         try:
-    #             await client.connect()
-    #
-    #             # Преобразуем в StringSession
-    #             session_string = StringSession.save(client.session)
-    #             await client.disconnect()
-    #
-    #             # Переподключаемся через StringSession
-    #             client = TelegramClient(
-    #                 StringSession(session_string),
-    #                 api_id=api_id,
-    #                 api_hash=api_hash,
-    #                 device_model=mobile_device["device_model"],
-    #                 system_version=mobile_device["system_version"],
-    #                 app_version=mobile_device["app_version"],
-    #                 lang_code=mobile_device["lang_code"],
-    #                 system_lang_code=mobile_device["system_lang_code"],
-    #             )
-    #
-    #             await client.connect()
-    #             account_info = await get_account_info(client)
-    #
-    #             # Записываем в базу данных
-    #             write_account_to_user_table(
-    #                 user_id=self.user_id,
-    #                 session_string=session_string,
-    #                 phone_number=account_info["phone"]
-    #             )
-    #             await client.disconnect()
-    #
-    #         except Exception as error:
-    #             logger.exception(error)
-    #             await client.disconnect()
-    #
-    #     except Exception as e:
-    #         logger.exception(e)
-
     # === Подключение клиента Telethon ===
     async def connect_client(self) -> TelegramClient | None:
         """
@@ -321,50 +211,6 @@ class CheckingAccountsValidity:
             # Не отключаем здесь — это делает вызывающий код после использования
             pass
 
-    # === Подключение клиента Telethon ===
-    # async def connect_client_test(self, path, available_sessions):
-    #     """
-    #     Подключение клиента Telethon и проверка сессий. Возвращается client.connect()
-    #     :param available_sessions: список доступных сессий Telethon
-    #     :param path: путь к папке с сессиями
-    #     :return: client - клиент Telethon
-    #     """
-    #     logger.info(f"🧾 Проверка сессий... {available_sessions}")
-    #
-    #     for session_name in available_sessions:
-    #
-    #         client = TelegramClient(f"{path}/{session_name}", api_id, api_hash, system_version="4.16.30-vxCUSTOM")
-    #
-    #         await client.connect()
-    #
-    #         # === Проверка авторизации ===
-    #         if not await client.is_user_authorized():
-    #             logger.error(f"⚠️ Сессия {session_name} недействительна — требуется повторный вход.")
-    #             await client.disconnect()
-    #             await asyncio.sleep(1)  # дать время ОС освободить файл
-    #             try:
-    #                 os.remove(f"{path}/{session_name}.session")
-    #             except FileNotFoundError:
-    #                 pass  # файл уже удалён
-    #
-    #             continue  # переходим к следующей сессии
-    #
-    #         account_info = await get_account_info(client)
-    #         phone = account_info["phone"]
-    #         logger.info(f"🧾 Аккаунт: | ID: {account_info['id']} | Phone: {phone}")
-    #         logger.info("✅ Сессия активна, подключение успешно!")
-    #
-    #         await asyncio.sleep(1)  # дать время ОС освободить файл
-    #         await client.disconnect()
-    #         try:
-    #             os.rename(f"{path}/{session_name}.session", f"{path}/{phone}.session")
-    #         except FileExistsError:
-    #             await client.disconnect()
-    #             os.remove(f"{path}/{session_name}.session")
-    #
-    #         if client.is_connected():
-    #             await client.disconnect()  # отключаемся, если подключены
-
     async def start_random_client(self):
         """
         Запускает Telegram-клиент со случайной сессией из указанной папки.
@@ -397,12 +243,3 @@ class CheckingAccountsValidity:
 
         logger.info("Телеграм-клиент запущен.")
         return client
-
-    # async def checking_accounts(self):
-    #     """
-    #     ✅ Проверка аккаунтов на валидность
-    #     :return: (list) Список доступных сессий.
-    #     """
-    #     await self.checking_accounts_for_validity()
-    #     available_sessions = await self.get_available_sessions()
-    #     return available_sessions
