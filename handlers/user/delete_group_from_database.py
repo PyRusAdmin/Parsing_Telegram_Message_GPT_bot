@@ -9,7 +9,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.session import find_session_file
 from account_manager.unsubscribe import unsubscribe
-from database.database import User
+from database.database import User, dell_group
 from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, connect_keyboard_account
 from states.states import MyStates
 from system.dispatcher import router
@@ -46,43 +46,45 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     # GroupModel = create_groups_model(user_id=message.from_user.id)
 
     # Попытка найти и удалить
-    deleted_count = (GroupModel
-                     .delete()
-                     .where((GroupModel.username == username_to_search) |
-                            (GroupModel.username == f"@{username_to_search}"))
-                     .execute())
+    # deleted_count = (GroupModel
+    #                  .delete()
+    #                  .where((GroupModel.username == username_to_search) |
+    #                         (GroupModel.username == f"@{username_to_search}"))
+    #                  .execute())
 
-    if deleted_count > 0:
+    deletion_result = dell_group(user_id=message.from_user.id, username=group_username)
+
+    if deletion_result:
         await message.answer(
-            f"✅ Группа @{username_to_search} успешно удалена из отслеживания.",
+            f"✅ Группа @{group_username} успешно удалена из отслеживания.",
             reply_markup=main_menu_keyboard()
         )
-        logger.info(f"Пользователь {message.from_user.id} удалил группу @{username_to_search}")
+        logger.info(f"Пользователь {message.from_user.id} удалил группу @{group_username}")
     else:
         await message.answer(
-            f"❌ Группа @{username_to_search} не найдена в вашем списке отслеживаемых.",
+            f"❌ Группа @{group_username} не найдена в вашем списке отслеживаемых.",
             reply_markup=main_menu_keyboard()
         )
-        logger.warning(f"Попытка удалить несуществующую группу @{username_to_search} "
+        logger.warning(f"Попытка удалить несуществующую группу @{group_username} "
                        f"пользователем {message.from_user.id}")
 
     user = User.get(User.user_id == message.from_user.id)
 
     # === Папка, где хранятся сессии ===
-    session_dir = os.path.join("accounts", str(message.from_user.id))
-    os.makedirs(session_dir, exist_ok=True)
-
-    session_path = await find_session_file(session_dir, user, message)  # <-- ✅ ищем файл сессии
-
-    logger.info(session_path)
-    if session_path is None:
-        logger.warning("Нет подключенного аккаунта")
-
-        await message.answer(
-            text="Нет подключенного аккаунта. Подключите аккаунт.",
-            reply_markup=connect_keyboard_account()
-        )
-        return  # Правильный способ прервать выполнение обработчика
+    # session_dir = os.path.join("accounts", str(message.from_user.id))
+    # os.makedirs(session_dir, exist_ok=True)
+    #
+    # session_path = await find_session_file(session_dir, user, message)  # <-- ✅ ищем файл сессии
+    #
+    # logger.info(session_path)
+    # if session_path is None:
+    #     logger.warning("Нет подключенного аккаунта")
+    #
+    #     await message.answer(
+    #         text="Нет подключенного аккаунта. Подключите аккаунт.",
+    #         reply_markup=connect_keyboard_account()
+    #     )
+    #     return  # Правильный способ прервать выполнение обработчика
 
     checker = CheckingAccountsValidity(message=message, path="accounts/parsing")
     client = await checker.connect_client(

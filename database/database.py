@@ -49,7 +49,7 @@ class Groups(BaseModel):
 
 def dell_group(user_id: int, username: str):
     """
-    Удаляет группу из отслеживания.
+    Удаляет группу из отслеживания ключевых слов.
 
     :param user_id: Telegram ID пользователя
     :param username: Username группы
