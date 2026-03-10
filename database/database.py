@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 from loguru import logger
-from peewee import Model, CharField
+from peewee import Model, CharField, DoesNotExist
 from peewee import SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField
 from peewee import fn
 
@@ -81,6 +81,8 @@ def get_tracked_channels_count(user_id: int) -> int:
     except Exception as e:
         logger.error(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
         return 0
+
+
 
 
 def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
@@ -217,7 +219,7 @@ async def delete_account_from_db(session_string: str) -> None:
         # Удаляем запись
         account.delete_instance()
         logger.info(f"Аккаунт {phone_number} успешно удалён из базы данных.")
-    except Account.DoesNotExist:
+    except DoesNotExist:
         logger.info(f"Аккаунт с session_string='{session_string}' не найден в базе.")
     except Exception as e:
         logger.exception("Ошибка при удалении аккаунта")

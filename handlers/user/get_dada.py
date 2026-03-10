@@ -9,7 +9,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from database.database import User, create_keywords_model
+from database.database import User, create_keywords_model, get_user_channel_usernames
 from locales.locales import get_text
 from system.dispatcher import router
 
@@ -181,7 +181,6 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
 
     :param message: (Message) Входящее сообщение от пользователя, инициировавшего экспорт.
     :param state: (FSMContext) Контекст машины состояний, сбрасывается в начале обработки.
-    :return: None
     :raise Exception: Перехватывается локально при ошибках создания или отправки файла.
                       Логируется и преобразуется в пользовательское сообщение об ошибке.
     """
@@ -192,24 +191,25 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ссылок для отслеживания")
 
     # Получаем модель таблицы групп для данного пользователя
-    GroupsModel = create_groups_model(user_id=telegram_user.id)
-
+    # GroupsModel = create_groups_model(user_id=telegram_user.id)
     # Проверяем, существует ли таблица
-    if not GroupsModel.table_exists():
-        GroupsModel.create_table()
-        await message.answer(get_text(user.language, "no_tracking_links"))
-        return
+    # if not GroupsModel.table_exists():
+    #     GroupsModel.create_table()
+    #     await message.answer(get_text(user.language, "no_tracking_links"))
+    #     return
+
+    usernames = get_user_channel_usernames(telegram_user.id)
 
     # Извлекаем все записи (группы/каналы)
-    groups = list(GroupsModel.select())
+    # groups = list(GroupsModel.select())
 
-    if not groups:
-        await message.answer(get_text(user.language, "no_tracking_links"))
-        return
+    # if not groups:
+    #     await message.answer(get_text(user.language, "no_tracking_links"))
+    #     return
 
     # Формируем список данных для Excel
     data = []
-    for idx, group in enumerate(groups, start=1):
+    for idx, group in enumerate(usernames, start=1):
         data.append((idx, group.username_chat_channel))  # Номер и username канала
 
     # Формируем имя файла
