@@ -8,7 +8,7 @@ from aiogram.types import Message
 from loguru import logger
 from telethon.sessions import StringSession
 
-from account_manager.auth import CheckingAccountsValidity
+from account_manager.auth import CheckingAccountsValidity, get_account_info
 from database.database import write_account_to_db
 from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
 from keyboards.user.keyboards import back_keyboard
@@ -90,9 +90,9 @@ async def receive_session_file(message: Message, state: FSMContext):
         client = await checker.connect_client()
 
         if client:
-            me = await client.get_me()
-            phone = me.phone or "unknown"
-            first_name = me.first_name or ""
+            account_info = await get_account_info(client)
+            phone = account_info["phone"] or "unknown"
+            first_name = account_info["first_name"] or ""
 
             # ✅ Конвертируем в StringSession и сохраняем в БД
             session_string = StringSession.save(client.session)

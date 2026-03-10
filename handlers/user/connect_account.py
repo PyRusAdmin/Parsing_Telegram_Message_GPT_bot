@@ -10,7 +10,7 @@ from aiogram.types import Message
 from loguru import logger
 from telethon.sessions import StringSession
 
-from account_manager.auth import CheckingAccountsValidity
+from account_manager.auth import CheckingAccountsValidity, get_account_info
 from database.database import User
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
@@ -125,9 +125,9 @@ async def handle_account_file(message: Message, state: FSMContext):
         client = await checker.connect_client()
 
         if client:
-            me = await client.get_me()
-            phone = me.phone or "unknown"
-            first_name = me.first_name or ""
+            account_info = await get_account_info(client)
+            phone = account_info["phone"] or "unknown"
+            first_name = account_info["first_name"] or ""
 
             session_string = StringSession.save(client.session)
             write_account_to_user_table(

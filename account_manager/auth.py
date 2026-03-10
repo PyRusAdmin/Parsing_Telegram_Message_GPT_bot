@@ -27,6 +27,31 @@ mobile_device = {
 }
 
 
+async def get_account_info(client: TelegramClient) -> dict:
+    """
+    Получает информацию о пользователе Telegram через client.get_me().
+    
+    :param client: (TelegramClient) Авторизованный клиент Telethon.
+    :return: dict с полями:
+        - id: ID пользователя
+        - phone: номер телефона (или пустая строка)
+        - first_name: имя
+        - last_name: фамилия (может быть None)
+        - username: юзернейм (может быть None)
+    """
+    me = await client.get_me()
+    phone = me.phone or ""
+    logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+
+    return {
+        "id": me.id,
+        "phone": phone,
+        "first_name": me.first_name,
+        "last_name": me.last_name,
+        "username": me.username
+    }
+
+
 class CheckingAccountsValidity:
 
     def __init__(self, message: Message, path: str | None = None):
@@ -106,9 +131,7 @@ class CheckingAccountsValidity:
                     logger.error("❌ Сессия недействительна или аккаунт не авторизован!")
                 return None  # Не возвращаем клиента
 
-            me = await client.get_me()  # Получаем информацию о пользователе
-            phone = me.phone or ""
-            logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+            await get_account_info(client)  # Получаем и логируем информацию о пользователе
             return client  # Возвращаем клиента
 
         except AuthKeyDuplicatedError:
@@ -241,16 +264,13 @@ class CheckingAccountsValidity:
                 )
 
                 await client.connect()
-                me = await client.get_me()
-
-                phone = me.phone or ""
-                logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+                account_info = await get_account_info(client)
 
                 # Записываем в базу данных
                 write_account_to_user_table(
                     user_id=self.user_id,
                     session_string=session_string,
-                    phone_number=phone
+                    phone_number=account_info["phone"]
                 )
                 await client.disconnect()
 
@@ -290,8 +310,8 @@ class CheckingAccountsValidity:
                 logger.warning(f"⚠️ Сессия {self.path} не авторизована")
                 return None
 
-            me = await client.get_me()
-            logger.success(f"✅ Сессия активна: {me.phone or me.id}")
+            account_info = await get_account_info(client)
+            logger.success(f"✅ Сессия активна: {account_info['phone'] or account_info['id']}")
             return client
 
         except Exception as e:
@@ -329,9 +349,9 @@ class CheckingAccountsValidity:
 
                 continue  # переходим к следующей сессии
 
-            me = await client.get_me()
-            phone = me.phone or ""
-            logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+            account_info = await get_account_info(client)
+            phone = account_info["phone"]
+            logger.info(f"🧾 Аккаунт: | ID: {account_info['id']} | Phone: {phone}")
             logger.info("✅ Сессия активна, подключение успешно!")
 
             await asyncio.sleep(1)  # дать время ОС освободить файл
