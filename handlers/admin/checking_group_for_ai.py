@@ -1,4 +1,4 @@
-# handlers/admin/checking_group_for_ai.py
+# -*- coding: utf-8 -*-
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
