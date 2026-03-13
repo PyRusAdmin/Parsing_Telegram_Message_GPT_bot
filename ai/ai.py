@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import groq
 from groq import AsyncGroq
