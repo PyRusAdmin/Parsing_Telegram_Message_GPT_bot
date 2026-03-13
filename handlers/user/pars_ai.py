@@ -131,7 +131,11 @@ def format_summary_message(groups_count):
 
     message = f"✅ <b>Поиск завершён!</b>\n\n"
     message += f"📊 Найдено и сохранено: <b>{groups_count}</b> групп/каналов\n"
-    message += f"📁 Результаты отправлены в Excel-файле"
+    message += f"📁 Результаты отправлены в Excel-файле\n\n"
+    message += f"📍 <b>Обозначение активности:</b>\n"
+    message += f"🟢 <b>active</b> — группа активна (последнее сообщение ≤ 30 дней)\n"
+    message += f"🔴 <b>inactive</b> — группа неактивна (сообщений > 30 дней или нет вообще)\n"
+    message += f"⚪ <b>unknown</b> — не удалось определить (ограничения Telegram)"
     return message
 
 
