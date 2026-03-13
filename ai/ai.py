@@ -14,6 +14,119 @@ from core.config import GROQ_API_KEY
 from core.config import OPENROUTER_API_KEY
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
+from g4f.client import Client  # https://github.com/xtekky/gpt4free
+
+
+def category_assignment_sync_free(group_data: dict) -> dict:
+    """
+    Синхронная функция для определения категории (для запуска в ThreadPoolExecutor).
+
+    :param group_data: dict с полями name, description, username, group_type, telegram_id
+    :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
+    """
+    setup_proxy()
+
+    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "<OPENROUTER_API_KEY>":
+        logger.error("❌ OPENROUTER_API_KEY не настроен!")
+        return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
+
+    try:
+        client = Client()
+
+        # 🧩 Формируем контекст
+        data_parts = []
+        if group_data.get('name'):
+            data_parts.append(f"Название: {group_data['name']}")
+        if group_data.get('description'):
+            data_parts.append(f"Описание: {group_data['description']}")
+        if group_data.get('username'):
+            data_parts.append(f"Username: @{group_data['username']}")
+        if group_data.get('group_type'):
+            data_parts.append(f"Тип: {group_data['group_type']}")
+
+        user_input = "\n".join(data_parts) if data_parts else "Нет данных"
+
+        prompt = (
+            f"На основе следующих данных о Telegram-группе или канале:\n\n{user_input}\n\n"
+            "Выбери ОДНУ наиболее подходящую категорию из списка ниже. "
+            "Ответь ТОЛЬКО названием категории из списка, без пояснений, кавычек, точек и других знаков препинания. "
+            "Если ни одна категория не подходит — ответь 'Не определена'.\n\n"
+            "СПИСОК КАТЕГОРИЙ (выбирай ТОЛЬКО из этого списка):\n"
+            "Инвестиции\nФинансы и личный бюджет\nКриптовалюты и блокчейн\n"
+            "Бизнес и предпринимательство\nМаркетинг и продвижение\nТехнологии и IT\n"
+            "Образование и саморазвитие\nРабота и карьера\nНедвижимость\n"
+            "Здоровье и медицина\nПутешествия\nАвто и транспорт\nШоппинг и скидки\n"
+            "Развлечения и досуг\nПолитика и общество\nНаука и исследования\n"
+            "Спорт и фитнес\nКулинария и еда\nМода и красота\nХобби и творчество\n\n"
+            "ПРАВИЛА:\n"
+            "1. Ответ должен содержать ТОЛЬКО одно слово или фразу из списка категорий\n"
+            "2. Никаких приветствий, объяснений, рекламы или дополнительного текста\n"
+            "3. Никаких кавычек, точек или других символов\n"
+            "4. Язык ответа: русский\n\n"
+            "Пример правильного ответа: Технологии и IT\n"
+            "Пример неправильного ответа: Hello! I think this is about technology.\n\n"
+            "Твой ответ:"
+        )
+
+        # 🤖 Запрос к API (блокирующий — поэтому запускаем в потоке)
+        # Доступные модели: gpt-4o-mini, gpt-4.1, gpt-4o, deepseek-v3, llama-3.1-70b, mistral-7b и др.
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",  # Быстрая и бесплатная модель от OpenAI
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=20
+        )
+
+        category = (
+            completion.choices[0].message.content
+            .strip()
+            .strip('".')
+        )
+        
+        # 🧹 Дополнительная очистка от мусора (реклама, приветствия и т.д.)
+        # Если ответ содержит пробелы и не похож на категорию — берём первую строку
+        if '\n' in category:
+            category = category.split('\n')[0].strip()
+        
+        # Если ответ слишком длинный или содержит подозрительные слова — отклоняем
+        suspicious_phrases = ['hello', 'hi ', 'i am', 'thank', 'proxy', 'http', 'www', 'click', 'buy']
+        if any(phrase in category.lower() for phrase in suspicious_phrases):
+            logger.debug(f"⚠️ Подозрительный ответ AI: {category}")
+            category = "Не определена"
+
+        # ✅ Валидация результата — сверяем со списком допустимых категорий
+        valid_categories = [
+            "инвестиции", "финансы и личный бюджет", "криптовалюты и блокчейн",
+            "бизнес и предпринимательство", "маркетинг и продвижение", "технологии и it",
+            "образование и саморазвитие", "работа и карьера", "недвижимость",
+            "здоровье и медицина", "путешествия", "авто и транспорт", "шоппинг и скидки",
+            "развлечения и досуг", "политика и общество", "наука и исследования",
+            "спорт и фитнес", "кулинария и еда", "мода и красота", "хобби и творчество",
+            "не определена"
+        ]
+        
+        if not category or category.lower() not in valid_categories:
+            logger.debug(f"⚪ AI вернул некорректную категорию '{category}' для: {group_data.get('name')}")
+            return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
+
+        # Нормализуем категорию (первая буква заглавная)
+        category = category.title()
+        
+        logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
+        return {
+            "telegram_id": group_data["telegram_id"],
+            "category": category,
+            "success": True
+        }
+
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
+        return {
+            "telegram_id": group_data.get("telegram_id"),
+            "category": None,
+            "success": False,
+            "error": str(e)
+        }
 
 
 def category_assignment_sync(group_data: dict) -> dict:
@@ -244,7 +357,7 @@ async def search_groups_in_telegram(client, group_names):
                         # Убираем часовой пояс для корректного сравнения
                         last_message_naive = last_message_date.replace(tzinfo=None)
                         days_since_last_message = (datetime.now() - last_message_naive).days
-                        
+
                         if days_since_last_message <= 7:
                             availability = 'active'  # Активная группа (сообщения за последнюю неделю)
                         elif days_since_last_message <= 30:

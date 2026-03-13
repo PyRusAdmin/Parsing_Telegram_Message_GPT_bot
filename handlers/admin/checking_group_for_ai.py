@@ -7,7 +7,7 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 from loguru import logger
 
-from ai.ai import category_assignment_sync  # ✅ Синхронная функция
+from ai.ai import category_assignment_sync_free  # ✅ Синхронная функция
 from database.database import TelegramGroup, db
 from system.dispatcher import router
 
@@ -83,7 +83,7 @@ async def checking_group_for_ai_db(message: Message):
 
     try:
         # 1️⃣ Получаем группы для обработки
-        groups_to_process = await get_groups_without_category(limit=100)
+        groups_to_process = await get_groups_without_category(limit=10)
 
         if not groups_to_process:
             await status_msg.edit_text("✅ Все группы уже имеют категории!")
@@ -98,7 +98,7 @@ async def checking_group_for_ai_db(message: Message):
 
         with ThreadPoolExecutor(max_workers=10) as executor:  # ✅ 10 параллельных запросов
             futures = [
-                loop.run_in_executor(executor, category_assignment_sync, group_data)
+                loop.run_in_executor(executor, category_assignment_sync_free, group_data)
                 for group_data in groups_to_process
             ]
             results = await asyncio.gather(*futures, return_exceptions=True)
