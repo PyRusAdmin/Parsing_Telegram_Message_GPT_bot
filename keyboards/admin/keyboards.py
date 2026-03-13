@@ -126,3 +126,37 @@ def admin_keyboard():
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
     )
+
+
+def category_method_keyboard():
+    """
+    Клавиатура для выбора метода присвоения категорий
+    :return: (ReplyKeyboardMarkup) Объект клавиатуры с выбором метода
+    """
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(
+                    text="⚡️ Быстро (g4f.free)",
+                    style='primary',
+                    icon_custom_emoji_id="5368461927452258024"
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="🚀 Мощно (Groq API)",
+                    style='success',
+                    icon_custom_emoji_id="5438489737125975601"
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="Назад",
+                    icon_custom_emoji_id="5352759161945867747",
+                    style='danger'
+                )
+            ]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )

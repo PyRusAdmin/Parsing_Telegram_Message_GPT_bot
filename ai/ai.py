@@ -17,19 +17,14 @@ from database.database import TelegramGroup
 from g4f.client import Client  # https://github.com/xtekky/gpt4free
 
 
-def category_assignment_sync_free(group_data: dict) -> dict:
+async def category_assignment_free(group_data: dict) -> dict:
     """
-    Синхронная функция для определения категории (для запуска в ThreadPoolExecutor).
+    Асинхронная функция для определения категории через g4f (бесплатно, без потоков).
+    Работает последовательно, подходит для постепенной обработки.
 
     :param group_data: dict с полями name, description, username, group_type, telegram_id
     :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
     """
-    setup_proxy()
-
-    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "<OPENROUTER_API_KEY>":
-        logger.error("❌ OPENROUTER_API_KEY не настроен!")
-        return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
-
     try:
         client = Client()
 
@@ -68,10 +63,11 @@ def category_assignment_sync_free(group_data: dict) -> dict:
             "Твой ответ:"
         )
 
-        # 🤖 Запрос к API (блокирующий — поэтому запускаем в потоке)
+        # 🤖 Запрос к API (синхронный, но вызывается асинхронно через to_thread)
         # Доступные модели: gpt-4o-mini, gpt-4.1, gpt-4o, deepseek-v3, llama-3.1-70b, mistral-7b и др.
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",  # Быстрая и бесплатная модель от OpenAI
+        completion = await asyncio.to_thread(
+            client.chat.completions.create,
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=20
@@ -82,12 +78,12 @@ def category_assignment_sync_free(group_data: dict) -> dict:
             .strip()
             .strip('".')
         )
-        
+
         # 🧹 Дополнительная очистка от мусора (реклама, приветствия и т.д.)
         # Если ответ содержит пробелы и не похож на категорию — берём первую строку
         if '\n' in category:
             category = category.split('\n')[0].strip()
-        
+
         # Если ответ слишком длинный или содержит подозрительные слова — отклоняем
         suspicious_phrases = ['hello', 'hi ', 'i am', 'thank', 'proxy', 'http', 'www', 'click', 'buy']
         if any(phrase in category.lower() for phrase in suspicious_phrases):
@@ -104,14 +100,14 @@ def category_assignment_sync_free(group_data: dict) -> dict:
             "спорт и фитнес", "кулинария и еда", "мода и красота", "хобби и творчество",
             "не определена"
         ]
-        
+
         if not category or category.lower() not in valid_categories:
             logger.debug(f"⚪ AI вернул некорректную категорию '{category}' для: {group_data.get('name')}")
             return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
 
         # Нормализуем категорию (первая буква заглавная)
         category = category.title()
-        
+
         logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
         return {
             "telegram_id": group_data["telegram_id"],
