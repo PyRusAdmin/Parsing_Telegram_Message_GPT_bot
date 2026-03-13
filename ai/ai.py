@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
+from datetime import datetime, timedelta
 
 import groq
 from groq import AsyncGroq
@@ -12,6 +13,7 @@ from account_manager.parser import determine_telegram_chat_type
 from core.config import GROQ_API_KEY
 from core.config import OPENROUTER_API_KEY
 from core.proxy import setup_proxy
+from database.database import TelegramGroup
 
 
 def category_assignment_sync(group_data: dict) -> dict:
@@ -188,6 +190,7 @@ async def search_groups_in_telegram(client, group_names):
     """
     Асинхронно ищет публичные группы и каналы в Telegram по списку названий.
     При заморозке аккаунта сразу прекращает весь поиск.
+    Проверяет дату последнего сообщения и обновляет поле availability в БД.
     """
     found_groups = []
     account_frozen = False
@@ -225,6 +228,70 @@ async def search_groups_in_telegram(client, group_names):
                 participants = getattr(chat, 'participants_count', 0)
                 group_type = determine_telegram_chat_type(entity=chat)
 
+                # ========== Проверка даты последнего сообщения ==========
+                last_message_date = None
+                availability = 'unknown'
+
+                try:
+                    # Получаем историю сообщений (последнее сообщение)
+                    messages = await client.get_messages(chat.id, limit=1)
+                    if messages and len(messages) > 0:
+                        last_message = messages[0]
+                        last_message_date = last_message.date
+                        logger.debug(f"📅 Последнее сообщение в '{title}': {last_message_date}")
+
+                        # Определяем активность по дате последнего сообщения
+                        # Убираем часовой пояс для корректного сравнения
+                        last_message_naive = last_message_date.replace(tzinfo=None)
+                        days_since_last_message = (datetime.now() - last_message_naive).days
+                        
+                        if days_since_last_message <= 7:
+                            availability = 'active'  # Активная группа (сообщения за последнюю неделю)
+                        elif days_since_last_message <= 30:
+                            availability = 'active'  # Относительно активная (сообщения за последний месяц)
+                        else:
+                            availability = 'inactive'  # Неактивная (нет сообщений больше месяца)
+                    else:
+                        availability = 'inactive'  # Нет сообщений вообще
+                        logger.warning(f"⚠️ В группе '{title}' нет сообщений")
+
+                except Exception as e:
+                    logger.warning(f"Не удалось получить дату последнего сообщения для '{title}': {e}")
+                    availability = 'unknown'  # Не удалось определить
+
+                # ========== Сохранение в базу данных ==========
+                try:
+                    # Проверяем, существует ли уже группа
+                    existing_group = TelegramGroup.get_or_none(
+                        (TelegramGroup.telegram_id == telegram_id) |
+                        (TelegramGroup.group_hash == group_hash)
+                    )
+
+                    if existing_group:
+                        # Обновляем существующую запись
+                        existing_group.availability = availability
+                        existing_group.save()
+                        logger.debug(f"🔄 Обновлена активность группы '{title}': {availability}")
+                    else:
+                        # Создаём новую запись
+                        TelegramGroup.create(
+                            telegram_id=telegram_id,
+                            group_hash=group_hash,
+                            name=title,
+                            username=username,
+                            description='',
+                            participants=participants,
+                            category='',
+                            group_type=group_type,
+                            language='',
+                            link=link,
+                            availability=availability
+                        )
+                        logger.debug(f"✅ Добавлена новая группа '{title}': {availability}")
+
+                except Exception as e:
+                    logger.exception(f"Ошибка при сохранении группы '{title}' в БД: {e}")
+
                 found_groups.append({
                     'telegram_id': telegram_id,
                     'group_hash': group_hash,
@@ -235,7 +302,9 @@ async def search_groups_in_telegram(client, group_names):
                     'category': '',
                     'group_type': group_type,
                     'language': '',
-                    'link': link
+                    'link': link,
+                    'availability': availability,
+                    'last_message_date': last_message_date.isoformat() if last_message_date else None
                 })
 
         except FrozenMethodInvalidError:
