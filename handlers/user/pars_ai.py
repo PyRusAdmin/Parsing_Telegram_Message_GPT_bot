@@ -74,6 +74,7 @@ def save_group_to_db(group_data: dict):
             existing.category = group_data.get('category')
             existing.group_type = group_data.get('group_type')
             existing.language = group_data.get('language', '')
+            existing.availability = group_data.get('availability', 'unknown')
             existing.link = group_data.get('link')
             # date_added оставляем оригинальным (дата первого добавления)
             # Если хочешь обновлять на "последнее обнаружение" — раскомментируй:
@@ -95,6 +96,7 @@ def save_group_to_db(group_data: dict):
                 category=group_data.get('category'),
                 group_type=group_data.get('group_type'),
                 language=group_data.get('language', ''),
+                availability=group_data.get('availability', 'unknown'),
                 link=group_data.get('link'),
                 # date_added автоматически поставится по default в модели
             )
@@ -138,7 +140,7 @@ def create_excel_file(groups):
     Создаёт байтовый Excel-файл (.xlsx) с данными о найденных группах для отправки пользователю.
 
     Содержит колонки: ID (Hash), Название, Username, Описание, Участников,
-    Категория, Тип, Ссылка, Дата добавления.
+    Категория, Тип, Язык, Активность, Ссылка, Дата добавления.
     Username приводится к формату '@username'.
 
     :param groups: (list[TelegramGroup]) Список экземпляров модели TelegramGroup.
@@ -158,6 +160,7 @@ def create_excel_file(groups):
         'Категория',
         'Тип',
         'Язык',
+        'Активность',
         'Ссылка',
         'Дата добавления'
     ]
@@ -182,6 +185,7 @@ def create_excel_file(groups):
             group.category or '',
             group.group_type,
             group.language,
+            group.availability,
             group.link,
             group.date_added.strftime('%Y-%m-%d %H:%M:%S')
         ])

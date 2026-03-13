@@ -143,7 +143,8 @@ async def update_db(message: Message):
                             processed += 1
 
                             TelegramGroup.update(
-                                group_type="Это пользователь, а не канал/группа."
+                                group_type="Это пользователь, а не канал/группа.",
+                                availability=''  # Группа неактивна
                                 # ИЛИ, если используете status:Недействительный username
                                 # status='invalid_username'
                             ).where(TelegramGroup.group_hash == group.group_hash).execute()
@@ -170,7 +171,8 @@ async def update_db(message: Message):
                             username=actual_username,
                             description=description,
                             participants=participants_count,
-                            name=entity.title  # Также обновляем название на актуальное
+                            name=entity.title,  # Также обновляем название на актуальное
+                            availability=''  # Группа активна
                         ).where(
                             TelegramGroup.group_hash == group.group_hash
                         ).execute()
@@ -203,7 +205,8 @@ async def update_db(message: Message):
                             f"Пропускаем дубликат username {group.username} (аккаунт {current_account})"
                         )
                         TelegramGroup.update(
-                            group_type="Дублирующийся username"
+                            group_type="Дублирующийся username",
+                            availability='inactive'  # Группа неактивна
                             # ИЛИ, если используете status:Недействительный username
                             # status='invalid_username'
                         ).where(TelegramGroup.group_hash == group.group_hash).execute()
@@ -251,7 +254,8 @@ async def update_db(message: Message):
                         logger.warning(f"Недействительный username: {group.username}")
                         # Помечаем как невалидный, чтобы не обрабатывать в будущем
                         TelegramGroup.update(
-                            group_type="Недействительный username"
+                            group_type="Недействительный username",
+                            availability=''  # Группа неактивна
                             # ИЛИ, если используете status:Недействительный username
                             # status='invalid_username'
                         ).where(TelegramGroup.group_hash == group.group_hash).execute()
@@ -262,7 +266,8 @@ async def update_db(message: Message):
                         logger.warning(f"Недействительный username: {group.username}")
                         # Помечаем как невалидный, чтобы не обрабатывать в будущем
                         TelegramGroup.update(
-                            group_type="Недействительный username"
+                            group_type="Недействительный username",
+                            availability=''  # Группа неактивна
                             # ИЛИ, если используете status:Недействительный username
                             # status='invalid_username'
                         ).where(TelegramGroup.group_hash == group.group_hash).execute()
@@ -272,7 +277,8 @@ async def update_db(message: Message):
                     except ValueError as e:
                         logger.warning(f"Недействительный username: {group.username} — {e}")
                         TelegramGroup.update(
-                            group_type="Недействительный username"
+                            group_type="Недействительный username",
+                            availability=''  # Группа неактивна
                             # ИЛИ, если используете status:Недействительный username
                             # status='invalid_username'
                         ).where(TelegramGroup.group_hash == group.group_hash).execute()

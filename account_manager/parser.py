@@ -279,6 +279,8 @@ async def get_grup_accaunt(client):
                     description=description,
                     participants=participants_count,
                     group_type=new_group_type,
+                    language='',
+                    availability='',
                     link=link or "",
                     date_added=datetime.now()
                 ).on_conflict(
@@ -289,6 +291,8 @@ async def get_grup_accaunt(client):
                         TelegramGroup.description: description,
                         TelegramGroup.participants: participants_count,
                         TelegramGroup.group_type: new_group_type,
+                        TelegramGroup.language: '',
+                        TelegramGroup.availability: '',
                         TelegramGroup.link: link or "",
                     }
                 ).execute()

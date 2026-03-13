@@ -5,7 +5,7 @@ import sys
 
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import clean_telegram_id_duplicates, init_database
+from database.database import clean_telegram_id_duplicates, init_database, migrate_add_availability_column
 from handlers.admin.admin import register_handlers_admin_panel
 from handlers.admin.checking_accounts import register_checking_accounts
 from handlers.admin.checking_group_for_ai import register_handlers_checking_group_for_ai
@@ -51,6 +51,7 @@ async def main() -> None:
         Рабата с базой данных
         """
         init_database()  # Создание таблиц
+        migrate_add_availability_column()  # Миграция: добавление колонки availability
         clean_telegram_id_duplicates()  # Чистка дублей в базе данных
 
         """

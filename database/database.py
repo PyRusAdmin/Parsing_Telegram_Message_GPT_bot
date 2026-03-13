@@ -25,7 +25,38 @@ def init_database():
     db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
     db.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
+    db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
     db.close()
+
+
+def migrate_add_availability_column():
+    """
+    Миграция: добавляет колонку availability в таблицу telegram_groups.
+    
+    Запускается один раз при обновлении базы данных.
+    Если колонка уже существует — миграция пропускается.
+    """
+    try:
+        db.connect(reuse_if_open=True)
+        
+        # Проверяем, существует ли уже колонка
+        cursor = db.execute_sql("PRAGMA table_info(telegram_groups)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'availability' not in columns:
+            # Добавляем колонку availability со значением по умолчанию 'unknown'
+            db.execute_sql("""
+                ALTER TABLE telegram_groups 
+                ADD COLUMN availability TEXT DEFAULT 'unknown'
+            """)
+            logger.info("✅ Миграция: добавлена колонка 'availability' в таблицу 'telegram_groups'")
+        else:
+            logger.info("ℹ️ Колонка 'availability' уже существует в таблице 'telegram_groups'")
+            
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при выполнении миграции availability: {e}")
+    finally:
+        db.close()
 
 
 """
@@ -81,8 +112,6 @@ def get_tracked_channels_count(user_id: int) -> int:
     except Exception as e:
         logger.error(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
         return 0
-
-
 
 
 def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
@@ -314,6 +343,7 @@ class TelegramGroup(BaseModel):
     повторного поиска и дублирования. Таблица общая для всех пользователей.
 
     Attributes:
+        telegram_id (IntegerField): Уникальный ID группы в Telegram (первичный ключ).
         group_hash (CharField): Уникальный хеш или ID группы, используется как ключ.
         name (CharField): Отображаемое название группы или канала.
         username (CharField, optional): Юзернейм (@username), может отсутствовать.
@@ -321,7 +351,9 @@ class TelegramGroup(BaseModel):
         participants (IntegerField): Количество участников, по умолчанию 0.
         category (CharField, optional): Категория, определённая ИИ (например, 'технологии').
         group_type (CharField): Тип чата — 'group', 'channel' или 'link'.
+        language (CharField): Язык группы/канала — 'ru', 'en' или ''.
         link (CharField): Прямая ссылка на чат (https://t.me/...).
+        availability (CharField): Статус активности группы
         date_added (DateTimeField): Дата и время добавления записи, по умолчанию — текущее время.
 
     Meta:
@@ -337,6 +369,7 @@ class TelegramGroup(BaseModel):
     group_type = CharField()  # 'group', 'channel', 'link'
     language = CharField(null=True, default='')  # ru/en язык группы / канала
     link = CharField()  # Ссылка на группу
+    availability = CharField(null=True)  # Статус активности
     date_added = DateTimeField(default=datetime.now)  # Дата добавления
 
     class Meta:
