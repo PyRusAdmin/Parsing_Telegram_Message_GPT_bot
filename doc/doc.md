@@ -25,11 +25,11 @@
    HASH=ваш_hash_приложения
    GROQ_API_KEY=ваш_groq_api_key
    OPENROUTER_API_KEY=ваш_openrouter_api_key
-   user=ваш_прокси_пользователь
-   password=ваш_прокси_пароль
-   ip=ваш_прокси_ip
-   port=ваш_прокси_порт
-   language=ru
+   USER=ваш_прокси_пользователь
+   PASSWORD=ваш_прокси_пароль
+   IP=ваш_прокси_ip
+   PORT=ваш_прокси_порт
+   LANGUAGE=ru
 3. Запустите бота: python main.py
 
 ## 🧭 Основное меню

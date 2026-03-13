@@ -5,7 +5,7 @@ from loguru import logger
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-from core.config import api_id, api_hash
+from core.config import API_ID, API_HASH
 from database.database import get_user_accounts
 
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
@@ -82,7 +82,7 @@ async def _is_session_valid(session_string: str) -> bool:
         return False
 
     # Пробуем создать клиент и подключиться (быстрый тест)
-    client = TelegramClient(StringSession(session_string), api_id, api_hash)
+    client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
 
     try:
         await client.connect()

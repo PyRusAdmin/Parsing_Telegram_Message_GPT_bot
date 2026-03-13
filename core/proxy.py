@@ -3,7 +3,7 @@ import os
 
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from core.config import proxy_user, proxy_password, proxy_ip, proxy_port
+from core.config import PROXY_USER, PROXY_PASSWORD, PROXY_IP, PROXY_PORT
 
 
 def setup_proxy():
@@ -16,10 +16,10 @@ def setup_proxy():
     или подключении к Telegram.
 
     Использует прокси-данные из модуля `core.config`:
-        - proxy_user: логин для аутентификации на прокси
-        - proxy_password: пароль
-        - proxy_ip: IP-адрес прокси-сервера
-        - proxy_port: порт прокси
+        - PROXY_USER: логин для аутентификации на прокси
+        - PROXY_PASSWORD: пароль
+        - PROXY_IP: IP-адрес прокси-сервера
+        - PROXY_PORT: порт прокси
 
     Raises:
         Exception: В случае ошибки устанавливается логирование с помощью `logger.exception`.
@@ -30,8 +30,8 @@ def setup_proxy():
     """
     try:
         # Указываем прокси для HTTP и HTTPS
-        os.environ['http_proxy'] = f"http://{proxy_user}:{proxy_password}@{proxy_ip}:{proxy_port}"
-        os.environ['https_proxy'] = f"http://{proxy_user}:{proxy_password}@{proxy_ip}:{proxy_port}"
+        os.environ['http_proxy'] = f"http://{PROXY_USER}:{PROXY_PASSWORD}@{PROXY_IP}:{PROXY_PORT}"
+        os.environ['https_proxy'] = f"http://{PROXY_USER}:{PROXY_PASSWORD}@{PROXY_IP}:{PROXY_PORT}"
     except Exception as e:
         logger.exception(e)
 

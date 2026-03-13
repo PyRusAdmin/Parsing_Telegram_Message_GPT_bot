@@ -15,7 +15,7 @@ from telethon.errors import (
 )
 from telethon.sessions import StringSession
 
-from core.config import api_id, api_hash
+from core.config import API_ID, API_HASH
 from database.database import delete_account_from_db, getting_account
 
 mobile_device = {
@@ -73,8 +73,8 @@ class CheckingAccountsValidity:
         # Создаем клиент, используя StringSession и вашу строку
         client = TelegramClient(  # Создаем клиента Telegram
             StringSession(session_name),  # Строка сессии
-            api_id=api_id,  # ID приложения
-            api_hash=api_hash,  # Хэш приложения
+            api_id=API_ID,  # ID приложения
+            api_hash=API_HASH,  # Хэш приложения
             device_model=mobile_device["device_model"],
             system_version=mobile_device["system_version"],
             app_version=mobile_device["app_version"],
@@ -184,8 +184,8 @@ class CheckingAccountsValidity:
 
         client = TelegramClient(
             self.path,  # Telethon сам добавит .session
-            api_id=api_id,
-            api_hash=api_hash,
+            api_id=API_ID,
+            api_hash=API_HASH,
             device_model=mobile_device["device_model"],
             system_version=mobile_device["system_version"],
             app_version=mobile_device["app_version"],
@@ -225,8 +225,8 @@ class CheckingAccountsValidity:
 
         client = TelegramClient(
             StringSession(chosen_session_name),
-            api_id=api_id,
-            api_hash=api_hash,
+            api_id=API_ID,
+            api_hash=API_HASH,
             device_model=mobile_device["device_model"],
             system_version=mobile_device["system_version"],
             app_version=mobile_device["app_version"],

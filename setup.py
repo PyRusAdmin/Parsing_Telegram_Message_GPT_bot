@@ -8,6 +8,13 @@ env_example = """
 BOT_TOKEN=_____
 ID=_____
 HASH=_____
+GROQ_API_KEY=_____
+OPENROUTER_API_KEY=_____
+USER=_____
+PASSWORD=_____
+IP=_____
+PORT=_____
+LANGUAGE=ru
 """.strip()
 
 env_file = ".env"
