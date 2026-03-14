@@ -108,10 +108,6 @@ async def assign_categories_free(message: Message):
         )
 
         # 2️⃣ Обрабатываем последовательно
-        successful = 0
-        failed = 0
-        processed = 0
-
         for group_data in groups_to_process:
             try:
                 # AI запрос
@@ -123,36 +119,36 @@ async def assign_categories_free(message: Message):
                      .update(category=result["category"])
                      .where(TelegramGroup.telegram_id == result["telegram_id"])
                      .execute())
-                    successful += 1
+                    # successful += 1
                     logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
-                else:
-                    failed += 1
-                    logger.debug(f"⚪ Не удалось определить категорию: {group_data.get('name')}")
+                # else:
+                #     failed += 1
+                #     logger.debug(f"⚪ Не удалось определить категорию: {group_data.get('name')}")
 
-                processed += 1
+                # processed += 1
 
                 # Прогресс каждые 10 групп
-                if processed % 10 == 0:
-                    await status_msg.edit_text(
-                        f"🔄 Прогресс: {processed}/{total}\n"
-                        f"✅ Успешно: {successful}\n"
-                        f"⚪ Не определено: {failed}"
-                    )
+                # if processed % 10 == 0:
+                #     await status_msg.edit_text(
+                #         f"🔄 Прогресс: {processed}/{total}\n"
+                #         f"✅ Успешно: {successful}\n"
+                #         f"⚪ Не определено: {failed}"
+                #     )
 
                 # Пауза между запросами (чтобы не блокировали)
-                await asyncio.sleep(2)
+                await asyncio.sleep(0.5)
 
             except Exception as e:
-                failed += 1
+                # failed += 1
                 logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
                 continue
 
         # Финальный отчёт
         await status_msg.edit_text(
             f"✅ <b>Готово!</b>\n\n"
-            f"📊 Всего обработано: {total}\n"
-            f"✅ Успешно: {successful}\n"
-            f"⚪ Не определено: {failed}\n\n"
+            # f"📊 Всего обработано: {total}\n"
+            # f"✅ Успешно: {successful}\n"
+            # f"⚪ Не определено: {failed}\n\n"
             f"🤖 Метод: g4f.free (бесплатный)"
         )
 
@@ -190,7 +186,7 @@ async def assign_categories_groq(message: Message):
                     "name": next((g["name"] for g in groups_to_process if g["telegram_id"] == result["telegram_id"]),
                                  "Unknown")
                 })
-        
+
         # 3️⃣ Обновляем БД одним батчем
         if successful_results:
             await batch_update_categories(successful_results)
