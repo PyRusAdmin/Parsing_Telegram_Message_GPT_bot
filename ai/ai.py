@@ -5,13 +5,11 @@ from datetime import datetime
 import groq
 from groq import AsyncGroq
 from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
-from openai import OpenAI
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
 from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
 from core.config import GROQ_API_KEY
-from core.config import OPENROUTER_API_KEY
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
 
@@ -55,6 +53,8 @@ async def category_assignment_free(group_data: dict, client, model) -> dict:
     :param model: g4f.model.Model
     :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
     """
+    setup_proxy()
+
     try:
         # client = Client()
 
@@ -155,86 +155,86 @@ async def category_assignment_free(group_data: dict, client, model) -> dict:
         }
 
 
-def category_assignment_sync(group_data: dict) -> dict:
-    """
-    Синхронная функция для определения категории (для запуска в ThreadPoolExecutor).
-
-    :param group_data: dict с полями name, description, username, group_type, telegram_id
-    :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
-    """
-    setup_proxy()
-
-    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "<OPENROUTER_API_KEY>":
-        logger.error("❌ OPENROUTER_API_KEY не настроен!")
-        return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
-
-    try:
-        # client = OpenAI(
-        #     base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
-        #     api_key=OPENROUTER_API_KEY,
-        #     timeout=30
-        # )
-
-        # 🧩 Формируем контекст
-        data_parts = []
-        if group_data.get('name'):
-            data_parts.append(f"Название: {group_data['name']}")
-        if group_data.get('description'):
-            data_parts.append(f"Описание: {group_data['description']}")
-        if group_data.get('username'):
-            data_parts.append(f"Username: @{group_data['username']}")
-        if group_data.get('group_type'):
-            data_parts.append(f"Тип: {group_data['group_type']}")
-
-        user_input = "\n".join(data_parts) if data_parts else "Нет данных"
-
-        prompt = (
-            f"На основе следующих данных о Telegram-группе или канале:\n\n{user_input}\n\n"
-            "Выбери ОДНУ наиболее подходящую категорию из списка ниже. "
-            "Ответь ТОЛЬКО названием категории, без пояснений, кавычек и знаков препинания.\n\n"
-            "Список категорий:\n"
-            "Инвестиции\nФинансы и личный бюджет\nКриптовалюты и блокчейн\n"
-            "Бизнес и предпринимательство\nМаркетинг и продвижение\nТехнологии и IT\n"
-            "Образование и саморазвитие\nРабота и карьера\nНедвижимость\n"
-            "Здоровье и медицина\nПутешествия\nАвто и транспорт\nШоппинг и скидки\n"
-            "Развлечения и досуг\nПолитика и общество\nНаука и исследования\n"
-            "Спорт и фитнес\nКулинария и еда\nМода и красота\nХобби и творчество"
-        )
-
-        # 🤖 Запрос к API (блокирующий — поэтому запускаем в потоке)
-        completion = client.chat.completions.create(
-            model="meta-llama/llama-3.2-3b-instruct",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=20
-        )
-
-        category = (
-            completion.choices[0].message.content
-            .strip()
-            .strip('".')
-        )
-
-        # ✅ Валидация результата
-        if not category or category.lower() in ["не определена", "undefined", "unknown", ""]:
-            logger.debug(f"⚪ AI не определил категорию для: {group_data.get('name')}")
-            return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
-
-        logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
-        return {
-            "telegram_id": group_data["telegram_id"],
-            "category": category,
-            "success": True
-        }
-
-    except Exception as e:
-        logger.warning(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
-        return {
-            "telegram_id": group_data.get("telegram_id"),
-            "category": None,
-            "success": False,
-            "error": str(e)
-        }
+# def category_assignment_sync(group_data: dict, client, model) -> dict:
+#     """
+#     Синхронная функция для определения категории (для запуска в ThreadPoolExecutor).
+#
+#     :param group_data: dict с полями name, description, username, group_type, telegram_id
+#     :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
+#     """
+#     setup_proxy()
+#
+#     # if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "<OPENROUTER_API_KEY>":
+#     #     logger.error("❌ OPENROUTER_API_KEY не настроен!")
+#     #     return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
+#
+#     try:
+#         # client = OpenAI(
+#         #     base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
+#         #     api_key=OPENROUTER_API_KEY,
+#         #     timeout=30
+#         # )
+#
+#         # 🧩 Формируем контекст
+#         data_parts = []
+#         if group_data.get('name'):
+#             data_parts.append(f"Название: {group_data['name']}")
+#         if group_data.get('description'):
+#             data_parts.append(f"Описание: {group_data['description']}")
+#         if group_data.get('username'):
+#             data_parts.append(f"Username: @{group_data['username']}")
+#         if group_data.get('group_type'):
+#             data_parts.append(f"Тип: {group_data['group_type']}")
+#
+#         user_input = "\n".join(data_parts) if data_parts else "Нет данных"
+#
+#         prompt = (
+#             f"На основе следующих данных о Telegram-группе или канале:\n\n{user_input}\n\n"
+#             "Выбери ОДНУ наиболее подходящую категорию из списка ниже. "
+#             "Ответь ТОЛЬКО названием категории, без пояснений, кавычек и знаков препинания.\n\n"
+#             "Список категорий:\n"
+#             "Инвестиции\nФинансы и личный бюджет\nКриптовалюты и блокчейн\n"
+#             "Бизнес и предпринимательство\nМаркетинг и продвижение\nТехнологии и IT\n"
+#             "Образование и саморазвитие\nРабота и карьера\nНедвижимость\n"
+#             "Здоровье и медицина\nПутешествия\nАвто и транспорт\nШоппинг и скидки\n"
+#             "Развлечения и досуг\nПолитика и общество\nНаука и исследования\n"
+#             "Спорт и фитнес\nКулинария и еда\nМода и красота\nХобби и творчество"
+#         )
+#
+#         # 🤖 Запрос к API (блокирующий — поэтому запускаем в потоке)
+#         completion = client.chat.completions.create(
+#             model=model,
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.3,
+#             max_tokens=20
+#         )
+#
+#         category = (
+#             completion.choices[0].message.content
+#             .strip()
+#             .strip('".')
+#         )
+#
+#         # ✅ Валидация результата
+#         if not category or category.lower() in ["не определена", "undefined", "unknown", ""]:
+#             logger.debug(f"⚪ AI не определил категорию для: {group_data.get('name')}")
+#             return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
+#
+#         logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
+#         return {
+#             "telegram_id": group_data["telegram_id"],
+#             "category": category,
+#             "success": True
+#         }
+#
+#     except Exception as e:
+#         logger.warning(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
+#         return {
+#             "telegram_id": group_data.get("telegram_id"),
+#             "category": None,
+#             "success": False,
+#             "error": str(e)
+#         }
 
 
 async def category_assignment(user_input: str) -> str:

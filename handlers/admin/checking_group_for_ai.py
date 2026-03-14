@@ -8,8 +8,10 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 from g4f.client import Client  # https://github.com/xtekky/gpt4free
 from loguru import logger
+from openai import OpenAI
 
-from ai.ai import category_assignment_sync, category_assignment_free
+from ai.ai import category_assignment_free
+from core.config import OPENROUTER_API_KEY
 from database.database import TelegramGroup, db, get_groups_without_category
 from keyboards.admin.keyboards import category_method_keyboard, admin_keyboard
 from states.states import CategoryMethod
@@ -81,7 +83,13 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         await assign_categories_free(message, client, model)
     elif message.text == "🚀 Мощно (Openrouter API)":
         await state.clear()
-        await assign_categories_groq(message)
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
+            api_key=OPENROUTER_API_KEY,
+            timeout=30
+        )
+        model = "meta-llama/llama-3.2-3b-instruct"
+        await assign_categories_free(message, client, model)
     else:
         await message.answer(
             "Пожалуйста, выберите метод из клавиатуры ниже:",
@@ -132,8 +140,8 @@ async def assign_categories_free(message: Message, client, model):
 
         # Финальный отчёт
         await status_msg.edit_text(
-            f"✅ <b>Готово!</b>\n\n"
-            f"🤖 Метод: g4f.free (бесплатный)",
+            f"✅ <b>Готово!</b>\n\n",
+            # f"🤖 Метод: g4f.free (бесплатный)",
             parse_mode="HTML"
         )
 
@@ -142,53 +150,53 @@ async def assign_categories_free(message: Message, client, model):
         await status_msg.edit_text(f"❌ Ошибка: {e}")
 
 
-async def assign_categories_groq(message: Message):
-    """Присвоение категорий через Groq API (потоки, быстро)"""
-
-    status_msg = await message.answer("🚀 Запуск мощного AI (Groq API)...")
-
-    try:
-        # 1️⃣ Получаем группы для обработки
-        groups_to_process = await get_groups_without_category()
-
-        if not groups_to_process:
-            await status_msg.edit_text("✅ Все группы уже имеют категории!")
-            return
-
-        total = len(groups_to_process)
-        logger.info(f"📦 Найдено {total} групп для обработки (Groq API)")
-
-        await status_msg.edit_text(
-            f"🔄 Обрабатываю {total} групп (последовательно)...\n"
-        )
-
-        # 2️⃣ Запускаем AI-запросы
-        for group_data in groups_to_process:
-            try:
-                result = category_assignment_sync(group_data)
-                if result.get("success") and result.get("category"):
-                    # Обновляем БД
-                    (TelegramGroup
-                     .update(category=result["category"])
-                     .where(TelegramGroup.telegram_id == result["telegram_id"])
-                     .execute())
-                    logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
-
-                await asyncio.sleep(0.5)
-
-            except Exception as e:
-                logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
-                continue
-
-        await status_msg.edit_text(
-            f"✅ <b>Готово!</b>\n\n"
-            f"🤖 Метод: OPENROUTER",
-            parse_mode='HTML'
-        )
-
-    except Exception as e:
-        logger.exception(e)
-        await status_msg.edit_text(f"❌ Ошибка: {e}")
+# async def assign_categories_groq(message: Message, client, model):
+#     """Присвоение категорий через Groq API (потоки, быстро)"""
+#
+#     status_msg = await message.answer("🚀 Запуск мощного AI (Groq API)...")
+#
+#     try:
+#         # 1️⃣ Получаем группы для обработки
+#         groups_to_process = await get_groups_without_category()
+#
+#         if not groups_to_process:
+#             await status_msg.edit_text("✅ Все группы уже имеют категории!")
+#             return
+#
+#         total = len(groups_to_process)
+#         logger.info(f"📦 Найдено {total} групп для обработки (Groq API)")
+#
+#         await status_msg.edit_text(
+#             f"🔄 Обрабатываю {total} групп (последовательно)...\n"
+#         )
+#
+#         # 2️⃣ Запускаем AI-запросы
+#         for group_data in groups_to_process:
+#             try:
+#                 result = category_assignment_free(group_data, client, model)
+#                 if result.get("success") and result.get("category"):
+#                     # Обновляем БД
+#                     (TelegramGroup
+#                      .update(category=result["category"])
+#                      .where(TelegramGroup.telegram_id == result["telegram_id"])
+#                      .execute())
+#                     logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
+#
+#                 await asyncio.sleep(0.5)
+#
+#             except Exception as e:
+#                 logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
+#                 continue
+#
+#         await status_msg.edit_text(
+#             f"✅ <b>Готово!</b>\n\n"
+#             f"🤖 Метод: OPENROUTER",
+#             parse_mode='HTML'
+#         )
+#
+#     except Exception as e:
+#         logger.exception(e)
+#         await status_msg.edit_text(f"❌ Ошибка: {e}")
 
 
 @router.message(F.text == "📥 Получить группы без категории")
