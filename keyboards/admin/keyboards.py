@@ -151,6 +151,13 @@ def category_method_keyboard():
             ],
             [
                 KeyboardButton(
+                    text="🚀 Мощно (GROQ API)",
+                    style='success',
+                    icon_custom_emoji_id="5438489737125975601"
+                )
+            ],
+            [
+                KeyboardButton(
                     text="Назад",
                     icon_custom_emoji_id="5352759161945867747",
                     style='danger'

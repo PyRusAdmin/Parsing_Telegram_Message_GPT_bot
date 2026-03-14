@@ -23,41 +23,19 @@ from database.database import TelegramGroup
 """
 
 
-def prompt_for_category_assignment(user_input) -> str:
+async def category_assignment(group_data: dict, client, model) -> dict:
     """
-    Формирует промпт для определения категории через g4f.
-
-    :param user_input: Входные данные
-    :return: str с промптом
-    """
-    return (
-        f"На основе следующих данных о Telegram-группе или канале:\n\n{user_input}\n\n"
-        "Выбери ОДНУ наиболее подходящую категорию из списка ниже. "
-        "Ответь ТОЛЬКО названием категории, без пояснений, кавычек и знаков препинания.\n\n"
-        "Список категорий:\n"
-        "Инвестиции\n Финансы и личный бюджет\n Криптовалюты и блокчейн\n Бизнес и предпринимательство\n"
-        "Маркетинг и продвижение\n Технологии и IT\n Образование и саморазвитие\n Работа и карьера\n"
-        "Недвижимость\n Здоровье и медицина\n Путешествия\n Авто и транспорт\n Шоппинг и скидки\n"
-        "Развлечения и досуг\n Политика и общество\n Наука и исследования\n Спорт и фитнес\n Кулинария и еда\n"
-        "Мода и красота\n Хобби и творчество"
-    )
-
-
-async def category_assignment_free(group_data: dict, client, model) -> dict:
-    """
-    Асинхронная функция для определения категории через g4f (бесплатно, без потоков).
-    Работает последовательно, подходит для постепенной обработки.
+    Универсальная функция для определения категории через любой AI клиент.
+    Работает с g4f (синхронный), Groq, OpenAI (асинхронные).
 
     :param group_data: dict с полями name, description, username, group_type, telegram_id
-    :param client: g4f.client.Client
-    :param model: g4f.model.Model
+    :param client: g4f.client.Client | AsyncGroq | OpenAI
+    :param model: название модели
     :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
     """
     setup_proxy()
 
     try:
-        # client = Client()
-
         # 🧩 Формируем контекст
         data_parts = []
         if group_data.get('name'):
@@ -93,15 +71,26 @@ async def category_assignment_free(group_data: dict, client, model) -> dict:
             "Твой ответ:"
         )
 
-        # 🤖 Запрос к API (синхронный, но вызывается асинхронно через to_thread)
-        # Доступные модели: gpt-4o-mini, gpt-4.1, gpt-4o, deepseek-v3, llama-3.1-70b, mistral-7b и др.
-        completion = await asyncio.to_thread(
-            client.chat.completions.create,
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=20
-        )
+        # 🤖 Определяем тип клиента и делаем запрос
+        client_type = type(client).__name__
+        
+        # Асинхронные клиенты (Groq, OpenAI)
+        if client_type in ['AsyncGroq', 'AsyncOpenAI']:
+            completion = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=20
+            )
+        # Синхронные клиенты (g4f, OpenAI) - вызываем через to_thread
+        else:
+            completion = await asyncio.to_thread(
+                client.chat.completions.create,
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=20
+            )
 
         category = (
             completion.choices[0].message.content
@@ -153,110 +142,6 @@ async def category_assignment_free(group_data: dict, client, model) -> dict:
             "success": False,
             "error": str(e)
         }
-
-
-# def category_assignment_sync(group_data: dict, client, model) -> dict:
-#     """
-#     Синхронная функция для определения категории (для запуска в ThreadPoolExecutor).
-#
-#     :param group_data: dict с полями name, description, username, group_type, telegram_id
-#     :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
-#     """
-#     setup_proxy()
-#
-#     # if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "<OPENROUTER_API_KEY>":
-#     #     logger.error("❌ OPENROUTER_API_KEY не настроен!")
-#     #     return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
-#
-#     try:
-#         # client = OpenAI(
-#         #     base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
-#         #     api_key=OPENROUTER_API_KEY,
-#         #     timeout=30
-#         # )
-#
-#         # 🧩 Формируем контекст
-#         data_parts = []
-#         if group_data.get('name'):
-#             data_parts.append(f"Название: {group_data['name']}")
-#         if group_data.get('description'):
-#             data_parts.append(f"Описание: {group_data['description']}")
-#         if group_data.get('username'):
-#             data_parts.append(f"Username: @{group_data['username']}")
-#         if group_data.get('group_type'):
-#             data_parts.append(f"Тип: {group_data['group_type']}")
-#
-#         user_input = "\n".join(data_parts) if data_parts else "Нет данных"
-#
-#         prompt = (
-#             f"На основе следующих данных о Telegram-группе или канале:\n\n{user_input}\n\n"
-#             "Выбери ОДНУ наиболее подходящую категорию из списка ниже. "
-#             "Ответь ТОЛЬКО названием категории, без пояснений, кавычек и знаков препинания.\n\n"
-#             "Список категорий:\n"
-#             "Инвестиции\nФинансы и личный бюджет\nКриптовалюты и блокчейн\n"
-#             "Бизнес и предпринимательство\nМаркетинг и продвижение\nТехнологии и IT\n"
-#             "Образование и саморазвитие\nРабота и карьера\nНедвижимость\n"
-#             "Здоровье и медицина\nПутешествия\nАвто и транспорт\nШоппинг и скидки\n"
-#             "Развлечения и досуг\nПолитика и общество\nНаука и исследования\n"
-#             "Спорт и фитнес\nКулинария и еда\nМода и красота\nХобби и творчество"
-#         )
-#
-#         # 🤖 Запрос к API (блокирующий — поэтому запускаем в потоке)
-#         completion = client.chat.completions.create(
-#             model=model,
-#             messages=[{"role": "user", "content": prompt}],
-#             temperature=0.3,
-#             max_tokens=20
-#         )
-#
-#         category = (
-#             completion.choices[0].message.content
-#             .strip()
-#             .strip('".')
-#         )
-#
-#         # ✅ Валидация результата
-#         if not category or category.lower() in ["не определена", "undefined", "unknown", ""]:
-#             logger.debug(f"⚪ AI не определил категорию для: {group_data.get('name')}")
-#             return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
-#
-#         logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
-#         return {
-#             "telegram_id": group_data["telegram_id"],
-#             "category": category,
-#             "success": True
-#         }
-#
-#     except Exception as e:
-#         logger.warning(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
-#         return {
-#             "telegram_id": group_data.get("telegram_id"),
-#             "category": None,
-#             "success": False,
-#             "error": str(e)
-#         }
-
-
-async def category_assignment(user_input: str) -> str:
-    """
-    Назначает категорию с помощью Groq. Возвращает ТОЛЬКО название категории.
-    """
-    setup_proxy()
-    client_groq = AsyncGroq(api_key=GROQ_API_KEY)
-    prompt = prompt_for_category_assignment(user_input)
-    try:
-        chat_completion = await client_groq.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,  # снижаем "творчество"
-            max_tokens=20  # достаточно для одного слова/фразы
-        )
-        result = chat_completion.choices[0].message.content.strip()
-        logger.debug(f"Groq вернул категорию: '{result}'")
-        return result
-    except Exception as e:
-        logger.exception("Ошибка при вызове Groq")
-        return "Не определена"
 
 
 async def get_groq_response(user_input):

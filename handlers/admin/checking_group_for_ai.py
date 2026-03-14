@@ -7,38 +7,17 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
 from g4f.client import Client  # https://github.com/xtekky/gpt4free
-from loguru import logger
-from openai import OpenAI
+from groq import AsyncGroq
+from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
+from openai import AsyncOpenAI
 
-from ai.ai import category_assignment_free
+from ai.ai import category_assignment
+from core.config import GROQ_API_KEY
 from core.config import OPENROUTER_API_KEY
 from database.database import TelegramGroup, db, get_groups_without_category
 from keyboards.admin.keyboards import category_method_keyboard, admin_keyboard
 from states.states import CategoryMethod
 from system.dispatcher import router
-
-
-async def batch_update_categories(updates: list[dict]):
-    """Массовое обновление категорий в БД (в одном потоке, транзакцией)"""
-
-    def _update():
-        if db.is_closed():
-            db.connect(reuse_if_open=True)
-
-        try:
-            with db.atomic():  # ✅ Одна транзакция для всех обновлений
-                for item in updates:
-                    try:
-                        TelegramGroup.update(category=item['category']).where(
-                            TelegramGroup.telegram_id == item['telegram_id']).execute()
-                        logger.debug(f"✅ Обновлено: {item.get('name')} → {item['category']}")
-                    except Exception as e:
-                        logger.exception(f"❌ Ошибка обновления {item.get('name')}: {e}")
-
-        except Exception as e:
-            logger.exception(f"❌ Критическая ошибка транзакции: {e}")
-
-    return await sync_to_async(_update, thread_sensitive=True)()
 
 
 @router.message(F.text == "🏷️ Присвоить категорию")
@@ -64,6 +43,47 @@ async def checking_group_for_ai_db(message: Message, state: FSMContext):
     )
 
 
+async def get_best_g4f_model(client: Client) -> str:
+    """
+    Проверяет доступность моделей g4f и возвращает первую рабочую.
+    Приоритет: llama-3.1-8b-instant → gpt-4o-mini → llama-3.2-3b → mistral-7b
+    """
+    # Список моделей по приоритету (от быстрой к медленной)
+    models_to_check = [
+        "llama-3.1-8b-instant",
+        "gpt-4o-mini",
+        "llama-3.2-3b",
+        "mistral-7b",
+        "llama-3.2-1b",
+    ]
+    
+    test_prompt = [{"role": "user", "content": "Hi"}]
+    
+    for model in models_to_check:
+        try:
+            # Пробуем сделать быстрый тестовый запрос
+            await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.chat.completions.create,
+                    model=model,
+                    messages=test_prompt,
+                    timeout=5
+                ),
+                timeout=7
+            )
+            logger.info(f"✅ Модель {model} доступна")
+            return model
+        except asyncio.TimeoutError:
+            logger.warning(f"⏱️ Таймаут модели {model}, пробуем следующую...")
+        except Exception as e:
+            logger.warning(f"❌ Модель {model} не работает: {type(e).__name__}")
+            continue
+    
+    # Если ничего не работает, возвращаем последнюю надежду
+    logger.warning("⚠️ Ни одна модель не доступна, используем llama-3.1-8b-instant по умолчанию")
+    return "llama-3.1-8b-instant"
+
+
 @router.message(StateFilter(CategoryMethod.waiting_for_method))
 async def process_category_method_choice(message: Message, state: FSMContext):
     """Обрабатывает выбор метода присвоения категорий"""
@@ -79,17 +99,30 @@ async def process_category_method_choice(message: Message, state: FSMContext):
     if message.text == "⚡️ Быстро (g4f.free)":
         await state.clear()
         client = Client()
-        model = "gpt-4o-mini"
-        await assign_categories_free(message, client, model)
+        
+        # 🔍 Определяем лучшую доступную модель
+        status_msg = await message.answer("🔍 Проверка доступных моделей...")
+        model = await get_best_g4f_model(client)
+        await status_msg.edit_text(f"✅ Выбрана модель: {model}")
+        await asyncio.sleep(1)
+        await status_msg.delete()
+        
+        await assign_categories(message, client, model)
+        
     elif message.text == "🚀 Мощно (Openrouter API)":
         await state.clear()
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
+        client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
             api_key=OPENROUTER_API_KEY,
             timeout=30
         )
         model = "meta-llama/llama-3.2-3b-instruct"
-        await assign_categories_free(message, client, model)
+        await assign_categories(message, client, model)
+    elif message.text == "🚀 Мощно (GROQ API)":
+        await state.clear()
+        client = AsyncGroq(api_key=GROQ_API_KEY)
+        model = "llama-3.1-8b-instant"
+        await assign_categories(message, client, model)
     else:
         await message.answer(
             "Пожалуйста, выберите метод из клавиатуры ниже:",
@@ -97,13 +130,13 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         )
 
 
-async def assign_categories_free(message: Message, client, model):
-    """Присвоение категорий через g4f (бесплатно, последовательно)"""
+async def assign_categories(message: Message, client, model):
+    """Универсальная функция присвоения категорий (любой AI клиент)"""
 
-    status_msg = await message.answer("⚡️ Запуск бесплатного AI (g4f)...")
+    status_msg = await message.answer("🤖 Запуск AI...")
 
     try:
-        # 1️⃣ Получаем группы для обработки (без категорий)
+        # 1️⃣ Получаем группы для обработки
         groups_to_process = await get_groups_without_category()
 
         if not groups_to_process:
@@ -111,92 +144,39 @@ async def assign_categories_free(message: Message, client, model):
             return
 
         total = len(groups_to_process)
-        logger.info(f"📦 Найдено {total} групп для обработки (g4f.free)")
+        logger.info(f"📦 Найдено {total} групп для обработки")
 
-        await status_msg.edit_text(
-            f"🔄 Обрабатываю {total} групп (последовательно)...\n"
-        )
+        await status_msg.edit_text(f"🔄 Обрабатываю {total} групп...")
 
-        # 2️⃣ Обрабатываем последовательно
-        for group_data in groups_to_process:
+        # 2️⃣ Обрабатываем последовательно с немедленной записью в БД
+        for i, group_data in enumerate(groups_to_process, 1):
             try:
                 # AI запрос
-                result = await category_assignment_free(group_data, client, model)
+                result = await category_assignment(group_data, client, model)
 
                 if result.get("success") and result.get("category"):
-                    # Обновляем БД
-                    (TelegramGroup
-                     .update(category=result["category"])
-                     .where(TelegramGroup.telegram_id == result["telegram_id"])
-                     .execute())
-                    logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
+                    # ✅ Сразу пишем в БД
+                    await sync_to_async(lambda: TelegramGroup.update(category=result["category"])
+                                        .where(TelegramGroup.telegram_id == result["telegram_id"])
+                                        .execute(), thread_sensitive=True)()
+                    logger.info(f"[{i}/{total}] ✅ {group_data['name']} → {result['category']}")
+                else:
+                    logger.warning(f"[{i}/{total}] ❌ {group_data['name']} — AI не определил")
 
-                # Пауза между запросами (чтобы не блокировали)
-                await asyncio.sleep(0.5)
+                # Пауза только для g4f (чтобы не блокировали)
+                if type(client).__name__ == 'Client':  # g4f клиент
+                    await asyncio.sleep(0.5)
 
             except Exception as e:
-                logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
+                logger.error(f"❌ Ошибка {group_data.get('name')}: {e}")
                 continue
 
-        # Финальный отчёт
-        await status_msg.edit_text(
-            f"✅ <b>Готово!</b>\n\n",
-            # f"🤖 Метод: g4f.free (бесплатный)",
-            parse_mode="HTML"
-        )
+        # 3️⃣ Финал
+        await status_msg.edit_text("✅ <b>Готово!</b>", parse_mode="HTML")
 
     except Exception as e:
         logger.exception(e)
         await status_msg.edit_text(f"❌ Ошибка: {e}")
-
-
-# async def assign_categories_groq(message: Message, client, model):
-#     """Присвоение категорий через Groq API (потоки, быстро)"""
-#
-#     status_msg = await message.answer("🚀 Запуск мощного AI (Groq API)...")
-#
-#     try:
-#         # 1️⃣ Получаем группы для обработки
-#         groups_to_process = await get_groups_without_category()
-#
-#         if not groups_to_process:
-#             await status_msg.edit_text("✅ Все группы уже имеют категории!")
-#             return
-#
-#         total = len(groups_to_process)
-#         logger.info(f"📦 Найдено {total} групп для обработки (Groq API)")
-#
-#         await status_msg.edit_text(
-#             f"🔄 Обрабатываю {total} групп (последовательно)...\n"
-#         )
-#
-#         # 2️⃣ Запускаем AI-запросы
-#         for group_data in groups_to_process:
-#             try:
-#                 result = category_assignment_free(group_data, client, model)
-#                 if result.get("success") and result.get("category"):
-#                     # Обновляем БД
-#                     (TelegramGroup
-#                      .update(category=result["category"])
-#                      .where(TelegramGroup.telegram_id == result["telegram_id"])
-#                      .execute())
-#                     logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
-#
-#                 await asyncio.sleep(0.5)
-#
-#             except Exception as e:
-#                 logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
-#                 continue
-#
-#         await status_msg.edit_text(
-#             f"✅ <b>Готово!</b>\n\n"
-#             f"🤖 Метод: OPENROUTER",
-#             parse_mode='HTML'
-#         )
-#
-#     except Exception as e:
-#         logger.exception(e)
-#         await status_msg.edit_text(f"❌ Ошибка: {e}")
 
 
 @router.message(F.text == "📥 Получить группы без категории")
