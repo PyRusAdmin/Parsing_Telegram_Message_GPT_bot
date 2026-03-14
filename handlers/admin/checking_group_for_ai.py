@@ -10,13 +10,10 @@ from asgiref.sync import sync_to_async
 from loguru import logger
 
 from ai.ai import category_assignment_sync, category_assignment_free
-from database.database import TelegramGroup, db
+from database.database import TelegramGroup, db, get_groups_without_category
 from keyboards.admin.keyboards import category_method_keyboard, admin_keyboard
 from states.states import CategoryMethod
 from system.dispatcher import router
-
-
-
 
 
 async def batch_update_categories(updates: list[dict]) -> tuple[int, int]:
@@ -109,7 +106,7 @@ async def assign_categories_free(message: Message):
     status_msg = await message.answer("⚡️ Запуск бесплатного AI (g4f)...")
 
     try:
-        # 1️⃣ Получаем группы для обработки
+        # 1️⃣ Получаем группы для обработки (без категорий)
         groups_to_process = await get_groups_without_category()
 
         if not groups_to_process:

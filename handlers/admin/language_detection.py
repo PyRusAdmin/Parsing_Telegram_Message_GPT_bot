@@ -10,7 +10,8 @@ from openai import OpenAI
 
 from database.database import TelegramGroup, db
 from system.dispatcher import router
-from g4f.client import Client # https://github.com/xtekky/gpt4free
+from g4f.client import Client  # https://github.com/xtekky/gpt4free
+
 
 def ai_llama_fri(group_data: dict):
     """Определение языка (ТОЛЬКО AI-запрос, БЕЗ записи в БД)"""
@@ -90,6 +91,7 @@ def ai_llama_fri(group_data: dict):
             "success": False,
             "error": str(e)
         }
+
 
 def ai_llama(group_data: dict) -> dict:
     """Определение языка (ТОЛЬКО AI-запрос, БЕЗ записи в БД)"""
