@@ -144,7 +144,7 @@ def category_method_keyboard():
             ],
             [
                 KeyboardButton(
-                    text="🚀 Мощно (Groq API)",
+                    text="🚀 Мощно (Openrouter API)",
                     style='success',
                     icon_custom_emoji_id="5438489737125975601"
                 )

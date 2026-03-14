@@ -30,3 +30,8 @@ class MyStatesParsing(StatesGroup):
 
 class ExportStates(StatesGroup):
     waiting_for_category = State()
+
+
+class CategoryMethod(StatesGroup):
+    """Состояния для выбора метода присвоения категорий"""
+    waiting_for_method = State()
