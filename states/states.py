@@ -29,7 +29,13 @@ class MyStatesParsing(StatesGroup):
 
 
 class ExportStates(StatesGroup):
-    waiting_for_category = State()
+    """
+    Группа состояний для процесса экспорта данных в боте.
+
+    Содержит состояния, используемые при взаимодействии пользователя
+    с функцией экспорта, например, ожидание выбора категории.
+    """
+    waiting_for_category = State()  # Ожидание выбора категории для экспорта
 
 
 class CategoryMethod(StatesGroup):
