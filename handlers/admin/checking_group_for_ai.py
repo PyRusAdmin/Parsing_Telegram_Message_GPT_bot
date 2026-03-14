@@ -56,9 +56,9 @@ async def get_best_g4f_model(client: Client) -> str:
         "mistral-7b",
         "llama-3.2-1b",
     ]
-    
+
     test_prompt = [{"role": "user", "content": "Hi"}]
-    
+
     for model in models_to_check:
         try:
             # Пробуем сделать быстрый тестовый запрос
@@ -78,10 +78,10 @@ async def get_best_g4f_model(client: Client) -> str:
         except Exception as e:
             logger.warning(f"❌ Модель {model} не работает: {type(e).__name__}")
             continue
-    
+
     # Если ничего не работает, возвращаем последнюю надежду
-    logger.warning("⚠️ Ни одна модель не доступна, используем llama-3.1-8b-instant по умолчанию")
-    return "llama-3.1-8b-instant"
+    logger.warning("⚠️ Ни одна модель не доступна, используем gpt-4o-mini по умолчанию")
+    return "gpt-4o-mini"
 
 
 @router.message(StateFilter(CategoryMethod.waiting_for_method))
@@ -99,16 +99,16 @@ async def process_category_method_choice(message: Message, state: FSMContext):
     if message.text == "⚡️ Быстро (g4f.free)":
         await state.clear()
         client = Client()
-        
+
         # 🔍 Определяем лучшую доступную модель
         status_msg = await message.answer("🔍 Проверка доступных моделей...")
         model = await get_best_g4f_model(client)
         await status_msg.edit_text(f"✅ Выбрана модель: {model}")
         await asyncio.sleep(1)
         await status_msg.delete()
-        
+
         await assign_categories(message, client, model)
-        
+
     elif message.text == "🚀 Мощно (Openrouter API)":
         await state.clear()
         client = AsyncOpenAI(
