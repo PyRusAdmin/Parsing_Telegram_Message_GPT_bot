@@ -97,7 +97,7 @@ async def update_db(message: Message):
         # 4. Получаем записи с username и group_type='group', которые ещё НЕ обновлены
         groups_to_update = list(TelegramGroup.select().where(
             (TelegramGroup.username.is_null(False)) &
-            (TelegramGroup.group_type == 'group')
+            (TelegramGroup.group_type == '')
         ))
 
         total_count = len(groups_to_update)

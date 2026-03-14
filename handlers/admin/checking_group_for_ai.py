@@ -180,36 +180,20 @@ async def assign_categories_groq(message: Message):
         await status_msg.edit_text(f"🔄 Обрабатываю {total} групп в 10 потоков...")
 
         # 2️⃣ Запускаем AI-запросы
+        successful_results = []
         for group_data in groups_to_process:
             result = category_assignment_sync(group_data)
-            # with ThreadPoolExecutor(max_workers=10) as executor:  # ✅ 10 параллельных запросов
-            #     futures = [
-            #         loop.run_in_executor(executor, category_assignment_sync, group_data)
-            #         for group_data in groups_to_process
-            #     ]
-            #     results = await asyncio.gather(*futures, return_exceptions=True)
-            # 3️⃣ Собираем успешные результаты
-            # successful_results = []
-            # ai_errors = 0
-            # for result in results:
-            # if isinstance(result, Exception):
-            #     logger.error(f"❌ Исключение в потоке: {result}")
-            #     ai_errors += 1
-            #     continue
             if result.get("success") and result.get("category"):
-                successful_results = {
+                successful_results.append({
                     "telegram_id": result["telegram_id"],
                     "category": result["category"],
                     "name": next((g["name"] for g in groups_to_process if g["telegram_id"] == result["telegram_id"]),
                                  "Unknown")
-                }
-                # else:
-                #     ai_errors += 1
-                # 4️⃣ Обновляем БД одним батчем
-                # db_updated = 0
-                # db_errors = 0
-                # if successful_results:
-                await batch_update_categories(successful_results)
+                })
+        
+        # 3️⃣ Обновляем БД одним батчем
+        if successful_results:
+            await batch_update_categories(successful_results)
 
         # 5️⃣ Финальный отчёт
         await status_msg.edit_text(
