@@ -6,6 +6,7 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
+from g4f.client import Client  # https://github.com/xtekky/gpt4free
 from loguru import logger
 
 from ai.ai import category_assignment_sync, category_assignment_free
@@ -75,7 +76,9 @@ async def process_category_method_choice(message: Message, state: FSMContext):
 
     if message.text == "⚡️ Быстро (g4f.free)":
         await state.clear()
-        await assign_categories_free(message)
+        client = Client()
+        model = "gpt-4o-mini"
+        await assign_categories_free(message, client, model)
     elif message.text == "🚀 Мощно (Openrouter API)":
         await state.clear()
         await assign_categories_groq(message)
@@ -86,7 +89,7 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         )
 
 
-async def assign_categories_free(message: Message):
+async def assign_categories_free(message: Message, client, model):
     """Присвоение категорий через g4f (бесплатно, последовательно)"""
 
     status_msg = await message.answer("⚡️ Запуск бесплатного AI (g4f)...")
@@ -110,7 +113,7 @@ async def assign_categories_free(message: Message):
         for group_data in groups_to_process:
             try:
                 # AI запрос
-                result = await category_assignment_free(group_data)
+                result = await category_assignment_free(group_data, client, model)
 
                 if result.get("success") and result.get("category"):
                     # Обновляем БД
@@ -118,36 +121,18 @@ async def assign_categories_free(message: Message):
                      .update(category=result["category"])
                      .where(TelegramGroup.telegram_id == result["telegram_id"])
                      .execute())
-                    # successful += 1
                     logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
-                # else:
-                #     failed += 1
-                #     logger.debug(f"⚪ Не удалось определить категорию: {group_data.get('name')}")
-
-                # processed += 1
-
-                # Прогресс каждые 10 групп
-                # if processed % 10 == 0:
-                #     await status_msg.edit_text(
-                #         f"🔄 Прогресс: {processed}/{total}\n"
-                #         f"✅ Успешно: {successful}\n"
-                #         f"⚪ Не определено: {failed}"
-                #     )
 
                 # Пауза между запросами (чтобы не блокировали)
                 await asyncio.sleep(0.5)
 
             except Exception as e:
-                # failed += 1
                 logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
                 continue
 
         # Финальный отчёт
         await status_msg.edit_text(
             f"✅ <b>Готово!</b>\n\n"
-            # f"📊 Всего обработано: {total}\n"
-            # f"✅ Успешно: {successful}\n"
-            # f"⚪ Не определено: {failed}\n\n"
             f"🤖 Метод: g4f.free (бесплатный)",
             parse_mode="HTML"
         )
@@ -178,48 +163,25 @@ async def assign_categories_groq(message: Message):
         )
 
         # 2️⃣ Запускаем AI-запросы
-        # successful_results = []
         for group_data in groups_to_process:
             try:
                 result = category_assignment_sync(group_data)
-                # if result.get("success") and result.get("category"):
-                #     successful_results.append({
-                #         "telegram_id": result["telegram_id"],
-                #         "category": result["category"],
-                #         "name": next((g["name"] for g in groups_to_process if g["telegram_id"] == result["telegram_id"]),
-                #                      "Unknown")
-                #     })
                 if result.get("success") and result.get("category"):
                     # Обновляем БД
                     (TelegramGroup
                      .update(category=result["category"])
                      .where(TelegramGroup.telegram_id == result["telegram_id"])
                      .execute())
-                    # successful += 1
                     logger.debug(f"✅ Обновлено: {group_data.get('name')} → {result['category']}")
 
                 await asyncio.sleep(0.5)
 
             except Exception as e:
-                # failed += 1
                 logger.error(f"❌ Ошибка обработки {group_data.get('name')}: {e}")
                 continue
 
-        # 3️⃣ Обновляем БД одним батчем
-        # if successful_results:
-        #     await batch_update_categories(successful_results)
-
-        # 5️⃣ Финальный отчёт
-        # await status_msg.edit_text(
-        #     f"✅ <b>Готово!</b>\n\n"
-        #     f"🚀 Метод: Openrouter API",
-        #     parse_mode='HTML'
-        # )
         await status_msg.edit_text(
             f"✅ <b>Готово!</b>\n\n"
-            # f"📊 Всего обработано: {total}\n"
-            # f"✅ Успешно: {successful}\n"
-            # f"⚪ Не определено: {failed}\n\n"
             f"🤖 Метод: OPENROUTER",
             parse_mode='HTML'
         )

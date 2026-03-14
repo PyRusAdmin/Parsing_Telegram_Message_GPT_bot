@@ -14,7 +14,6 @@ from core.config import GROQ_API_KEY
 from core.config import OPENROUTER_API_KEY
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
-from g4f.client import Client  # https://github.com/xtekky/gpt4free
 
 """
 Категории для присваивания группам и каналам из базы данных
@@ -46,16 +45,18 @@ def prompt_for_category_assignment(user_input) -> str:
     )
 
 
-async def category_assignment_free(group_data: dict) -> dict:
+async def category_assignment_free(group_data: dict, client, model) -> dict:
     """
     Асинхронная функция для определения категории через g4f (бесплатно, без потоков).
     Работает последовательно, подходит для постепенной обработки.
 
     :param group_data: dict с полями name, description, username, group_type, telegram_id
+    :param client: g4f.client.Client
+    :param model: g4f.model.Model
     :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
     """
     try:
-        client = Client()
+        # client = Client()
 
         # 🧩 Формируем контекст
         data_parts = []
@@ -96,7 +97,7 @@ async def category_assignment_free(group_data: dict) -> dict:
         # Доступные модели: gpt-4o-mini, gpt-4.1, gpt-4o, deepseek-v3, llama-3.1-70b, mistral-7b и др.
         completion = await asyncio.to_thread(
             client.chat.completions.create,
-            model="gpt-4o-mini",
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=20
@@ -168,11 +169,11 @@ def category_assignment_sync(group_data: dict) -> dict:
         return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
 
     try:
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
-            api_key=OPENROUTER_API_KEY,
-            timeout=30
-        )
+        # client = OpenAI(
+        #     base_url="https://openrouter.ai/api/v1",  # ✅ Без пробелов!
+        #     api_key=OPENROUTER_API_KEY,
+        #     timeout=30
+        # )
 
         # 🧩 Формируем контекст
         data_parts = []
