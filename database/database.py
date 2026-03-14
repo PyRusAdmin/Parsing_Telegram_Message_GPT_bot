@@ -2,10 +2,11 @@
 import os
 from datetime import datetime
 
+from asgiref.sync import sync_to_async
 from loguru import logger
-from peewee import Model, CharField, DoesNotExist
-from peewee import SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField
-from peewee import fn
+from peewee import (
+    SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField, Model, CharField, DoesNotExist, fn
+)
 
 db = SqliteDatabase(
     'data/bot.db', timeout=30,
@@ -38,11 +39,11 @@ def migrate_add_availability_column():
     """
     try:
         db.connect(reuse_if_open=True)
-        
+
         # Проверяем, существует ли уже колонка
         cursor = db.execute_sql("PRAGMA table_info(telegram_groups)")
         columns = [row[1] for row in cursor.fetchall()]
-        
+
         if 'availability' not in columns:
             # Добавляем колонку availability со значением по умолчанию 'unknown'
             db.execute_sql("""
@@ -52,7 +53,7 @@ def migrate_add_availability_column():
             logger.info("✅ Миграция: добавлена колонка 'availability' в таблицу 'telegram_groups'")
         else:
             logger.info("ℹ️ Колонка 'availability' уже существует в таблице 'telegram_groups'")
-            
+
     except Exception as e:
         logger.exception(f"❌ Ошибка при выполнении миграции availability: {e}")
     finally:
@@ -334,6 +335,11 @@ def create_group_model(user_id):
     return Group  # Возвращаем класс модели
 
 
+"""
+Работа с моделью TelegramGroup. База групп и каналов в Telegram.
+"""
+
+
 class TelegramGroup(BaseModel):
     """
     Модель для хранения данных о найденных Telegram-группах и каналах.
@@ -419,6 +425,36 @@ def clean_telegram_id_duplicates():
 
     print(f"✅ Очищено дубликатов по telegram_id: {deleted_count}")
     return deleted_count
+
+
+async def get_groups_without_category() -> list[dict]:
+    """Получает группы без категории (в отдельном потоке для БД)"""
+
+    def _fetch():
+        if db.is_closed():
+            db.connect(reuse_if_open=True)
+
+        groups = TelegramGroup.select().where(
+            (TelegramGroup.username.is_null(False)) &
+            (TelegramGroup.category == '')
+        )
+
+        return [
+            {
+                "telegram_id": group.telegram_id,
+                "name": group.name,
+                "username": group.username,
+                "description": group.description,
+                "group_type": group.group_type,
+            }
+            for group in groups
+        ]
+
+    try:
+        return await sync_to_async(_fetch, thread_sensitive=True)()
+    except Exception as e:
+        logger.exception(f"❌ Ошибка получения групп: {e}")
+        return []
 
 
 def getting_number_records_database():

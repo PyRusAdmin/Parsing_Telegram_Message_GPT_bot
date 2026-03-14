@@ -16,31 +16,7 @@ from states.states import CategoryMethod
 from system.dispatcher import router
 
 
-async def get_groups_without_category(limit: int = 200) -> list[dict]:
-    """Получает группы без категории (в отдельном потоке для БД)"""
 
-    def _fetch():
-        if db.is_closed():
-            db.connect(reuse_if_open=True)
-
-        groups = TelegramGroup.select().where(
-            (TelegramGroup.username.is_null(False)) &
-            (TelegramGroup.category == '')
-        ).limit(limit)
-
-        return [{
-            "telegram_id": group.telegram_id,
-            "name": group.name,
-            "username": group.username,
-            "description": group.description,
-            "group_type": group.group_type,
-        } for group in groups]
-
-    try:
-        return await sync_to_async(_fetch, thread_sensitive=True)()
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения групп: {e}")
-        return []
 
 
 async def batch_update_categories(updates: list[dict]) -> tuple[int, int]:
@@ -134,7 +110,7 @@ async def assign_categories_free(message: Message):
 
     try:
         # 1️⃣ Получаем группы для обработки
-        groups_to_process = await get_groups_without_category(limit=100)
+        groups_to_process = await get_groups_without_category()
 
         if not groups_to_process:
             await status_msg.edit_text("✅ Все группы уже имеют категории!")
@@ -209,7 +185,7 @@ async def assign_categories_groq(message: Message):
 
     try:
         # 1️⃣ Получаем группы для обработки
-        groups_to_process = await get_groups_without_category(limit=100)
+        groups_to_process = await get_groups_without_category()
 
         if not groups_to_process:
             await status_msg.edit_text("✅ Все группы уже имеют категории!")
