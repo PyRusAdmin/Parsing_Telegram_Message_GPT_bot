@@ -7,7 +7,7 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError

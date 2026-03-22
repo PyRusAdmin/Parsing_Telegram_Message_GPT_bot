@@ -73,7 +73,7 @@ async def category_assignment(group_data: dict, client, model) -> dict:
 
         # 🤖 Определяем тип клиента и делаем запрос
         client_type = type(client).__name__
-        
+
         # Асинхронные клиенты (Groq, OpenAI)
         if client_type in ['AsyncGroq', 'AsyncOpenAI']:
             completion = await client.chat.completions.create(

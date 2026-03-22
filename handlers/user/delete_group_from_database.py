@@ -2,7 +2,7 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe

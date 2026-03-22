@@ -2,7 +2,7 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 
 from database.database import User
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
