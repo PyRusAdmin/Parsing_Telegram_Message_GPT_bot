@@ -12,7 +12,8 @@ from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import router as checking_accounts
 # from handlers.admin.checking_group_for_ai import register_handlers_checking_group_for_ai
 from handlers.admin.checking_group_for_ai import router as checking_group_for_ai
-from handlers.admin.connecting_account import register_handlers_admin_connect_account
+# from handlers.admin.connecting_account import register_handlers_admin_connect_account
+from handlers.admin.connecting_account import router as connecting_account
 # from handlers.admin.language_detection import register_handlers_languages
 from handlers.admin.language_detection import router as language_detection
 # from handlers.admin.post_log import register_handlers_log
@@ -107,8 +108,8 @@ async def main() -> None:
         dp.include_router(checking_accounts)  # ✅ Проверка аккаунтов
         # register_handlers_languages()
         dp.include_router(language_detection)  # Присвоение языка группам / каналам
-        register_handlers_admin_connect_account()
-        dp.include_router(delete_group_from_database)  # Подключение аккаунтов админом бота
+        # register_handlers_admin_connect_account()
+        dp.include_router(connecting_account)  # Подключение аккаунтов админом бота
 
         await dp.start_polling(bot)  # Запуск поллинг обновлений от Telegram
 
