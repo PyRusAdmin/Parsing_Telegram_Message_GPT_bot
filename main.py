@@ -14,19 +14,21 @@ from handlers.admin.language_detection import register_handlers_languages
 from handlers.admin.post_log import register_handlers_log
 from handlers.user.checking_group_for_keywords import register_handlers_checking_group_for_keywords
 from handlers.user.connect_account import register_connect_account_handler
+from handlers.user.connect_group import router as connect_group
 # from handlers.user.connect_group import register_entering_group_handler
 from handlers.user.delete_group_from_database import register_handlers_delete
-# from handlers.user.entering_keyword import register_entering_keyword_handler
-from handlers.user.get_dada import register_data_export_handlers
-from handlers.user.connect_group import router as connect_group
-
 from handlers.user.entering_keyword import router as entering_keyword
+from handlers.user.get_dada import router as get_dada
 from handlers.user.handlers import router as handlers
 # from handlers.user.handlers import register_greeting_handlers
 from handlers.user.pars_ai import register_handlers_pars_ai
 from handlers.user.post_doc import register_handlers_post_doc
-from handlers.user.stop_tracking import register_stop_tracking_handler
+# from handlers.user.stop_tracking import register_stop_tracking_handler
+from handlers.user.stop_tracking import router as stop_tracking
 from system.dispatcher import dp, bot
+
+# from handlers.user.entering_keyword import register_entering_keyword_handler
+# from handlers.user.get_dada import register_data_export_handlers
 
 logger.add("logs/log.log", rotation="1 MB", compression="zip", enqueue=True)  # Логирование бота
 
@@ -52,26 +54,25 @@ async def main() -> None:
 
     try:
         """
-        Рабата с базой данных
+        Рабата с базой данных 
         """
         init_database()  # Создание таблиц
         migrate_add_availability_column()  # Миграция: добавление колонки availability
         clean_telegram_id_duplicates()  # Чистка дублей в базе данных
 
         """
-        Панель пользователя
+        Панель пользователя Telegram бота
         """
-
         # register_greeting_handlers()
         dp.include_router(handlers)  # Регистрация приветственного меню и основных команд
         # register_entering_keyword_handler()
         dp.include_router(entering_keyword)  # Регистрация обработчика для ввода и записи в БД ключевых слов
         # register_entering_group_handler()
         dp.include_router(connect_group)  # Регистрация обработчика для ввода и записи в БД групп (техническая группа)
-        register_data_export_handlers()
-        dp.include_router(handlers)  # Выдача пользователю введенных им данных
-        register_stop_tracking_handler()
-        dp.include_router(handlers)  # Остановка отслеживания ключевых слов
+        # register_data_export_handlers()
+        dp.include_router(get_dada)  # Выдача пользователю введенных им данных
+        # register_stop_tracking_handler()
+        dp.include_router(stop_tracking)  # Остановка отслеживания ключевых слов
         register_handlers_pars_ai()
         dp.include_router(handlers)  # Ищет группы и каналы с помощью ИИ
         register_handlers_post_doc()
@@ -84,7 +85,7 @@ async def main() -> None:
         dp.include_router(handlers)  # Удаление групп из базы данных пользователя
 
         """
-        Панель администратора
+        Панель администратора Telegram бота
         """
         register_handlers_admin_panel()  # Панель администратора
         register_handlers_log()  # Логирование

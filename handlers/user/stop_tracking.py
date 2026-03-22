@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiogram import F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
@@ -7,7 +7,10 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from database.database import User
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
 from account_manager.parser import stop_tracking
-from system.dispatcher import router
+
+# from system.dispatcher import router
+
+router = Router(name=__name__)
 
 
 @router.message(F.text == "🛑 Остановить отслеживание")
@@ -40,16 +43,15 @@ async def handle_stop_tracking(message: Message, state: FSMContext):
         reply_markup=menu_launch_tracking_keyboard()  # клавиатура выбора языка
     )
 
-
-def register_stop_tracking_handler():
-    """
-    Регистрирует обработчик для остановки отслеживания.
-
-    Добавляет в маршрутизатор (router) обработчик команды "🛑 Остановить отслеживание".
-    Позволяет пользователю вручную завершить процесс парсинга сообщений.
-
-    Вызывается при инициализации бота в `main.py`.
-
-    :return: None
-    """
-    router.message.register(handle_stop_tracking)  # Регистрация обработчика
+# def register_stop_tracking_handler():
+#     """
+#     Регистрирует обработчик для остановки отслеживания.
+#
+#     Добавляет в маршрутизатор (router) обработчик команды "🛑 Остановить отслеживание".
+#     Позволяет пользователю вручную завершить процесс парсинга сообщений.
+#
+#     Вызывается при инициализации бота в `main.py`.
+#
+#     :return: None
+#     """
+#     router.message.register(handle_stop_tracking)  # Регистрация обработчика

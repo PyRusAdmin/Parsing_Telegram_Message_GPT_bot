@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiogram import Bot, Dispatcher, Router
+from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from core.config import BOT_TOKEN
@@ -12,5 +12,5 @@ dp = Dispatcher(storage=storage)
 # ID администраторов бота с особыми привилегиями
 ADMIN_USER_ID = (535185511, 743541086)
 
-router = Router()
-dp.include_router(router)
+# router = Router()
+# dp.include_router(router)
