@@ -15,9 +15,10 @@ def search_group_ai():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📥 Вся база")],
-            [KeyboardButton(text="📥 База каналов"), KeyboardButton(text="📥 База групп")],
-            [KeyboardButton(text="Выбрать категорию")],
+            [KeyboardButton(text="📥 Вся база", style="primary")],
+            [KeyboardButton(text="📥 База каналов", style="primary"),
+             KeyboardButton(text="📥 База групп", style="primary")],
+            [KeyboardButton(text="Выбрать категорию", style="primary")],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
         ],
         resize_keyboard=True,
@@ -28,25 +29,26 @@ def search_group_ai():
 def get_categories_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Инвестиции")],
-            [KeyboardButton(text="Финансы и личный бюджет")],
-            [KeyboardButton(text="Криптовалюты и блокчейн"), KeyboardButton(text="Бизнес и предпринимательство")],
-            [KeyboardButton(text="Маркетинг и продвижение")],
-            [KeyboardButton(text="Технологии и IT")],
-            [KeyboardButton(text="Образование и саморазвитие")],
-            [KeyboardButton(text="Работа и карьера")],
-            [KeyboardButton(text="Недвижимость")],
-            [KeyboardButton(text="Здоровье и медицина")],
-            [KeyboardButton(text="Путешествия")],
-            [KeyboardButton(text="Авто и транспорт")],
-            [KeyboardButton(text="Шоппинг и скидки")],
-            [KeyboardButton(text="Развлечения и досуг")],
-            [KeyboardButton(text="Политика и общество")],
-            [KeyboardButton(text="Наука и исследования")],
-            [KeyboardButton(text="Спорт и фитнес")],
-            [KeyboardButton(text="Кулинария и еда")],
-            [KeyboardButton(text="Мода и красота")],
-            [KeyboardButton(text="Хобби и творчество")],
+            [KeyboardButton(text="Инвестиции", style="primary")],
+            [KeyboardButton(text="Финансы и личный бюджет", style="primary")],
+            [KeyboardButton(text="Криптовалюты и блокчейн", style="primary"),
+             KeyboardButton(text="Бизнес и предпринимательство", style="primary")],
+            [KeyboardButton(text="Маркетинг и продвижение", style="primary")],
+            [KeyboardButton(text="Технологии и IT", style="primary")],
+            [KeyboardButton(text="Образование и саморазвитие", style="primary")],
+            [KeyboardButton(text="Работа и карьера", style="primary")],
+            [KeyboardButton(text="Недвижимость", style="primary")],
+            [KeyboardButton(text="Здоровье и медицина", style="primary")],
+            [KeyboardButton(text="Путешествия", style="primary")],
+            [KeyboardButton(text="Авто и транспорт", style="primary")],
+            [KeyboardButton(text="Шоппинг и скидки", style="primary")],
+            [KeyboardButton(text="Развлечения и досуг", style="primary")],
+            [KeyboardButton(text="Политика и общество", style="primary")],
+            [KeyboardButton(text="Наука и исследования", style="primary")],
+            [KeyboardButton(text="Спорт и фитнес", style="primary")],
+            [KeyboardButton(text="Кулинария и еда", style="primary")],
+            [KeyboardButton(text="Мода и красота", style="primary")],
+            [KeyboardButton(text="Хобби и творчество", style="primary")],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
         ],
         resize_keyboard=True,
@@ -69,7 +71,7 @@ def get_lang_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🇷🇺 Русский"), KeyboardButton(text="🇬🇧 English")]
+            [KeyboardButton(text="🇷🇺 Русский", style="primary"), KeyboardButton(text="🇬🇧 English", style="primary")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -101,11 +103,53 @@ def main_menu_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Запуск отслеживания")],
-            [KeyboardButton(text="Проверка группы на наличие ключевых слов")],
-            [KeyboardButton(text="AI поиск"), KeyboardButton(text="Получить базу")],
-            [KeyboardButton(text="Инструкция по использованию")],
-            [KeyboardButton(text="Настройки")]
+            [
+                KeyboardButton(
+                    text="Запуск отслеживания",
+                    icon_custom_emoji_id="5438489737125975601",
+                    style="success"
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="Проверка группы на наличие ключевых слов",
+                    icon_custom_emoji_id="5247057031789040703",
+                    style="primary"
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="AI поиск",
+                    icon_custom_emoji_id="5357314052072692864",
+                    style="primary"
+                ),
+                KeyboardButton(
+                    text="Получить базу",
+                    icon_custom_emoji_id="5443127283898405358",
+                    style="primary"
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="Глобальный AI поиск",
+                    icon_custom_emoji_id="5357314052072692864",
+                    style='primary'
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="Инструкция по использованию",
+                    icon_custom_emoji_id="5332724926216428039",
+                    style="primary"
+                )
+            ],
+            [
+                KeyboardButton(
+                    text="Настройки",
+                    icon_custom_emoji_id="5341715473882955310",
+                    style="primary"
+                )
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -132,7 +176,7 @@ def menu_launch_tracking_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🛑 Остановить отслеживание")],
+            [KeyboardButton(text="🛑 Остановить отслеживание", style="danger")],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
         ],
         resize_keyboard=True,
@@ -165,11 +209,14 @@ def settings_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔁 Обновить список"), KeyboardButton(text="🔍 Ввод ключевого слова")],
-            [KeyboardButton(text="Удалить группу из отслеживания")],
-            [KeyboardButton(text="🔍 Список ключевых слов"), KeyboardButton(text="🌐 Ссылки для отслеживания")],
-            [KeyboardButton(text="🔐 Подключить аккаунт"), KeyboardButton(text="📤 Подключить группу для сообщений")],
-            [KeyboardButton(text="🌐 Сменить язык")],
+            [KeyboardButton(text="🔁 Обновить список", style="primary"),
+             KeyboardButton(text="🔍 Ввод ключевого слова", style="primary")],
+            [KeyboardButton(text="Удалить группу из отслеживания", style="danger")],
+            [KeyboardButton(text="🔍 Список ключевых слов", style="primary"),
+             KeyboardButton(text="🌐 Ссылки для отслеживания", style="primary")],
+            [KeyboardButton(text="🔐 Подключить аккаунт", style="success"),
+             KeyboardButton(text="📤 Подключить группу для сообщений", style="success")],
+            [KeyboardButton(text="🌐 Сменить язык", style="primary")],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,
@@ -202,7 +249,7 @@ def connect_grup_keyboard_tech():
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📤 Подключить группу для сообщений")],
+            [KeyboardButton(text="📤 Подключить группу для сообщений", style="success")],
             [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
         ],
         resize_keyboard=True,

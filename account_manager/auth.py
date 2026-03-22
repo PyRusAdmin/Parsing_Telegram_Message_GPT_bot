@@ -2,20 +2,20 @@
 import asyncio
 import csv
 import os
-import os.path
 import random
 from pathlib import Path
 
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 from telethon import TelegramClient
 from telethon.errors import (
-    AuthKeyDuplicatedError, TimedOutError, PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
-    AuthKeyUnregisteredError
+    AuthKeyDuplicatedError, TimedOutError, PhoneNumberBannedError,
+    UserDeactivatedBanError, AuthKeyNotFound, AuthKeyUnregisteredError
 )
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
+from core.proxy import Proxy
 from database.database import delete_account_from_db, getting_account
 
 mobile_device = {
@@ -30,14 +30,9 @@ mobile_device = {
 async def get_account_info(client: TelegramClient) -> dict:
     """
     Получает информацию о пользователе Telegram через client.get_me().
-    
-    :param client: (TelegramClient) Авторизованный клиент Telethon.
-    :return: dict с полями:
-        - id: ID пользователя
-        - phone: номер телефона (или пустая строка)
-        - first_name: имя
-        - last_name: фамилия (может быть None)
-        - username: юзернейм (может быть None)
+
+    :param client: Авторизованный клиент Telethon.
+    :return: dict с полями: id, phone, first_name, last_name, username
     """
     me = await client.get_me()
     phone = me.phone or ""
@@ -57,11 +52,13 @@ class CheckingAccountsValidity:
     def __init__(self, message: Message, path: str | None = None):
         """
         :param message: Сообщение для отправки уведомлений (опционально)
-        :param path: Путь к папке с .session файлами (опционально, нужен только для проверки файловых сессий)
+        :param path: Путь к папке с .session файлами (опционально)
         """
         self.message = message
-        self.path = Path(path) if path else None  # ✅ path теперь опционален
+        self.path = Path(path) if path else None
         self.user_id = message.from_user.id
+        self.proxy = Proxy()  # Инициализация класса Proxy для проверки прокси.
+        # self.proxy_config = get_proxy_config("mtproxy")
 
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """
@@ -70,17 +67,19 @@ class CheckingAccountsValidity:
         :param session_name: Имя аккаунта для подключения (файл .session)
         :return: Клиент Telegram или None, если подключение не удалось
         """
-        # Создаем клиент, используя StringSession и вашу строку
-        client = TelegramClient(  # Создаем клиента Telegram
-            StringSession(session_name),  # Строка сессии
-            api_id=API_ID,  # ID приложения
-            api_hash=API_HASH,  # Хэш приложения
+        # setup_proxy()
+        client = TelegramClient(
+            StringSession(session_name),
+            api_id=API_ID,
+            api_hash=API_HASH,
             device_model=mobile_device["device_model"],
             system_version=mobile_device["system_version"],
             app_version=mobile_device["app_version"],
             lang_code=mobile_device["lang_code"],
             system_lang_code=mobile_device["system_lang_code"],
+            proxy=await self.proxy.reading_proxy_data_from_the_database()
         )
+
         try:
             await client.connect()
 
@@ -88,32 +87,34 @@ class CheckingAccountsValidity:
                 logger.error("❌ Сессия недействительна или аккаунт не авторизован!")
                 await self.write_csv(data=session_name)
                 try:
-                    await client.disconnect()  # Отключаемся от аккаунта, для освобождения процесса session файла.
+                    await client.disconnect()
                 except ValueError:
                     logger.error("❌ Сессия недействительна или аккаунт не авторизован!")
-                return None  # Не возвращаем клиента
+                return None
 
-            await get_account_info(client)  # Получаем и логируем информацию о пользователе
-            return client  # Возвращаем клиента
+            await get_account_info(client)
+            return client
 
         except AuthKeyDuplicatedError:
             logger.error(
-                "❌ AuthKeyDuplicatedError: Повторный ввод ключа авторизации (на данный момент сеесия используется в другом месте)")
+                "❌ AuthKeyDuplicatedError: Повторный ввод ключа авторизации "
+                "(сессия используется в другом месте)")
             await client.disconnect()
             await self.write_csv(data=session_name)
-            return None  # Не возвращаем клиента
+            return None
+        except Exception as e:
+            logger.exception(f"Ошибка подключения: {e}")
+            await client.disconnect()
+            return None
 
     async def write_csv(self, data):
         """
-        Запись данных в CSV файл. (Аккаунты Telegram)
-        Все данные будут записаны в одну строку.
+        Запись данных в CSV файл.
         :param data: Список значений (например, список аккаунтов)
-        :return:
         """
         with open('file.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            # Записываем данные как одну строку с одним элементом
-            writer.writerow([data])  # Оборачиваем в список, чтобы строка не разбилась по символам
+            writer.writerow([data])
 
     async def read_invalid_sessions(self) -> list[str]:
         """Чтение всех невалидных сессий из CSV"""
@@ -122,34 +123,33 @@ class CheckingAccountsValidity:
             with open('file.csv', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if row:  # Проверяем, не пустая ли строка
+                    if row:
                         invalid_sessions.append(row[0])
         return invalid_sessions
 
     async def verify_account(self, session_name) -> None:
         """
         Проверяет и сортирует аккаунты.
-
         :param session_name: Имя аккаунта для проверки
-        :return: None
         """
         try:
+            # setup_proxy()
             logger.info(f"Проверка аккаунта {session_name}")
             client: TelegramClient = await self.client_connect_string_session(session_name=session_name)
+
+            if client is None:
+                return
+
             try:
-                if not await client.is_user_authorized():  # Если аккаунт не авторизирован
+                if not await client.is_user_authorized():
                     await client.disconnect()
                     await asyncio.sleep(5)
-
-                    # await delete_account_from_db(session_string=session_name, app_logger=self.app_logger)
                     await self.write_csv(data=session_name)
-
                 else:
                     logger.info(f"Аккаунт {session_name} авторизован")
-                    client.disconnect()  # Отключаемся после проверки
+                    await client.disconnect()
             except (PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
                     AuthKeyUnregisteredError, AuthKeyDuplicatedError) as e:
-
                 await delete_account_from_db(session_string=session_name)
             except TimedOutError as e:
                 logger.exception(e)
@@ -162,28 +162,26 @@ class CheckingAccountsValidity:
             for session in invalid_sessions:
                 await delete_account_from_db(session_string=session)
 
-            # Удаляем файл file.csv, если он существует, чтобы очистить данные о невалидных сессиях перед новой проверкой
             try:
                 os.remove("file.csv")
-            except FileNotFoundError:  # Игнорируем ошибку, если файл не найден, так как это ожидаемо при первом запуске
+            except FileNotFoundError:
                 pass
 
         except Exception as error:
             logger.exception(error)
 
-    # === Подключение клиента Telethon ===
     async def connect_client(self) -> TelegramClient | None:
         """
         Подключение клиента Telethon и проверка сессии.
-        Использует self.path (путь к файлу БЕЗ расширения .session)
         :return: client или None, если сессия невалидна
         """
+        # setup_proxy()
         if not self.path:
             logger.error("❌ self.path не установлен для connect_client()")
             return None
 
         client = TelegramClient(
-            self.path,  # Telethon сам добавит .session
+            self.path,
             api_id=API_ID,
             api_hash=API_HASH,
             device_model=mobile_device["device_model"],
@@ -191,6 +189,7 @@ class CheckingAccountsValidity:
             app_version=mobile_device["app_version"],
             lang_code=mobile_device["lang_code"],
             system_lang_code=mobile_device["system_lang_code"],
+            proxy=await self.proxy.reading_proxy_data_from_the_database()
         )
 
         try:
@@ -207,19 +206,14 @@ class CheckingAccountsValidity:
         except Exception as e:
             logger.exception(f"Ошибка подключения к {self.path}: {e}")
             return None
-        finally:
-            # Не отключаем здесь — это делает вызывающий код после использования
-            pass
 
     async def start_random_client(self):
         """
         Запускает Telegram-клиент со случайной сессией из указанной папки.
-
-        :return: Авторизованный TelegramClient или None, если не удалось
+        :return: Авторизованный TelegramClient или None
         """
-
+        # setup_proxy()
         records = getting_account()
-        # Случайно выбираем сессию
         chosen_session_name = random.choice(records)
         logger.info(f"Используется сессия: {chosen_session_name}")
 
@@ -232,6 +226,7 @@ class CheckingAccountsValidity:
             app_version=mobile_device["app_version"],
             lang_code=mobile_device["lang_code"],
             system_lang_code=mobile_device["system_lang_code"],
+            proxy=await self.proxy.reading_proxy_data_from_the_database()
         )
 
         await client.connect()
