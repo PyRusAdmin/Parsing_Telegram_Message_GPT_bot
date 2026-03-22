@@ -3,7 +3,6 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile
 
-# from system.dispatcher import router
 router = Router(name=__name__)
 
 
@@ -51,18 +50,3 @@ async def send_instruction(message: Message, state: FSMContext):
 
     except Exception as e:
         await message.answer(f"Произошла ошибка при отправке файла: {e}")
-
-# def register_handlers_post_doc():
-#     """
-#     Регистрирует обработчик для отправки инструкции по использованию бота.
-#
-#     Добавляет в маршрутизатор (router) один обработчик:
-#         - send_instruction — реагирует на нажатие кнопки "Инструкция по использованию".
-#
-#     Позволяет пользователю получить актуальную документацию в формате .md-файла
-#     с описанием всех функций и настроек бота.
-#
-#     Returns:
-#         None
-#     """
-#     router.message.register(send_instruction)

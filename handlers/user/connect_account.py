@@ -15,7 +15,6 @@ from database.database import User
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
 from states.states import MyStates
-# from system.dispatcher import router
 from database.database import write_account_to_user_table
 
 router = Router(name=__name__)
@@ -164,16 +163,3 @@ async def handle_account_file(message: Message, state: FSMContext):
             local_file_path.unlink()
         # ✅ Сбрасываем состояние только в конце
         await state.clear()
-
-# def register_connect_account_handler():
-#     """
-#     Регистрирует обработчики для подключения аккаунта.
-#
-#     Добавляет в маршрутизатор (router) два обработчика:
-#         1. handle_connect_account — для обработки нажатия кнопки "🔐 Подключить аккаунт".
-#         2. handle_account_file — для приёма файла сессии (.session) от пользователя.
-#
-#     Обработчики реагируют на текстовые сообщения и документы соответственно.
-#     """
-#     router.message.register(handle_connect_account)  # обработчик для кнопки "🔐 Подключить аккаунт"
-#     router.message.register(handle_account_file)  # обработчик приема аккаунта в формате .session

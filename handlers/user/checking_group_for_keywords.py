@@ -4,14 +4,13 @@ import asyncio
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from keyboards.user.keyboards import back_keyboard
 from states.states import MyStatesParsing
 
-# from system.dispatcher import router
 router = Router(name=__name__)
 
 
@@ -182,7 +181,3 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                 logger.warning("Клиент не был создан или заблокирован")
     except Exception as e:
         logger.exception(e)
-
-# def register_handlers_checking_group_for_keywords():
-#     """Регистрирует обработчики для проверки группы на наличие ключевых слов."""
-#     router.message.register(checking_group_for_keywords, F.text == "Проверка группы на наличие ключевых слов")

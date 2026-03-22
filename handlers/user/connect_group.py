@@ -3,10 +3,10 @@ from aiogram import F
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 
 from database.database import User, create_group_model
-from keyboards.user.keyboards import (back_keyboard)
+from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
 from states.states import MyStates
 
@@ -83,19 +83,3 @@ async def handle_group_username_submission(message: Message, state: FSMContext):
             await message.answer("⚠️ Ошибка при добавлении группы.")
         logger.error(f"Ошибка при добавлении ключевого слова: {e}")
     await state.clear()  # Завершаем текущее состояние машины состояния
-
-# def register_entering_group_handler():
-#     """
-#     Регистрирует обработчики для подключения технической группы.
-#
-#     Добавляет в маршрутизатор (router) два обработчика:
-#         1. handle_connect_message_group — реагирует на нажатие кнопки "📤 Подключить группу для сообщений".
-#         2. handle_group_username_submission — обрабатывает ввод username группы в состоянии MyStates.entering_group.
-#
-#     Эти обработчики позволяют пользователю указать чат, куда бот будет пересылать
-#     найденные сообщения, содержащие ключевые слова.
-#
-#     :return: None
-#     """
-#     router.message.register(handle_connect_message_group)  # Регистрация обработчика
-#     router.message.register(handle_group_username_submission)  # Регистрация обработчика ввода username

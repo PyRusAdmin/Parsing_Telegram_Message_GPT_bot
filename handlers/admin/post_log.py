@@ -6,7 +6,6 @@ from aiogram.types import Message
 
 from keyboards.user.keyboards import back_keyboard
 
-# from system.dispatcher import router
 router = Router(name=__name__)
 
 
@@ -47,18 +46,3 @@ async def log(message: Message, state: FSMContext):
         parse_mode="HTML",  # Режим разметки для капшна
         reply_markup=back_keyboard(),  # Клавиатура с кнопкой «Назад»
     )
-
-# def register_handlers_log():
-#     """
-#     Регистрирует обработчик для отправки лог-файла бота.
-#
-#     Добавляет в маршрутизатор обработчик команды «📄 Получить лог файл».
-#     Позволяет отправить файл 'logs/log.log' в ответ на нажатие кнопки.
-#     Предназначен для технической диагностики.
-#
-#     - Доступ к команде имеют только администраторы;
-#     - Команда вызывается через кнопку, а не через /log.
-#
-#     :return: None
-#     """
-#     router.message.register(log)

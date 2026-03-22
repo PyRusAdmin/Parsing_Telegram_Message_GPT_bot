@@ -9,20 +9,14 @@ from loguru import logger
 from openai import OpenAI
 
 from database.database import TelegramGroup, db
-# from system.dispatcher import router
-from g4f.client import Client  # https://github.com/xtekky/gpt4free
+from g4f.client import Client
 
 router = Router(name=__name__)
 
 
 def ai_llama_fri(group_data: dict):
     """Определение языка (ТОЛЬКО AI-запрос, БЕЗ записи в БД)"""
-    # api_key = os.getenv("POLZA_AI_API_KEY")
     try:
-        # client = OpenAI(
-        #     base_url="https://api.polza.ai/api/v1",
-        #     api_key=api_key,
-        # )
         client = Client()
 
         data_parts = []
@@ -311,6 +305,3 @@ async def language_detection(message):
         f"• Ошибок БД: {db_failed}\n"
         f"• Всего ошибок: {total_failed}"
     )
-
-# def register_handlers_languages():
-#     router.message.register(language_detection, F.text == "🌐 Присвоить язык")

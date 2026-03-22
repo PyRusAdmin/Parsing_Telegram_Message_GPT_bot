@@ -5,7 +5,7 @@ import peewee
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from loguru import logger  # https://github.com/Delgan/loguru
+from loguru import logger
 from telethon.errors import (
     FloodWaitError, AuthKeyUnregisteredError, UsernameInvalidError, UsernameNotOccupiedError, TypeNotFoundError
 )
@@ -16,7 +16,6 @@ from account_manager.parser import determine_telegram_chat_type
 from database.database import TelegramGroup, db, getting_account
 from keyboards.admin.keyboards import admin_keyboard
 
-# from system.dispatcher import router
 router = Router(name=__name__)
 
 
@@ -321,19 +320,3 @@ async def update_db(message: Message):
             db.close()
 
         logger.info("Актуализация завершена.")
-
-# def register_handlers_admin_panel():
-#     """
-#     Регистрирует обработчик команды «Панель администратора» в маршрутизаторе.
-#
-#     Добавляет в router обработчик для команды, активируемой по тексту «Панель администратора».
-#     Обеспечивает запуск функции admin_panel при получении соответствующего сообщения.
-#
-#     Рекомендации по безопасности:
-#     - Доступ к команде имеют только администраторы;
-#     - обработка исключений реализована.
-#
-#     :return: None
-#     """
-#     router.message.register(admin_panel)  # Админ панель
-#     router.message.register(update_db)  # 🔄 Актуализация базы данных (c пометкой Группа или Канал)

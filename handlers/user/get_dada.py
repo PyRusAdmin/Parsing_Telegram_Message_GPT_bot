@@ -12,8 +12,6 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from database.database import User, create_keywords_model, get_user_channel_usernames
 from locales.locales import get_text
 
-# from system.dispatcher import router
-
 router = Router(name=__name__)
 
 
@@ -227,22 +225,3 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла со ссылками: {e}")
         await message.answer(get_text(user.language, "export_error"))
-
-# def register_data_export_handlers():
-#     """
-#     Регистрирует обработчики для экспорта пользовательских данных в Excel.
-#
-#     Добавляет в маршрутизатор (router) два обработчика:
-#         1. get_keywords_list — для экспорта списка ключевых слов по кнопке "🔍 Список ключевых слов".
-#         2. get_tracking_links_list — для экспорта списка отслеживаемых ссылок по кнопке "🌐 Ссылки для отслеживания".
-#
-#     Эти обработчики позволяют пользователю получать свои данные в виде файлов .xlsx,
-#     пригодных для просмотра или анализа в сторонних программах.
-#
-#     Вызывается при инициализации бота в `main.py`.
-#
-#     Returns:
-#         None
-#     """
-#     router.message.register(get_keywords_list)
-#     router.message.register(get_tracking_links_list)

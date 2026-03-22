@@ -14,8 +14,6 @@ from handlers.user.connect_account import creates_temporary_folder_for_accounts,
 from keyboards.user.keyboards import back_keyboard
 from states.states import MyStates
 
-# from system.dispatcher import router
-
 router = Router(name=__name__)
 
 
@@ -210,8 +208,3 @@ def cleanup_session_files(parsing_dir: str, root_dirs: list[str] | None = None):
             result["errors"].append(error_msg)
 
     logger.debug("🧹 Очистка завершена")
-
-# def register_handlers_admin_connect_account():
-#     """✅ Регистрируем оба хендлера"""
-#     router.message.register(admin_connecting_account)
-#     router.message.register(receive_session_file)
