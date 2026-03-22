@@ -6,7 +6,8 @@ import sys
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.database import clean_telegram_id_duplicates, init_database, migrate_add_availability_column
-from handlers.admin.admin import register_handlers_admin_panel
+# from handlers.admin.admin import register_handlers_admin_panel
+from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import register_checking_accounts
 from handlers.admin.checking_group_for_ai import register_handlers_checking_group_for_ai
 from handlers.admin.connecting_account import register_handlers_admin_connect_account
@@ -92,12 +93,18 @@ async def main() -> None:
         """
         Панель администратора Telegram бота
         """
-        register_handlers_admin_panel()  # Панель администратора
-        register_handlers_log()  # Логирование
-        register_handlers_checking_group_for_ai()  # Присвоение категории группам / каналам
-        register_checking_accounts()  # ✅ Проверка аккаунтов
-        register_handlers_languages()  # Присвоение языка группам / каналам
-        register_handlers_admin_connect_account()  # Подключение аккаунтов админом бота
+        # register_handlers_admin_panel()
+        dp.include_router(admin)  # Панель администратора
+        register_handlers_log()
+        dp.include_router(delete_group_from_database)  # Логирование
+        register_handlers_checking_group_for_ai()
+        dp.include_router(delete_group_from_database)  # Присвоение категории группам / каналам
+        register_checking_accounts()
+        dp.include_router(delete_group_from_database)  # ✅ Проверка аккаунтов
+        register_handlers_languages()
+        dp.include_router(delete_group_from_database)  # Присвоение языка группам / каналам
+        register_handlers_admin_connect_account()
+        dp.include_router(delete_group_from_database)  # Подключение аккаунтов админом бота
 
         await dp.start_polling(bot)  # Запуск поллинг обновлений от Telegram
 
