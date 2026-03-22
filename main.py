@@ -12,7 +12,8 @@ from handlers.admin.checking_group_for_ai import register_handlers_checking_grou
 from handlers.admin.connecting_account import register_handlers_admin_connect_account
 from handlers.admin.language_detection import register_handlers_languages
 from handlers.admin.post_log import register_handlers_log
-from handlers.user.checking_group_for_keywords import register_handlers_checking_group_for_keywords
+# from handlers.user.checking_group_for_keywords import register_handlers_checking_group_for_keywords
+from handlers.user.checking_group_for_keywords import router as checking_group_for_keywords
 # from handlers.user.connect_account import register_connect_account_handler
 from handlers.user.connect_account import router as connect_account
 from handlers.user.connect_group import router as connect_group
@@ -82,8 +83,8 @@ async def main() -> None:
         dp.include_router(post_doc)  # Выдает пользователю документацию к проекту
         # register_connect_account_handler()
         dp.include_router(connect_account)  # Подключение аккаунта
-        register_handlers_checking_group_for_keywords()
-        dp.include_router(handlers)  # Проверка группы на наличие ключевых слов
+        # register_handlers_checking_group_for_keywords()
+        dp.include_router(checking_group_for_keywords)  # Проверка группы на наличие ключевых слов
         register_handlers_delete()
         dp.include_router(handlers)  # Удаление групп из базы данных пользователя
 
