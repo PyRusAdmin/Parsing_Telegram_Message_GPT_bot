@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-from aiogram import F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import getting_account
-from system.dispatcher import router
+
+# from system.dispatcher import router
+router = Router(name=__name__)
 
 
 @router.message(F.text == "✅ Проверка аккаунтов")
@@ -38,7 +40,6 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
     except Exception as e:
         logger.exception(e)
 
-
-def register_checking_accounts():
-    """Регистрация обработчика для проверки аккаунтов на валидность"""
-    router.message.register(checking_accounts_handler)
+# def register_checking_accounts():
+#     """Регистрация обработчика для проверки аккаунтов на валидность"""
+#     router.message.register(checking_accounts_handler)

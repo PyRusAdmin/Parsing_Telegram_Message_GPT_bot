@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 
-from aiogram import F
+from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -17,7 +17,9 @@ from core.config import OPENROUTER_API_KEY
 from database.database import TelegramGroup, db, get_groups_without_category
 from keyboards.admin.keyboards import category_method_keyboard, admin_keyboard
 from states.states import CategoryMethod
-from system.dispatcher import router
+
+# from system.dispatcher import router
+router = Router(name=__name__)
 
 
 @router.message(F.text == "🏷️ Присвоить категорию")
@@ -199,7 +201,6 @@ async def get_groups_without_category_message(message: Message):
         "Нажмите '🏷️ Присвоить категорию' для запуска AI"
     )
 
-
-def register_handlers_checking_group_for_ai():
-    """Регистрация обработчиков для присвоения категорий"""
-    pass  # Обработчики регистрируются через router автоматически
+# def register_handlers_checking_group_for_ai():
+#     """Регистрация обработчиков для присвоения категорий"""
+#     pass  # Обработчики регистрируются через router автоматически
