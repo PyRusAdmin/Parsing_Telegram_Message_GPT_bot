@@ -3,14 +3,16 @@ import asyncio
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from aiogram import F
+from aiogram import F, Router
 from asgiref.sync import sync_to_async
 from loguru import logger
 from openai import OpenAI
 
 from database.database import TelegramGroup, db
-from system.dispatcher import router
+# from system.dispatcher import router
 from g4f.client import Client  # https://github.com/xtekky/gpt4free
+
+router = Router(name=__name__)
 
 
 def ai_llama_fri(group_data: dict):
@@ -310,6 +312,5 @@ async def language_detection(message):
         f"• Всего ошибок: {total_failed}"
     )
 
-
-def register_handlers_languages():
-    router.message.register(language_detection, F.text == "🌐 Присвоить язык")
+# def register_handlers_languages():
+#     router.message.register(language_detection, F.text == "🌐 Присвоить язык")

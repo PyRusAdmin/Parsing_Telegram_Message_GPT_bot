@@ -13,7 +13,8 @@ from handlers.admin.checking_accounts import router as checking_accounts
 # from handlers.admin.checking_group_for_ai import register_handlers_checking_group_for_ai
 from handlers.admin.checking_group_for_ai import router as checking_group_for_ai
 from handlers.admin.connecting_account import register_handlers_admin_connect_account
-from handlers.admin.language_detection import register_handlers_languages
+# from handlers.admin.language_detection import register_handlers_languages
+from handlers.admin.language_detection import router as language_detection
 # from handlers.admin.post_log import register_handlers_log
 from handlers.admin.post_log import router as post_log
 # from handlers.user.checking_group_for_keywords import register_handlers_checking_group_for_keywords
@@ -104,8 +105,8 @@ async def main() -> None:
         dp.include_router(checking_group_for_ai)  # Присвоение категории группам / каналам
         # register_checking_accounts()
         dp.include_router(checking_accounts)  # ✅ Проверка аккаунтов
-        register_handlers_languages()
-        dp.include_router(delete_group_from_database)  # Присвоение языка группам / каналам
+        # register_handlers_languages()
+        dp.include_router(language_detection)  # Присвоение языка группам / каналам
         register_handlers_admin_connect_account()
         dp.include_router(delete_group_from_database)  # Подключение аккаунтов админом бота
 
