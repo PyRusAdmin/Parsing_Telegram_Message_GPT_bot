@@ -4,7 +4,7 @@ import io
 import re
 from datetime import datetime
 
-from aiogram import F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
 from loguru import logger  # https://github.com/Delgan/loguru
@@ -19,7 +19,10 @@ from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
 from locales.locales import get_text
 from states.states import MyStates, ExportStates
-from system.dispatcher import router
+
+# from system.dispatcher import router
+
+router = Router(name=__name__)
 
 
 def clean_group_name(name):
@@ -791,35 +794,34 @@ def parse_search_input(user_input: str) -> list[str]:
 
     return result
 
-
-def register_handlers_pars_ai():
-    """
-    Регистрирует обработчики для AI-поиска и экспорта Telegram-групп и каналов.
-
-    Добавляет в маршрутизатор (router) следующие обработчики:
-        1. search_menu — отображает меню поиска по нажатию кнопки "Получить базу".
-        2. start_ai_search — запускает процесс AI-поиска по нажатию "AI поиск".
-        3. process_ai_search_keyword — обрабатывает ввод ключевого слова в состоянии MyStates.entering_keyword_ai_search.
-        4. export_all_groups — экспортирует всю базу групп и каналов в XLSX.
-        5. export_channels — экспортирует только каналы.
-        6. export_supergroups — экспортирует только супергруппы.
-        7. export_legacy_groups — экспортирует обычные чаты (группы старого типа).
-
-    Эти обработчики позволяют пользователю:
-        - Использовать ИИ для поиска релевантных Telegram-чats по ключевому слову.
-        - Получать результаты в виде XLSX-файла.
-        - Экспортировать всю или часть базы данных по типам чатов.
-
-    :return: None
-    """
-    router.message.register(handle_enter_keyword_menu, F.text == "Получить базу")
-    router.message.register(ai_search, F.text == "AI поиск")
-
-    router.message.register(ai_search_global, F.text == "Глобальный AI поиск")
-
-    router.message.register(export_all_groups, F.text == "📥 Вся база")
-    router.message.register(export_channels, F.text == "📥 База каналов")
-    router.message.register(export_supergroups, F.text == "📥 База групп")
-
-    router.message.register(start_category_export, F.text == "Выбрать категорию")
-    router.message.register(handle_category_selection, ExportStates.waiting_for_category)
+# def register_handlers_pars_ai():
+#     """
+#     Регистрирует обработчики для AI-поиска и экспорта Telegram-групп и каналов.
+#
+#     Добавляет в маршрутизатор (router) следующие обработчики:
+#         1. search_menu — отображает меню поиска по нажатию кнопки "Получить базу".
+#         2. start_ai_search — запускает процесс AI-поиска по нажатию "AI поиск".
+#         3. process_ai_search_keyword — обрабатывает ввод ключевого слова в состоянии MyStates.entering_keyword_ai_search.
+#         4. export_all_groups — экспортирует всю базу групп и каналов в XLSX.
+#         5. export_channels — экспортирует только каналы.
+#         6. export_supergroups — экспортирует только супергруппы.
+#         7. export_legacy_groups — экспортирует обычные чаты (группы старого типа).
+#
+#     Эти обработчики позволяют пользователю:
+#         - Использовать ИИ для поиска релевантных Telegram-чats по ключевому слову.
+#         - Получать результаты в виде XLSX-файла.
+#         - Экспортировать всю или часть базы данных по типам чатов.
+#
+#     :return: None
+#     """
+#     router.message.register(handle_enter_keyword_menu, F.text == "Получить базу")
+#     router.message.register(ai_search, F.text == "AI поиск")
+#
+#     router.message.register(ai_search_global, F.text == "Глобальный AI поиск")
+#
+#     router.message.register(export_all_groups, F.text == "📥 Вся база")
+#     router.message.register(export_channels, F.text == "📥 База каналов")
+#     router.message.register(export_supergroups, F.text == "📥 База групп")
+#
+#     router.message.register(start_category_export, F.text == "Выбрать категорию")
+#     router.message.register(handle_category_selection, ExportStates.waiting_for_category)

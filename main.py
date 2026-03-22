@@ -21,7 +21,9 @@ from handlers.user.entering_keyword import router as entering_keyword
 from handlers.user.get_dada import router as get_dada
 from handlers.user.handlers import router as handlers
 # from handlers.user.handlers import register_greeting_handlers
-from handlers.user.pars_ai import register_handlers_pars_ai
+# from handlers.user.pars_ai import register_handlers_pars_ai
+from handlers.user.pars_ai import router as pars_ai
+
 from handlers.user.post_doc import register_handlers_post_doc
 # from handlers.user.stop_tracking import register_stop_tracking_handler
 from handlers.user.stop_tracking import router as stop_tracking
@@ -73,8 +75,8 @@ async def main() -> None:
         dp.include_router(get_dada)  # Выдача пользователю введенных им данных
         # register_stop_tracking_handler()
         dp.include_router(stop_tracking)  # Остановка отслеживания ключевых слов
-        register_handlers_pars_ai()
-        dp.include_router(handlers)  # Ищет группы и каналы с помощью ИИ
+        # register_handlers_pars_ai()
+        dp.include_router(pars_ai)  # Ищет группы и каналы с помощью ИИ
         register_handlers_post_doc()
         dp.include_router(handlers)  # Выдает пользователю документацию к проекту
         register_connect_account_handler()
