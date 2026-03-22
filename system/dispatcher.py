@@ -22,6 +22,3 @@ dp = Dispatcher(storage=storage)
 
 # ID администраторов бота с особыми привилегиями
 ADMIN_USER_ID = (535185511, 743541086)
-
-# router = Router()
-# dp.include_router(router)
