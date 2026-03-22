@@ -4,7 +4,7 @@ import random
 import shutil
 from pathlib import Path
 
-from aiogram import F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger
@@ -15,8 +15,10 @@ from database.database import User
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
 from states.states import MyStates
-from system.dispatcher import router
+# from system.dispatcher import router
 from database.database import write_account_to_user_table
+
+router = Router(name=__name__)
 
 
 @router.message(F.text == "🔐 Подключить свободный аккаунт")
@@ -163,16 +165,15 @@ async def handle_account_file(message: Message, state: FSMContext):
         # ✅ Сбрасываем состояние только в конце
         await state.clear()
 
-
-def register_connect_account_handler():
-    """
-    Регистрирует обработчики для подключения аккаунта.
-
-    Добавляет в маршрутизатор (router) два обработчика:
-        1. handle_connect_account — для обработки нажатия кнопки "🔐 Подключить аккаунт".
-        2. handle_account_file — для приёма файла сессии (.session) от пользователя.
-
-    Обработчики реагируют на текстовые сообщения и документы соответственно.
-    """
-    router.message.register(handle_connect_account)  # обработчик для кнопки "🔐 Подключить аккаунт"
-    router.message.register(handle_account_file)  # обработчик приема аккаунта в формате .session
+# def register_connect_account_handler():
+#     """
+#     Регистрирует обработчики для подключения аккаунта.
+#
+#     Добавляет в маршрутизатор (router) два обработчика:
+#         1. handle_connect_account — для обработки нажатия кнопки "🔐 Подключить аккаунт".
+#         2. handle_account_file — для приёма файла сессии (.session) от пользователя.
+#
+#     Обработчики реагируют на текстовые сообщения и документы соответственно.
+#     """
+#     router.message.register(handle_connect_account)  # обработчик для кнопки "🔐 Подключить аккаунт"
+#     router.message.register(handle_account_file)  # обработчик приема аккаунта в формате .session
