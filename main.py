@@ -17,7 +17,8 @@ from handlers.user.checking_group_for_keywords import router as checking_group_f
 # from handlers.user.connect_account import register_connect_account_handler
 from handlers.user.connect_account import router as connect_account
 from handlers.user.connect_group import router as connect_group
-from handlers.user.delete_group_from_database import register_handlers_delete
+# from handlers.user.delete_group_from_database import register_handlers_delete
+from handlers.user.delete_group_from_database import router as delete_group_from_database
 # from handlers.user.connect_group import register_entering_group_handler
 from handlers.user.entering_keyword import router as entering_keyword
 from handlers.user.get_dada import router as get_dada
@@ -85,8 +86,8 @@ async def main() -> None:
         dp.include_router(connect_account)  # Подключение аккаунта
         # register_handlers_checking_group_for_keywords()
         dp.include_router(checking_group_for_keywords)  # Проверка группы на наличие ключевых слов
-        register_handlers_delete()
-        dp.include_router(handlers)  # Удаление групп из базы данных пользователя
+        # register_handlers_delete()
+        dp.include_router(delete_group_from_database)  # Удаление групп из базы данных пользователя
 
         """
         Панель администратора Telegram бота

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-
-from aiogram import F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
@@ -10,7 +9,9 @@ from account_manager.unsubscribe import unsubscribe
 from database.database import dell_group, get_user_accounts
 from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, menu_launch_tracking_keyboard
 from states.states import MyStates
-from system.dispatcher import router
+
+# from system.dispatcher import router
+router = Router(name=__name__)
 
 
 @router.message(F.text == "Удалить группу из отслеживания")
@@ -71,6 +72,5 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
 
     client.disconnect()
 
-
-def register_handlers_delete():
-    router.message.register(delete_group_from_database)
+# def register_handlers_delete():
+#     router.message.register(delete_group_from_database)
