@@ -149,5 +149,3 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     )
 
     await state.clear()  # Завершаем текущее состояние машины состояния
-
-
