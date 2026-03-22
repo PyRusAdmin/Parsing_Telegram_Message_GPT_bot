@@ -8,7 +8,10 @@ from database.database import User, create_keywords_model
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import get_text
 from states.states import MyStates
-from system.dispatcher import router
+# from system.dispatcher import router
+from aiogram import Router
+
+router = Router(name=__name__)
 
 
 @router.message(F.text == "🔍 Ввод ключевого слова")
@@ -148,19 +151,18 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
 
     await state.clear()  # Завершаем текущее состояние машины состояния
 
-
-def register_entering_keyword_handler():
-    """
-    Регистрирует обработчики для ввода ключевых слов.
-
-    Добавляет в маршрутизатор (router) два обработчика:
-        1. handle_enter_keyword_menu — реагирует на нажатие кнопки "🔍 Ввод ключевого слова".
-        2. handle_keywords_submission — обрабатывает ввод ключевых слов в состоянии MyStates.entering_keyword.
-
-    Эти обработчики позволяют пользователю добавлять слова или фразы для отслеживания
-    в Telegram-группах и каналах. Поддерживается массовый ввод через переносы строк.
-
-    :return: None
-    """
-    router.message.register(handle_enter_keyword_menu)  # Регистрация обработчика
-    router.message.register(handle_keywords_submission)  # Регистрация обработчика ввода ключевых слов
+# def register_entering_keyword_handler():
+#     """
+#     Регистрирует обработчики для ввода ключевых слов.
+#
+#     Добавляет в маршрутизатор (router) два обработчика:
+#         1. handle_enter_keyword_menu — реагирует на нажатие кнопки "🔍 Ввод ключевого слова".
+#         2. handle_keywords_submission — обрабатывает ввод ключевых слов в состоянии MyStates.entering_keyword.
+#
+#     Эти обработчики позволяют пользователю добавлять слова или фразы для отслеживания
+#     в Telegram-группах и каналах. Поддерживается массовый ввод через переносы строк.
+#
+#     :return: None
+#     """
+#     router.message.register(handle_enter_keyword_menu)  # Регистрация обработчика
+#     router.message.register(handle_keywords_submission)  # Регистрация обработчика ввода ключевых слов
