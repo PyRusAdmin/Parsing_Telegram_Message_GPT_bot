@@ -2,6 +2,7 @@
 import os
 
 from aiogram import F
+from aiogram import Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -20,7 +21,9 @@ from keyboards.user.keyboards import (
 )
 from locales.locales import get_text
 from states.states import MyStates
-from system.dispatcher import ADMIN_USER_ID, router
+from system.dispatcher import ADMIN_USER_ID
+
+router = Router(name=__name__)
 
 
 @router.message(CommandStart())
@@ -393,28 +396,27 @@ async def handle_group_usernames_file(message, state: FSMContext, bot):
     await message.answer(response)
     await state.clear()
 
-
-def register_greeting_handlers():
-    """
-    Регистрирует основные обработчики команд и навигации бота.
-
-    Добавляет в маршрутизатор (router) обработчики для:
-        - Команды /start (приветствие и инициализация)
-        - Выбора языка интерфейса
-        - Открытия меню настроек
-        - Возврата в главное меню (кнопка Назад)
-        - Запуска отслеживания сообщений
-        - Обновления списка отслеживаемых групп
-
-    Эти обработчики формируют основную логику взаимодействия пользователя с ботом.
-
-    Вызывается при инициализации бота в `main.py`.
-    :return: None
-    """
-    router.message.register(handle_start_command)  # обработчик команды /start
-    router.message.register(handle_language_selection)  # обработчик выбора языка
-    router.message.register(handle_settings_menu)  # обработчик меню настроек
-    router.message.register(handle_back_to_main_menu)  # обработчик для кнопки Назад
-    router.message.register(handle_start_tracking)  # обработчик запуска отслеживания
-    router.message.register(handle_refresh_groups_list)  # обработчик запуска 🔁 Обновить список
-    router.message.register(handle_group_usernames_file)  # обработчик ввода username групп
+# def register_greeting_handlers():
+#     """
+#     Регистрирует основные обработчики команд и навигации бота.
+#
+#     Добавляет в маршрутизатор (router) обработчики для:
+#         - Команды /start (приветствие и инициализация)
+#         - Выбора языка интерфейса
+#         - Открытия меню настроек
+#         - Возврата в главное меню (кнопка Назад)
+#         - Запуска отслеживания сообщений
+#         - Обновления списка отслеживаемых групп
+#
+#     Эти обработчики формируют основную логику взаимодействия пользователя с ботом.
+#
+#     Вызывается при инициализации бота в `main.py`.
+#     :return: None
+#     """
+#     router.message.register(handle_start_command)  # обработчик команды /start
+#     router.message.register(handle_language_selection)  # обработчик выбора языка
+#     router.message.register(handle_settings_menu)  # обработчик меню настроек
+#     router.message.register(handle_back_to_main_menu)  # обработчик для кнопки Назад
+#     router.message.register(handle_start_tracking)  # обработчик запуска отслеживания
+#     router.message.register(handle_refresh_groups_list)  # обработчик запуска 🔁 Обновить список
+#     router.message.register(handle_group_usernames_file)  # обработчик ввода username групп

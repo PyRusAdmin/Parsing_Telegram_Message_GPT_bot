@@ -18,11 +18,12 @@ from handlers.user.connect_group import register_entering_group_handler
 from handlers.user.delete_group_from_database import register_handlers_delete
 from handlers.user.entering_keyword import register_entering_keyword_handler
 from handlers.user.get_dada import register_data_export_handlers
-from handlers.user.handlers import register_greeting_handlers
+# from handlers.user.handlers import register_greeting_handlers
 from handlers.user.pars_ai import register_handlers_pars_ai
 from handlers.user.post_doc import register_handlers_post_doc
 from handlers.user.stop_tracking import register_stop_tracking_handler
 from system.dispatcher import dp, bot
+from handlers.user.handlers import router as handlers
 
 logger.add("logs/log.log", rotation="1 MB", compression="zip", enqueue=True)  # Логирование бота
 
@@ -57,16 +58,27 @@ async def main() -> None:
         """
         Панель пользователя
         """
-        register_greeting_handlers()  # Регистрация приветственного меню и основных команд
-        register_entering_keyword_handler()  # Регистрация обработчика для ввода и записи в БД ключевых слов
-        register_entering_group_handler()  # Регистрация обработчика для ввода и записи в БД групп (техническая группа)
-        register_data_export_handlers()  # Выдача пользователю введенных им данных
-        register_stop_tracking_handler()  # Остановка отслеживания ключевых слов
-        register_handlers_pars_ai()  # Ищет группы и каналы с помощью ИИ
-        register_handlers_post_doc()  # Выдает пользователю документацию к проекту
-        register_connect_account_handler()  # Подключение аккаунта
-        register_handlers_checking_group_for_keywords()  # Проверка группы на наличие ключевых слов
-        register_handlers_delete()  # Удаление групп из базы данных пользователя
+
+        # register_greeting_handlers()
+        dp.include_router(handlers)  # Регистрация приветственного меню и основных команд
+        register_entering_keyword_handler()
+        dp.include_router(handlers)  # Регистрация обработчика для ввода и записи в БД ключевых слов
+        register_entering_group_handler()
+        dp.include_router(handlers)  # Регистрация обработчика для ввода и записи в БД групп (техническая группа)
+        register_data_export_handlers()
+        dp.include_router(handlers)  # Выдача пользователю введенных им данных
+        register_stop_tracking_handler()
+        dp.include_router(handlers)  # Остановка отслеживания ключевых слов
+        register_handlers_pars_ai()
+        dp.include_router(handlers)  # Ищет группы и каналы с помощью ИИ
+        register_handlers_post_doc()
+        dp.include_router(handlers)  # Выдает пользователю документацию к проекту
+        register_connect_account_handler()
+        dp.include_router(handlers)  # Подключение аккаунта
+        register_handlers_checking_group_for_keywords()
+        dp.include_router(handlers)  # Проверка группы на наличие ключевых слов
+        register_handlers_delete()
+        dp.include_router(handlers)  # Удаление групп из базы данных пользователя
 
         """
         Панель администратора
