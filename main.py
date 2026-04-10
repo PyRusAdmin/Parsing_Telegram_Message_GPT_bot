@@ -5,7 +5,9 @@ import sys
 
 from loguru import logger
 
-from database.database import clean_telegram_id_duplicates, init_database, migrate_add_availability_column, migrate_link_column_to_nullable
+from database.database import (
+    clean_telegram_id_duplicates, init_database, migrate_add_availability_column, migrate_link_column_to_nullable
+)
 from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import router as checking_accounts
 from handlers.admin.checking_group_for_ai import router as checking_group_for_ai

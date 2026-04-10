@@ -89,7 +89,7 @@ def migrate_link_column_to_nullable():
                 SET link = ''
                 WHERE link IS NULL
             """)
-            
+
             # Шаг 2: Пересоздаём таблицу без NOT NULL ограничения
             # Получаем список всех колонок
             all_columns = []
@@ -97,16 +97,16 @@ def migrate_link_column_to_nullable():
                 col_name = col[1]
                 if col_name != 'link':
                     all_columns.append(col_name)
-            
+
             # Создаём временную таблицу
             db.execute_sql("""
                 CREATE TABLE IF NOT EXISTS telegram_groups_backup AS
                 SELECT * FROM telegram_groups
             """)
-            
+
             # Удаляем старую таблицу
             db.execute_sql("DROP TABLE telegram_groups")
-            
+
             # Создаём новую таблицу с правильным ограничением
             db.execute_sql("""
                 CREATE TABLE telegram_groups (
@@ -125,7 +125,7 @@ def migrate_link_column_to_nullable():
                     date_added DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            
+
             # Восстанавливаем данные
             db.execute_sql("""
                 INSERT INTO telegram_groups (id, telegram_id, group_hash, name, username, description, 
@@ -134,10 +134,10 @@ def migrate_link_column_to_nullable():
                        participants, category, group_type, language, link, availability, date_added
                 FROM telegram_groups_backup
             """)
-            
+
             # Удаляем временную таблицу
             db.execute_sql("DROP TABLE telegram_groups_backup")
-            
+
             logger.info("✅ Миграция: колонка 'link' успешно изменена на nullable")
         else:
             logger.info("ℹ️ Колонка 'link' уже допускает NULL значения или отсутствует")
