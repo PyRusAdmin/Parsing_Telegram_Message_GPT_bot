@@ -201,52 +201,134 @@ global_search_results_caption =
 global_search_no_results =
     ❌ Unfortunately, nothing was found. Try other keywords.
 
-# === Check Group for Keywords ===
-check_group_ask_url =
-    🔍 Enter a link to a group or channel to search for keywords.
+# === Group Connection ===
+group_added =
+    ✅ Group { $group } has been added for message forwarding.
 
-    📌 Example: <code>https://t.me/example_group</code> or <code>@example_channel</code>
+group_already_added =
+    ⚠️ This group has already been added.
+
+group_add_error =
+    ⚠️ Error adding group.
+
+# === Group Deletion ===
+delete_group_prompt =
+    Enter the group/channel username in @username format to remove from tracking:
+
+group_deleted =
+    ✅ Group { $group } has been successfully removed from tracking.
+
+group_not_found =
+    ❌ Group @{ $group } not found in your tracking list.
+
+no_accounts =
+    ❌ You have no connected accounts.
+
+    Send a `.session` file or click "Connect Account" in the menu.
+
+# === Keywords ===
+no_keywords_entered =
+    ⚠️ You haven't entered any keywords.
+
+keywords_added_count =
+    Keywords added: { $count }
+
+keywords_already_added =
+    Already added ({ $count })
+
+keywords_add_errors =
+    Errors adding
+
+keywords_and_more =
+    and { $count } more
+
+keywords_and_more_errors =
+    and { $count } more errors
+
+keywords_summary =
+    Summary
+
+keywords_added =
+    Added
+
+keywords_skipped =
+    Skipped (duplicates)
+
+keywords_errors =
+    Errors
+
+# === Group Check ===
+check_group_ask_url =
+    📤 Enter the group link to check:
 
 check_group_ask_keyword =
-    ✍️ Enter a keyword to search for in messages.
-
-    📌 Example: <code>Work in Moscow</code> or <code>looking for designer</code>
-
-    ❗️Important: Do not use too short or multiple words (e.g., <code>work, Moscow, design</code>).
-    The bot searches for exact matches — it is better to use the full phrase.
+    🔍 Enter the keyword to search:
 
 check_group_started =
-    ✅ Data received successfully!
-
-    🔍 Starting search for messages in the specified group and keyword…
-
-    ⏳ Please wait — the process may take some time.
+    🔍 Starting group check...
 
 check_group_new_message_with_link =
-    📥 <b>New message</b>
+    📨 New message with keyword!
 
-    <b>Source:</b> { $title }
-    <b>Date:</b> { $msg_date }
-    <b>Link:</b> <a href='{ $message_link }'>Go to message</a>
-
-    <b>Message text:</b>
-    { $display_text }
+    📌 <b>{ $title }</b>
+    📅 Date: { $msg_date }
+    🔗 <a href="{ $message_link }">Go to message</a>
 
 check_group_new_message_no_link =
-    📥 <b>New message</b>
+    📨 New message with keyword!
 
-    <b>Source:</b> { $title }
-    <b>Date:</b> { $msg_date }
-    <b>Message text:</b>
-    { $display_text }
+    📌 <b>{ $title }</b>
+    📅 Date: { $msg_date }
 
 check_group_summary =
-    🔍 Search completed:
-    Messages checked: { $count }
-    Matches for '{ $keyword }': { $matched_count }
+    ✅ Check completed!
+
+    Messages found: { $count }
+    Keyword: { $keyword }
+    Matches: { $matched_count }
 
 check_group_parse_error =
-    ❌ An error occurred while parsing the group. Please check the link and chat access.
+    ❌ Error parsing group. Please check the link and chat access.
+
+# === Parser ===
+target_group_not_found =
+    ❌ Target group not found for user. Connect a group so I can forward messages found by your keywords.
+
+no_channels_to_track =
+    📭 You have no added channels to track.
+
+too_many_channels =
+    ⚠️ Found { $total } channels. Subscription will only be done for the first { $limit }.
+
+channel_subscribed =
+    ✅ Subscribed to { $channel }
+    ⏳ Next attempt in { $delay } sec.
+
+target_group_join_error =
+    ❌ Account could not join the target group, check the connected group
+
+target_group_not_configured =
+    ❌ Target group not found for user. Connect a group.
+
+target_group_fetch_error =
+    ❌ Could not fetch target group. Check connection.
+
+bot_listening =
+    👂 Bot is listening for new messages...
+
+tracking_not_active =
+    ⚠️ Tracking is not started or already stopped.
+
+tracking_stop_requested =
+    🛑 Stop command sent. Tracking will be stopped within a few seconds.
+
+# === Session ===
+session_invalid =
+    ⚠️ Account `{ $phone }` is no longer valid.
+    Please reconnect the account.
+
+account_fetch_error =
+    ⚠️ An error occurred while fetching the account. Please try again later.
 
 # === Account Checking ===
 checking_accounts_start =
