@@ -79,7 +79,6 @@ def save_group_to_db(group_data: dict):
             existing.link = group_data.get('link')
             # date_added оставляем оригинальным (дата первого добавления)
             # Если хочешь обновлять на "последнее обнаружение" — раскомментируй:
-            # existing.date_added = datetime.now()
 
             existing.save()
             logger.info(f"🔄 Обновлена существующая группа: {existing.name} (telegram_id={telegram_id})")

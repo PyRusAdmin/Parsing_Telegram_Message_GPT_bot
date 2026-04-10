@@ -2,6 +2,10 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile
+from loguru import logger
+
+from database.database import User
+from locales.locales import t
 
 router = Router(name=__name__)
 
@@ -28,13 +32,13 @@ async def send_instruction(message: Message, state: FSMContext):
         - Капшн содержит прямую ссылку на документ в репозитории (gitverse.ru).
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
-    text = (
-        "📘 <b>Инструкция по использованию</b>\n\n"
-        "Прикреплён подробный руководство по функционалу бота.\n\n"
-        "🔗 <b>Онлайн-документация:</b>\n"
-        "• <a href=\"https://gitverse.ru/pyadminru/AutoParseAlertBot/content/master/doc/doc.md\">GitVerse</a>\n"
-        "• <a href=\"https://github.com/PyRusAdmin/AutoParseAlertBot/blob/master/doc/doc.md\">GitHub</a>\n\n"
-        "Рекомендуем ознакомиться для эффективного использования всех возможностей бота."
+    user = User.get(User.user_id == message.from_user.id)
+
+    text = t(
+        "instruction_caption",
+        lang=user.language,
+        gitverse_link="https://gitverse.ru/pyadminru/AutoParseAlertBot/content/master/doc/doc.md",
+        github_link="https://github.com/PyRusAdmin/AutoParseAlertBot/blob/master/doc/doc.md"
     )
 
     try:
@@ -46,7 +50,8 @@ async def send_instruction(message: Message, state: FSMContext):
         )
 
     except FileNotFoundError:
-        await message.answer("Файл инструкции не найден на сервере.")
+        await message.answer(t("instruction_file_not_found", lang=user.language))
 
     except Exception as e:
-        await message.answer(f"Произошла ошибка при отправке файла: {e}")
+        logger.exception(e)
+        await message.answer(t("instruction_send_error", lang=user.language))

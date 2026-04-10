@@ -88,3 +88,20 @@ admin_panel_message =
 
 tracking_stopped =
     ✅ Tracking has been stopped.
+
+instruction_caption =
+    📘 <b>Usage Instructions</b>
+
+    Attached is a detailed guide on the bot's functionality.
+
+    🔗 <b>Online Documentation:</b>
+    • <a href="{ $gitverse_link }">GitVerse</a>
+    • <a href="{ $github_link }">GitHub</a>
+
+    We recommend reviewing it for effective use of all bot features.
+
+instruction_file_not_found =
+    ⚠️ Instruction file not found on server.
+
+instruction_send_error =
+    ❌ An error occurred while sending the file.
