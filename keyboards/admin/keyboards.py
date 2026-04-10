@@ -18,57 +18,49 @@ def main_admin_keyboard():
         keyboard=[
             [
                 KeyboardButton(
-                    text="Запуск отслеживания",
-                    icon_custom_emoji_id="5438489737125975601",
+                    text="🚀 Запуск отслеживания",
                     style='primary'
                 )
             ],
             [
                 KeyboardButton(
-                    text="Проверка группы на наличие ключевых слов",
-                    icon_custom_emoji_id="5247057031789040703",
+                    text="🔍 Проверка группы на наличие ключевых слов",
                     style='primary'
                 )
             ],
             [
                 KeyboardButton(
-                    text="AI поиск",
-                    icon_custom_emoji_id="5357314052072692864",
+                    text="🤖 AI поиск",
                     style='primary'
                 ),
                 KeyboardButton(
-                    text="Получить базу",
-                    icon_custom_emoji_id="5443127283898405358",
+                    text="📥 Получить базу",
                     style='primary'
                 )
             ],
 
             [
                 KeyboardButton(
-                    text="Глобальный AI поиск",
-                    icon_custom_emoji_id="5357314052072692864",
+                    text="🌐 Глобальный AI поиск",
                     style='primary'
                 )
             ],
 
             [
                 KeyboardButton(
-                    text="Инструкция по использованию",
-                    icon_custom_emoji_id="5332724926216428039",
+                    text="📖 Инструкция по использованию",
                     style='primary'
                 )
             ],
             [
                 KeyboardButton(
-                    text="Настройки",
-                    icon_custom_emoji_id="5341715473882955310",
+                    text="⚙️ Настройки",
                     style='primary'
                 )
             ],
             [
                 KeyboardButton(
-                    text="Панель администратора",
-                    icon_custom_emoji_id="5368461927452258024",
+                    text="🛡️ Панель администратора",
                     style='success'
                 )
             ]
@@ -117,8 +109,7 @@ def admin_keyboard():
             ],
             [
                 KeyboardButton(
-                    text="Назад",
-                    icon_custom_emoji_id="5352759161945867747",
+                    text="⬅️ Назад",
                     style='danger'
                 )
             ]
@@ -138,28 +129,24 @@ def category_method_keyboard():
             [
                 KeyboardButton(
                     text="⚡️ Быстро (g4f.free)",
-                    style='primary',
-                    icon_custom_emoji_id="5368461927452258024"
+                    style='primary'
                 )
             ],
             [
                 KeyboardButton(
                     text="🚀 Мощно (Openrouter API)",
-                    style='success',
-                    icon_custom_emoji_id="5438489737125975601"
+                    style='success'
                 )
             ],
             [
                 KeyboardButton(
                     text="🚀 Мощно (GROQ API)",
-                    style='success',
-                    icon_custom_emoji_id="5438489737125975601"
+                    style='success'
                 )
             ],
             [
                 KeyboardButton(
-                    text="Назад",
-                    icon_custom_emoji_id="5352759161945867747",
+                    text="⬅️ Назад",
                     style='danger'
                 )
             ]

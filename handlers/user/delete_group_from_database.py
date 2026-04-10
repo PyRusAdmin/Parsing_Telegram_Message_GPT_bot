@@ -13,7 +13,7 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message(F.text == "Удалить группу из отслеживания")
+@router.message(F.text == "🗑️ Удалить группу из отслеживания")
 async def delete_group_from_database(message: Message, state: FSMContext):
     """
     Удаление группы из базы данных

@@ -6,7 +6,7 @@ from aiogram.types import Message, FSInputFile
 router = Router(name=__name__)
 
 
-@router.message(F.text == "Инструкция по использованию")
+@router.message(F.text == "📖 Инструкция по использованию")
 async def send_instruction(message: Message, state: FSMContext):
     """
     Обработчик команды "Инструкция по использованию".

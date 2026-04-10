@@ -80,7 +80,7 @@ async def handle_start_command(message, state: FSMContext) -> None:
         logger.exception(e)
 
 
-@router.message(F.text == "Назад")
+@router.message(F.text == "⬅️ Назад")
 async def handle_back_to_main_menu(message, state: FSMContext):
     """
     Обработчик команды "Назад".
@@ -223,7 +223,7 @@ async def handle_language_selection(message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "Настройки")
+@router.message(F.text == "⚙️ Настройки")
 async def handle_settings_menu(message, state: FSMContext):
     """
     Обработчик команды "Настройки".
@@ -251,7 +251,7 @@ async def handle_settings_menu(message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "Запуск отслеживания")
+@router.message(F.text == "🚀 Запуск отслеживания")
 async def handle_start_tracking(message, state: FSMContext):
     """
     Обработчик команды "Запуск отслеживания".

@@ -19,7 +19,7 @@ from keyboards.admin.keyboards import admin_keyboard
 router = Router(name=__name__)
 
 
-@router.message(F.text == "Панель администратора")
+@router.message(F.text == "🛡️ Панель администратора")
 async def admin_panel(message: Message, state: FSMContext):
     """
     Обработчик команды «Панель администратора».

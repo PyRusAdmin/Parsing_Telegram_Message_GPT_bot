@@ -89,7 +89,7 @@ async def get_best_g4f_model(client: Client) -> str:
 async def process_category_method_choice(message: Message, state: FSMContext):
     """Обрабатывает выбор метода присвоения категорий"""
 
-    if message.text == "Назад":
+    if message.text == "⬅️ Назад":
         await state.clear()
         await message.answer(
             "↩️ Возврат в панель администратора",

@@ -18,8 +18,8 @@ def search_group_ai():
             [KeyboardButton(text="📥 Вся база", style="primary")],
             [KeyboardButton(text="📥 База каналов", style="primary"),
              KeyboardButton(text="📥 База групп", style="primary")],
-            [KeyboardButton(text="Выбрать категорию", style="primary")],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
+            [KeyboardButton(text="📂 Выбрать категорию", style="primary")],
+            [KeyboardButton(text="⬅️ Назад", style="danger")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -49,7 +49,7 @@ def get_categories_keyboard():
             [KeyboardButton(text="Кулинария и еда", style="primary")],
             [KeyboardButton(text="Мода и красота", style="primary")],
             [KeyboardButton(text="Хобби и творчество", style="primary")],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
+            [KeyboardButton(text="⬅️ Назад", style="danger")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -105,48 +105,41 @@ def main_menu_keyboard():
         keyboard=[
             [
                 KeyboardButton(
-                    text="Запуск отслеживания",
-                    icon_custom_emoji_id="5438489737125975601",
+                    text="🚀 Запуск отслеживания",
                     style="success"
                 )
             ],
             [
                 KeyboardButton(
-                    text="Проверка группы на наличие ключевых слов",
-                    icon_custom_emoji_id="5247057031789040703",
+                    text="🔍 Проверка группы на наличие ключевых слов",
                     style="primary"
                 )
             ],
             [
                 KeyboardButton(
-                    text="AI поиск",
-                    icon_custom_emoji_id="5357314052072692864",
+                    text="🤖 AI поиск",
                     style="primary"
                 ),
                 KeyboardButton(
-                    text="Получить базу",
-                    icon_custom_emoji_id="5443127283898405358",
+                    text="📥 Получить базу",
                     style="primary"
                 )
             ],
             [
                 KeyboardButton(
-                    text="Глобальный AI поиск",
-                    icon_custom_emoji_id="5357314052072692864",
+                    text="🌐 Глобальный AI поиск",
                     style='primary'
                 )
             ],
             [
                 KeyboardButton(
-                    text="Инструкция по использованию",
-                    icon_custom_emoji_id="5332724926216428039",
+                    text="📖 Инструкция по использованию",
                     style="primary"
                 )
             ],
             [
                 KeyboardButton(
-                    text="Настройки",
-                    icon_custom_emoji_id="5341715473882955310",
+                    text="⚙️ Настройки",
                     style="primary"
                 )
             ]
@@ -161,14 +154,14 @@ def menu_launch_tracking_keyboard():
     Создаёт клавиатуру во время активного отслеживания.
 
     Позволяет пользователю остановить процесс парсинга или вернуться в главное меню.
-    Появляется после нажатия кнопки "Запуск отслеживания".
+    Появляется после нажатия кнопки "🚀 Запуск отслеживания".
 
     Returns:
         ReplyKeyboardMarkup: Объект клавиатуры с кнопками управления отслеживанием.
 
     Layout:
         [🛑 Остановить отслеживание]
-        [Назад]
+        [⬅️ Назад]
 
     Notes:
         - Отображает текущее состояние (отслеживание активно).
@@ -177,7 +170,7 @@ def menu_launch_tracking_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🛑 Остановить отслеживание", style="danger")],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")],
+            [KeyboardButton(text="⬅️ Назад", style="danger")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -200,9 +193,11 @@ def settings_keyboard():
 
     Layout:
         [🔁 Обновить список] [🔍 Ввод ключевого слова]
+        [🗑️ Удалить группу из отслеживания]
+        [🔍 Список ключевых слов] [🌐 Ссылки для отслеживания]
         [🔐 Подключить аккаунт] [📤 Подключить группу для сообщений]
         [🌐 Сменить язык]
-        [Назад]
+        [⬅️ Назад]
 
     Notes:
         - Клавиатура подстраивается по размеру и остаётся видимой после использования.
@@ -211,13 +206,13 @@ def settings_keyboard():
         keyboard=[
             [KeyboardButton(text="🔁 Обновить список", style="primary"),
              KeyboardButton(text="🔍 Ввод ключевого слова", style="primary")],
-            [KeyboardButton(text="Удалить группу из отслеживания", style="danger")],
+            [KeyboardButton(text="🗑️ Удалить группу из отслеживания", style="danger")],
             [KeyboardButton(text="🔍 Список ключевых слов", style="primary"),
              KeyboardButton(text="🌐 Ссылки для отслеживания", style="primary")],
             [KeyboardButton(text="🔐 Подключить аккаунт", style="success"),
              KeyboardButton(text="📤 Подключить группу для сообщений", style="success")],
             [KeyboardButton(text="🌐 Сменить язык", style="primary")],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
+            [KeyboardButton(text="⬅️ Назад", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -236,7 +231,7 @@ def connect_keyboard_account():
                 text="🔐 Подключить свободный аккаунт",
                 style="success"
             )],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
+            [KeyboardButton(text="⬅️ Назад", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -250,7 +245,7 @@ def connect_grup_keyboard_tech():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📤 Подключить группу для сообщений", style="success")],
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
+            [KeyboardButton(text="⬅️ Назад", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -268,7 +263,7 @@ def back_keyboard():
         ReplyKeyboardMarkup: Объект клавиатуры с кнопкой возврата.
 
     Layout:
-        [Назад]
+        [⬅️ Назад]
 
     Notes:
         - Клавиатура подстраивается по размеру и остаётся видимой.
@@ -276,7 +271,7 @@ def back_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Назад", icon_custom_emoji_id="5352759161945867747", style="danger")]
+            [KeyboardButton(text="⬅️ Назад", style="danger")]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз

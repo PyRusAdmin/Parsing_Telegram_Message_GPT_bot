@@ -17,7 +17,7 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message(F.text == "Подключение аккаунта")
+@router.message(F.text == "🔐 Подключение аккаунта")
 async def admin_connecting_account(message: Message, state: FSMContext):
     """Админ нажимает кнопку → бот просит .session файл(ы)"""
     await state.clear()

@@ -328,7 +328,7 @@ async def export_supergroups(message: Message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "Получить базу")
+@router.message(F.text == "📥 Получить базу")
 async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
     Обрабатывает запрос пользователя на получение базы Telegram-групп и каналов.
@@ -363,7 +363,7 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     )
 
 
-@router.message(F.text == "Выбрать категорию")
+@router.message(F.text == "📂 Выбрать категорию")
 async def start_category_export(message: Message, state: FSMContext):
     """
     Запускает процесс выбора категории для экспорта.
@@ -384,7 +384,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
     selected_category = message.text.strip()
 
     # Проверка на кнопку "Назад"
-    if selected_category == "Назад":
+    if selected_category == "⬅️ Назад":
         await message.answer("❌ Отменено.", reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
@@ -492,7 +492,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
 """Одиночный AI поиск"""
 
 
-@router.message(F.text == "AI поиск")
+@router.message(F.text == "🤖 AI поиск")
 async def ai_search(message: Message, state: FSMContext):
     """
     Обработчик команды "Получить базу".
@@ -622,7 +622,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 """Глобальный AI поиск"""
 
 
-@router.message(F.text == "Глобальный AI поиск")
+@router.message(F.text == "🌐 Глобальный AI поиск")
 async def ai_search_global(message: Message, state: FSMContext):
     """
     Обработчик команды "Глобальный AI поиск".

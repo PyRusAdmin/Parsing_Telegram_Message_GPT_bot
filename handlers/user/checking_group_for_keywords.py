@@ -14,7 +14,7 @@ from states.states import MyStatesParsing
 router = Router(name=__name__)
 
 
-@router.message(F.text == "Проверка группы на наличие ключевых слов")
+@router.message(F.text == "🔍 Проверка группы на наличие ключевых слов")
 async def checking_group_for_keywords(message: Message, state: FSMContext):
     """
     Обработчик команды "Проверка группы на наличие ключевых слов".
