@@ -17,7 +17,7 @@ from account_manager.auth import CheckingAccountsValidity
 from ai.ai import get_groq_response, search_groups_in_telegram
 from database.database import User, TelegramGroup
 from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
-from locales.locales import get_text
+from locales.locales import t
 from states.states import MyStates, ExportStates
 
 router = Router(name=__name__)
@@ -514,7 +514,7 @@ async def ai_search(message: Message, state: FSMContext):
         f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню поиска групп")
 
     await message.answer(
-        get_text(user.language, "enter_keyword"),
+        t("enter_keyword", lang=user.language),
         reply_markup=back_keyboard()
     )
     await state.set_state(MyStates.entering_keyword_ai_search)
@@ -638,7 +638,7 @@ async def ai_search_global(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        get_text(user.language, "enter_keyword"),
+        t("enter_keyword", lang=user.language),
         reply_markup=back_keyboard()
     )
     await state.set_state(MyStates.entering_keyword_ai_search_global)

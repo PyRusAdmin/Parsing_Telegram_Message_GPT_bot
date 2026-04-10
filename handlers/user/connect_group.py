@@ -7,7 +7,7 @@ from loguru import logger
 
 from database.database import User, create_group_model
 from keyboards.user.keyboards import back_keyboard
-from locales.locales import get_text
+from locales.locales import t
 from states.states import MyStates
 
 router = Router(name=__name__)
@@ -35,7 +35,7 @@ async def handle_connect_message_group(message: Message, state: FSMContext):
         f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} перешел в меню 📤 Подключить группу для сообщений")
 
     await message.answer(
-        get_text(user.language, "enter_group"),
+        t("enter_group", lang=user.language),
         reply_markup=back_keyboard()  # клавиатура назад
     )
     await state.set_state(MyStates.entering_group)

@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
 from database.database import User, create_keywords_model, get_user_channel_usernames
-from locales.locales import get_text
+from locales.locales import t
 
 router = Router(name=__name__)
 
@@ -121,14 +121,14 @@ async def get_keywords_list(message: Message, state: FSMContext):
     # Проверяем, существует ли таблица
     if not KeywordsModel.table_exists():
         KeywordsModel.create_table()
-        await message.answer(get_text(user.language, "no_keywords"))
+        await message.answer(t("no_keywords", lang=user.language))
         return
 
     # Извлекаем все ключевые слова
     keywords = list(KeywordsModel.select())
 
     if not keywords:
-        await message.answer(get_text(user.language, "no_keywords"))
+        await message.answer(t("no_keywords", lang=user.language))
         return
 
     # Формируем список данных для записи в Excel
@@ -154,7 +154,7 @@ async def get_keywords_list(message: Message, state: FSMContext):
         document = FSInputFile(filepath)
         await message.answer_document(
             document=document,
-            caption=f"📋 {get_text(user.language, 'keywords_export')}\n"
+            caption=f"📋 {t('keywords_export', lang=user.language)}\n"
                     f"Всего записей: {len(data)}"
         )
 
@@ -164,7 +164,7 @@ async def get_keywords_list(message: Message, state: FSMContext):
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла с ключевыми словами: {e}")
-        await message.answer(get_text(user.language, "export_error"))
+        await message.answer(t("export_error", lang=user.language))
 
 
 @router.message(F.text == "🌐 Ссылки для отслеживания")
@@ -189,7 +189,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     usernames_list, total_count = get_user_channel_usernames(telegram_user.id)
 
     if not usernames_list:
-        await message.answer(get_text(user.language, "no_tracking_links"))
+        await message.answer(t("no_tracking_links", lang=user.language))
         return
 
     # Формируем список данных для Excel
@@ -224,4 +224,4 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла со ссылками: {e}")
-        await message.answer(get_text(user.language, "export_error"))
+        await message.answer(t("export_error", lang=user.language))

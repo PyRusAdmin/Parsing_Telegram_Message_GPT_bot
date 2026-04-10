@@ -6,7 +6,7 @@ from loguru import logger
 
 from database.database import User, create_keywords_model
 from keyboards.user.keyboards import back_keyboard
-from locales.locales import get_text
+from locales.locales import t
 from states.states import MyStates
 from aiogram import Router
 
@@ -36,7 +36,7 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
         f"Пользователь {telegram_user.id} {telegram_user.username} {telegram_user.first_name} {telegram_user.last_name} перешел в меню 🔍 Ввод ключевого слова")
 
     await message.answer(
-        get_text(user.language, "enter_keyword"),
+        t("enter_keyword", lang=user.language),
         reply_markup=back_keyboard()  # клавиатура назад
     )
     await state.set_state(MyStates.entering_keyword)

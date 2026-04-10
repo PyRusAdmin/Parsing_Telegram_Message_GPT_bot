@@ -13,7 +13,7 @@ from telethon.sessions import StringSession
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from database.database import User
 from keyboards.user.keyboards import back_keyboard
-from locales.locales import get_text
+from locales.locales import t
 from states.states import MyStates
 from database.database import write_account_to_user_table
 
@@ -93,7 +93,10 @@ async def handle_connect_account(message: Message, state: FSMContext):
             "language": "unset"
         }
     )
-    await message.answer(get_text(user.language, "connect_account"), reply_markup=back_keyboard())
+    await message.answer(
+        text=t("connect_account"),
+        reply_markup=back_keyboard()
+    )
     await state.set_state(MyStates.waiting_for_session_file_user)
 
 

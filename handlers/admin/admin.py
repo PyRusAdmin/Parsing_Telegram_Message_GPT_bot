@@ -13,8 +13,9 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.parser import determine_telegram_chat_type
-from database.database import TelegramGroup, db, getting_account
+from database.database import TelegramGroup, db, getting_account, User
 from keyboards.admin.keyboards import admin_keyboard
+from locales.locales import t
 
 router = Router(name=__name__)
 
@@ -47,13 +48,15 @@ async def admin_panel(message: Message, state: FSMContext):
     try:
         await state.clear()  # Сбрасываем текущее состояние FSM
 
+        # Получаем язык пользователя
+        try:
+            user = User.get(User.user_id == message.from_user.id)
+            user_lang = user.language if user.language != "unset" else "ru"
+        except Exception:
+            user_lang = "ru"
+
         await message.answer(
-            text=(
-                "👋 <b>Добро пожаловать в Панель администратора!</b>\n\n"
-                "Вот что вы можете сделать:\n\n"
-                "📁 <b>Получить лог-файл</b> — просмотреть журнал ошибок и событий бота за последнее время. Полезно для диагностики.\n\n"
-                "🔄 <b>🔄 Актуализация базы данных</b> — обновить информацию о группах и каналах: проверить их текущий тип (группа/канал) и получить актуальные ID.\n\n"
-            ),
+            text=t("admin_panel_message", lang=user_lang),
             parse_mode="HTML",
             reply_markup=admin_keyboard(),
         )

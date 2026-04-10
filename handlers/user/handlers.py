@@ -19,7 +19,7 @@ from keyboards.user.keyboards import (
     get_lang_keyboard, main_menu_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
     connect_keyboard_account
 )
-from locales.locales import get_text
+from locales.locales import t
 from states.states import MyStates
 from system.dispatcher import ADMIN_USER_ID
 
@@ -135,7 +135,6 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     :param user_tg_id: Telegram ID пользователя для получения его данных.
     :return: Готовое текстовое сообщение для отправки.
     """
-    template = get_text(user_language, "welcome_message_template")
     version = "0.0.9"
     groups_count = getting_number_records_database()  # Общее число найденных групп
     count = get_session_count(user_id=user_tg_id)  # Сессии пользователя
@@ -143,7 +142,9 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     get_groups = get_tracked_channels_count(user_id=user_tg_id)  # Отслеживаемые каналы
     keywords_count = get_keywords_count(user_id=user_tg_id)  # Ключевые слова
 
-    return template.format(
+    return t(
+        "welcome_message_template",
+        lang=user_language,
         version=version,
         groups_count=groups_count,
         count=count,
@@ -211,10 +212,10 @@ async def handle_language_selection(message, state: FSMContext):
 
         if message.text == "🇷🇺 Русский":
             user.language = "ru"
-            confirmation_text = get_text("ru", "lang_selected")
+            confirmation_text = t("lang_selected", lang="ru")
         elif message.text == "🇬🇧 English":
             user.language = "en"
-            confirmation_text = get_text("en", "lang_selected")
+            confirmation_text = t("lang_selected", lang="en")
 
         user.save()
 
@@ -244,7 +245,7 @@ async def handle_settings_menu(message, state: FSMContext):
         user = User.get(User.user_id == message.from_user.id)
 
         await message.answer(
-            get_text(user.language, "settings_message"),
+            t("settings_message", lang=user.language),
             reply_markup=settings_keyboard()  # клавиатура выбора языка
         )
     except Exception as e:
@@ -299,7 +300,7 @@ async def handle_start_tracking(message, state: FSMContext):
 
             # Если у пользователя подключенный аккаунт
         await message.answer(
-            get_text(user.language, "launching_tracking"),
+            t("launching_tracking", lang=user.language),
             reply_markup=menu_launch_tracking_keyboard()  # клавиатура выбора языка
         )
 
@@ -334,7 +335,7 @@ async def handle_refresh_groups_list(message, state: FSMContext):
         f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} перешел в меню 🔁 Обновить список")
 
     await message.answer(
-        text=get_text(user.language, "update_list", ),  # текст сообщения
+        text=t("update_list", lang=user.language),  # текст сообщения
         reply_markup=back_keyboard(),  # клавиатура назад
         parse_mode="HTML"
     )

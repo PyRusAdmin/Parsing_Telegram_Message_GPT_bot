@@ -17,7 +17,7 @@ from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
-from locales.locales import get_text
+from locales.locales import t
 
 # 🧠 Простейший трекер сообщений (в памяти)
 forwarded_messages = set()
@@ -459,7 +459,7 @@ async def get_user_channels_or_notify(user_id: int, user, message, client):
         logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
         await client.disconnect()
         await message.answer(
-            get_text(user.language, "tracking_launch_error"),
+            t("tracking_launch_error", lang=user.language),
             reply_markup=menu_launch_tracking_keyboard()
         )
         return None
