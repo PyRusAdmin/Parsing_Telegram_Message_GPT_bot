@@ -12,9 +12,10 @@ from telethon.errors import (
     AuthKeyDuplicatedError, TimedOutError, PhoneNumberBannedError,
     UserDeactivatedBanError, AuthKeyNotFound, AuthKeyUnregisteredError
 )
+from telethon.network import ConnectionTcpMTProxyRandomizedIntermediate
 from telethon.sessions import StringSession
 
-from core.config import API_ID, API_HASH
+from core.config import API_ID, API_HASH, MT_PROXY_IP, MT_PROXY_SECRET
 from core.proxy import Proxy
 from database.database import delete_account_from_db, getting_account
 
@@ -68,17 +69,35 @@ class CheckingAccountsValidity:
         :return: Клиент Telegram или None, если подключение не удалось
         """
         # setup_proxy()
-        client = TelegramClient(
-            StringSession(session_name),
-            api_id=API_ID,
-            api_hash=API_HASH,
-            device_model=mobile_device["device_model"],
-            system_version=mobile_device["system_version"],
-            app_version=mobile_device["app_version"],
-            lang_code=mobile_device["lang_code"],
-            system_lang_code=mobile_device["system_lang_code"],
-            proxy=await self.proxy.reading_proxy_data_from_the_database()
-        )
+        # Проверяем, есть ли MTProxy конфиг
+        use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
+        
+        if use_mtproxy:
+            logger.info(f"🔗 Подключение через MTProxy: {MT_PROXY_IP}:{443}")
+            client = TelegramClient(
+                StringSession(session_name),
+                api_id=API_ID,
+                api_hash=API_HASH,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"],
+                connection=ConnectionTcpMTProxyRandomizedIntermediate,
+                proxy=('MTProxy', MT_PROXY_IP, 443, MT_PROXY_SECRET)
+            )
+        else:
+            logger.info("📡 Подключение без прокси")
+            client = TelegramClient(
+                StringSession(session_name),
+                api_id=API_ID,
+                api_hash=API_HASH,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"]
+            )
 
         try:
             await client.connect()
@@ -180,17 +199,32 @@ class CheckingAccountsValidity:
             logger.error("❌ self.path не установлен для connect_client()")
             return None
 
-        client = TelegramClient(
-            self.path,
-            api_id=API_ID,
-            api_hash=API_HASH,
-            device_model=mobile_device["device_model"],
-            system_version=mobile_device["system_version"],
-            app_version=mobile_device["app_version"],
-            lang_code=mobile_device["lang_code"],
-            system_lang_code=mobile_device["system_lang_code"],
-            proxy=await self.proxy.reading_proxy_data_from_the_database()
-        )
+        use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
+        
+        if use_mtproxy:
+            client = TelegramClient(
+                self.path,
+                api_id=API_ID,
+                api_hash=API_HASH,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"],
+                connection=ConnectionTcpMTProxyRandomizedIntermediate,
+                proxy=('MTProxy', MT_PROXY_IP, 443, MT_PROXY_SECRET)
+            )
+        else:
+            client = TelegramClient(
+                self.path,
+                api_id=API_ID,
+                api_hash=API_HASH,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"]
+            )
 
         try:
             await client.connect()
@@ -217,17 +251,32 @@ class CheckingAccountsValidity:
         chosen_session_name = random.choice(records)
         logger.info(f"Используется сессия: {chosen_session_name}")
 
-        client = TelegramClient(
-            StringSession(chosen_session_name),
-            api_id=API_ID,
-            api_hash=API_HASH,
-            device_model=mobile_device["device_model"],
-            system_version=mobile_device["system_version"],
-            app_version=mobile_device["app_version"],
-            lang_code=mobile_device["lang_code"],
-            system_lang_code=mobile_device["system_lang_code"],
-            proxy=await self.proxy.reading_proxy_data_from_the_database()
-        )
+        use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
+        
+        if use_mtproxy:
+            client = TelegramClient(
+                StringSession(chosen_session_name),
+                api_id=API_ID,
+                api_hash=API_HASH,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"],
+                connection=ConnectionTcpMTProxyRandomizedIntermediate,
+                proxy=('MTProxy', MT_PROXY_IP, 443, MT_PROXY_SECRET)
+            )
+        else:
+            client = TelegramClient(
+                StringSession(chosen_session_name),
+                api_id=API_ID,
+                api_hash=API_HASH,
+                device_model=mobile_device["device_model"],
+                system_version=mobile_device["system_version"],
+                app_version=mobile_device["app_version"],
+                lang_code=mobile_device["lang_code"],
+                system_lang_code=mobile_device["system_lang_code"]
+            )
 
         await client.connect()
 

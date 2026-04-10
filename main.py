@@ -81,6 +81,13 @@ async def main() -> None:
         dp.include_router(language_detection)
         dp.include_router(connecting_account)
 
+        # Миграция: приводим все категории к нижнему регистру
+        from database.database import migrate_categories_to_lowercase
+        logger.info("🔄 Запуск миграции категорий в нижнем регистре...")
+        updated = migrate_categories_to_lowercase()
+        if updated:
+            logger.info(f"✅ Обновлено {updated} категорий на нижний регистр")
+
         await dp.start_polling(bot)
 
     except Exception as e:

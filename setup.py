@@ -15,6 +15,13 @@ PASSWORD=_____
 IP=_____
 PORT=_____
 LANGUAGE=ru
+PROXY_USER=_____
+PROXY_PASSWORD=_____
+PROXY_PORT=_____
+PROXY_IP=_____
+MT_PROXY_IP=103.59.42.72
+MT_PROXY_PORT=443
+MT_PROXY_SECRET=_____
 """.strip()
 
 env_file = ".env"

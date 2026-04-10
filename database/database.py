@@ -545,6 +545,34 @@ async def get_groups_without_category() -> list[dict]:
         return []
 
 
+def migrate_categories_to_lowercase():
+    """
+    Миграция: приводит все существующие категории к нижнему регистру.
+    Запускать один раз после обновления логики.
+    """
+    if db.is_closed():
+        db.connect(reuse_if_open=True)
+
+    try:
+        groups = TelegramGroup.select().where(
+            TelegramGroup.category.is_null(False) &
+            (TelegramGroup.category != '')
+        )
+
+        updated_count = 0
+        for group in groups:
+            if group.category != group.category.lower():
+                group.category = group.category.lower()
+                group.save()
+                updated_count += 1
+
+        logger.info(f"✅ Миграция категорий завершена: обновлено {updated_count} записей")
+        return updated_count
+    except Exception as e:
+        logger.exception(f"❌ Ошибка миграции категорий: {e}")
+        return 0
+
+
 def getting_number_records_database():
     """Получает количество записей в базе данных о найденных группах пользователями"""
     return TelegramGroup.select().count()
