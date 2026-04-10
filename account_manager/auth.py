@@ -7,7 +7,7 @@ from pathlib import Path
 
 from aiogram.types import Message
 from loguru import logger
-from telethon import TelegramClient
+from telethon import TelegramClient, connection
 from telethon.errors import (
     AuthKeyDuplicatedError, TimedOutError, PhoneNumberBannedError,
     UserDeactivatedBanError, AuthKeyNotFound, AuthKeyUnregisteredError
@@ -71,7 +71,7 @@ class CheckingAccountsValidity:
         # setup_proxy()
         # Проверяем, есть ли MTProxy конфиг
         use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
-        
+
         if use_mtproxy:
             logger.info(f"🔗 Подключение через MTProxy: {MT_PROXY_IP}:{443}")
             client = TelegramClient(
@@ -83,8 +83,8 @@ class CheckingAccountsValidity:
                 app_version=mobile_device["app_version"],
                 lang_code=mobile_device["lang_code"],
                 system_lang_code=mobile_device["system_lang_code"],
-                connection=ConnectionTcpMTProxyRandomizedIntermediate,
-                proxy=('MTProxy', MT_PROXY_IP, 443, MT_PROXY_SECRET)
+                connection=connection.ConnectionTcpMTProxyRandomizedIntermediate,
+                proxy=(MT_PROXY_IP, 443, MT_PROXY_SECRET)
             )
         else:
             logger.info("📡 Подключение без прокси")
@@ -200,7 +200,7 @@ class CheckingAccountsValidity:
             return None
 
         use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
-        
+
         if use_mtproxy:
             client = TelegramClient(
                 self.path,
@@ -212,7 +212,7 @@ class CheckingAccountsValidity:
                 lang_code=mobile_device["lang_code"],
                 system_lang_code=mobile_device["system_lang_code"],
                 connection=ConnectionTcpMTProxyRandomizedIntermediate,
-                proxy=('MTProxy', MT_PROXY_IP, 443, MT_PROXY_SECRET)
+                proxy=(MT_PROXY_IP, 443, MT_PROXY_SECRET)
             )
         else:
             client = TelegramClient(
@@ -246,44 +246,61 @@ class CheckingAccountsValidity:
         Запускает Telegram-клиент со случайной сессией из указанной папки.
         :return: Авторизованный TelegramClient или None
         """
-        # setup_proxy()
-        records = getting_account()
-        chosen_session_name = random.choice(records)
-        logger.info(f"Используется сессия: {chosen_session_name}")
+        try:
+            # setup_proxy()
+            records = getting_account()
 
-        use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
-        
-        if use_mtproxy:
-            client = TelegramClient(
-                StringSession(chosen_session_name),
-                api_id=API_ID,
-                api_hash=API_HASH,
-                device_model=mobile_device["device_model"],
-                system_version=mobile_device["system_version"],
-                app_version=mobile_device["app_version"],
-                lang_code=mobile_device["lang_code"],
-                system_lang_code=mobile_device["system_lang_code"],
-                connection=ConnectionTcpMTProxyRandomizedIntermediate,
-                proxy=('MTProxy', MT_PROXY_IP, 443, MT_PROXY_SECRET)
-            )
-        else:
-            client = TelegramClient(
-                StringSession(chosen_session_name),
-                api_id=API_ID,
-                api_hash=API_HASH,
-                device_model=mobile_device["device_model"],
-                system_version=mobile_device["system_version"],
-                app_version=mobile_device["app_version"],
-                lang_code=mobile_device["lang_code"],
-                system_lang_code=mobile_device["system_lang_code"]
-            )
+            if not records:
+                logger.error("❌ Нет доступных аккаунтов в базе данных")
+                return None
 
-        await client.connect()
+            chosen_session_name = random.choice(records)
 
-        if not await client.is_user_authorized():
-            logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
-            await client.disconnect()
+            if not chosen_session_name or not isinstance(chosen_session_name, str):
+                logger.error(f"❌ Неверный формат сессии: {type(chosen_session_name)}")
+                return None
+
+            logger.info(f"Используется сессия: {chosen_session_name[:30]}...")
+
+            use_mtproxy = bool(MT_PROXY_IP and MT_PROXY_SECRET)
+
+            if use_mtproxy:
+                logger.info(f"🔗 Подключение через MTProxy: {MT_PROXY_IP}:443")
+                client = TelegramClient(
+                    StringSession(chosen_session_name),
+                    api_id=API_ID,
+                    api_hash=API_HASH,
+                    device_model=mobile_device["device_model"],
+                    system_version=mobile_device["system_version"],
+                    app_version=mobile_device["app_version"],
+                    lang_code=mobile_device["lang_code"],
+                    system_lang_code=mobile_device["system_lang_code"],
+                    connection=ConnectionTcpMTProxyRandomizedIntermediate,
+                    proxy=(MT_PROXY_IP, 443, MT_PROXY_SECRET)
+                )
+            else:
+                logger.info("📡 Подключение без прокси")
+                client = TelegramClient(
+                    StringSession(chosen_session_name),
+                    api_id=API_ID,
+                    api_hash=API_HASH,
+                    device_model=mobile_device["device_model"],
+                    system_version=mobile_device["system_version"],
+                    app_version=mobile_device["app_version"],
+                    lang_code=mobile_device["lang_code"],
+                    system_lang_code=mobile_device["system_lang_code"]
+                )
+
+            await client.connect()
+
+            if not await client.is_user_authorized():
+                logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
+                await client.disconnect()
+                return None
+
+            logger.info("Телеграм-клиент запущен.")
+            return client
+
+        except Exception as e:
+            logger.exception(f"❌ Ошибка запуска клиента: {e}")
             return None
-
-        logger.info("Телеграм-клиент запущен.")
-        return client

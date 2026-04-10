@@ -564,7 +564,25 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
-        client = await checker.start_random_client()
+        client = None
+        try:
+            client = await checker.start_random_client()
+        except Exception as e:
+            logger.error(f"❌ Ошибка запуска клиента: {e}")
+            await message.answer(
+                t("search_client_error", lang=user.language),
+                reply_markup=back_keyboard()
+            )
+            await state.clear()
+            return
+
+        if not client:
+            await message.answer(
+                t("search_no_available_accounts", lang=user.language),
+                reply_markup=back_keyboard()
+            )
+            await state.clear()
+            return
 
         for group_name in group_names:
             # Ищем в Telegram
@@ -613,7 +631,8 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             reply_markup=back_keyboard()
         )
     finally:
-        await client.disconnect()
+        if client:
+            await client.disconnect()
         await state.clear()  # Завершаем текущее состояние машины состояния
 
 
@@ -675,7 +694,12 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
             checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
-            client = await checker.start_random_client()
+            client = None
+            try:
+                client = await checker.start_random_client()
+            except Exception as e:
+                logger.error(f"❌ Ошибка запуска клиента для '{term}': {e}")
+                continue
 
             if not client:
                 logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
@@ -727,8 +751,9 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             finally:
                 # 🔌 Обязательно отключаем клиент после каждого запроса
-                await client.disconnect()
-                logger.info(f"🔌 Клиент для '{term}' отключён")
+                if client:
+                    await client.disconnect()
+                    logger.info(f"🔌 Клиент для '{term}' отключён")
 
                 # Пауза между запросами (защита от лимитов API и Telegram)
                 if idx < len(search_terms):

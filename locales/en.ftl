@@ -322,6 +322,12 @@ tracking_not_active =
 tracking_stop_requested =
     🛑 Stop command sent. Tracking will be stopped within a few seconds.
 
+search_client_error =
+    ❌ Error connecting to account. Please try again later.
+
+search_no_available_accounts =
+    ⚠️ No available accounts for search.
+
 # === Session ===
 session_invalid =
     ⚠️ Account `{ $phone }` is no longer valid.

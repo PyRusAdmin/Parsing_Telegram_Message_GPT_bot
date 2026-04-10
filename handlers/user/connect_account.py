@@ -56,7 +56,7 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        text="✅ Аккаунт успешно подключен",
+        text=t("account_connected_free", lang=user.language),
         reply_markup=back_keyboard()
     )
 
@@ -113,7 +113,7 @@ async def handle_account_file(message: Message, state: FSMContext):
 
         # ✅ Проверяем расширение — если не .session, остаёмся в состоянии
         if not document.file_name.endswith('.session'):
-            await message.answer("❌ Это не файл сессии! Отправьте файл с расширением `.session`")
+            await message.answer(t("invalid_session_file", lang=user.language))
             return  # state НЕ сбрасываем — ждём правильный файл
 
         sessions_dir = creates_temporary_folder_for_accounts()
@@ -122,7 +122,7 @@ async def handle_account_file(message: Message, state: FSMContext):
         await message.bot.download(document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
 
-        await message.answer(f"📥 Файл получен: `{safe_file_name}`\n\n🔍 Проверяю аккаунт...")
+        await message.answer(t("session_file_received", lang=user.language, filename=safe_file_name))
 
         session_path_without_ext = str(local_file_path.with_suffix(""))
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
@@ -143,22 +143,19 @@ async def handle_account_file(message: Message, state: FSMContext):
 
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
             await message.answer(
-                f"✅ <b>{safe_file_name}</b> — успешно!\n"
-                f"📱 {phone} | 👤 {first_name}\n"
-                f"💾 Сохранено в вашу персональную базу.",
+                t("session_connected_success", lang=user.language, filename=safe_file_name, phone=phone, name=first_name),
                 parse_mode="HTML"
             )
         else:
             logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {user_id}")
             await message.answer(
-                f"❌ <b>{safe_file_name}</b> — не прошёл проверку.\n"
-                f"Проверьте, что файл сессии актуален и не используется в другом месте.",
+                t("session_validation_failed", lang=user.language, filename=safe_file_name),
                 parse_mode="HTML"
             )
 
     except Exception as e:
         logger.exception(f"Ошибка при обработке сессии пользователя {user_id}: {e}")
-        await message.answer("⚠️ Произошла ошибка при проверке аккаунта. Попробуйте позже.")
+        await message.answer(t("session_check_error", lang=user.language))
 
     finally:
         # ✅ Удаляем временный файл в любом случае
