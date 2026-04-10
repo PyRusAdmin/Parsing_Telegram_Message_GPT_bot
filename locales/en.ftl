@@ -105,3 +105,98 @@ instruction_file_not_found =
 
 instruction_send_error =
     ❌ An error occurred while sending the file.
+
+# === Database Export ===
+database_empty =
+    📭 Database is empty.
+
+export_all_caption =
+    📦 Complete database of Telegram groups and channels.
+
+    📊 Total records: { $total_records }
+    🧹 Duplicates removed before export: { $deleted_duplicates }
+
+export_channels_caption =
+    📦 Telegram channels database.
+
+    📊 Total records: { $total_records }
+
+export_groups_caption =
+    📦 Telegram groups database.
+
+    📊 Total records: { $total_records }
+
+export_error_generic =
+    ❌ An error occurred while creating the file.
+
+get_database_menu =
+    👋 Welcome to the database export mode!
+
+    Here's what you can do:
+
+    🔹 <b>📥 Get Full Database</b> — get a complete list of all saved groups and channels in Excel format.
+    🔹 <b>Get Channels Database</b> — get a list of all saved channels in Excel format.
+    🔹 <b>Get Groups Database (supergroups)</b> — get a list of all saved supergroups in Excel format.
+    🔹 <b>Get Regular Chats Database (old-style groups)</b> — get a list of all saved regular chats (old-style groups) in Excel format.
+    🔹 Choose a category for export
+
+    🔸 Press <b>Back</b> to return to the main menu.
+
+select_category_prompt =
+    📌 Select a category for which you want to get a list of groups/channels:
+
+action_cancelled =
+    ❌ Cancelled.
+
+invalid_category =
+    ⚠️ Invalid category. Please select from the list.
+
+category_empty =
+    📭 No groups in the "{ $category }" category yet.
+
+category_export_caption =
+    ✅ Exported { $group_count } groups/channels for category:
+    "{ $category }"
+
+# === AI Search ===
+searching_groups =
+    🔍 Searching for groups and channels...
+
+search_summary =
+    ✅ <b>Search completed!</b>
+
+    📊 Found and saved: <b>{ $groups_count }</b> groups/channels
+    📁 Results sent in Excel file
+
+    📍 <b>Activity indicators:</b>
+    🟢 <b>active</b> — group is active (last message ≤ 30 days)
+    🔴 <b>inactive</b> — group is inactive (messages > 30 days or none at all)
+    ⚪ <b>unknown</b> — could not determine (Telegram limitations)
+
+search_results_caption =
+    📄 Search results for query: <b>{ $query }</b>
+
+search_no_results =
+    ❌ Unfortunately, nothing was found for your query. Try other keywords.
+
+search_error =
+    ❌ An error occurred during search. Please try again.
+
+# === Global AI Search ===
+global_search_no_terms =
+    ❌ Enter at least one search term.
+
+global_search_processing =
+    🔍 Processing { $total } queries...
+
+global_search_skipped =
+    ⚠️ Skipped: '{ $term }' (no available accounts)
+
+global_search_progress =
+    🔍 Processed { $current }/{ $total }: { $successful } successful
+
+global_search_results_caption =
+    📄 Found { $total } groups from { $successful }/{ $total_queries } queries
+
+global_search_no_results =
+    ❌ Unfortunately, nothing was found. Try other keywords.

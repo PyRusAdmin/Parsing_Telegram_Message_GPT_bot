@@ -117,7 +117,7 @@ def save_group_to_db(group_data: dict):
         return None
 
 
-def format_summary_message(groups_count):
+def format_summary_message(groups_count, lang="ru"):
     """
     Форматирует HTML-сообщение с краткой сводкой о результатах поиска.
 
@@ -126,17 +126,14 @@ def format_summary_message(groups_count):
     Сообщение отправляется перед XLSX-файлом.
 
     :param groups_count: (int) Количество успешно сохранённых и отправленных групп.
+    :param lang: (str) Язык пользователя
     :return: (str) Сообщение с HTML-разметкой (теги <b>).
     """
-
-    message = f"✅ <b>Поиск завершён!</b>\n\n"
-    message += f"📊 Найдено и сохранено: <b>{groups_count}</b> групп/каналов\n"
-    message += f"📁 Результаты отправлены в Excel-файле\n\n"
-    message += f"📍 <b>Обозначение активности:</b>\n"
-    message += f"🟢 <b>active</b> — группа активна (последнее сообщение ≤ 30 дней)\n"
-    message += f"🔴 <b>inactive</b> — группа неактивна (сообщений > 30 дней или нет вообще)\n"
-    message += f"⚪ <b>unknown</b> — не удалось определить (ограничения Telegram)"
-    return message
+    return t(
+        "search_summary",
+        lang=lang,
+        groups_count=groups_count
+    )
 
 
 def create_excel_file(groups):
@@ -210,6 +207,7 @@ def create_excel_file(groups):
 async def export_all_groups(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
     await state.clear()
+    user = User.get(User.user_id == message.from_user.id)
 
     try:
         # ====================== ОЧИСТКА ДУБЛИКАТОВ ======================
@@ -258,28 +256,31 @@ async def export_all_groups(message: Message, state: FSMContext):
         # ====================== ЭКСПОРТ ======================
         groups = TelegramGroup.select()
         if not groups:
-            await message.answer("📭 База данных пуста.")
+            await message.answer(t("database_empty", lang=user.language))
             return
 
         excel_bytes = create_excel_file(groups)
         document = BufferedInputFile(excel_bytes, filename="Вся_база.xlsx")
         await message.answer_document(
             document=document,
-            caption=f"📦 Вся база данных Telegram-групп и каналов.\n\n"
-                    f"📊 Всего записей: {len(groups)}\n"
-                    f"🧹 Дубликатов удалено перед экспортом: {deleted_count}"
+            caption=t(
+                "export_all_caption",
+                lang=user.language,
+                total_records=len(groups),
+                deleted_duplicates=deleted_count
+            )
         )
 
     except Exception as e:
-        await message.answer("❌ Произошла ошибка при создании файла.")
+        await message.answer(t("export_error_generic", lang=user.language))
         logger.exception(e)
 
 
 @router.message(F.text == "📥 База каналов")
 async def export_channels(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    # Путь к временному CSV-файлу
+    await state.clear()
+    user = User.get(User.user_id == message.from_user.id)
     try:
         # Получаем только КАНАЛЫ
         groups = TelegramGroup.select().where(
@@ -287,43 +288,44 @@ async def export_channels(message: Message, state: FSMContext):
         )
 
         if not groups:
-            await message.answer("📭 База данных пуста.")
+            await message.answer(t("database_empty", lang=user.language))
             return
 
         excel_bytes = create_excel_file(groups)
         document = BufferedInputFile(excel_bytes, filename="База_каналов.xlsx")
         await message.answer_document(
             document=document,
-            caption=f"📦 Вся база данных Telegram-групп и каналов.\n\n📊 Всего записей: {len(groups)}"
+            caption=t("export_channels_caption", lang=user.language, total_records=len(groups))
         )
 
     except Exception as e:
-        await message.answer("❌ Произошла ошибка при создании файла.")
+        await message.answer(t("export_error_generic", lang=user.language))
         logger.exception(e)
 
 
 @router.message(F.text == "📥 База групп")
 async def export_supergroups(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
-    await state.clear()  # Завершаем текущее состояние машины состояния
+    await state.clear()
+    user = User.get(User.user_id == message.from_user.id)
     try:
         # Получаем только СУПЕРГРУППЫ
         groups = TelegramGroup.select().where(
             TelegramGroup.group_type == 'Группа (супергруппа)'
         )
         if not groups:
-            await message.answer("📭 База данных пуста.")
+            await message.answer(t("database_empty", lang=user.language))
             return
 
         excel_bytes = create_excel_file(groups)
         document = BufferedInputFile(excel_bytes, filename="База_групп.xlsx")
         await message.answer_document(
             document=document,
-            caption=f"📦 Вся база данных Telegram-групп и каналов.\n\n📊 Всего записей: {len(groups)}"
+            caption=t("export_groups_caption", lang=user.language, total_records=len(groups))
         )
 
     except Exception as e:
-        await message.answer("❌ Произошла ошибка при создании файла.")
+        await message.answer(t("export_error_generic", lang=user.language))
         logger.exception(e)
 
 
@@ -342,21 +344,11 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     :param state: (FSMContext, optional) Контекст состояния конечного автомата (не используется, но передаётся).
     :return: None
     """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    text = (
-        "👋 Добро пожаловать в режим получения базы данных!\n\n"
-        "Вот что вы можете сделать:\n\n"
+    await state.clear()
+    user = User.get(User.user_id == message.from_user.id)
 
-        "🔹 <b>📥 Получить всю базу</b> — получите полный список всех сохранённых групп и каналов в формате Excel.\n"
-        "🔹 <b>Получить базу Каналов</b> — получите список всех сохранённых каналов в формате Excel.\n"
-        "🔹 <b>Получить базу Групп (супергрупп)</b> — получите список всех сохранённых супергрупп в формате Excel.\n"
-        "🔹 <b>Получить базу Обычных чатов (группы старого типа)</b> — получите список всех сохранённых обычных чатов (групп старого типа) в формате Excel.\n"
-        "🔹 Выбрать категорию для получения базы\n\n"
-
-        "🔸 Нажмите <b>Назад</b>, чтобы вернуться в главное меню."
-    )
     await message.answer(
-        text=text,
+        text=t("get_database_menu", lang=user.language),
         reply_markup=search_group_ai(),
         parse_mode="HTML"
     )
@@ -368,8 +360,9 @@ async def start_category_export(message: Message, state: FSMContext):
     Запускает процесс выбора категории для экспорта.
     Показывает клавиатуру с категориями и переводит в состояние ожидания выбора.
     """
+    user = User.get(User.user_id == message.from_user.id)
     await message.answer(
-        "📌 Выберите категорию, по которой хотите получить список групп/каналов:",
+        t("select_category_prompt", lang=user.language),
         reply_markup=get_categories_keyboard()
     )
     await state.set_state(ExportStates.waiting_for_category)
@@ -380,11 +373,12 @@ async def handle_category_selection(message: Message, state: FSMContext):
     """
     Обрабатывает выбор категории и формирует файл со списком групп.
     """
+    user = User.get(User.user_id == message.from_user.id)
     selected_category = message.text.strip()
 
     # Проверка на кнопку "Назад"
     if selected_category == "⬅️ Назад":
-        await message.answer("❌ Отменено.", reply_markup=ReplyKeyboardRemove())
+        await message.answer(t("action_cancelled", lang=user.language), reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
 
@@ -414,7 +408,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
     if selected_category not in valid_categories:
         await message.answer(
-            "⚠️ Неверная категория. Пожалуйста, выберите из списка.",
+            t("invalid_category", lang=user.language),
             reply_markup=get_categories_keyboard()
         )
         return
@@ -425,7 +419,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
     if group_count == 0:
         await message.answer(
-            f"📭 В категории «{selected_category}» пока нет ни одной группы.",
+            t("category_empty", lang=user.language, category=selected_category),
             reply_markup=ReplyKeyboardRemove()
         )
         await state.clear()
@@ -480,7 +474,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
             file=output.getvalue(),
             filename=file_name
         ),
-        caption=f"✅ Экспортировано {group_count} групп/каналов по категории:\n«{selected_category}»",
+        caption=t("category_export_caption", lang=user.language, group_count=group_count, category=selected_category),
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -548,8 +542,9 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
     # telegram_user = message.from_user
     user_input = message.text.strip()
+    user = User.get(User.user_id == message.from_user.id)
     # Отправляем сообщение о начале поиска
-    processing_msg = await message.answer("🔍 Ищу группы и каналы...")
+    processing_msg = await message.answer(t("searching_groups", lang=user.language))
 
     try:
         # Получаем ответ от AI
@@ -592,25 +587,25 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             excel_file = BufferedInputFile(excel_bytes, filename=filename)
 
-            summary = format_summary_message(len(saved_groups))
+            summary = format_summary_message(len(saved_groups), lang=user.language)
             await message.answer(summary, parse_mode="HTML")
             # Отправляем CSV файл
             await message.answer_document(
                 document=excel_file,
-                caption=f"📄 Результаты поиска по запросу: <b>{user_input}</b>",
+                caption=t("search_results_caption", lang=user.language, query=user_input),
                 parse_mode="HTML"
             )
             logger.info(f"Отправлено {len(saved_groups)} групп пользователю {message.from_user.id} в Excel файле")
         else:
             await message.answer(
-                "❌ К сожалению, по вашему запросу ничего не найдено. Попробуйте другие ключевые слова.",
+                t("search_no_results", lang=user.language),
                 reply_markup=back_keyboard()
             )
     except Exception as e:
         logger.error(f"Ошибка при обработке запроса: {e}")
         await processing_msg.delete()
         await message.answer(
-            "❌ Произошла ошибка при поиске. Попробуйте ещё раз.",
+            t("search_error", lang=user.language),
             reply_markup=back_keyboard()
         )
     finally:
@@ -650,6 +645,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     Каждый запрос обрабатывается через ОТДЕЛЬНЫЙ случайный аккаунт.
     """
     telegram_user = message.from_user
+    user = User.get(User.user_id == telegram_user.id)
     user_input = message.text.strip()
 
     # Парсим ввод в список запросов
@@ -657,13 +653,13 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
     if not search_terms:
         await message.answer(
-            "❌ Введите хотя бы один поисковый запрос",
+            t("global_search_no_terms", lang=user.language),
             reply_markup=back_keyboard()
         )
         await state.clear()
         return
 
-    processing_msg = await message.answer(f"🔍 Обрабатываю {len(search_terms)} запросов...")
+    processing_msg = await message.answer(t("global_search_processing", lang=user.language, total=len(search_terms)))
 
     all_saved_groups = []
     successful_queries = 0
@@ -679,7 +675,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             if not client:
                 logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
-                await message.answer(f"⚠️ Пропущено: '{term}' (нет доступных аккаунтов)")
+                await message.answer(t("global_search_skipped", lang=user.language, term=term))
                 continue
 
             try:
@@ -718,7 +714,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 # 📊 Обновляем статус в Telegram (опционально)
                 if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
                     await processing_msg.edit_text(
-                        f"🔍 Обработано {idx}/{len(search_terms)}: {successful_queries} успешно"
+                        t("global_search_progress", lang=user.language, current=idx, total=len(search_terms), successful=successful_queries)
                     )
 
             except Exception as e:
@@ -742,18 +738,18 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             excel_file = BufferedInputFile(excel_bytes, filename=filename)
 
-            summary = format_summary_message(len(all_saved_groups))
+            summary = format_summary_message(len(all_saved_groups), lang=user.language)
             await message.answer(summary, parse_mode="HTML")
 
             await message.answer_document(
                 document=excel_file,
-                caption=f"📄 Найдено {len(all_saved_groups)} групп по {successful_queries}/{len(search_terms)} запросам",
+                caption=t("global_search_results_caption", lang=user.language, total=len(all_saved_groups), successful=successful_queries, total_queries=len(search_terms)),
                 parse_mode="HTML"
             )
             logger.info(f"✅ Отправлено {len(all_saved_groups)} групп пользователю {telegram_user.id}")
         else:
             await message.answer(
-                "❌ К сожалению, ничего не найдено. Попробуйте другие ключевые слова.",
+                t("global_search_no_results", lang=user.language),
                 reply_markup=back_keyboard()
             )
 
@@ -761,7 +757,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         logger.error(f"❌ Критическая ошибка: {e}")
         await processing_msg.delete()
         await message.answer(
-            "❌ Произошла ошибка при поиске. Попробуйте ещё раз.",
+            t("search_error", lang=user.language),
             reply_markup=back_keyboard()
         )
     finally:
