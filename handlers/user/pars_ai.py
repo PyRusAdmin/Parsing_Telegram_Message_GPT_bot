@@ -72,7 +72,7 @@ def save_group_to_db(group_data: dict):
             existing.username = group_data.get('username')
             existing.description = group_data.get('description')
             existing.participants = group_data.get('participants', 0)
-            existing.category = group_data.get('category')
+            existing.category = (group_data.get('category') or '').lower() or None
             existing.group_type = group_data.get('group_type')
             existing.language = group_data.get('language', '')
             existing.availability = group_data.get('availability', 'unknown')
@@ -86,6 +86,9 @@ def save_group_to_db(group_data: dict):
 
         else:
             # Создаём новую запись
+            category = group_data.get('category')
+            if category:
+                category = category.lower()
             new_group = TelegramGroup.create(
                 telegram_id=telegram_id,
                 group_hash=group_hash,
@@ -93,7 +96,7 @@ def save_group_to_db(group_data: dict):
                 username=group_data.get('username'),
                 description=group_data.get('description'),
                 participants=group_data.get('participants', 0),
-                category=group_data.get('category'),
+                category=category,
                 group_type=group_data.get('group_type'),
                 language=group_data.get('language', ''),
                 availability=group_data.get('availability', 'unknown'),
@@ -382,28 +385,29 @@ async def handle_category_selection(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Список допустимых категорий (для защиты от ручного ввода)
+    # Список допустимых категорий (нижний регистр)
+    selected_category = selected_category.lower()
     valid_categories = {
-        "Инвестиции",
-        "Финансы и личный бюджет",
-        "Криптовалюты и блокчейн",
-        "Бизнес и предпринимательство",
-        "Маркетинг и продвижение",
-        "Технологии и IT",
-        "Образование и саморазвитие",
-        "Работа и карьера",
-        "Недвижимость",
-        "Здоровье и медицина",
-        "Путешествия",
-        "Авто и транспорт",
-        "Шоппинг и скидки",
-        "Развлечения и досуг",
-        "Политика и общество",
-        "Наука и исследования",
-        "Спорт и фитнес",
-        "Кулинария и еда",
-        "Мода и красота",
-        "Хобби и творчество"
+        "инвестиции",
+        "финансы и личный бюджет",
+        "криптовалюты и блокчейн",
+        "бизнес и предпринимательство",
+        "маркетинг и продвижение",
+        "технологии и it",
+        "образование и саморазвитие",
+        "работа и карьера",
+        "недвижимость",
+        "здоровье и медицина",
+        "путешествия",
+        "авто и транспорт",
+        "шоппинг и скидки",
+        "развлечения и досуг",
+        "политика и общество",
+        "наука и исследования",
+        "спорт и фитнес",
+        "кулинария и еда",
+        "мода и красота",
+        "хобби и творчество"
     }
 
     if selected_category not in valid_categories:

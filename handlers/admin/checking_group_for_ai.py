@@ -110,8 +110,19 @@ async def process_category_method_choice(message: Message, state: FSMContext):
             api_key=OPENROUTER_API_KEY,
             timeout=30
         )
-        model = "meta-llama/llama-3.2-3b-instruct"
-        await assign_categories(message, client, model)
+        # Лучшие бесплатные модели для классификации (выберите нужную):
+        # 🏆 Лучшая для русского языка:
+        model = "google/gemma-3-27b:free"
+        # 🔥 Самая умная (уровень GPT-4):
+        # model = "meta-llama/llama-3.3-70b-instruct:free"
+        # ⚖️ Баланс скорости и качества:
+        # model = "google/gemma-3-12b:free"
+        # 🌐 Многоязычная:
+        # model = "z-ai/glm-4.5-air:free"
+        # 📊 Лёгкая и быстрая:
+        # model = "meta-llama/llama-3.2-3b:free"
+        await assign_categories(message, client, model="google/gemma-3n-e4b-it")
+
     elif message.text == "🚀 Мощно (GROQ API)":
         await state.clear()
         client = AsyncGroq(api_key=GROQ_API_KEY)
@@ -150,11 +161,12 @@ async def assign_categories(message: Message, client, model):
                 result = await category_assignment(group_data, client, model)
 
                 if result.get("success") and result.get("category"):
-                    # ✅ Сразу пишем в БД
-                    await sync_to_async(lambda: TelegramGroup.update(category=result["category"])
+                    # ✅ Сразу пишем в БД (в нижнем регистре)
+                    category_lower = result["category"].lower()
+                    await sync_to_async(lambda: TelegramGroup.update(category=category_lower)
                                         .where(TelegramGroup.telegram_id == result["telegram_id"])
                                         .execute(), thread_sensitive=True)()
-                    logger.info(f"[{i}/{total}] ✅ {group_data['name']} → {result['category']}")
+                    logger.info(f"[{i}/{total}] ✅ {group_data['name']} → {category_lower}")
                 else:
                     logger.warning(f"[{i}/{total}] ❌ {group_data['name']} — AI не определил")
 
@@ -190,7 +202,7 @@ async def get_groups_without_category_message(message: Message):
     count = await sync_to_async(_count)()
 
     await message.answer(
-        t("ai_category_stats_title", lang=user.language) + "\n\n"
-        t("ai_category_no_category_count", lang=user.language, count=count) + "\n\n"
+        t("ai_category_stats_title", lang=user.language) + "\n\n" +
+        t("ai_category_no_category_count", lang=user.language, count=count) + "\n\n" +
         t("ai_category_run_ai", lang=user.language)
     )

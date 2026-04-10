@@ -9,16 +9,23 @@ from loguru import logger
 from openai import OpenAI
 
 from database.database import TelegramGroup, db, User
-from g4f.client import Client
 from locales.locales import t
 
 router = Router(name=__name__)
 
 
+from core.config import OPENROUTER_API_KEY
+
+
 def ai_llama_fri(group_data: dict):
-    """Определение языка (ТОЛЬКО AI-запрос, БЕЗ записи в БД)"""
+    """Определение языка (ТОЛЬКО AI-запрос через OpenRouter Free, БЕЗ записи в БД)"""
     try:
-        client = Client()
+        # from openai import OpenAI
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=OPENROUTER_API_KEY,
+            timeout=15
+        )
 
         data_parts = []
         if group_data.get('name'):
@@ -40,7 +47,7 @@ def ai_llama_fri(group_data: dict):
         )
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="google/gemma-3n-e4b-it",  # Бесплатная модель OpenRouter
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=10
@@ -119,7 +126,7 @@ def ai_llama(group_data: dict) -> dict:
         )
 
         completion = client.chat.completions.create(
-            model="meta-llama/llama-3-8b-instruct",
+            model="google/gemma-3-12b:free",  # Бесплатная модель OpenRouter для определения языка
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=10

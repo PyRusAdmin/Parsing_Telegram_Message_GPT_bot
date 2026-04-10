@@ -107,7 +107,7 @@ async def category_assignment(group_data: dict, client, model) -> dict:
         suspicious_phrases = ['hello', 'hi ', 'i am', 'thank', 'proxy', 'http', 'www', 'click', 'buy']
         if any(phrase in category.lower() for phrase in suspicious_phrases):
             logger.debug(f"⚠️ Подозрительный ответ AI: {category}")
-            category = "Не определена"
+            category = "не определена"
 
         # ✅ Валидация результата — сверяем со списком допустимых категорий
         valid_categories = [
@@ -124,8 +124,8 @@ async def category_assignment(group_data: dict, client, model) -> dict:
             logger.debug(f"⚪ AI вернул некорректную категорию '{category}' для: {group_data.get('name')}")
             return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
 
-        # Нормализуем категорию (первая буква заглавная)
-        category = category.title()
+        # Нормализуем категорию (нижний регистр)
+        category = category.lower()
 
         logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
         return {

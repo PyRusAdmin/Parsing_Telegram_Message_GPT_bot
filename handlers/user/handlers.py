@@ -252,6 +252,29 @@ async def handle_settings_menu(message, state: FSMContext):
         logger.exception(e)
 
 
+@router.message(F.text == "🌐 Сменить язык")
+async def handle_change_language(message, state: FSMContext):
+    """
+    Обработчик команды "Сменить язык".
+
+    Предлагает пользователю выбрать язык интерфейса.
+    Использует клавиатуру выбора языка.
+
+    :param message: (Message) Входящее сообщение от пользователя.
+    :param state: (FSMContext) Контекст машины состояний, сбрасывается.
+    :return: None
+    """
+    try:
+        await state.clear()
+
+        await message.answer(
+            t("welcome_ask_language", lang="ru"),
+            reply_markup=get_lang_keyboard()
+        )
+    except Exception as e:
+        logger.exception(e)
+
+
 @router.message(F.text == "🚀 Запуск отслеживания")
 async def handle_start_tracking(message, state: FSMContext):
     """
