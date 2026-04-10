@@ -7,8 +7,8 @@ from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
 from database.database import get_user_accounts
-
 from keyboards.user.keyboards import menu_launch_tracking_keyboard
+from locales.locales import t
 
 
 async def find_session_file(user_id: int, user, message):
@@ -27,8 +27,7 @@ async def find_session_file(user_id: int, user, message):
         if not accounts:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
             await message.answer(
-                "❌ У вас нет подключённых аккаунтов.\n\n"
-                "Отправьте файл сессии `.session` или нажмите «Подключение аккаунта» в меню.",
+                t("no_accounts", lang=user.language),
                 reply_markup=menu_launch_tracking_keyboard()
             )
             return None
@@ -44,8 +43,7 @@ async def find_session_file(user_id: int, user, message):
         if not await _is_session_valid(session_string):
             logger.warning(f"⚠️ Сессия {phone} не валидна — удаляем из БД")
             await message.answer(
-                f"⚠️ Аккаунт `{phone}` больше не действителен.\n"
-                f"Пожалуйста, подключите аккаунт заново.",
+                t("session_invalid", lang=user.language, phone=phone),
                 reply_markup=menu_launch_tracking_keyboard()
             )
             # Удаляем невалидную сессию из БД
@@ -63,7 +61,7 @@ async def find_session_file(user_id: int, user, message):
     except Exception as e:
         logger.exception(f"❌ Ошибка получения аккаунта из БД для пользователя {user_id}: {e}")
         await message.answer(
-            "⚠️ Произошла ошибка при получении аккаунта. Попробуйте позже.",
+            t("account_fetch_error", lang=user.language),
             reply_markup=menu_launch_tracking_keyboard()
         )
         return None

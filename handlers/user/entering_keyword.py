@@ -67,6 +67,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
 
     raw_input = message.text.strip()
     telegram_user = message.from_user
+    user = User.get(User.user_id == telegram_user.id)
     logger.info(f"Пользователь ввёл ключевое слово: {raw_input}")
 
     keywords_list = [
@@ -76,7 +77,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     ]
 
     if not keywords_list:
-        await message.answer("⚠️ Вы не указали ни одного ключевого слова.")
+        await message.answer(t("no_keywords_entered", lang=user.language))
         await state.clear()  # Завершаем текущее состояние машины состояния
         return
 
@@ -111,32 +112,32 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
         keywords_preview = added_keywords[:10]  # Show first 10
         keywords_text = "\n".join(f"• {kw}" for kw in keywords_preview)
         if len(added_keywords) > 10:
-            keywords_text += f"\n... и ещё {len(added_keywords) - 10}"
+            keywords_text += f"\n... {t('keywords_and_more', lang=user.language, count=len(added_keywords) - 10)}"
         response_parts.append(
-            f"✅ Добавлено ключевых слов: {len(added_keywords)}\n{keywords_text}"
+            f"✅ {t('keywords_added_count', lang=user.language, count=len(added_keywords))}\n{keywords_text}"
         )
 
     if skipped_keywords:
         skipped_preview = skipped_keywords[:5]  # Show first 5
         skipped_text = "\n".join(f"• {kw}" for kw in skipped_preview)
         if len(skipped_keywords) > 5:
-            skipped_text += f"\n... и ещё {len(skipped_keywords) - 5}"
+            skipped_text += f"\n... {t('keywords_and_more', lang=user.language, count=len(skipped_keywords) - 5)}"
         response_parts.append(
-            f"⚠️ Уже были добавлены ({len(skipped_keywords)}):\n{skipped_text}"
+            f"⚠️ {t('keywords_already_added', lang=user.language, count=len(skipped_keywords))}:\n{skipped_text}"
         )
 
     if error_keywords:
         error_text = "\n".join(f"• {kw}: {err}" for kw, err in error_keywords[:3])
         if len(error_keywords) > 3:
-            error_text += f"\n... и ещё {len(error_keywords) - 3} ошибок"
-        response_parts.append(f"❌ Ошибки при добавлении:\n{error_text}")
+            error_text += f"\n... {t('keywords_and_more_errors', lang=user.language, count=len(error_keywords) - 3)}"
+        response_parts.append(f"❌ {t('keywords_add_errors', lang=user.language)}:\n{error_text}")
 
     # Summary
     summary = (
-        f"\n📊 Итого:\n"
-        f"• Добавлено: {len(added_keywords)}\n"
-        f"• Пропущено (дубликаты): {len(skipped_keywords)}\n"
-        f"• Ошибки: {len(error_keywords)}"
+        f"\n📊 {t('keywords_summary', lang=user.language)}\n"
+        f"• {t('keywords_added', lang=user.language)}: {len(added_keywords)}\n"
+        f"• {t('keywords_skipped', lang=user.language)}: {len(skipped_keywords)}\n"
+        f"• {t('keywords_errors', lang=user.language)}: {len(error_keywords)}"
     )
     response_parts.append(summary)
 

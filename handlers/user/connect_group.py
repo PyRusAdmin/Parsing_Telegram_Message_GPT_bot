@@ -74,12 +74,12 @@ async def handle_group_username_submission(message: Message, state: FSMContext):
         GroupModel.delete().execute()
         # Вставляем новую
         GroupModel.create(user_group=group_username)
-        await message.answer(f"✅ Группа {group_username} добавлена для отправки сообщений.")
+        await message.answer(t("group_added", lang=user.language, group=group_username))
         logger.info(f"username {group_username} добавлено пользователем {message.from_user.id}")
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
-            await message.answer("⚠️ Эта группа уже добавлена.")
+            await message.answer(t("group_already_added", lang=user.language))
         else:
-            await message.answer("⚠️ Ошибка при добавлении группы.")
+            await message.answer(t("group_add_error", lang=user.language))
         logger.error(f"Ошибка при добавлении ключевого слова: {e}")
     await state.clear()  # Завершаем текущее состояние машины состояния

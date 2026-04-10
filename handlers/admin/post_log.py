@@ -4,7 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
 from aiogram.types import Message
 
+from database.database import User
 from keyboards.user.keyboards import back_keyboard
+from locales.locales import t
 
 router = Router(name=__name__)
 
@@ -38,11 +40,13 @@ async def log(message: Message, state: FSMContext):
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
 
+    user = User.get(User.user_id == message.from_user.id)
+
     document = FSInputFile("logs/log.log")
 
     await message.answer_document(
         document=document,  # Файл логов для отправки
-        caption=f"📄 Лог файл с ошибками.",  # Текст под файлом
+        caption=t("log_file_caption", lang=user.language),  # Текст под файлом
         parse_mode="HTML",  # Режим разметки для капшна
         reply_markup=back_keyboard(),  # Клавиатура с кнопкой «Назад»
     )

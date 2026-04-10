@@ -8,8 +8,9 @@ from asgiref.sync import sync_to_async
 from loguru import logger
 from openai import OpenAI
 
-from database.database import TelegramGroup, db
+from database.database import TelegramGroup, db, User
 from g4f.client import Client
+from locales.locales import t
 
 router = Router(name=__name__)
 
@@ -239,15 +240,16 @@ async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
 @router.message(F.text == "🌐 Присвоить язык")
 async def language_detection(message):
     """Присвоение языка группам"""
+    user = User.get(User.user_id == message.from_user.id)
 
     # 1️⃣ Получаем группы для обработки
     groups_to_process = await get_groups_without_language()
     if not groups_to_process:
-        await message.answer("❌ Нет групп для обработки")
+        await message.answer(t("lang_detect_no_groups", lang=user.language))
         return
 
     total = len(groups_to_process)
-    await message.answer(f"🚀 Запуск обработки {total} групп...")
+    await message.answer(t("lang_detect_starting", lang=user.language, total=total))
 
     # 2️⃣ Определяем языки параллельно (ТОЛЬКО AI, БЕЗ БД)
     loop = asyncio.get_event_loop()
@@ -262,7 +264,7 @@ async def language_detection(message):
 
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(t("lang_detect_error", lang=user.language, error=str(e)))
         return
 
     # 3️⃣ Собираем успешные результаты для обновления
@@ -286,7 +288,7 @@ async def language_detection(message):
 
     # 4️⃣ Обновляем БД одним батчем (в основном потоке)
     if successful_results:
-        await message.answer(f"💾 Сохранение {len(successful_results)} результатов в БД...")
+        await message.answer(t("lang_detect_saving", lang=user.language, count=len(successful_results)))
         updated, db_failed = await batch_update_languages(successful_results)
     else:
         updated = 0
@@ -296,12 +298,12 @@ async def language_detection(message):
     total_failed = ai_failed + db_failed
 
     await message.answer(
-        f"✅ Обработка завершена!\n\n"
-        f"📊 Статистика:\n"
-        f"• Всего: {total}\n"
-        f"• AI определил: {len(successful_results)}\n"
-        f"• Сохранено в БД: {updated}\n"
-        f"• Ошибок AI: {ai_failed}\n"
-        f"• Ошибок БД: {db_failed}\n"
-        f"• Всего ошибок: {total_failed}"
+        t("lang_detect_complete", lang=user.language) + "\n\n"
+        f"📊 {t('lang_detect_stats_title', lang=user.language)}:\n"
+        f"• {t('lang_detect_stats_total', lang=user.language)}: {total}\n"
+        f"• {t('lang_detect_stats_ai_success', lang=user.language)}: {len(successful_results)}\n"
+        f"• {t('lang_detect_stats_db_success', lang=user.language)}: {updated}\n"
+        f"• {t('lang_detect_stats_ai_fail', lang=user.language)}: {ai_failed}\n"
+        f"• {t('lang_detect_stats_db_fail', lang=user.language)}: {db_failed}\n"
+        f"• {t('lang_detect_stats_total_fail', lang=user.language)}: {total_failed}"
     )

@@ -58,7 +58,7 @@ async def join_target_group(client, user_id, message):
         logger.warning(f"❌ Не найдена целевая группа для пользователя {user_id}")
         # Если группа не найдена, то высылаем сообщение пользователю группы, что такой группы нет и клавиатуру для добавления группы для пересылки
         await message.answer(
-            text="❌ Не найдена целевая группа для пользователя. Подключите группу, для того, что бы я мог пересылать туда сообщения, найденные по вашим ключевым словам.",
+            text=t("target_group_not_found", lang=user.language),
             reply_markup=connect_grup_keyboard_tech()
         )
         return None  # Возвращаем None, если группа не найдена
@@ -66,7 +66,7 @@ async def join_target_group(client, user_id, message):
     if not target_username:
         logger.error(f"❌ Целевая группа имеет пустой username для user_id={user_id}")
         await message.answer(
-            text="❌ Не найдена целевая группа для пользователя. Подключите группу, для того, что бы я мог пересылать туда сообщения, найденные по вашим ключевым словам.",
+            text=t("target_group_not_found", lang=user.language),
             reply_markup=connect_grup_keyboard_tech()
         )
         return None
@@ -333,13 +333,12 @@ async def join_required_channels(client, user_id, message, already_subscribed):
 
     logger.info(f"📊 Всего каналов для подписки: {total_count}, уже подписан на: {len(already_subscribed)}")
     if total_count == 0:
-        await message.answer("📭 У вас нет добавленных каналов для отслеживания.")
+        await message.answer(t("no_channels_to_track", lang=user.language))
         return
 
     if len(list(db_channels - already_subscribed)) > 500:
         await message.answer(
-            f"⚠️ Найдено {len(list(db_channels - already_subscribed))} каналов. "
-            f"Подписка будет выполнена только на первые {500}."
+            t("too_many_channels", lang=user.language, total=len(list(db_channels - already_subscribed)), limit=500)
         )
 
     for channel in list(db_channels - already_subscribed)[:500]:  # Ограничиваем до 500 записей
@@ -397,8 +396,7 @@ async def join_required_channels(client, user_id, message, already_subscribed):
             logger.warning(f"🔗 Подписка на {channel}")
             await client(JoinChannelRequest(channel))
             await message.answer(
-                f"✅ Подписка на {channel} выполнена\n"
-                f"⏳ Следующая попытка через {random_delay} сек."
+                t("channel_subscribed", lang=user.language, channel=channel, delay=random_delay)
             )
             await asyncio.sleep(random_delay)
         except ChannelPrivateError:
@@ -440,7 +438,7 @@ async def ensure_joined_target_group(client, message, user_id: int):
     target_group_id = await join_target_group(client=client, user_id=user_id, message=message)
 
     if not target_group_id:
-        text_error = "❌ Аккаунту не удалось присоединиться к целевой группе, проверьте подключенную группу"
+        text_error = t("target_group_join_error", lang=user.language)
         logger.error(text_error)
         await message.answer(
             text=text_error,

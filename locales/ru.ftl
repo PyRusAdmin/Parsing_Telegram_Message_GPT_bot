@@ -200,3 +200,152 @@ global_search_results_caption =
 
 global_search_no_results =
     ❌ К сожалению, ничего не найдено. Попробуйте другие ключевые слова.
+
+# === Проверка группы на ключевые слова ===
+check_group_ask_url =
+    🔍 Введите ссылку на группу или канал для поиска ключевых слов.
+
+    📌 Пример: <code>https://t.me/example_group</code> или <code>@example_channel</code>
+
+check_group_ask_keyword =
+    ✍️ Введите ключевое слово для поиска в сообщениях.
+
+    📌 Пример: <code>Работа в Москве</code> или <code>ищу дизайнера</code>
+
+    ❗️Важно: Не указывайте слишком короткие или множественные слова (например: <code>работа, Москва, дизайн</code>).
+    Бот ищет точные совпадения — лучше использовать фразу целиком.
+
+check_group_started =
+    ✅ Данные успешно получены!
+
+    🔍 Начинаю поиск сообщений по указанной группе и ключевому слову…
+
+    ⏳ Пожалуйста, ожидайте — процесс может занять некоторое время.
+
+check_group_new_message_with_link =
+    📥 <b>Новое сообщение</b>
+
+    <b>Источник:</b> { $title }
+    <b>Дата:</b> { $msg_date }
+    <b>Ссылка:</b> <a href='{ $message_link }'>Перейти к сообщению</a>
+
+    <b>Текст сообщения:</b>
+    { $display_text }
+
+check_group_new_message_no_link =
+    📥 <b>Новое сообщение</b>
+
+    <b>Источник:</b> { $title }
+    <b>Дата:</b> { $msg_date }
+    <b>Текст сообщения:</b>
+    { $display_text }
+
+check_group_summary =
+    🔍 Поиск завершён:
+    Проверено сообщений: { $count }
+    Совпадений с '{ $keyword }': { $matched_count }
+
+check_group_parse_error =
+    ❌ Произошла ошибка при парсинге группы. Проверьте ссылку и доступ к чату.
+
+# === Проверка аккаунтов ===
+checking_accounts_start =
+    Аккаунтов для проверки: { $count }
+checking_accounts_complete =
+    ✅ Проверка аккаунтов завершена
+
+# === Проверка группы для AI ===
+ai_category_select_method =
+    🤖 <b>Выберите метод присвоения категорий:</b>
+
+    ⚡️ <b>Быстро (g4f.free)</b>
+    • Бесплатно, без API ключей
+    • Последовательная обработка (медленнее)
+    • Подходит для небольших объёмов
+    • Может возвращать неточные результаты
+
+    🚀 <b>Мощно (Groq API)</b>
+    • Требует API ключ Groq
+    • Параллельная обработка в 10 потоков (быстрее)
+    • Подходит для больших объёмов
+    • Более точные результаты
+
+    Выберите метод:
+ai_category_back =
+    ↩️ Возврат в панель администратора
+ai_category_checking_models =
+    🔍 Проверка доступных моделей...
+ai_category_model_selected =
+    ✅ Выбрана модель: { $model }
+ai_category_select_from_keyboard =
+    Пожалуйста, выберите метод из клавиатуры ниже:
+ai_category_all_have_categories =
+    ✅ Все группы уже имеют категории!
+ai_category_processing =
+    🔄 Обрабатываю { $total } групп...
+ai_category_done =
+    ✅ <b>Готово!</b>
+ai_category_error =
+    ❌ Ошибка: { $error }
+ai_category_stats_title =
+    📊 <b>Статистика категорий:</b>
+ai_category_no_category_count =
+    🗃️ Групп без категории: { $count }
+ai_category_run_ai =
+    Нажмите '🏷️ Присвоить категорию' для запуска AI
+
+# === Подключение аккаунта ===
+connect_account_ask_session =
+    📤 Отправьте мне файл(ы) сессии Telethon (должны заканчиваться на `.session`)
+
+    Можно отправить сразу несколько файлов — бот обработает их по очереди.
+    Когда закончите — нажмите кнопку «Назад» или отправьте /start
+connect_account_invalid_file =
+    ❌ Это не файл сессии! Отправьте файл с расширением `.session`
+connect_account_limit_reached =
+    ⚠️ Достигнут лимит: { $max } файлов за раз.
+    Обработайте текущие и отправьте остальные позже.
+connect_account_file_queued =
+    📥 Файл принят: `{ $filename }`
+    📊 В очереди: { $total } файл(ов). Обрабатываю...
+connect_account_success =
+    ✅ <b>{ $filename }</b> — успешно!
+    📱 { $phone } | 👤 { $name }
+connect_account_failed =
+    ❌ <b>{ $filename }</b> — не прошёл проверку
+connect_account_error =
+    ⚠️ <b>{ $filename }</b> — ошибка обработки
+connect_account_processing_done =
+    📊 <b>Обработка завершена!</b>
+
+# === Определение языка ===
+lang_detect_no_groups =
+    ❌ Нет групп для обработки
+lang_detect_starting =
+    🚀 Запуск обработки { $total } групп...
+lang_detect_error =
+    ❌ Ошибка: { $error }
+lang_detect_saving =
+    💾 Сохранение { $count } результатов в БД...
+lang_detect_complete =
+    ✅ Обработка завершена!
+
+    📊 Статистика:
+    • Всего: { $total }
+    • AI определил: { $ai_success }
+    • Сохранено в БД: { $db_success }
+    • Ошибок AI: { $ai_fail }
+    • Ошибок БД: { $db_fail }
+    • Всего ошибок: { $total_fail }
+
+lang_detect_stats_title = Статистика
+lang_detect_stats_total = Всего
+lang_detect_stats_ai_success = AI определил
+lang_detect_stats_db_success = Сохранено в БД
+lang_detect_stats_ai_fail = Ошибок AI
+lang_detect_stats_db_fail = Ошибок БД
+lang_detect_stats_total_fail = Всего ошибок
+
+# === Лог файл ===
+log_file_caption =
+    📄 Лог файл с ошибками.

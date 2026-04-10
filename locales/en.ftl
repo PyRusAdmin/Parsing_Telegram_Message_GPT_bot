@@ -200,3 +200,152 @@ global_search_results_caption =
 
 global_search_no_results =
     ❌ Unfortunately, nothing was found. Try other keywords.
+
+# === Check Group for Keywords ===
+check_group_ask_url =
+    🔍 Enter a link to a group or channel to search for keywords.
+
+    📌 Example: <code>https://t.me/example_group</code> or <code>@example_channel</code>
+
+check_group_ask_keyword =
+    ✍️ Enter a keyword to search for in messages.
+
+    📌 Example: <code>Work in Moscow</code> or <code>looking for designer</code>
+
+    ❗️Important: Do not use too short or multiple words (e.g., <code>work, Moscow, design</code>).
+    The bot searches for exact matches — it is better to use the full phrase.
+
+check_group_started =
+    ✅ Data received successfully!
+
+    🔍 Starting search for messages in the specified group and keyword…
+
+    ⏳ Please wait — the process may take some time.
+
+check_group_new_message_with_link =
+    📥 <b>New message</b>
+
+    <b>Source:</b> { $title }
+    <b>Date:</b> { $msg_date }
+    <b>Link:</b> <a href='{ $message_link }'>Go to message</a>
+
+    <b>Message text:</b>
+    { $display_text }
+
+check_group_new_message_no_link =
+    📥 <b>New message</b>
+
+    <b>Source:</b> { $title }
+    <b>Date:</b> { $msg_date }
+    <b>Message text:</b>
+    { $display_text }
+
+check_group_summary =
+    🔍 Search completed:
+    Messages checked: { $count }
+    Matches for '{ $keyword }': { $matched_count }
+
+check_group_parse_error =
+    ❌ An error occurred while parsing the group. Please check the link and chat access.
+
+# === Account Checking ===
+checking_accounts_start =
+    Accounts to check: { $count }
+checking_accounts_complete =
+    ✅ Account checking completed
+
+# === Category Assignment for AI ===
+ai_category_select_method =
+    🤖 <b>Select category assignment method:</b>
+
+    ⚡️ <b>Fast (g4f.free)</b>
+    • Free, no API keys
+    • Sequential processing (slower)
+    • Suitable for small volumes
+    • May return inaccurate results
+
+    🚀 <b>Powerful (Groq API)</b>
+    • Requires Groq API key
+    • Parallel processing in 10 threads (faster)
+    • Suitable for large volumes
+    • More accurate results
+
+    Select a method:
+ai_category_back =
+    ↩️ Back to admin panel
+ai_category_checking_models =
+    🔍 Checking available models...
+ai_category_model_selected =
+    ✅ Selected model: { $model }
+ai_category_select_from_keyboard =
+    Please select a method from the keyboard below:
+ai_category_all_have_categories =
+    ✅ All groups already have categories!
+ai_category_processing =
+    🔄 Processing { $total } groups...
+ai_category_done =
+    ✅ <b>Done!</b>
+ai_category_error =
+    ❌ Error: { $error }
+ai_category_stats_title =
+    📊 <b>Category Statistics:</b>
+ai_category_no_category_count =
+    🗃️ Groups without category: { $count }
+ai_category_run_ai =
+    Press '🏷️ Assign Category' to start AI
+
+# === Connect Account ===
+connect_account_ask_session =
+    📤 Send me Telethon session file(s) (must end with `.session`)
+
+    You can send multiple files at once — the bot will process them in order.
+    When done — press the "Back" button or send /start
+connect_account_invalid_file =
+    ❌ This is not a session file! Send a file with `.session` extension
+connect_account_limit_reached =
+    ⚠️ Limit reached: { $max } files at once.
+    Process current files and send the rest later.
+connect_account_file_queued =
+    📥 File accepted: `{ $filename }`
+    📊 In queue: { $total } file(s). Processing...
+connect_account_success =
+    ✅ <b>{ $filename }</b> — success!
+    📱 { $phone } | 👤 { $name }
+connect_account_failed =
+    ❌ <b>{ $filename }</b> — failed validation
+connect_account_error =
+    ⚠️ <b>{ $filename }</b> — processing error
+connect_account_processing_done =
+    📊 <b>Processing completed!</b>
+
+# === Language Detection ===
+lang_detect_no_groups =
+    ❌ No groups to process
+lang_detect_starting =
+    🚀 Starting processing of { $total } groups...
+lang_detect_error =
+    ❌ Error: { $error }
+lang_detect_saving =
+    💾 Saving { $count } results to DB...
+lang_detect_complete =
+    ✅ Processing completed!
+
+    📊 Statistics:
+    • Total: { $total }
+    • AI detected: { $ai_success }
+    • Saved to DB: { $db_success }
+    • AI errors: { $ai_fail }
+    • DB errors: { $db_fail }
+    • Total errors: { $total_fail }
+
+lang_detect_stats_title = Statistics
+lang_detect_stats_total = Total
+lang_detect_stats_ai_success = AI detected
+lang_detect_stats_db_success = Saved to DB
+lang_detect_stats_ai_fail = AI errors
+lang_detect_stats_db_fail = DB errors
+lang_detect_stats_total_fail = Total errors
+
+# === Log File ===
+log_file_caption =
+    📄 Log file with errors.

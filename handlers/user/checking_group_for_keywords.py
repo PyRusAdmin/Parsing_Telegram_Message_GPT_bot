@@ -8,7 +8,9 @@ from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
+from database.database import User
 from keyboards.user.keyboards import back_keyboard
+from locales.locales import t
 from states.states import MyStatesParsing
 
 router = Router(name=__name__)
@@ -25,9 +27,9 @@ async def checking_group_for_keywords(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
+    user = User.get(User.user_id == message.from_user.id)
     await message.answer(
-        text=("🔍 Введите ссылку на группу или канал для поиска ключевых слов.\n\n"
-              "📌 Пример: <code>https://t.me/example_group</code> или <code>@example_channel</code>"),
+        text=t("check_group_ask_url", lang=user.language),
         reply_markup=back_keyboard(),
         parse_mode="HTML"
     )
@@ -42,11 +44,9 @@ async def get_url(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
     await state.update_data(url=message.text.strip())  # Сохраняем URL в контекст данных
+    user = User.get(User.user_id == message.from_user.id)
     await message.answer(
-        text=("✍️ Введите ключевое слово для поиска в сообщениях.\n\n"
-              "📌 Пример: <code>Работа в Москве</code> или <code>ищу дизайнера</code>\n\n"
-              "❗️Важно: Не указывайте слишком короткие или множественные слова (например: <code>работа, Москва, дизайн</code>).\n"
-              "Бот ищет точные совпадения — лучше использовать фразу целиком."),
+        text=t("check_group_ask_keyword", lang=user.language),
         reply_markup=back_keyboard(),
         parse_mode="HTML"
     )
@@ -61,10 +61,9 @@ async def get_keyword(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
     keyword = message.text.strip()  # Получаем ключевое слово из сообщения
+    user = User.get(User.user_id == message.from_user.id)
     await message.answer(
-        text=("✅ Данные успешно получены!\n\n"
-              "🔍 Начинаю поиск сообщений по указанной группе и ключевому слову…\n\n"
-              "⏳ Пожалуйста, ожидайте — процесс может занять некоторое время."),
+        text=t("check_group_started", lang=user.language),
         reply_markup=back_keyboard()
     )
     await state.update_data(keyword=keyword)
@@ -83,6 +82,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
     """
     try:
         user_id = message.from_user.id  # Получаем ID пользователя
+        user = User.get(User.user_id == message.from_user.id)
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
@@ -145,19 +145,25 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                     # Отправляем в целевую группу
                     if message_link:
                         await message.answer(
-                            text=(f"📥 <b>Новое сообщение</b>\n\n"
-                                  f"<b>Источник:</b> {title}\n"
-                                  f"<b>Дата:</b> {msg_date}\n"
-                                  f"<b>Ссылка:</b> <a href='{message_link}'>Перейти к сообщению</a>\n\n"
-                                  f"<b>Текст сообщения:</b>\n{display_text}"),
+                            text=t(
+                                "check_group_new_message_with_link",
+                                lang=user.language,
+                                title=title,
+                                msg_date=msg_date,
+                                message_link=message_link,
+                                display_text=display_text
+                            ),
                             parse_mode="HTML"
                         )
                     else:
                         await message.answer(
-                            text=(f"📥 <b>Новое сообщение</b>\n\n"
-                                  f"<b>Источник:</b> {title}\n"
-                                  f"<b>Дата:</b> {msg_date}\n"
-                                  f"<b>Текст сообщения:</b>\n{display_text}"),
+                            text=t(
+                                "check_group_new_message_no_link",
+                                lang=user.language,
+                                title=title,
+                                msg_date=msg_date,
+                                display_text=display_text
+                            ),
                             parse_mode="HTML"
                         )
                     logger.info(f"✅ Сообщение переслано в целевую группу (ID={user_id})")
@@ -165,15 +171,19 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                 await asyncio.sleep(0.4)
 
             await message.answer(
-                text=(f"🔍 Поиск завершён:\n"
-                      f"Проверено сообщений: {count}\n"
-                      f"Совпадений с '{keyword}': {matched_count}")
+                text=t(
+                    "check_group_summary",
+                    lang=user.language,
+                    count=count,
+                    keyword=keyword,
+                    matched_count=matched_count
+                )
             )
         except ValueError:
             logger.warning("❌ Не удалось найти группу или канал. Возможно не подходящий гео аккаунта.")
         except Exception as e:
             logger.exception(f"❌ Ошибка при парсинге группы: {e}")
-            await message.answer("❌ Произошла ошибка при парсинге группы. Проверьте ссылку и доступ к чату.")
+            await message.answer(t("check_group_parse_error", lang=user.language))
         finally:
             if client is not None:
                 await client.disconnect()

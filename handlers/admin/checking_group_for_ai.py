@@ -14,8 +14,9 @@ from openai import AsyncOpenAI
 from ai.ai import category_assignment
 from core.config import GROQ_API_KEY
 from core.config import OPENROUTER_API_KEY
-from database.database import TelegramGroup, db, get_groups_without_category
+from database.database import TelegramGroup, db, get_groups_without_category, User
 from keyboards.admin.keyboards import category_method_keyboard, admin_keyboard
+from locales.locales import t
 from states.states import CategoryMethod
 
 router = Router(name=__name__)
@@ -26,19 +27,10 @@ async def checking_group_for_ai_db(message: Message, state: FSMContext):
     """Предлагает выбор метода присвоения категорий"""
     await state.set_state(CategoryMethod.waiting_for_method)
 
+    user = User.get(User.user_id == message.from_user.id)
+
     await message.answer(
-        "🤖 <b>Выберите метод присвоения категорий:</b>\n\n"
-        "⚡️ <b>Быстро (g4f.free)</b>\n"
-        "• Бесплатно, без API ключей\n"
-        "• Последовательная обработка (медленнее)\n"
-        "• Подходит для небольших объёмов\n"
-        "• Может возвращать неточные результаты\n\n"
-        "🚀 <b>Мощно (Groq API)</b>\n"
-        "• Требует API ключ Groq\n"
-        "• Параллельная обработка в 10 потоков (быстрее)\n"
-        "• Подходит для больших объёмов\n"
-        "• Более точные результаты\n\n"
-        "Выберите метод:",
+        t("ai_category_select_method", lang=user.language),
         reply_markup=category_method_keyboard(),
         parse_mode="HTML"
     )
@@ -88,11 +80,12 @@ async def get_best_g4f_model(client: Client) -> str:
 @router.message(StateFilter(CategoryMethod.waiting_for_method))
 async def process_category_method_choice(message: Message, state: FSMContext):
     """Обрабатывает выбор метода присвоения категорий"""
+    user = User.get(User.user_id == message.from_user.id)
 
     if message.text == "⬅️ Назад":
         await state.clear()
         await message.answer(
-            "↩️ Возврат в панель администратора",
+            t("ai_category_back", lang=user.language),
             reply_markup=admin_keyboard()
         )
         return
@@ -102,9 +95,9 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         client = Client()
 
         # 🔍 Определяем лучшую доступную модель
-        status_msg = await message.answer("🔍 Проверка доступных моделей...")
+        status_msg = await message.answer(t("ai_category_checking_models", lang=user.language))
         model = await get_best_g4f_model(client)
-        await status_msg.edit_text(f"✅ Выбрана модель: {model}")
+        await status_msg.edit_text(t("ai_category_model_selected", lang=user.language, model=model))
         await asyncio.sleep(1)
         await status_msg.delete()
 
@@ -126,28 +119,29 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         await assign_categories(message, client, model)
     else:
         await message.answer(
-            "Пожалуйста, выберите метод из клавиатуры ниже:",
+            t("ai_category_select_from_keyboard", lang=user.language),
             reply_markup=category_method_keyboard()
         )
 
 
 async def assign_categories(message: Message, client, model):
     """Универсальная функция присвоения категорий (любой AI клиент)"""
+    user = User.get(User.user_id == message.from_user.id)
 
-    status_msg = await message.answer("🤖 Запуск AI...")
+    status_msg = await message.answer(t("ai_category_processing", lang=user.language, total=0))
 
     try:
         # 1️⃣ Получаем группы для обработки
         groups_to_process = await get_groups_without_category()
 
         if not groups_to_process:
-            await status_msg.edit_text("✅ Все группы уже имеют категории!")
+            await status_msg.edit_text(t("ai_category_all_have_categories", lang=user.language))
             return
 
         total = len(groups_to_process)
         logger.info(f"📦 Найдено {total} групп для обработки")
 
-        await status_msg.edit_text(f"🔄 Обрабатываю {total} групп...")
+        await status_msg.edit_text(t("ai_category_processing", lang=user.language, total=total))
 
         # 2️⃣ Обрабатываем последовательно с немедленной записью в БД
         for i, group_data in enumerate(groups_to_process, 1):
@@ -173,16 +167,17 @@ async def assign_categories(message: Message, client, model):
                 continue
 
         # 3️⃣ Финал
-        await status_msg.edit_text("✅ <b>Готово!</b>", parse_mode="HTML")
+        await status_msg.edit_text(t("ai_category_done", lang=user.language), parse_mode="HTML")
 
     except Exception as e:
         logger.exception(e)
-        await status_msg.edit_text(f"❌ Ошибка: {e}")
+        await status_msg.edit_text(t("ai_category_error", lang=user.language, error=str(e)))
 
 
 @router.message(F.text == "📥 Получить группы без категории")
 async def get_groups_without_category_message(message: Message):
     """Информация о группах без категории"""
+    user = User.get(User.user_id == message.from_user.id)
 
     def _count():
         if db.is_closed():
@@ -195,7 +190,7 @@ async def get_groups_without_category_message(message: Message):
     count = await sync_to_async(_count)()
 
     await message.answer(
-        f"📊 <b>Статистика категорий:</b>\n\n"
-        f"🗃️ Групп без категории: {count}\n\n"
-        "Нажмите '🏷️ Присвоить категорию' для запуска AI"
+        t("ai_category_stats_title", lang=user.language) + "\n\n"
+        t("ai_category_no_category_count", lang=user.language, count=count) + "\n\n"
+        t("ai_category_run_ai", lang=user.language)
     )
