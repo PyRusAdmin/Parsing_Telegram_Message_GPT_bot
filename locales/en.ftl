@@ -437,3 +437,55 @@ lang_detect_stats_total_fail = Total errors
 # === Log File ===
 log_file_caption =
     📄 Log file with errors.
+
+# === connect_account.py ===
+account_connected_free =
+    ✅ Account successfully connected
+
+invalid_session_file =
+    ❌ This is not a session file! Send a file with `.session` extension
+
+session_file_received =
+    📥 File received: `{ $filename }`
+
+    🔍 Checking account...
+
+session_connected_success =
+    ✅ <b>{ $filename }</b> — successful!
+    📱 { $phone } | 👤 { $name }
+    💾 Saved to your personal database.
+
+session_validation_failed =
+    ❌ <b>{ $filename }</b> — validation failed.
+    Please check that the session file is current and not used elsewhere.
+
+session_check_error =
+    ⚠️ An error occurred while checking the account. Please try again later.
+
+# === handlers.py (groups) ===
+only_txt_files_supported =
+    ⚠️ Only .txt files are supported.
+
+empty_file_no_usernames =
+    ⚠️ File is empty or contains no usernames.
+
+groups_upload_summary =
+    ✅ Added: { $added }
+    ⚠️ Already exists: { $skipped }
+    ❌ Errors: { $errors }
+
+# === admin.py ===
+admin_found_accounts =
+    🔍 Found accounts: { $count }
+
+admin_db_actualization_start =
+    🔄 Starting actualization of { $total } groups...
+
+admin_using_account =
+    📱 Using account: { $account }
+
+admin_account_error =
+    ❌ Account error { $account }: { $error }
+
+admin_critical_error =
+    ❌ Critical error: { $error }

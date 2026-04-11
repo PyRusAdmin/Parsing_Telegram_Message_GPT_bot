@@ -543,7 +543,6 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     Raises:
         Exception: Перехватывается локально, логируется и преобразуется в пользовательское сообщение.
     """
-
     # telegram_user = message.from_user
     user_input = message.text.strip()
     user = User.get(User.user_id == message.from_user.id)
@@ -551,8 +550,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     processing_msg = await message.answer(t("searching_groups", lang=user.language))
 
     try:
-        # Получаем ответ от AI
-        answer = await get_groq_response(user_input)
+        answer = await get_groq_response(user_input)  # Получаем ответ от AI
         logger.info(f"Ответ от Groq: {answer}")
 
         # Разбиваем ответ на строки и очищаем
@@ -564,15 +562,15 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
-        client = None
+        # client = None
         try:
             client = await checker.start_random_client()
         except Exception as e:
             logger.error(f"❌ Ошибка запуска клиента: {e}")
-            await message.answer(
-                t("search_client_error", lang=user.language),
-                reply_markup=back_keyboard()
-            )
+            # await message.answer(
+            #     t("search_client_error", lang=user.language),
+            #     reply_markup=back_keyboard()
+            # )
             await state.clear()
             return
 
@@ -742,7 +740,8 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 # 📊 Обновляем статус в Telegram (опционально)
                 if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
                     await processing_msg.edit_text(
-                        t("global_search_progress", lang=user.language, current=idx, total=len(search_terms), successful=successful_queries)
+                        t("global_search_progress", lang=user.language, current=idx, total=len(search_terms),
+                          successful=successful_queries)
                     )
 
             except Exception as e:
@@ -772,7 +771,8 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             await message.answer_document(
                 document=excel_file,
-                caption=t("global_search_results_caption", lang=user.language, total=len(all_saved_groups), successful=successful_queries, total_queries=len(search_terms)),
+                caption=t("global_search_results_caption", lang=user.language, total=len(all_saved_groups),
+                          successful=successful_queries, total_queries=len(search_terms)),
                 parse_mode="HTML"
             )
             logger.info(f"✅ Отправлено {len(all_saved_groups)} групп пользователю {telegram_user.id}")

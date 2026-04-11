@@ -370,11 +370,12 @@ async def handle_group_usernames_file(message, state: FSMContext, bot):
     """
     Обработчик загрузки .txt файла со списком групп/каналов.
     """
+    user = User.get(User.user_id == message.from_user.id)
     document = message.document
 
     # Проверяем расширение файла
     if not document.file_name.endswith(".txt"):
-        await message.answer("⚠️ Поддерживаются только .txt файлы.")
+        await message.answer(t("only_txt_files_supported", lang=user.language))
         return
 
     # Скачиваем файл
@@ -386,7 +387,7 @@ async def handle_group_usernames_file(message, state: FSMContext, bot):
     usernames = [line.strip() for line in content.splitlines() if line.strip()]
 
     if not usernames:
-        await message.answer("⚠️ Файл пуст или не содержит username-ов.")
+        await message.answer(t("empty_file_no_usernames", lang=user.language))
         await state.clear()
         return
 
@@ -412,10 +413,12 @@ async def handle_group_usernames_file(message, state: FSMContext, bot):
                 errors_count += 1
                 logger.error(f"Ошибка при добавлении {username}: {e}")
 
-    response = (
-        f"✅ Добавлено: {added_count}\n"
-        f"⚠️ Уже есть: {skipped_count}\n"
-        f"❌ Ошибок: {errors_count}"
+    response = t(
+        "groups_upload_summary",
+        lang=user.language,
+        added=added_count,
+        skipped=skipped_count,
+        errors=errors_count
     )
     await message.answer(response)
     await state.clear()

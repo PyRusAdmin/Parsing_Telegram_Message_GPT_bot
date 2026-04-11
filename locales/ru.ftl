@@ -437,3 +437,55 @@ lang_detect_stats_total_fail = Всего ошибок
 # === Лог файл ===
 log_file_caption =
     📄 Лог файл с ошибками.
+
+# === connect_account.py ===
+account_connected_free =
+    ✅ Аккаунт успешно подключен
+
+invalid_session_file =
+    ❌ Это не файл сессии! Отправьте файл с расширением `.session`
+
+session_file_received =
+    📥 Файл получен: `{ $filename }`
+
+    🔍 Проверяю аккаунт...
+
+session_connected_success =
+    ✅ <b>{ $filename }</b> — успешно!
+    📱 { $phone } | 👤 { $name }
+    💾 Сохранено в вашу персональную базу.
+
+session_validation_failed =
+    ❌ <b>{ $filename }</b> — не прошёл проверку.
+    Проверьте, что файл сессии актуален и не используется в другом месте.
+
+session_check_error =
+    ⚠️ Произошла ошибка при проверке аккаунта. Попробуйте позже.
+
+# === handlers.py (группы) ===
+only_txt_files_supported =
+    ⚠️ Поддерживаются только .txt файлы.
+
+empty_file_no_usernames =
+    ⚠️ Файл пуст или не содержит username-ов.
+
+groups_upload_summary =
+    ✅ Добавлено: { $added }
+    ⚠️ Уже есть: { $skipped }
+    ❌ Ошибок: { $errors }
+
+# === admin.py ===
+admin_found_accounts =
+    🔍 Найдено аккаунтов: { $count }
+
+admin_db_actualization_start =
+    🔄 Начинаю актуализацию { $total } групп...
+
+admin_using_account =
+    📱 Используется аккаунт: { $account }
+
+admin_account_error =
+    ❌ Ошибка аккаунта { $account }: { $error }
+
+admin_critical_error =
+    ❌ Критическая ошибка: { $error }

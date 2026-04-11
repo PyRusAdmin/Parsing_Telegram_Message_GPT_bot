@@ -88,9 +88,10 @@ async def update_db(message: Message):
      """
 
     available_sessions = getting_account()  # Получаем все аккаунты в базе данных
+    user = User.get(User.user_id == message.from_user.id)
 
     await message.answer(
-        f"🔍 Найдено аккаунтов: {len(available_sessions)}\n"
+        t("admin_found_accounts", lang=user.language, count=len(available_sessions))
     )
 
     try:
@@ -108,7 +109,7 @@ async def update_db(message: Message):
         logger.info(f"Найдено {total_count} групп для обновления")
 
         # Отправляем начальное сообщение
-        await message.answer(f"🔄 Начинаю актуализацию {total_count} групп...")
+        await message.answer(t("admin_db_actualization_start", lang=user.language, total=total_count))
 
         processed = 0
         updated = 0
@@ -128,7 +129,7 @@ async def update_db(message: Message):
 
                 current_account = available_sessions[current_session_index].split('/')[-1]
                 logger.info(f"Используется аккаунт: {current_account}")
-                await message.answer(f"📱 Используется аккаунт: {current_account}")
+                await message.answer(t("admin_using_account", lang=user.language, account=current_account))
 
                 # Обрабатываем группы с текущим аккаунтом
                 for group in groups_to_update[processed:]:
@@ -291,7 +292,7 @@ async def update_db(message: Message):
             except Exception as e:
                 logger.exception(e)
                 # logger.error(f"Ошибка подключения к аккаунту {current_account}: {e}")
-                await message.answer(f"❌ Ошибка аккаунта {current_account}: {e}")
+                await message.answer(t("admin_account_error", lang=user.language, account=current_account, error=str(e)))
                 current_session_index += 1
             finally:
                 await client.disconnect()
@@ -316,7 +317,7 @@ async def update_db(message: Message):
 
     except Exception as e:
         logger.error(f"Критическая ошибка: {e}")
-        await message.answer(f"❌ Критическая ошибка: {e}")
+        await message.answer(t("admin_critical_error", lang=user.language, error=str(e)))
 
     finally:
         if not db.is_closed():
