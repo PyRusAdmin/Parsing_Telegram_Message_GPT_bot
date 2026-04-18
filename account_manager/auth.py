@@ -15,7 +15,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH, MT_PROXY_IP
-from core.proxy import Proxy, setup_proxy
+from core.proxy import Proxy
 from database.database import delete_account_from_db, getting_account
 
 mobile_device = {
@@ -58,7 +58,6 @@ class CheckingAccountsValidity:
         self.path = Path(path) if path else None
         self.user_id = message.from_user.id
         self.proxy = Proxy()  # Инициализация класса Proxy для проверки прокси.
-        # self.proxy_config = get_proxy_config("mtproxy")
 
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """
@@ -77,8 +76,6 @@ class CheckingAccountsValidity:
             app_version=mobile_device["app_version"],
             lang_code=mobile_device["lang_code"],
             system_lang_code=mobile_device["system_lang_code"],
-            # connection=connection.ConnectionTcpMTProxyAbridged,
-            proxy=('socks5', "87.239.250.238", 39301, True, "C8MRdMvXh8", "FmUmOnx2JW")
         )
 
         try:
@@ -184,8 +181,6 @@ class CheckingAccountsValidity:
             app_version=mobile_device["app_version"],
             lang_code=mobile_device["lang_code"],
             system_lang_code=mobile_device["system_lang_code"],
-            # connection=connection.ConnectionTcpMTProxyAbridged,
-            proxy=('socks5', "87.239.250.238", 39301, True, "C8MRdMvXh8", "FmUmOnx2JW")
         )
         try:
             await client.connect()
@@ -215,26 +210,7 @@ class CheckingAccountsValidity:
 
             logger.info(f"Используется сессия: {chosen_session_name[:30]}...")
 
-            client = TelegramClient(
-                StringSession(chosen_session_name),
-                api_id=API_ID,
-                api_hash=API_HASH,
-                device_model=mobile_device["device_model"],
-                system_version=mobile_device["system_version"],
-                app_version=mobile_device["app_version"],
-                lang_code=mobile_device["lang_code"],
-                system_lang_code=mobile_device["system_lang_code"],
-                timeout=30,
-            )
-            await client.connect()
-
-            if not await client.is_user_authorized():
-                logger.error("Клиент не авторизован. Запустите сначала авторизацию.")
-                await client.disconnect()
-                return None
-
-            logger.info("Телеграм-клиент запущен.")
-            return client
+            return await self.client_connect_string_session(chosen_session_name)
 
         except Exception as e:
             logger.exception(f"❌ Ошибка запуска клиента: {e}")
