@@ -567,10 +567,6 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             client = await checker.start_random_client()
         except Exception as e:
             logger.error(f"❌ Ошибка запуска клиента: {e}")
-            # await message.answer(
-            #     t("search_client_error", lang=user.language),
-            #     reply_markup=back_keyboard()
-            # )
             await state.clear()
             return
 

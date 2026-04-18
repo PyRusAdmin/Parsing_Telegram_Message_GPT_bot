@@ -134,14 +134,6 @@ async def receive_session_file(message: Message, state: FSMContext):
             fail_count=fail_count
         )
 
-        # dir_del = ['accounts/parsing', 'accounts/parsing_grup', 'accounts/ai', 'accounts/free']
-        # for dir in dir_del:
-        # ✅ Запускаем очистку
-        # cleanup_session_files(
-        #     parsing_dir=dir,
-        #     root_dirs=[".", "accounts", "data", "sessions"]  # Укажите ваши корневые папки
-        # )
-
         await message.answer(
             t("connect_account_processing_done", lang=user.language),
             parse_mode="HTML",

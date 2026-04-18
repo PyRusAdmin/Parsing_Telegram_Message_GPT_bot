@@ -6,7 +6,7 @@ from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe
-from database.database import dell_group, get_user_accounts
+from database.database import dell_group, get_user_accounts, User
 from keyboards.user.keyboards import back_keyboard, main_menu_keyboard, menu_launch_tracking_keyboard
 from locales.locales import t
 from states.states import MyStates
@@ -20,6 +20,7 @@ async def delete_group_from_database(message: Message, state: FSMContext):
     Удаление группы из базы данных
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
+
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         t("delete_group_prompt", lang=user.language),

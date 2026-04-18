@@ -64,6 +64,8 @@ async def handle_group_username_submission(message: Message, state: FSMContext):
     group_username = message.text.strip()
     logger.info(f"Пользователь ввёл ссылку: {group_username}")
 
+    user = User.get(User.user_id == message.from_user.id)
+
     # Создаём модель с таблицей, уникальной для конкретного пользователя
     GroupModel = create_group_model(user_id=message.from_user.id)  # Создаём таблицу для групп / ключевых слов
     GroupModel.create_table(safe=True)

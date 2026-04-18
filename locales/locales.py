@@ -27,15 +27,3 @@ def t(key: str, lang: str = "ru", **kwargs) -> str:
     """
     l10n = get_l10n(lang)
     return l10n.format_value(key, kwargs)
-
-# def get_text(lang: str, key: str, **kwargs) -> str:
-#     """
-#     Получить перевод по ключу (обратная совместимость).
-#
-#     :param lang: Язык локализации (например, 'ru', 'en')
-#     :param key: Ключ сообщения (например, 'registered-message')
-#     :param kwargs: Переменные для подстановки (например, name='Иван')
-#     :return: Переведённая строка
-#     """
-#     l10n = get_l10n(lang)
-#     return l10n.format_value(key, kwargs)

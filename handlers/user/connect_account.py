@@ -104,22 +104,22 @@ async def handle_connect_account(message: Message, state: FSMContext):
 @router.message(MyStates.waiting_for_session_file_user, F.document)
 async def handle_account_file(message: Message, state: FSMContext):
     """Обработчик приёма файла сессии (.session) от пользователя"""
-    user_id = message.from_user.id
-    document = message.document
     local_file_path = None  # для безопасного удаления в finally
 
+    user = User.get(User.user_id == message.from_user.id)
+
     try:
-        logger.info(f"User {user_id} отправил файл: {document.file_name}")
+        logger.info(f"User {message.from_user.id} отправил файл: {message.document.file_name}")
 
         # ✅ Проверяем расширение — если не .session, остаёмся в состоянии
-        if not document.file_name.endswith('.session'):
+        if not message.document.file_name.endswith('.session'):
             await message.answer(t("invalid_session_file", lang=user.language))
             return  # state НЕ сбрасываем — ждём правильный файл
 
         sessions_dir = creates_temporary_folder_for_accounts()
-        local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
+        local_file_path, safe_file_name = sanitization_file_name(message.document, sessions_dir)
 
-        await message.bot.download(document, destination=local_file_path)
+        await message.bot.download(message.document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
 
         await message.answer(t("session_file_received", lang=user.language, filename=safe_file_name))
@@ -135,7 +135,7 @@ async def handle_account_file(message: Message, state: FSMContext):
 
             session_string = StringSession.save(client.session)
             write_account_to_user_table(
-                user_id=user_id,
+                user_id=message.from_user.id,
                 session_string=session_string,
                 phone_number=phone
             )
@@ -148,14 +148,14 @@ async def handle_account_file(message: Message, state: FSMContext):
                 parse_mode="HTML"
             )
         else:
-            logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {user_id}")
+            logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {message.from_user.id}")
             await message.answer(
                 t("session_validation_failed", lang=user.language, filename=safe_file_name),
                 parse_mode="HTML"
             )
 
     except Exception as e:
-        logger.exception(f"Ошибка при обработке сессии пользователя {user_id}: {e}")
+        logger.exception(f"Ошибка при обработке сессии пользователя {message.from_user.id}: {e}")
         await message.answer(t("session_check_error", lang=user.language))
 
     finally:
