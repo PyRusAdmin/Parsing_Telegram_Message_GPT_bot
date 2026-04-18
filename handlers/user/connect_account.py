@@ -143,7 +143,8 @@ async def handle_account_file(message: Message, state: FSMContext):
 
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
             await message.answer(
-                t("session_connected_success", lang=user.language, filename=safe_file_name, phone=phone, name=first_name),
+                t("session_connected_success", lang=user.language, filename=safe_file_name, phone=phone,
+                  name=first_name),
                 parse_mode="HTML"
             )
         else:

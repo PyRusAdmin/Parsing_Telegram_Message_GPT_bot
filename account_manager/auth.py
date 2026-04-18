@@ -256,10 +256,9 @@ class CheckingAccountsValidity:
                 'addr': "87.239.250.238",
                 'port': 39301,
                 'username': 'C8MRdMvXh8',
-                'password':'FmUmOnx2JW',
+                'password': 'FmUmOnx2JW',
                 'rdns': True
             }
-
 
             client = TelegramClient(
                 StringSession(chosen_session_name),

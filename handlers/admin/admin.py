@@ -292,7 +292,8 @@ async def update_db(message: Message):
             except Exception as e:
                 logger.exception(e)
                 # logger.error(f"Ошибка подключения к аккаунту {current_account}: {e}")
-                await message.answer(t("admin_account_error", lang=user.language, account=current_account, error=str(e)))
+                await message.answer(
+                    t("admin_account_error", lang=user.language, account=current_account, error=str(e)))
                 current_session_index += 1
             finally:
                 await client.disconnect()

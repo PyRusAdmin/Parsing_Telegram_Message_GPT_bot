@@ -72,7 +72,8 @@ async def receive_session_file(message: Message, state: FSMContext):
     # ✅ Показываем прогресс, если файлов больше 1
     total = len(received_files)
     if total > 1:
-        await message.answer(t("connect_account_file_queued", lang=user.language, filename=document.file_name, total=total))
+        await message.answer(
+            t("connect_account_file_queued", lang=user.language, filename=document.file_name, total=total))
     try:
         # ✅ Создаём папку для временного хранения
         sessions_dir = creates_temporary_folder_for_accounts()
@@ -114,7 +115,8 @@ async def receive_session_file(message: Message, state: FSMContext):
                 local_file_path.unlink()
             fail_count += 1
             logger.warning(f"❌ Сессия не валидна: {safe_file_name}")
-            await message.answer(t("connect_account_failed", lang=user.language, filename=safe_file_name), parse_mode="HTML")
+            await message.answer(t("connect_account_failed", lang=user.language, filename=safe_file_name),
+                                 parse_mode="HTML")
 
     except Exception as e:
         logger.exception(f"Ошибка при обработке {document.file_name}: {e}")

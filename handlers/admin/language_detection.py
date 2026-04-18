@@ -13,7 +13,6 @@ from locales.locales import t
 
 router = Router(name=__name__)
 
-
 from core.config import OPENROUTER_API_KEY
 
 
@@ -306,11 +305,11 @@ async def language_detection(message):
 
     await message.answer(
         t("lang_detect_complete", lang=user.language) + "\n\n"
-        f"📊 {t('lang_detect_stats_title', lang=user.language)}:\n"
-        f"• {t('lang_detect_stats_total', lang=user.language)}: {total}\n"
-        f"• {t('lang_detect_stats_ai_success', lang=user.language)}: {len(successful_results)}\n"
-        f"• {t('lang_detect_stats_db_success', lang=user.language)}: {updated}\n"
-        f"• {t('lang_detect_stats_ai_fail', lang=user.language)}: {ai_failed}\n"
-        f"• {t('lang_detect_stats_db_fail', lang=user.language)}: {db_failed}\n"
-        f"• {t('lang_detect_stats_total_fail', lang=user.language)}: {total_failed}"
+                                                        f"📊 {t('lang_detect_stats_title', lang=user.language)}:\n"
+                                                        f"• {t('lang_detect_stats_total', lang=user.language)}: {total}\n"
+                                                        f"• {t('lang_detect_stats_ai_success', lang=user.language)}: {len(successful_results)}\n"
+                                                        f"• {t('lang_detect_stats_db_success', lang=user.language)}: {updated}\n"
+                                                        f"• {t('lang_detect_stats_ai_fail', lang=user.language)}: {ai_failed}\n"
+                                                        f"• {t('lang_detect_stats_db_fail', lang=user.language)}: {db_failed}\n"
+                                                        f"• {t('lang_detect_stats_total_fail', lang=user.language)}: {total_failed}"
     )
