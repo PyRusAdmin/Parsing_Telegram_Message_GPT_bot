@@ -14,7 +14,8 @@ from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelReq
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import (
-    create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups
+    create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
+    User
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import t
@@ -47,6 +48,7 @@ async def join_target_group(client, user_id, message):
     :raises InviteRequestSentError: Если требуется подтверждение приглашения.
     :raises Exception: Логируется при любых других ошибках.
     """
+    user = User.get(User.user_id == message.from_user.id)
     GroupModel = create_group_model(user_id=user_id)
     logger.info(f"🔍 Проверяю целевую группу... {GroupModel}")
     if not GroupModel.table_exists():
@@ -325,6 +327,7 @@ async def join_required_channels(client, user_id, message, already_subscribed):
     :param already_subscribed: (set) Список каналов, где аккаунт уже состоит.
     :return: None
     """
+    user = User.get(User.user_id == message.from_user.id)
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
     # already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
@@ -434,6 +437,7 @@ async def ensure_joined_target_group(client, message, user_id: int):
     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
     :return: int or None: Идентификатор целевой группы (entity.id) при успехе, иначе None.
     """
+    user = User.get(User.user_id == message.from_user.id)
     logger.info("Подключаемся к целевой группе для пересылки")
     target_group_id = await join_target_group(client=client, user_id=user_id, message=message)
 
@@ -614,6 +618,7 @@ async def stop_tracking(user_id, message):
     :param message: (Message) Объект сообщения aiogram для отправки подтверждения.
     :return: None
     """
+    user = User.get(User.user_id == message.from_user.id)
     user_id = str(user_id)  # <-- ✅ преобразуем в строку
 
     logger.info(f"🛑 Запрос на остановку отслеживания для user_id={user_id}")
