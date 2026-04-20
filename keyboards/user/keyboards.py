@@ -204,15 +204,27 @@ def settings_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔁 Обновить список", style="primary"),
-             KeyboardButton(text="🔍 Ввод ключевого слова", style="primary")],
-            [KeyboardButton(text="🗑️ Удалить группу из отслеживания", style="danger")],
-            [KeyboardButton(text="🔍 Список ключевых слов", style="primary"),
-             KeyboardButton(text="🌐 Ссылки для отслеживания", style="primary")],
-            [KeyboardButton(text="🔐 Подключить аккаунт", style="success"),
-             KeyboardButton(text="📤 Подключить группу для сообщений", style="success")],
-            [KeyboardButton(text="🌐 Сменить язык", style="primary")],
-            [KeyboardButton(text="⬅️ Назад", style="danger")]
+            [
+                KeyboardButton(text="🔁 Обновить список", style="primary"),
+                KeyboardButton(text="🔍 Ввод ключевого слова", style="primary")
+            ],
+            [
+                KeyboardButton(text="🗑️ Удалить группу из отслеживания", style="danger")
+            ],
+            [
+                KeyboardButton(text="🔍 Список ключевых слов", style="primary"),
+                KeyboardButton(text="🌐 Ссылки для отслеживания", style="primary")
+            ],
+            [
+                KeyboardButton(text="🔐 Подключить аккаунт", style="success"),
+                KeyboardButton(text="📤 Подключить группу для сообщений", style="success")
+            ],
+            [
+                KeyboardButton(text="🌐 Сменить язык", style="primary")
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
