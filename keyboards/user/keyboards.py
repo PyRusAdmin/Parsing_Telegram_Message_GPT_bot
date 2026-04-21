@@ -235,15 +235,15 @@ def connect_keyboard_account():
     """Если у пользователя не подключен аккаунт, то высылаем ему наддую клавиатуру"""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(
-                text="🔐 Подключить аккаунт",
-                style="success"
-            )],
-            [KeyboardButton(
-                text="🔐 Подключить свободный аккаунт",
-                style="success"
-            )],
-            [KeyboardButton(text="⬅️ Назад", style="danger")]
+            [
+                KeyboardButton(text="🔐 Подключить аккаунт", style="success")
+            ],
+            [
+                KeyboardButton(text="🔐 Подключить свободный аккаунт", style="success")
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -256,8 +256,12 @@ def connect_grup_keyboard_tech():
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📤 Подключить группу для сообщений", style="success")],
-            [KeyboardButton(text="⬅️ Назад", style="danger")]
+            [
+                KeyboardButton(text="📤 Подключить группу для сообщений", style="success")
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз

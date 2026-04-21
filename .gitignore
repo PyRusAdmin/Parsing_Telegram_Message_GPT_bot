@@ -31,3 +31,5 @@ logs/
 Thumbs.db
 /.idea/
 /.venv/
+
+.qwen
