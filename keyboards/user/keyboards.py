@@ -104,44 +104,23 @@ def main_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(
-                    text="🚀 Запуск отслеживания",
-                    style="success"
-                )
+                KeyboardButton(text="🚀 Запуск отслеживания", style="success")
             ],
             [
-                KeyboardButton(
-                    text="🔍 Проверка группы на наличие ключевых слов",
-                    style="primary"
-                )
+                KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style="primary")
             ],
             [
-                KeyboardButton(
-                    text="🤖 AI поиск",
-                    style="primary"
-                ),
-                KeyboardButton(
-                    text="📥 Получить базу",
-                    style="primary"
-                )
+                KeyboardButton(text="🤖 AI поиск", style="primary"),
+                KeyboardButton(text="📥 Получить базу", style="primary")
             ],
             [
-                KeyboardButton(
-                    text="🌐 Глобальный AI поиск",
-                    style='primary'
-                )
+                KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="📖 Инструкция по использованию",
-                    style="primary"
-                )
+                KeyboardButton(text="📖 Инструкция по использованию", style="primary")
             ],
             [
-                KeyboardButton(
-                    text="⚙️ Настройки",
-                    style="primary"
-                )
+                KeyboardButton(text="⚙️ Настройки", style="primary")
             ]
         ],
         resize_keyboard=True,
@@ -169,8 +148,12 @@ def menu_launch_tracking_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🛑 Остановить отслеживание", style="danger")],
-            [KeyboardButton(text="⬅️ Назад", style="danger")],
+            [
+                KeyboardButton(text="🛑 Остановить отслеживание", style="danger")
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -287,7 +270,9 @@ def back_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="⬅️ Назад", style="danger")]
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
