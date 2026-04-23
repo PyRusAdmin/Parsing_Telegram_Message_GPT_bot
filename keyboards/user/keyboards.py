@@ -29,27 +29,67 @@ def search_group_ai():
 def get_categories_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="инвестиции", style="primary")],
-            [KeyboardButton(text="финансы и личный бюджет", style="primary")],
-            [KeyboardButton(text="криптовалюты и блокчейн", style="primary"),
-             KeyboardButton(text="бизнес и предпринимательство", style="primary")],
-            [KeyboardButton(text="маркетинг и продвижение", style="primary")],
-            [KeyboardButton(text="технологии и it", style="primary")],
-            [KeyboardButton(text="образование и саморазвитие", style="primary")],
-            [KeyboardButton(text="работа и карьера", style="primary")],
-            [KeyboardButton(text="недвижимость", style="primary")],
-            [KeyboardButton(text="здоровье и медицина", style="primary")],
-            [KeyboardButton(text="путешествия", style="primary")],
-            [KeyboardButton(text="авто и транспорт", style="primary")],
-            [KeyboardButton(text="шоппинг и скидки", style="primary")],
-            [KeyboardButton(text="развлечения и досуг", style="primary")],
-            [KeyboardButton(text="политика и общество", style="primary")],
-            [KeyboardButton(text="наука и исследования", style="primary")],
-            [KeyboardButton(text="спорт и фитнес", style="primary")],
-            [KeyboardButton(text="кулинария и еда", style="primary")],
-            [KeyboardButton(text="мода и красота", style="primary")],
-            [KeyboardButton(text="хобби и творчество", style="primary")],
-            [KeyboardButton(text="⬅️ Назад", style="danger")],
+            [
+                KeyboardButton(text="инвестиции", style="primary")
+            ],
+            [
+                KeyboardButton(text="финансы и личный бюджет", style="primary")
+            ],
+            [
+                KeyboardButton(text="криптовалюты и блокчейн", style="primary"),
+                KeyboardButton(text="бизнес и предпринимательство", style="primary")
+            ],
+            [
+                KeyboardButton(text="маркетинг и продвижение", style="primary")
+            ],
+            [
+                KeyboardButton(text="технологии и it", style="primary")
+            ],
+            [
+                KeyboardButton(text="образование и саморазвитие", style="primary")
+            ],
+            [
+                KeyboardButton(text="работа и карьера", style="primary")
+            ],
+            [
+                KeyboardButton(text="недвижимость", style="primary")
+            ],
+            [
+                KeyboardButton(text="здоровье и медицина", style="primary")
+            ],
+            [
+                KeyboardButton(text="путешествия", style="primary")
+            ],
+            [
+                KeyboardButton(text="авто и транспорт", style="primary")
+            ],
+            [
+                KeyboardButton(text="шоппинг и скидки", style="primary")
+            ],
+            [
+                KeyboardButton(text="развлечения и досуг", style="primary")
+            ],
+            [
+                KeyboardButton(text="политика и общество", style="primary")
+            ],
+            [
+                KeyboardButton(text="наука и исследования", style="primary")
+            ],
+            [
+                KeyboardButton(text="спорт и фитнес", style="primary")
+            ],
+            [
+                KeyboardButton(text="кулинария и еда", style="primary")
+            ],
+            [
+                KeyboardButton(text="мода и красота", style="primary")
+            ],
+            [
+                KeyboardButton(text="хобби и творчество", style="primary")
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
@@ -71,7 +111,10 @@ def get_lang_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🇷🇺 Русский", style="primary"), KeyboardButton(text="🇬🇧 English", style="primary")]
+            [
+                KeyboardButton(text="🇷🇺 Русский", style="primary"),
+                KeyboardButton(text="🇬🇧 English", style="primary")
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
