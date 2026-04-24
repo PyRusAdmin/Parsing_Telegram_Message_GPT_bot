@@ -15,11 +15,19 @@ def search_group_ai():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📥 Вся база", style="primary")],
-            [KeyboardButton(text="📥 База каналов", style="primary"),
-             KeyboardButton(text="📥 База групп", style="primary")],
-            [KeyboardButton(text="📂 Выбрать категорию", style="primary")],
-            [KeyboardButton(text="⬅️ Назад", style="danger")],
+            [
+                KeyboardButton(text="📥 Вся база", style="primary")
+            ],
+            [
+                KeyboardButton(text="📥 База каналов", style="primary"),
+                KeyboardButton(text="📥 База групп", style="primary")
+            ],
+            [
+                KeyboardButton(text="📂 Выбрать категорию", style="primary")
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
