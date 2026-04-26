@@ -17,52 +17,28 @@ def main_admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(
-                    text="🚀 Запуск отслеживания",
-                    style='primary'
-                )
+                KeyboardButton(text="🚀 Запуск отслеживания", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="🔍 Проверка группы на наличие ключевых слов",
-                    style='primary'
-                )
+                KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="🤖 AI поиск",
-                    style='primary'
-                ),
-                KeyboardButton(
-                    text="📥 Получить базу",
-                    style='primary'
-                )
+                KeyboardButton(text="🤖 AI поиск", style='primary'),
+                KeyboardButton(text="📥 Получить базу", style='primary')
             ],
 
             [
-                KeyboardButton(
-                    text="🌐 Глобальный AI поиск",
-                    style='primary'
-                )
+                KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
             ],
 
             [
-                KeyboardButton(
-                    text="📖 Инструкция по использованию",
-                    style='primary'
-                )
+                KeyboardButton(text="📖 Инструкция по использованию", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="⚙️ Настройки",
-                    style='primary'
-                )
+                KeyboardButton(text="⚙️ Настройки", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="🛡️ Панель администратора",
-                    style='success'
-                )
+                KeyboardButton(text="🛡️ Панель администратора", style='success')
             ]
         ],
         resize_keyboard=True,
