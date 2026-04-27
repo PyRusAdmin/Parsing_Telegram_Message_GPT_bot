@@ -12,7 +12,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 def main_admin_keyboard():
     """
     Клавиатура администратора
-    :return:
+    :return: ReplyKeyboardMarkup
     """
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -54,40 +54,20 @@ def admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(
-                    text="📄 Получить лог файл",
-                    style='primary'
-                ),
-                KeyboardButton(
-                    text="🔄 Актуализация базы данных",
-                    style='primary'
-                )
+                KeyboardButton(text="📄 Получить лог файл", style='primary'),
+                KeyboardButton(text="🔄 Актуализация базы данных", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="🏷️ Присвоить категорию",
-                    style='primary'
-                ),
-                KeyboardButton(
-                    text="✅ Проверка аккаунтов",
-                    style='success'
-                )
+                KeyboardButton(text="🏷️ Присвоить категорию", style='primary'
+                               ),
+                KeyboardButton(text="✅ Проверка аккаунтов", style='success')
             ],
             [
-                KeyboardButton(
-                    text="🌐 Присвоить язык",
-                    style='primary'
-                ),
-                KeyboardButton(
-                    text="🔐 Подключение аккаунта",
-                    style='primary'
-                )
+                KeyboardButton(text="🌐 Присвоить язык", style='primary'),
+                KeyboardButton(text="🔐 Подключение аккаунта", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="⬅️ Назад",
-                    style='danger'
-                )
+                KeyboardButton(text="⬅️ Назад", style='danger')
             ]
         ],
         resize_keyboard=True,
