@@ -83,28 +83,16 @@ def category_method_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(
-                    text="⚡️ Быстро (g4f.free)",
-                    style='primary'
-                )
+                KeyboardButton(text="⚡️ Быстро (g4f.free)", style='primary')
             ],
             [
-                KeyboardButton(
-                    text="🚀 Мощно (Openrouter API)",
-                    style='success'
-                )
+                KeyboardButton(text="🚀 Мощно (Openrouter API)", style='success')
             ],
             [
-                KeyboardButton(
-                    text="🚀 Мощно (GROQ API)",
-                    style='success'
-                )
+                KeyboardButton(text="🚀 Мощно (GROQ API)", style='success')
             ],
             [
-                KeyboardButton(
-                    text="⬅️ Назад",
-                    style='danger'
-                )
+                KeyboardButton(text="⬅️ Назад", style='danger')
             ]
         ],
         resize_keyboard=True,
