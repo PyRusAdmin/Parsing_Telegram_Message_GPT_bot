@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import asyncio
 import random
 from datetime import datetime

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import asyncio
 
 from loguru import logger  # https://github.com/Delgan/loguru

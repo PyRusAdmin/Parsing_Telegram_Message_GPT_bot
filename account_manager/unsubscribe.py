@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from loguru import logger
 from telethon.errors import (
     UsernameInvalidError, UsernameNotOccupiedError, UserNotParticipantError, ChannelPrivateError, FloodWaitError
