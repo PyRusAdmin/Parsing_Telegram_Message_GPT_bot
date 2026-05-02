@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiogram import F
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
