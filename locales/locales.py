@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from functools import cache
 from pathlib import Path
 
