@@ -184,7 +184,6 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
             except MessageTooLongError:
                 logger.warning(
                     f"Не удалось отправить сообщение с контекстом, так как оно слишком длинное ({len(context_text)})")
-
             try:
                 await client.forward_messages(target_group_id, message)
                 logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
