@@ -59,92 +59,92 @@ def migrate_add_availability_column():
         db.close()
 
 
-def migrate_link_column_to_nullable():
-    """
-    Миграция: делает колонку link nullable в таблице telegram_groups.
-
-    Запускается один раз при обновлении базы данных.
-    Если колонка уже nullable — миграция пропускается.
-    """
-    try:
-        db.connect(reuse_if_open=True)
-
-        # Проверяем текущую структуру таблицы
-        cursor = db.execute_sql("PRAGMA table_info(telegram_groups)")
-        columns_info = cursor.fetchall()
-
-        # Ищем колонку link (индекс 2 — notnull флаг)
-        link_column = None
-        for col in columns_info:
-            if col[1] == 'link':
-                link_column = col
-                break
-
-        if link_column and link_column[3] == 1:  # notnull = 1
-            # В SQLite нельзя напрямую изменить NOT NULL, нужно пересоздать таблицу
-            # Шаг 1: Обновляем NULL значения на пустую строку
-            db.execute_sql("""
-                UPDATE telegram_groups
-                SET link = ''
-                WHERE link IS NULL
-            """)
-
-            # Шаг 2: Пересоздаём таблицу без NOT NULL ограничения
-            # Получаем список всех колонок
-            all_columns = []
-            for col in columns_info:
-                col_name = col[1]
-                if col_name != 'link':
-                    all_columns.append(col_name)
-
-            # Создаём временную таблицу
-            db.execute_sql("""
-                CREATE TABLE IF NOT EXISTS telegram_groups_backup AS
-                SELECT * FROM telegram_groups
-            """)
-
-            # Удаляем старую таблицу
-            db.execute_sql("DROP TABLE telegram_groups")
-
-            # Создаём новую таблицу с правильным ограничением
-            db.execute_sql("""
-                CREATE TABLE telegram_groups (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    telegram_id INTEGER,
-                    group_hash TEXT,
-                    name TEXT NOT NULL,
-                    username TEXT,
-                    description TEXT,
-                    participants INTEGER DEFAULT 0,
-                    category TEXT,
-                    group_type TEXT NOT NULL,
-                    language TEXT DEFAULT '',
-                    link TEXT DEFAULT '',
-                    availability TEXT,
-                    date_added DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            # Восстанавливаем данные
-            db.execute_sql("""
-                INSERT INTO telegram_groups (id, telegram_id, group_hash, name, username, description, 
-                                           participants, category, group_type, language, link, availability, date_added)
-                SELECT id, telegram_id, group_hash, name, username, description, 
-                       participants, category, group_type, language, link, availability, date_added
-                FROM telegram_groups_backup
-            """)
-
-            # Удаляем временную таблицу
-            db.execute_sql("DROP TABLE telegram_groups_backup")
-
-            logger.info("✅ Миграция: колонка 'link' успешно изменена на nullable")
-        else:
-            logger.info("ℹ️ Колонка 'link' уже допускает NULL значения или отсутствует")
-
-    except Exception as e:
-        logger.exception(f"❌ Ошибка при выполнении миграции link: {e}")
-    finally:
-        db.close()
+# def migrate_link_column_to_nullable():
+#     """
+#     Миграция: делает колонку link nullable в таблице telegram_groups.
+#
+#     Запускается один раз при обновлении базы данных.
+#     Если колонка уже nullable — миграция пропускается.
+#     """
+#     try:
+#         db.connect(reuse_if_open=True)
+#
+#         # Проверяем текущую структуру таблицы
+#         cursor = db.execute_sql("PRAGMA table_info(telegram_groups)")
+#         columns_info = cursor.fetchall()
+#
+#         # Ищем колонку link (индекс 2 — notnull флаг)
+#         link_column = None
+#         for col in columns_info:
+#             if col[1] == 'link':
+#                 link_column = col
+#                 break
+#
+#         if link_column and link_column[3] == 1:  # notnull = 1
+#             # В SQLite нельзя напрямую изменить NOT NULL, нужно пересоздать таблицу
+#             # Шаг 1: Обновляем NULL значения на пустую строку
+#             db.execute_sql("""
+#                 UPDATE telegram_groups
+#                 SET link = ''
+#                 WHERE link IS NULL
+#             """)
+#
+#             # Шаг 2: Пересоздаём таблицу без NOT NULL ограничения
+#             # Получаем список всех колонок
+#             all_columns = []
+#             for col in columns_info:
+#                 col_name = col[1]
+#                 if col_name != 'link':
+#                     all_columns.append(col_name)
+#
+#             # Создаём временную таблицу
+#             db.execute_sql("""
+#                 CREATE TABLE IF NOT EXISTS telegram_groups_backup AS
+#                 SELECT * FROM telegram_groups
+#             """)
+#
+#             # Удаляем старую таблицу
+#             db.execute_sql("DROP TABLE telegram_groups")
+#
+#             # Создаём новую таблицу с правильным ограничением
+#             db.execute_sql("""
+#                 CREATE TABLE telegram_groups (
+#                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+#                     telegram_id INTEGER,
+#                     group_hash TEXT,
+#                     name TEXT NOT NULL,
+#                     username TEXT,
+#                     description TEXT,
+#                     participants INTEGER DEFAULT 0,
+#                     category TEXT,
+#                     group_type TEXT NOT NULL,
+#                     language TEXT DEFAULT '',
+#                     link TEXT DEFAULT '',
+#                     availability TEXT,
+#                     date_added DATETIME DEFAULT CURRENT_TIMESTAMP
+#                 )
+#             """)
+#
+#             # Восстанавливаем данные
+#             db.execute_sql("""
+#                 INSERT INTO telegram_groups (id, telegram_id, group_hash, name, username, description,
+#                                            participants, category, group_type, language, link, availability, date_added)
+#                 SELECT id, telegram_id, group_hash, name, username, description,
+#                        participants, category, group_type, language, link, availability, date_added
+#                 FROM telegram_groups_backup
+#             """)
+#
+#             # Удаляем временную таблицу
+#             db.execute_sql("DROP TABLE telegram_groups_backup")
+#
+#             logger.info("✅ Миграция: колонка 'link' успешно изменена на nullable")
+#         else:
+#             logger.info("ℹ️ Колонка 'link' уже допускает NULL значения или отсутствует")
+#
+#     except Exception as e:
+#         logger.exception(f"❌ Ошибка при выполнении миграции link: {e}")
+#     finally:
+#         db.close()
 
 
 """
