@@ -25,7 +25,6 @@ async def handle_stop_tracking(message: Message, state: FSMContext):
 
     :param message: (Message) Входящее сообщение от пользователя.
     :param state: (FSMContext) Контекст машины состояний, сбрасывается перед остановкой.
-    :return: None
     :raise Exception: Передаётся в `stop_tracking`, где обрабатывается.
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
