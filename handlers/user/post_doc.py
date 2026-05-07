@@ -24,9 +24,7 @@ async def send_instruction(message: Message, state: FSMContext):
     :param message: (Message) Входящее сообщение от пользователя.
     :param state: (FSMContext) Контекст машины состояний, сбрасывается перед отправкой.
 
-    Raises:
-        FileNotFoundError: Если файл 'doc/doc.md' не существует.
-        Exception: При других ошибках отправки (например, проблемы с сетью).
+    :raises FileNotFoundError, Exception: Если файл 'doc/doc.md' не существует. Exception: При других ошибках отправки (например, проблемы с сетью).
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     user = User.get(User.user_id == message.from_user.id)

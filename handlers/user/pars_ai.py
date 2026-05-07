@@ -50,7 +50,6 @@ def save_group_to_db(group_data: dict):
     При отсутствии — создаёт новую запись.
 
     :param group_data: (dict) Словарь с данными группы
-    :return: TelegramGroup or None
     """
     try:
         telegram_id = group_data.get('telegram_id')

@@ -43,7 +43,6 @@ async def handle_start_command(message, state: FSMContext) -> None:
 
     :param message: (Message) Входящее сообщение от пользователя с командой /start.
     :param state: (FSMContext) Контекст машины состояний, сбрасывается при старте.
-    :return: None
     """
     try:
         await state.clear()  # Завершаем текущее состояние машины состояний
