@@ -30,7 +30,6 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
 
     :param message: (Message) Объект входящего сообщения от пользователя.
     :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
-    :return: None
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
 

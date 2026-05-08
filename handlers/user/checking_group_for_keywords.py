@@ -94,7 +94,6 @@ async def parse_group_for_keywords(url, keyword, message: Message):
             parse_kwargs = {
                 'limit': 500,  # Количество последних сообщений для проверки
             }
-
             count = 0
             matched_count = 0
 

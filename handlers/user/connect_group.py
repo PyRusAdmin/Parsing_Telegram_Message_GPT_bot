@@ -25,7 +25,6 @@ async def handle_connect_message_group(message: Message, state: FSMContext):
 
     :param message: (Message) Объект входящего сообщения от пользователя.
     :param state: (FSMContext) Контекст машины состояний, используется для сброса и установки состояния.
-    :return: None
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     user = User.get(User.user_id == message.from_user.id)
@@ -55,7 +54,6 @@ async def handle_group_username_submission(message: Message, state: FSMContext):
 
     :param message: (Message) Объект входящего сообщения с username группы.
     :param state: (FSMContext) Контекст машины состояний, используется для сброса состояния после обработки.
-    :return: None
     :raise Exception: При ошибке добавления в БД (например, нарушение уникальности).
                       Обрабатывается локально с отправкой пользователю соответствующего сообщения.
     """
