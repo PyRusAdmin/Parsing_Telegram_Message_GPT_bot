@@ -164,9 +164,6 @@ def main_menu_keyboard():
                 KeyboardButton(text="✨ Поиск через AI", style="primary"),
                 KeyboardButton(text="📥 Получить базу", style="primary")
             ],
-            # [
-            #     KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
-            # ],
             [
                 KeyboardButton(text="📖 Инструкция по использованию", style="primary")
             ],

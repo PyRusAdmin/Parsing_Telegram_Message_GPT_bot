@@ -10,9 +10,9 @@ def get_l10n(lang: str) -> FluentLocalization:
     Получить объект локализации для указанного языка.
     Кэшируется для производительности.
     """
-    locales_dir = Path(__file__).parent
-    loader = FluentResourceLoader(str(locales_dir))
-    return FluentLocalization([lang], [f"{lang}.ftl"], loader)
+    return FluentLocalization(
+        [lang], [f"{lang}.ftl"], FluentResourceLoader(str(Path(__file__).parent))
+    )
 
 
 def t(key: str, lang: str = "ru", **kwargs) -> str:
@@ -24,5 +24,4 @@ def t(key: str, lang: str = "ru", **kwargs) -> str:
     :param kwargs: Переменные для подстановки (например, name='Иван')
     :return: Переведённая строка
     """
-    l10n = get_l10n(lang)
-    return l10n.format_value(key, kwargs)
+    return get_l10n(lang).format_value(key, kwargs)

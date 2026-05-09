@@ -498,14 +498,12 @@ async def ai_search_menu(message: Message, state: FSMContext):
     """
     await state.clear()  # Сбрасывает состояние
 
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
-
-    logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню поиска групп")
+    logger.info(f"Пользователь {message.from_user.id} {message.from_user.username} перешел в меню поиска групп")
 
     await message.answer(
-        t("ai_search_welcome", lang=user.language),
-        reply_markup=ai_search_keyboard()
+        t("ai_search_welcome", lang=User.get(User.user_id == message.from_user.id).language),
+        reply_markup=ai_search_keyboard(),
+        parse_mode='HTML'
     )
 
 
