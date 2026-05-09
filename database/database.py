@@ -29,36 +29,6 @@ def init_database():
     db.close()
 
 
-# def migrate_add_availability_column():
-#     """
-#     Миграция: добавляет колонку availability в таблицу telegram_groups.
-#
-#     Запускается один раз при обновлении базы данных.
-#     Если колонка уже существует — миграция пропускается.
-#     """
-#     try:
-#         db.connect(reuse_if_open=True)
-#
-#         # Проверяем, существует ли уже колонка
-#         cursor = db.execute_sql("PRAGMA table_info(telegram_groups)")
-#         columns = [row[1] for row in cursor.fetchall()]
-#
-#         if 'availability' not in columns:
-#             # Добавляем колонку availability со значением по умолчанию 'unknown'
-#             db.execute_sql("""
-#                 ALTER TABLE telegram_groups
-#                 ADD COLUMN availability TEXT DEFAULT 'unknown'
-#             """)
-#             logger.info("✅ Миграция: добавлена колонка 'availability' в таблицу 'telegram_groups'")
-#         else:
-#             logger.info("ℹ️ Колонка 'availability' уже существует в таблице 'telegram_groups'")
-#
-#     except Exception as e:
-#         logger.exception(f"❌ Ошибка при выполнении миграции availability: {e}")
-#     finally:
-#         db.close()
-
-
 """
 Работа с группами пользователя для отслеживания ключевых слов. Все данные пользователей хранится в одной таблице, 
 для удобства масштабирования
