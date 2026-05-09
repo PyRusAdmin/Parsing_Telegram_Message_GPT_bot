@@ -170,8 +170,7 @@ def ai_search_keyboard(lang: str = 'ru'):
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-
-                KeyboardButton(text=t("ai_search_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("ai_search_button_user", lang=lang), style="primary"),
             ],
             [
                 KeyboardButton(text=t("global_ai_search_button", lang=lang), style='primary')
@@ -196,8 +195,8 @@ def menu_launch_tracking_keyboard(lang: str = 'ru'):
         ReplyKeyboardMarkup: Объект клавиатуры с кнопками управления отслеживанием.
 
     Layout:
-        [🛑 Остановить отслеживание]
-        [⬅️ Назад]
+        [stop_tracking_button - 🛑 Остановить отслеживание]
+        [back_button - ⬅️ Назад]
 
     Notes:
         - Отображает текущее состояние (отслеживание активно).
@@ -231,12 +230,12 @@ def settings_keyboard(lang: str = 'ru'):
     - Клавиатура подстраивается по размеру и остаётся видимой после использования.
 
     Layout:
-        [🔁 Обновить список] [🔍 Ввод ключевого слова]
-        [🗑️ Удалить группу из отслеживания]
-        [🔍 Список ключевых слов] [🌐 Ссылки для отслеживания]
-        [🔐 Подключить аккаунт] [📤 Подключить группу для сообщений]
-        [🌐 Сменить язык]
-        [⬅️ Назад]
+        [update_list_button - 🔁 Обновить список] [enter_keyword_button - 🔍 Ввод ключевого слова]
+        [delete_group_from_tracking_button - 🗑️ Удалить группу из отслеживания]
+        [keywords_list_button - 🔍 Список ключевых слов] [tracking_links_button - 🌐 Ссылки для отслеживания]
+        [connect_account_button - 🔐 Подключить аккаунт] [connect_group_for_messages_button - 📤 Подключить группу для сообщений]
+        [change_language_button - 🌐 Сменить язык]
+        [back_button - ⬅️ Назад]
 
     :return ReplyKeyboardMarkup: Объект клавиатуры с настройками.
     """
