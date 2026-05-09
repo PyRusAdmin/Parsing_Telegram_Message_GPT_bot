@@ -22,7 +22,7 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-@router.message(F.text == "Выгрузить вопросы")
+@router.message((F.text == t('export_questions_button', 'ru')) | (F.text == t('export_questions_button', 'en')))
 async def export_questions(message: Message):
     """
     Экспортирует вопросы и ответы из базы данных в CSV файл.
@@ -63,7 +63,7 @@ async def export_questions(message: Message):
         await message.answer(t("export_error", lang=user_lang, error=str(e)))
 
 
-@router.message(F.text == "🛡️ Панель администратора")
+@router.message((F.text == t('admin_panel_button', 'ru')) | (F.text == t('admin_panel_button', 'en')))
 async def admin_panel(message: Message, state: FSMContext):
     """
     Обработчик команды «Панель администратора».
@@ -93,7 +93,7 @@ async def admin_panel(message: Message, state: FSMContext):
 
         # Получаем язык пользователя
         try:
-            user = User.get(User.get(User.user_id == message.from_user.id))
+            user = User.get(User.user_id == message.from_user.id)
             user_lang = user.language if user.language != "unset" else "ru"
         except Exception:
             user_lang = "ru"
@@ -101,10 +101,11 @@ async def admin_panel(message: Message, state: FSMContext):
         await message.answer(
             text=t("admin_panel_message", lang=user_lang),
             parse_mode="HTML",
-            reply_markup=admin_keyboard(),
+            reply_markup=admin_keyboard(lang=user_lang),
         )
     except Exception as e:
         logger.exception(e)
+
 
 
 

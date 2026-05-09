@@ -1,9 +1,10 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from keyboards.admin.keyboards import menu_user_admin_keyboard
+from locales.locales import t
 
 
-def search_group_ai():
+def search_group_ai(lang: str = 'ru'):
     """
     Генерирует клавиатуру для меню «Получить базу».
 
@@ -17,17 +18,17 @@ def search_group_ai():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📥 Вся база", style="primary")
+                KeyboardButton(text=t("all_database_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="📥 База каналов", style="primary"),
-                KeyboardButton(text="📥 База групп", style="primary")
+                KeyboardButton(text=t("channels_database_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("groups_database_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="📂 Выбрать категорию", style="primary")
+                KeyboardButton(text=t("select_category_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ],
         ],
         resize_keyboard=True,
@@ -35,69 +36,69 @@ def search_group_ai():
     )
 
 
-def get_categories_keyboard():
+def get_categories_keyboard(lang: str = 'ru'):
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="инвестиции", style="primary")
+                KeyboardButton(text=t("investments_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="финансы и личный бюджет", style="primary")
+                KeyboardButton(text=t("finance_and_personal_budget_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="криптовалюты и блокчейн", style="primary"),
-                KeyboardButton(text="бизнес и предпринимательство", style="primary")
+                KeyboardButton(text=t("crypto_and_blockchain_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("business_and_entrepreneurship_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="маркетинг и продвижение", style="primary")
+                KeyboardButton(text=t("marketing_and_promotion_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="технологии и it", style="primary")
+                KeyboardButton(text=t("tech_and_it_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="образование и саморазвитие", style="primary")
+                KeyboardButton(text=t("education_and_self_development_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="работа и карьера", style="primary")
+                KeyboardButton(text=t("work_and_career_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="недвижимость", style="primary")
+                KeyboardButton(text=t("real_estate_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="здоровье и медицина", style="primary")
+                KeyboardButton(text=t("health_and_medicine_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="путешествия", style="primary")
+                KeyboardButton(text=t("travel_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="авто и транспорт", style="primary")
+                KeyboardButton(text=t("auto_and_transport_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="шоппинг и скидки", style="primary")
+                KeyboardButton(text=t("shopping_and_discounts_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="развлечения и досуг", style="primary")
+                KeyboardButton(text=t("entertainment_and_leisure_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="политика и общество", style="primary")
+                KeyboardButton(text=t("politics_and_society_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="наука и исследования", style="primary")
+                KeyboardButton(text=t("science_and_research_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="спорт и фитнес", style="primary")
+                KeyboardButton(text=t("sports_and_fitness_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="кулинария и еда", style="primary")
+                KeyboardButton(text=t("cooking_and_food_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="мода и красота", style="primary")
+                KeyboardButton(text=t("fashion_and_beauty_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="хобби и творчество", style="primary")
+                KeyboardButton(text=t("hobbies_and_creativity_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ],
         ],
         resize_keyboard=True,
@@ -105,7 +106,7 @@ def get_categories_keyboard():
     )
 
 
-def get_lang_keyboard():
+def get_lang_keyboard(lang: str = 'ru'):
     """
     Создаёт клавиатуру для выбора языка интерфейса.
 
@@ -121,8 +122,8 @@ def get_lang_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🇷🇺 Русский", style="primary"),
-                KeyboardButton(text="🇬🇧 English", style="primary")
+                KeyboardButton(text=t("russian_language_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("english_language_button", lang=lang), style="primary")
             ]
         ],
         resize_keyboard=True,
@@ -130,7 +131,7 @@ def get_lang_keyboard():
     )
 
 
-def main_menu_keyboard():
+def main_menu_keyboard(lang: str = 'ru'):
     """
     Создаёт клавиатуру главного меню бота.
 
@@ -154,14 +155,14 @@ def main_menu_keyboard():
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            *menu_user_admin_keyboard(),
+            *menu_user_admin_keyboard(lang),
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
     )
 
 
-def ai_search_keyboard():
+def ai_search_keyboard(lang: str = 'ru'):
     """
     Клавиатура для поиска новых групп / каналов с помощью AI.
     :return:
@@ -170,13 +171,13 @@ def ai_search_keyboard():
         keyboard=[
             [
 
-                KeyboardButton(text="🤖 AI поиск", style="primary"),
+                KeyboardButton(text=t("ai_search_button", lang=lang), style="primary"),
             ],
             [
-                KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
+                KeyboardButton(text=t("global_ai_search_button", lang=lang), style='primary')
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ],
         ],
         resize_keyboard=True,
@@ -184,7 +185,7 @@ def ai_search_keyboard():
     )
 
 
-def menu_launch_tracking_keyboard():
+def menu_launch_tracking_keyboard(lang: str = 'ru'):
     """
     Создаёт клавиатуру во время активного отслеживания.
 
@@ -205,10 +206,10 @@ def menu_launch_tracking_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🛑 Остановить отслеживание", style="danger")
+                KeyboardButton(text=t("stop_tracking_button", lang=lang), style="danger")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ],
         ],
         resize_keyboard=True,
@@ -216,7 +217,7 @@ def menu_launch_tracking_keyboard():
     )
 
 
-def settings_keyboard():
+def settings_keyboard(lang: str = 'ru'):
     """
     Создаёт клавиатуру меню настроек.
 
@@ -242,25 +243,25 @@ def settings_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🔁 Обновить список", style="primary"),
-                KeyboardButton(text="🔍 Ввод ключевого слова", style="primary")
+                KeyboardButton(text=t("update_list_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("enter_keyword_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="🗑️ Удалить группу из отслеживания", style="danger")
+                KeyboardButton(text=t("delete_group_from_tracking_button", lang=lang), style="danger")
             ],
             [
-                KeyboardButton(text="🔍 Список ключевых слов", style="primary"),
-                KeyboardButton(text="🌐 Ссылки для отслеживания", style="primary")
+                KeyboardButton(text=t("keywords_list_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("tracking_links_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="🔐 Подключить аккаунт", style="success"),
-                KeyboardButton(text="📤 Подключить группу для сообщений", style="success")
+                KeyboardButton(text=t("connect_account_button", lang=lang), style="success"),
+                KeyboardButton(text=t("connect_group_for_messages_button", lang=lang), style="success")
             ],
             [
-                KeyboardButton(text="🌐 Сменить язык", style="primary")
+                KeyboardButton(text=t("change_language_button", lang=lang), style="primary")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ]
         ],
         resize_keyboard=True,
@@ -268,18 +269,18 @@ def settings_keyboard():
     )
 
 
-def connect_keyboard_account():
+def connect_keyboard_account(lang: str = 'ru'):
     """Если у пользователя не подключен аккаунт, то высылаем ему наддую клавиатуру"""
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🔐 Подключить аккаунт", style="success")
+                KeyboardButton(text=t("connect_account_button", lang=lang), style="success")
             ],
             [
-                KeyboardButton(text="🔐 Подключить свободный аккаунт", style="success")
+                KeyboardButton(text=t("connect_free_account_button", lang=lang), style="success")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ]
         ],
         resize_keyboard=True,
@@ -287,17 +288,17 @@ def connect_keyboard_account():
     )
 
 
-def connect_grup_keyboard_tech():
+def connect_grup_keyboard_tech(lang: str = 'ru'):
     """
     Подключает группу для сообщений, в которую будут отправляться уведомления о новых найденных группах.
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи."""
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📤 Подключить группу для сообщений", style="success")
+                KeyboardButton(text=t("connect_group_for_messages_button", lang=lang), style="success")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ]
         ],
         resize_keyboard=True,
@@ -305,7 +306,7 @@ def connect_grup_keyboard_tech():
     )
 
 
-def back_keyboard():
+def back_keyboard(lang: str = 'ru'):
     """
     Создаёт простую клавиатуру с одной кнопкой Назад.
 
@@ -320,7 +321,7 @@ def back_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text=t("back_button", lang=lang), style="danger")
             ]
         ],
         resize_keyboard=True,

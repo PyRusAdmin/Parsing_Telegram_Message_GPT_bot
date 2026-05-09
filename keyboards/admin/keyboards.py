@@ -1,5 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+from locales.locales import t
+
 '''
 🔴 danger — красная кнопка (идеально для «Удалить», «Отмена», «Бан»).
 🟢 success — зелёная кнопка («Подтвердить», «Оплатить», «Принять»).
@@ -8,7 +10,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 '''
 
 
-def menu_user_admin_keyboard():
+def menu_user_admin_keyboard(lang: str = 'ru'):
     """
     Создаёт клавиатуру главного меню бота.
 
@@ -32,34 +34,34 @@ def menu_user_admin_keyboard():
     """
     return [
         [
-            KeyboardButton(text="🚀 Запуск отслеживания", style="success")
+            KeyboardButton(text=t("launch_tracking_button", lang=lang), style="success")
         ],
         [
-            KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style="primary")
+            KeyboardButton(text=t("check_group_for_keywords_button", lang=lang), style="primary")
         ],
         [
-            KeyboardButton(text="✨ Поиск через AI", style="primary"),
-            KeyboardButton(text="📥 Получить базу", style="primary")
+            KeyboardButton(text=t("ai_search_button", lang=lang), style="primary"),
+            KeyboardButton(text=t("get_database_button", lang=lang), style="primary")
         ],
         [
-            KeyboardButton(text="📖 Инструкция по использованию", style="primary")
+            KeyboardButton(text=t("instruction_button", lang=lang), style="primary")
         ],
         [
-            KeyboardButton(text="⚙️ Настройки", style="primary")
+            KeyboardButton(text=t("settings_button", lang=lang), style="primary")
         ]
     ]
 
 
-def main_admin_keyboard():
+def main_admin_keyboard(lang: str = 'ru'):
     """
     Клавиатура администратора
     :return: ReplyKeyboardMarkup
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            *menu_user_admin_keyboard(),
+            *menu_user_admin_keyboard(lang),
             [
-                KeyboardButton(text="🛡️ Панель администратора", style='success')
+                KeyboardButton(text=t("admin_panel_button", lang=lang), style='success')
             ]
         ],
         resize_keyboard=True,
@@ -67,7 +69,7 @@ def main_admin_keyboard():
     )
 
 
-def admin_keyboard():
+def admin_keyboard(lang: str = 'ru'):
     """
     Клавиатура панели администратора
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи.
@@ -75,21 +77,21 @@ def admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📄 Получить лог файл", style='primary'),
-                KeyboardButton(text="🔄 Актуализация базы данных", style='primary')
+                KeyboardButton(text=t("get_log_file_button", lang=lang), style='primary'),
+                KeyboardButton(text=t("update_database_button", lang=lang), style='primary')
             ],
             [
-                KeyboardButton(text="Выгрузить вопросы", style='primary'),
-                KeyboardButton(text="🏷️ Присвоить категорию", style='primary'
+                KeyboardButton(text=t("export_questions_button", lang=lang), style='primary'),
+                KeyboardButton(text=t("assign_category_button", lang=lang), style='primary'
                                ),
-                KeyboardButton(text="✅ Проверка аккаунтов", style='success')
+                KeyboardButton(text=t("check_accounts_button", lang=lang), style='success')
             ],
             [
-                KeyboardButton(text="🌐 Присвоить язык", style='primary'),
-                KeyboardButton(text="🔐 Подключение аккаунта", style='primary')
+                KeyboardButton(text=t("assign_language_button", lang=lang), style='primary'),
+                KeyboardButton(text=t("connect_account_button", lang=lang), style='primary')
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style='danger')
+                KeyboardButton(text=t("back_button", lang=lang), style='danger')
             ]
         ],
         resize_keyboard=True,
@@ -97,7 +99,7 @@ def admin_keyboard():
     )
 
 
-def category_method_keyboard():
+def category_method_keyboard(lang: str = 'ru'):
     """
     Клавиатура для выбора метода присвоения категорий
     :return: (ReplyKeyboardMarkup) Объект клавиатуры с выбором метода
@@ -105,16 +107,16 @@ def category_method_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="⚡️ Быстро (g4f.free)", style='primary')
+                KeyboardButton(text=t("fast_method_button", lang=lang), style='primary')
             ],
             [
-                KeyboardButton(text="🚀 Мощно (Openrouter API)", style='success')
+                KeyboardButton(text=t("powerful_method_openrouter_button", lang=lang), style='success')
             ],
             [
-                KeyboardButton(text="🚀 Мощно (GROQ API)", style='success')
+                KeyboardButton(text=t("powerful_method_groq_button", lang=lang), style='success')
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style='danger')
+                KeyboardButton(text=t("back_button", lang=lang), style='danger')
             ]
         ],
         resize_keyboard=True,

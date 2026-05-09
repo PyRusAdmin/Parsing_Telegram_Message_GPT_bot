@@ -56,9 +56,9 @@ async def handle_start_command(message, state: FSMContext) -> None:
         else:
             # Выбираем клавиатуру в зависимости от роли пользователя
             if message.from_user.id in ADMIN_USER_ID:  # Если пользователь является администратором
-                reply_markup = main_admin_keyboard()
+                reply_markup = main_admin_keyboard(lang=user.language)
             else:  # Если пользователь является обычным пользователем
-                reply_markup = main_menu_keyboard()
+                reply_markup = main_menu_keyboard(lang=user.language)
 
             await message.answer(
                 text=generate_welcome_message(user_language=user.language, user_tg_id=message.from_user.id),
@@ -73,7 +73,7 @@ async def handle_start_command(message, state: FSMContext) -> None:
         logger.exception(e)
 
 
-@router.message(F.text == "⬅️ Назад")
+@router.message((F.text == t('back_button', 'ru')) | (F.text == t('back_button', 'en')))
 async def handle_back_to_main_menu(message, state: FSMContext):
     """
     Обработчик команды "Назад".
@@ -106,7 +106,8 @@ async def handle_back_to_main_menu(message, state: FSMContext):
             # Генерируем приветственное сообщение
             text = generate_welcome_message(user_language=user.language, user_tg_id=message.from_user.id)
             # Выбираем клавиатуру в зависимости от роли
-            reply_markup = main_admin_keyboard() if is_admin else main_menu_keyboard()
+            reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(
+                lang=user.language)
             await message.answer(text=text, reply_markup=reply_markup, parse_mode="HTML")
     except Exception as e:
         logger.exception(e)
@@ -181,7 +182,7 @@ def get_or_create_user(user_tg):
     return user
 
 
-@router.message(F.text.in_(["🇷🇺 Русский", "🇬🇧 English"]))
+@router.message((F.text == t('russian_language_button', 'ru')) | (F.text == t('english_language_button', 'en')))
 async def handle_language_selection(message, state: FSMContext):
     """
     Обработчик выбора языка пользователем.
@@ -203,21 +204,21 @@ async def handle_language_selection(message, state: FSMContext):
         await state.clear()  # Завершаем текущее состояние машины состояния
         user = User.get(User.user_id == message.from_user.id)
 
-        if message.text == "🇷🇺 Русский":
+        if message.text == t('russian_language_button', 'ru'):
             user.language = "ru"
             confirmation_text = t("lang_selected", lang="ru")
-        elif message.text == "🇬🇧 English":
+        elif message.text == t('english_language_button', 'en'):
             user.language = "en"
             confirmation_text = t("lang_selected", lang="en")
 
         user.save()
 
-        await message.answer(confirmation_text, reply_markup=main_menu_keyboard())
+        await message.answer(confirmation_text, reply_markup=main_menu_keyboard(lang=user.language))
     except Exception as e:
         logger.exception(e)
 
 
-@router.message(F.text == "⚙️ Настройки")
+@router.message((F.text == t('settings_button', 'ru')) | (F.text == t('settings_button', 'en')))
 async def handle_settings_menu(message, state: FSMContext):
     """
     Обработчик команды "Настройки".
@@ -239,13 +240,13 @@ async def handle_settings_menu(message, state: FSMContext):
 
         await message.answer(
             t("settings_message", lang=user.language),
-            reply_markup=settings_keyboard()  # клавиатура выбора языка
+            reply_markup=settings_keyboard(lang=user.language)
         )
     except Exception as e:
         logger.exception(e)
 
 
-@router.message(F.text == "🌐 Сменить язык")
+@router.message((F.text == t('change_language_button', 'ru')) | (F.text == t('change_language_button', 'en')))
 async def handle_change_language(message, state: FSMContext):
     """
     Обработчик команды "Сменить язык".
@@ -268,7 +269,7 @@ async def handle_change_language(message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "🚀 Запуск отслеживания")
+@router.message((F.text == t('launch_tracking_button', 'ru')) | (F.text == t('launch_tracking_button', 'en')))
 async def handle_start_tracking(message, state: FSMContext):
     """
     Обработчик команды "Запуск отслеживания".
@@ -310,14 +311,14 @@ async def handle_start_tracking(message, state: FSMContext):
 
             await message.answer(
                 text="Нет подключенного аккаунта. Подключите аккаунт.",
-                reply_markup=connect_keyboard_account()
+                reply_markup=connect_keyboard_account(lang=user.language)
             )
             return  # Правильный способ прервать выполнение обработчика
 
             # Если у пользователя подключенный аккаунт
         await message.answer(
             t("launching_tracking", lang=user.language),
-            reply_markup=menu_launch_tracking_keyboard()  # клавиатура выбора языка
+            reply_markup=menu_launch_tracking_keyboard(lang=user.language)
         )
 
         await filter_messages(
@@ -329,7 +330,7 @@ async def handle_start_tracking(message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message(F.text == "🔁 Обновить список")
+@router.message((F.text == t('update_list_button', 'ru')) | (F.text == t('update_list_button', 'en')))
 async def handle_refresh_groups_list(message, state: FSMContext):
     """
     Обработчик команды "🔁 Обновить список".
@@ -352,7 +353,7 @@ async def handle_refresh_groups_list(message, state: FSMContext):
 
     await message.answer(
         text=t("update_list", lang=user.language),  # текст сообщения
-        reply_markup=back_keyboard(),  # клавиатура назад
+        reply_markup=back_keyboard(lang=user.language),
         parse_mode="HTML"
     )
     await state.set_state(MyStates.waiting_username_group)
