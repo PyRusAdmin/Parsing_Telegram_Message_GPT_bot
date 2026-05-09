@@ -57,10 +57,9 @@ def dell_group(user_id: int, username: str):
     :return: True, если группа удалена, иначе False
     """
     try:
-        (Groups
-         .delete()
-         .where(Groups.user_id == user_id, Groups.username == username)
-         .execute())
+        (
+            Groups.delete().where(Groups.user_id == user_id, Groups.username == username).execute()
+        )
         return True
     except Exception as e:
         logger.exception(e)
@@ -74,10 +73,9 @@ def get_tracked_channels_count(user_id: int) -> int:
     :return: Количество отслеживаемых каналов
     """
     try:
-        count = (Groups
-                 .select()
-                 .where(Groups.user_id == user_id)
-                 .count())
+        count = (
+            Groups.select().where(Groups.user_id == user_id).count()
+        )
         return count
     except Exception as e:
         logger.error(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
