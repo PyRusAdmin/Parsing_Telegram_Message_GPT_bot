@@ -21,16 +21,17 @@ from states.states import CategoryMethod
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🏷️ Присвоить категорию")
+@router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
 async def checking_group_for_ai_db(message: Message, state: FSMContext):
     """Предлагает выбор метода присвоения категорий"""
     await state.set_state(CategoryMethod.waiting_for_method)
 
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     await message.answer(
-        t("ai_category_select_method", lang=user.language),
-        reply_markup=category_method_keyboard(),
+        t("ai_category_select_method", lang=user_lang),
+        reply_markup=category_method_keyboard(lang=user_lang),
         parse_mode="HTML"
     )
 
@@ -80,29 +81,30 @@ async def get_best_g4f_model(client: Client) -> str:
 async def process_category_method_choice(message: Message, state: FSMContext):
     """Обрабатывает выбор метода присвоения категорий"""
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
-    if message.text == "⬅️ Назад":
+    if message.text == t('back_button', lang=user_lang):
         await state.clear()
         await message.answer(
-            t("ai_category_back", lang=user.language),
-            reply_markup=admin_keyboard()
+            t("ai_category_back", lang=user_lang),
+            reply_markup=admin_keyboard(lang=user_lang)
         )
         return
 
-    if message.text == "⚡️ Быстро (g4f.free)":
+    if message.text == t('fast_method_button', lang=user_lang):
         await state.clear()
         client = Client()
 
         # 🔍 Определяем лучшую доступную модель
-        status_msg = await message.answer(t("ai_category_checking_models", lang=user.language))
+        status_msg = await message.answer(t("ai_category_checking_models", lang=user_lang))
         model = await get_best_g4f_model(client)
-        await status_msg.edit_text(t("ai_category_model_selected", lang=user.language, model=model))
+        await status_msg.edit_text(t("ai_category_model_selected", lang=user_lang, model=model))
         await asyncio.sleep(1)
         await status_msg.delete()
 
         await assign_categories(message, client, model)
 
-    elif message.text == "🚀 Мощно (Openrouter API)":
+    elif message.text == t('powerful_method_openrouter_button', lang=user_lang):
         await state.clear()
         client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -120,38 +122,39 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         # model = "z-ai/glm-4.5-air:free"
         # 📊 Лёгкая и быстрая:
         # model = "meta-llama/llama-3.2-3b:free"
-        await assign_categories(message, client, model="google/gemma-3n-e4b-it")
+        await assign_categories(message, client, model=model)
 
-    elif message.text == "🚀 Мощно (GROQ API)":
+    elif message.text == t('powerful_method_groq_button', lang=user_lang):
         await state.clear()
         client = AsyncGroq(api_key=GROQ_API_KEY)
         model = "llama-3.1-8b-instant"
         await assign_categories(message, client, model)
     else:
         await message.answer(
-            t("ai_category_select_from_keyboard", lang=user.language),
-            reply_markup=category_method_keyboard()
+            t("ai_category_select_from_keyboard", lang=user_lang),
+            reply_markup=category_method_keyboard(lang=user_lang)
         )
 
 
 async def assign_categories(message: Message, client, model):
     """Универсальная функция присвоения категорий (любой AI клиент)"""
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
-    status_msg = await message.answer(t("ai_category_processing", lang=user.language, total=0))
+    status_msg = await message.answer(t("ai_category_processing", lang=user_lang, total=0))
 
     try:
         # 1️⃣ Получаем группы для обработки
         groups_to_process = await get_groups_without_category()
 
         if not groups_to_process:
-            await status_msg.edit_text(t("ai_category_all_have_categories", lang=user.language))
+            await status_msg.edit_text(t("ai_category_all_have_categories", lang=user_lang))
             return
 
         total = len(groups_to_process)
         logger.info(f"📦 Найдено {total} групп для обработки")
 
-        await status_msg.edit_text(t("ai_category_processing", lang=user.language, total=total))
+        await status_msg.edit_text(t("ai_category_processing", lang=user_lang, total=total))
 
         # 2️⃣ Обрабатываем последовательно с немедленной записью в БД
         for i, group_data in enumerate(groups_to_process, 1):
@@ -178,17 +181,18 @@ async def assign_categories(message: Message, client, model):
                 continue
 
         # 3️⃣ Финал
-        await status_msg.edit_text(t("ai_category_done", lang=user.language), parse_mode="HTML")
+        await status_msg.edit_text(t("ai_category_done", lang=user_lang), parse_mode="HTML")
 
     except Exception as e:
         logger.exception(e)
-        await status_msg.edit_text(t("ai_category_error", lang=user.language, error=str(e)))
+        await status_msg.edit_text(t("ai_category_error", lang=user_lang, error=str(e)))
 
 
-@router.message(F.text == "📥 Получить группы без категории")
+@router.message((F.text == t('get_database_button', 'ru')) | (F.text == t('get_database_button', 'en')))
 async def get_groups_without_category_message(message: Message):
     """Информация о группах без категории"""
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     def _count():
         if db.is_closed():
@@ -201,7 +205,7 @@ async def get_groups_without_category_message(message: Message):
     count = await sync_to_async(_count)()
 
     await message.answer(
-        t("ai_category_stats_title", lang=user.language) + "\n\n" +
-        t("ai_category_no_category_count", lang=user.language, count=count) + "\n\n" +
-        t("ai_category_run_ai", lang=user.language)
+        t("ai_category_stats_title", lang=user_lang) + "\n\n" +
+        t("ai_category_no_category_count", lang=user_lang, count=count) + "\n\n" +
+        t("ai_category_run_ai", lang=user_lang)
     )

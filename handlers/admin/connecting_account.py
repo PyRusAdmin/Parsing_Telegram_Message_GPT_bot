@@ -17,21 +17,21 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🔐 Подключение аккаунта")
+@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
 async def admin_connecting_account(message: Message, state: FSMContext):
     """Админ нажимает кнопку → бот просит .session файл(ы)"""
     await state.clear()
-    telegram_id = message.from_user.id
+    user = User.get(User.user_id == message.from_user.id)
 
     # ✅ Инициализируем очередь файлов в состоянии
     await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
 
     await state.set_state(MyStates.waiting_for_session_file)
     await message.answer(
-        t("connect_account_ask_session", lang="ru"),
-        reply_markup=back_keyboard()
+        t("connect_account_ask_session", lang=user.language),
+        reply_markup=back_keyboard(lang=user.language)
     )
-    logger.info(f"Админ {telegram_id} начал добавление новых сессий")
+    logger.info(f"Админ {message.from_user.id} начал добавление новых сессий")
 
 
 MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну сессию
@@ -136,7 +136,7 @@ async def receive_session_file(message: Message, state: FSMContext):
         await message.answer(
             t("connect_account_processing_done", lang=user.language),
             parse_mode="HTML",
-            reply_markup=back_keyboard()
+            reply_markup=back_keyboard(lang=user.language)
         )
 
     # ✅ Очищаем очередь в состоянии

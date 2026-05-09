@@ -19,7 +19,7 @@ from database.database import write_account_to_user_table
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🔐 Подключить свободный аккаунт")
+@router.message((F.text == t('connect_free_account_button', 'ru')) | (F.text == t('connect_free_account_button', 'en')))
 async def handle_connect_account_free(message: Message, state: FSMContext):
     """
     Обработчик команды "🔐 Подключить свободный аккаунт".
@@ -43,6 +43,8 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
             "language": "unset"  # ← ключевое: "unset" = язык не выбран
         }
     )
+    user_lang = user.language if user.language != "unset" else "ru"
+
     available_sessions = await CheckingAccountsValidity(message=message, path='accounts/free').get_available_sessions()
     logger.info(f"Подключаем аккаунт {available_sessions}")
     random_session = random.choice(available_sessions)
@@ -54,8 +56,8 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        text=t("account_connected_free", lang=user.language),
-        reply_markup=back_keyboard()
+        text=t("account_connected_free", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang)
     )
 
 
@@ -79,7 +81,7 @@ def sanitization_file_name(document, sessions_dir):
     return local_file_path, safe_file_name
 
 
-@router.message(F.text == "🔐 Подключить аккаунт")
+@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
 async def handle_connect_account(message: Message, state: FSMContext):
     await state.clear()
     user, created = User.get_or_create(
@@ -91,9 +93,10 @@ async def handle_connect_account(message: Message, state: FSMContext):
             "language": "unset"
         }
     )
+    user_lang = user.language if user.language != "unset" else "ru"
     await message.answer(
-        text=t("connect_account"),
-        reply_markup=back_keyboard()
+        text=t("connect_account", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang)
     )
     await state.set_state(MyStates.waiting_for_session_file_user)
 
@@ -105,13 +108,14 @@ async def handle_account_file(message: Message, state: FSMContext):
     local_file_path = None  # для безопасного удаления в finally
 
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     try:
         logger.info(f"User {message.from_user.id} отправил файл: {message.document.file_name}")
 
         # ✅ Проверяем расширение — если не .session, остаёмся в состоянии
         if not message.document.file_name.endswith('.session'):
-            await message.answer(t("invalid_session_file", lang=user.language))
+            await message.answer(t("invalid_session_file", lang=user_lang))
             return  # state НЕ сбрасываем — ждём правильный файл
 
         sessions_dir = creates_temporary_folder_for_accounts()
@@ -120,7 +124,7 @@ async def handle_account_file(message: Message, state: FSMContext):
         await message.bot.download(message.document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
 
-        await message.answer(t("session_file_received", lang=user.language, filename=safe_file_name))
+        await message.answer(t("session_file_received", lang=user_lang, filename=safe_file_name))
 
         session_path_without_ext = str(local_file_path.with_suffix(""))
         checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
@@ -141,20 +145,20 @@ async def handle_account_file(message: Message, state: FSMContext):
 
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
             await message.answer(
-                t("session_connected_success", lang=user.language, filename=safe_file_name, phone=phone,
+                t("session_connected_success", lang=user_lang, filename=safe_file_name, phone=phone,
                   name=first_name),
                 parse_mode="HTML"
             )
         else:
             logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {message.from_user.id}")
             await message.answer(
-                t("session_validation_failed", lang=user.language, filename=safe_file_name),
+                t("session_validation_failed", lang=user_lang, filename=safe_file_name),
                 parse_mode="HTML"
             )
 
     except Exception as e:
         logger.exception(f"Ошибка при обработке сессии пользователя {message.from_user.id}: {e}")
-        await message.answer(t("session_check_error", lang=user.language))
+        await message.answer(t("session_check_error", lang=user_lang))
 
     finally:
         # ✅ Удаляем временный файл в любом случае

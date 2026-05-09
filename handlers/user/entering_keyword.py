@@ -12,7 +12,7 @@ from aiogram import Router
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🔍 Ввод ключевого слова")
+@router.message((F.text == t('enter_keyword_button', 'ru')) | (F.text == t('enter_keyword_button', 'en')))
 async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
     Обработчик команды "🔍 Ввод ключевого слова".
@@ -35,7 +35,7 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
 
     await message.answer(
         t("enter_keyword", lang=user.language),
-        reply_markup=back_keyboard()  # клавиатура назад
+        reply_markup=back_keyboard(lang=user.language)  # клавиатура назад
     )
     await state.set_state(MyStates.entering_keyword)
 
@@ -76,7 +76,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
 
     if not keywords_list:
         await message.answer(t("no_keywords_entered", lang=user.language))
-        await state.clear()  # Завершаем текущее состояние машины состояния
+        await state.clear()
         return
 
     # Создаём модель с таблицей, уникальной для конкретного пользователя
@@ -108,27 +108,27 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
 
     if added_keywords:
         keywords_preview = added_keywords[:10]  # Show first 10
-        keywords_text = "\n".join(f"• {kw}" for kw in keywords_preview)
+        keywords_text = "\n\n".join(f"• {kw}" for kw in keywords_preview)
         if len(added_keywords) > 10:
-            keywords_text += f"\n... {t('keywords_and_more', lang=user.language, count=len(added_keywords) - 10)}"
+            keywords_text += f"\n...\n{t('keywords_and_more', lang=user.language, count=len(added_keywords) - 10)}\n"
         response_parts.append(
-            f"✅ {t('keywords_added_count', lang=user.language, count=len(added_keywords))}\n{keywords_text}"
+            f"✅ {t('keywords_added_count', lang=user.language, count=len(added_keywords))}\n{keywords_text}\n"
         )
 
     if skipped_keywords:
         skipped_preview = skipped_keywords[:5]  # Show first 5
         skipped_text = "\n".join(f"• {kw}" for kw in skipped_preview)
         if len(skipped_keywords) > 5:
-            skipped_text += f"\n... {t('keywords_and_more', lang=user.language, count=len(skipped_keywords) - 5)}"
+            skipped_text += f"\n...\n{t('keywords_and_more', lang=user.language, count=len(skipped_keywords) - 5)}\n"
         response_parts.append(
-            f"⚠️ {t('keywords_already_added', lang=user.language, count=len(skipped_keywords))}:\n{skipped_text}"
+            f"⚠️ {t('keywords_already_added', lang=user.language, count=len(skipped_keywords))}:\n{skipped_text}\n"
         )
 
     if error_keywords:
         error_text = "\n".join(f"• {kw}: {err}" for kw, err in error_keywords[:3])
         if len(error_keywords) > 3:
-            error_text += f"\n... {t('keywords_and_more_errors', lang=user.language, count=len(error_keywords) - 3)}"
-        response_parts.append(f"❌ {t('keywords_add_errors', lang=user.language)}:\n{error_text}")
+            error_text += f"\n...\n{t('keywords_and_more_errors', lang=user.language, count=len(error_keywords) - 3)}\n"
+        response_parts.append(f"❌ {t('keywords_add_errors', lang=user.language)}:\n{error_text}\n")
 
     # Summary
     summary = (

@@ -12,7 +12,8 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message(F.text == "📤 Подключить группу для сообщений")
+@router.message(
+    (F.text == t('connect_group_for_messages_button', 'ru')) | (F.text == t('connect_group_for_messages_button', 'en')))
 async def handle_connect_message_group(message: Message, state: FSMContext):
     """
     Обработчик команды "📤 Подключить группу для сообщений".
@@ -34,7 +35,7 @@ async def handle_connect_message_group(message: Message, state: FSMContext):
 
     await message.answer(
         t("enter_group", lang=user.language),
-        reply_markup=back_keyboard()  # клавиатура назад
+        reply_markup=back_keyboard(lang=user.language)  # клавиатура назад
     )
     await state.set_state(MyStates.entering_group)
 

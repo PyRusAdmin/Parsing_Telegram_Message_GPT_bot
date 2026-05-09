@@ -13,7 +13,8 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🗑️ Удалить группу из отслеживания")
+@router.message(
+    (F.text == t('delete_group_from_tracking_button', 'ru')) | (F.text == t('delete_group_from_tracking_button', 'en')))
 async def delete_group_from_database(message: Message, state: FSMContext):
     """
     Удаление группы из базы данных
@@ -23,7 +24,7 @@ async def delete_group_from_database(message: Message, state: FSMContext):
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         t("delete_group_prompt", lang=user.language),
-        reply_markup=back_keyboard()
+        reply_markup=back_keyboard(lang=user.language)
     )
     await state.set_state(MyStates.del_username_groups)
 
@@ -43,13 +44,13 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     if deletion_result:
         await message.answer(
             text=t("group_deleted", lang=user.language, group=group_username),
-            reply_markup=main_menu_keyboard()
+            reply_markup=main_menu_keyboard(lang=user.language)
         )
         logger.info(f"Пользователь {message.from_user.id} удалил группу @{group_username}")
     else:
         await message.answer(
             text=t("group_not_found", lang=user.language, group=group_username),
-            reply_markup=main_menu_keyboard()
+            reply_markup=main_menu_keyboard(lang=user.language)
         )
         logger.warning(f"Попытка удалить несуществующую группу @{group_username} "
                        f"пользователем {message.from_user.id}")
@@ -61,7 +62,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
         logger.warning(f"⚠️ У пользователя {message.from_user.id} нет подключённых аккаунтов в БД")
         await message.answer(
             t("no_accounts", lang=user.language),
-            reply_markup=menu_launch_tracking_keyboard()
+            reply_markup=menu_launch_tracking_keyboard(lang=user.language)
         )
         return None
     logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {message.from_user.id}")

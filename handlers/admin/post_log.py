@@ -10,7 +10,7 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-@router.message(F.text == "📄 Получить лог файл")
+@router.message((F.text == t('get_log_file_button', 'ru')) | (F.text == t('get_log_file_button', 'en')))
 async def log(message: Message, state: FSMContext):
     """
     Обработчик команды для отправки файла логов администратору.
@@ -47,5 +47,5 @@ async def log(message: Message, state: FSMContext):
         document=document,  # Файл логов для отправки
         caption=t("log_file_caption", lang=user.language),  # Текст под файлом
         parse_mode="HTML",  # Режим разметки для капшна
-        reply_markup=back_keyboard(),  # Клавиатура с кнопкой «Назад»
+        reply_markup=back_keyboard(lang=user.language),  # Клавиатура с кнопкой «Назад»
     )

@@ -15,7 +15,8 @@ from states.states import MyStatesParsing
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🔍 Проверка группы на наличие ключевых слов")
+@router.message(
+    (F.text == t('check_group_for_keywords_button', 'ru')) | (F.text == t('check_group_for_keywords_button', 'en')))
 async def checking_group_for_keywords(message: Message, state: FSMContext):
     """
     Обработчик команды "Проверка группы на наличие ключевых слов".
@@ -29,7 +30,7 @@ async def checking_group_for_keywords(message: Message, state: FSMContext):
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         text=t("check_group_ask_url", lang=user.language),
-        reply_markup=back_keyboard(),
+        reply_markup=back_keyboard(lang=user.language),
         parse_mode="HTML"
     )
     await state.set_state(MyStatesParsing.get_url)
@@ -46,7 +47,7 @@ async def get_url(message: Message, state: FSMContext):
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         text=t("check_group_ask_keyword", lang=user.language),
-        reply_markup=back_keyboard(),
+        reply_markup=back_keyboard(lang=user.language),
         parse_mode="HTML"
     )
     await state.set_state(MyStatesParsing.get_keyword)
@@ -63,12 +64,12 @@ async def get_keyword(message: Message, state: FSMContext):
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         text=t("check_group_started", lang=user.language),
-        reply_markup=back_keyboard()
+        reply_markup=back_keyboard(lang=user.language)
     )
     await state.update_data(keyword=keyword)
     data = await state.get_data()  # Получаем данные из контекста состояния
     await state.clear()  # Завершаем текущее состояние машины состояния
-    logger.info(f"Полученые данные от пользователя: ссылка {data.get("url")}, ключевое слово: {data.get('keyword')}")
+    logger.info(f"Полученые данные от пользователя: ссылка {data.get('url')}, ключевое слово: {data.get('keyword')}")
     await parse_group_for_keywords(url=data.get("url"), keyword=data.get("keyword"), message=message)
 
 

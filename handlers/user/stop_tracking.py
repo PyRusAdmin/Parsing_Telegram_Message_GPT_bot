@@ -11,7 +11,7 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-@router.message(F.text == "🛑 Остановить отслеживание")
+@router.message((F.text == t('stop_tracking_button', 'ru')) | (F.text == t('stop_tracking_button', 'en')))
 async def handle_stop_tracking(message: Message, state: FSMContext):
     """
     Обработчик команды "🛑 Остановить отслеживание".
@@ -29,6 +29,7 @@ async def handle_stop_tracking(message: Message, state: FSMContext):
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(
         f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} нажал кнопку остановки отслеживания")
@@ -36,6 +37,6 @@ async def handle_stop_tracking(message: Message, state: FSMContext):
     await stop_tracking(user_id=message.from_user.id, message=message)
 
     await message.answer(
-        text=t("tracking_stopped", lang=user.language),
-        reply_markup=menu_launch_tracking_keyboard()  # клавиатура выбора языка
+        text=t("tracking_stopped", lang=user_lang),
+        reply_markup=menu_launch_tracking_keyboard(lang=user_lang)  # клавиатура выбора языка
     )

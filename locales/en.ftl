@@ -566,3 +566,157 @@ connect_group_for_messages_button = 📤 Connect Group for Messages
 change_language_button = 🌐 Change Language
 connect_free_account_button = 🔐 Connect Free Account
 
+# get_dada.py
+keywords_export_caption = 📋 Keywords export. Total records: { $count }
+no_keywords_found = 📭 You have no saved keywords.
+tracking_links_export_caption = 🔗 Tracking links export. Total records: { $count }
+no_tracking_links_found = 📭 You have no tracking links.
+excel_header_number = #
+excel_header_keyword = Keyword
+excel_header_username = Channel/Group Username
+
+# pars_ai.py
+ai_search_button_user = 🤖 AI Search
+excel_filename_all_db = All_Database.xlsx
+excel_filename_channels_db = Channels_Database.xlsx
+excel_filename_groups_db = Groups_Database.xlsx
+excel_sheet_name_search_results = Search Results
+excel_header_id = ID (Hash)
+excel_header_name = Name
+excel_header_description = Description
+excel_header_participants = Participants
+excel_header_category = Category
+excel_header_type = Type
+excel_header_language = Language
+excel_header_activity = Activity
+excel_header_link = Link
+excel_header_date_added = Date Added
+excel_sheet_name_groups = Groups
+excel_filename_groups_by_category = groups_{ $category }.xlsx
+excel_header_group_name = Name
+excel_header_group_description = Description
+excel_header_group_type = Type
+excel_header_group_participants = Participants
+excel_header_group_link = Link
+excel_filename_telegram_groups = telegram_groups_{ $timestamp }.xlsx
+
+# post_doc.py
+instruction_question_prompt = 🤖 <b>You can ask me any question about using the bot, and I will answer you!</b>
+# post_doc.py
+instruction_question_prompt = 🤖 <b>You can ask me any question about using the bot, and I will answer you!</b>
+ai_support_assistant_system_prompt = You are a qualified support assistant for the AutoParseAlertBot Telegram bot. Your task is to answer user questions based STRICTLY on the provided knowledge base. If the answer is not in the knowledge base, politely inform the user that you do not have this information and advise them to contact support. Respond in the user's language. Use HTML markup for formatting the answer.
+excel_filename_telegram_groups = telegram_groups_{ $timestamp }.xlsx
+excel_header_group_link = Link
+excel_header_group_participants = Participants
+excel_header_group_type = Type
+excel_header_group_description = Description
+excel_header_group_name = Name
+excel_filename_groups_by_category = groups_{ $category }.xlsx
+excel_sheet_name_groups = Groups
+excel_header_date_added = Date Added
+excel_header_link = Link
+excel_header_activity = Activity
+excel_header_language = Language
+excel_header_type = Type
+excel_header_category = Category
+excel_header_participants = Participants
+excel_header_description = Description
+excel_header_name = Name
+excel_header_id = ID (Hash)
+excel_sheet_name_search_results = Search Results
+excel_filename_groups_db = Groups_Database.xlsx
+excel_filename_channels_db = Channels_Database.xlsx
+excel_filename_all_db = All_Database.xlsx
+ai_search_button_user = 🤖 AI Search
+excel_header_username = Channel/Group Username
+excel_header_keyword = Keyword
+excel_header_number = #
+no_tracking_links_found = 📭 You have no tracking links.
+tracking_links_export_caption = 🔗 Tracking links export. Total records: { $count }
+no_keywords_found = 📭 You have no saved keywords.
+keywords_export_caption = 📋 Keywords export. Total records: { $count }
+connect_free_account_button = 🔐 Connect Free Account
+change_language_button = 🌐 Change Language
+connect_group_for_messages_button = 📤 Connect Group for Messages
+tracking_links_button = 🌐 Tracking Links
+keywords_list_button = 🔍 Keywords List
+delete_group_from_tracking_button = 🗑️ Delete Group from Tracking
+enter_keyword_button = 🔍 Enter Keyword
+update_list_button = 🔁 Update List
+stop_tracking_button = 🛑 Stop Tracking
+global_ai_search_button = 🌐 Global AI Search
+english_language_button = 🇬🇧 English
+russian_language_button = 🇷🇺 Russian
+hobbies_and_creativity_button = hobbies and creativity
+fashion_and_beauty_button = fashion and beauty
+cooking_and_food_button = cooking and food
+sports_and_fitness_button = sports and fitness
+science_and_research_button = science and research
+politics_and_society_button = politics and society
+entertainment_and_leisure_button = entertainment and leisure
+shopping_and_discounts_button = shopping and discounts
+auto_and_transport_button = auto and transport
+travel_button = travel
+health_and_medicine_button = health and medicine
+real_estate_button = real estate
+work_and_career_button = work and career
+education_and_self_development_button = education and self-development
+tech_and_it_button = technologies and it
+marketing_and_promotion_button = marketing and promotion
+business_and_entrepreneurship_button = business and entrepreneurship
+crypto_and_blockchain_button = crypto and blockchain
+finance_and_personal_budget_button = finance and personal budget
+investments_button = investments
+select_category_button = 📂 Select Category
+groups_database_button = 📥 Groups Database
+channels_database_button = 📥 Channels Database
+all_database_button = 📥 All Database
+powerful_method_groq_button = 🚀 Powerful (GROQ API)
+powerful_method_openrouter_button = 🚀 Powerful (Openrouter API)
+fast_method_button = ⚡️ Fast (g4f.free)
+back_button = ⬅️ Back
+connect_account_button = 🔐 Connect Account
+assign_language_button = 🌐 Assign Language
+check_accounts_button = ✅ Check Accounts
+assign_category_button = 🏷️ Assign Category
+export_questions_button = Export Questions
+update_database_button = 🔄 Update Database
+get_log_file_button = 📄 Get Log File
+admin_panel_button = 🛡️ Admin Panel
+settings_button = ⚙️ Settings
+instruction_button = 📖 Instructions
+get_database_button = 📥 Get Database
+ai_search_button = ✨ AI Search
+check_group_for_keywords_button = 🔍 Check Group for Keywords
+launch_tracking_button = 🚀 Start Tracking
+
+# language_detection.py
+lang_detect_summary = ✅ Processing completed!
+
+    📊 Statistics:
+    • Total: { $total }
+    • AI detected: { $ai_success }
+    • Saved to DB: { $db_success }
+    • AI errors: { $ai_fail }
+    • DB errors: { $db_fail }
+    • Total errors: { $total_fail }
+name_prompt = Name
+description_prompt = Description
+no_data_prompt = No data
+ai_lang_detect_prompt = Determine the main language of the text or community description.
+Respond STRICTLY with a single word — the language code in ISO 639-1 format (two-letter code).
+Examples of correct answers: ru, en, es, zh, ar, hi, ja, ko, fr, de, pt, it, nl, sv, pl, tr, vi, th, id, fa, he, uk, cs, el, ro, hu, fi, da, no, sk, bg, hr, sr, sl, et, lv, lt, mk, sq, mt, cy, eu, gl, ga, is, ms, sw, tl, ur, bn, ta, te, mr, gu, kn, ml, si, km, lo, my, am, hy, ka, az, uz, kk, ky, tg, tk, mn, ps, ku, sd, ne, si, lo, km, my, dz, bo, ug, yi, ha, yo, ig, zu, xh, st, tn, ts, ve, nr, ss, ch, rw, rn, mg, ln, kg, sw, tn.
+If the language cannot be determined unambiguously or the text contains a mixture of languages without a dominant one — answer: unknown.
+DO NOT add any explanations, punctuation, spaces, or additional text. Only the language code or 'unknown'.
+
+Text for analysis:
+{ $user_input }
+
+# checking_group_for_ai.py
+get_groups_without_category_message = 📊 <b>Category Statistics:</b>
+
+    🗃️ Groups without category: { $count }
+
+    Press '🏷️ Assign Category' to start AI
+
+

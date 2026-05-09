@@ -137,7 +137,7 @@ def format_summary_message(groups_count, lang="ru"):
     )
 
 
-def create_excel_file(groups):
+def create_excel_file(groups, lang='ru'):
     """
     Создаёт байтовый Excel-файл (.xlsx) с данными о найденных группах для отправки пользователю.
 
@@ -150,21 +150,21 @@ def create_excel_file(groups):
     """
     wb = Workbook()
     ws = wb.active
-    ws.title = "Результаты поиска"
+    ws.title = t('excel_sheet_name_search_results', lang=lang)
 
     # Заголовки
     headers = [
-        'ID (Hash)',
-        'Название',
-        'Username',
-        'Описание',
-        'Участников',
-        'Категория',
-        'Тип',
-        'Язык',
-        'Активность',
-        'Ссылка',
-        'Дата добавления'
+        t('excel_header_id', lang=lang),
+        t('excel_header_name', lang=lang),
+        t('excel_header_username', lang=lang),
+        t('excel_header_description', lang=lang),
+        t('excel_header_participants', lang=lang),
+        t('excel_header_category', lang=lang),
+        t('excel_header_type', lang=lang),
+        t('excel_header_language', lang=lang),
+        t('excel_header_activity', lang=lang),
+        t('excel_header_link', lang=lang),
+        t('excel_header_date_added', lang=lang)
     ]
     ws.append(headers)
 
@@ -204,11 +204,12 @@ def create_excel_file(groups):
     return output.getvalue()
 
 
-@router.message(F.text == "📥 Вся база")
+@router.message((F.text == t('all_database_button', 'ru')) | (F.text == t('all_database_button', 'en')))
 async def export_all_groups(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
     await state.clear()
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     try:
         # ====================== ОЧИСТКА ДУБЛИКАТОВ ======================
@@ -257,31 +258,32 @@ async def export_all_groups(message: Message, state: FSMContext):
         # ====================== ЭКСПОРТ ======================
         groups = TelegramGroup.select()
         if not groups:
-            await message.answer(t("database_empty", lang=user.language))
+            await message.answer(t("database_empty", lang=user_lang))
             return
 
-        excel_bytes = create_excel_file(groups)
-        document = BufferedInputFile(excel_bytes, filename="Вся_база.xlsx")
+        excel_bytes = create_excel_file(groups, lang=user_lang)
+        document = BufferedInputFile(excel_bytes, filename=t('excel_filename_all_db', lang=user_lang))
         await message.answer_document(
             document=document,
             caption=t(
                 "export_all_caption",
-                lang=user.language,
+                lang=user_lang,
                 total_records=len(groups),
                 deleted_duplicates=deleted_count
             )
         )
 
     except Exception as e:
-        await message.answer(t("export_error_generic", lang=user.language))
+        await message.answer(t("export_error_generic", lang=user_lang))
         logger.exception(e)
 
 
-@router.message(F.text == "📥 База каналов")
+@router.message((F.text == t('channels_database_button', 'ru')) | (F.text == t('channels_database_button', 'en')))
 async def export_channels(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
     await state.clear()
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     try:
         # Получаем только КАНАЛЫ
         groups = TelegramGroup.select().where(
@@ -289,48 +291,49 @@ async def export_channels(message: Message, state: FSMContext):
         )
 
         if not groups:
-            await message.answer(t("database_empty", lang=user.language))
+            await message.answer(t("database_empty", lang=user_lang))
             return
 
-        excel_bytes = create_excel_file(groups)
-        document = BufferedInputFile(excel_bytes, filename="База_каналов.xlsx")
+        excel_bytes = create_excel_file(groups, lang=user_lang)
+        document = BufferedInputFile(excel_bytes, filename=t('excel_filename_channels_db', lang=user_lang))
         await message.answer_document(
             document=document,
-            caption=t("export_channels_caption", lang=user.language, total_records=len(groups))
+            caption=t("export_channels_caption", lang=user_lang, total_records=len(groups))
         )
 
     except Exception as e:
-        await message.answer(t("export_error_generic", lang=user.language))
+        await message.answer(t("export_error_generic", lang=user_lang))
         logger.exception(e)
 
 
-@router.message(F.text == "📥 База групп")
+@router.message((F.text == t('groups_database_button', 'ru')) | (F.text == t('groups_database_button', 'en')))
 async def export_supergroups(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
     await state.clear()
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     try:
         # Получаем только СУПЕРГРУППЫ
         groups = TelegramGroup.select().where(
             TelegramGroup.group_type == 'Группа (супергруппа)'
         )
         if not groups:
-            await message.answer(t("database_empty", lang=user.language))
+            await message.answer(t("database_empty", lang=user_lang))
             return
 
-        excel_bytes = create_excel_file(groups)
-        document = BufferedInputFile(excel_bytes, filename="База_групп.xlsx")
+        excel_bytes = create_excel_file(groups, lang=user_lang)
+        document = BufferedInputFile(excel_bytes, filename=t('excel_filename_groups_db', lang=user_lang))
         await message.answer_document(
             document=document,
-            caption=t("export_groups_caption", lang=user.language, total_records=len(groups))
+            caption=t("export_groups_caption", lang=user_lang, total_records=len(groups))
         )
 
     except Exception as e:
-        await message.answer(t("export_error_generic", lang=user.language))
+        await message.answer(t("export_error_generic", lang=user_lang))
         logger.exception(e)
 
 
-@router.message(F.text == "📥 Получить базу")
+@router.message((F.text == t('get_database_button', 'ru')) | (F.text == t('get_database_button', 'en')))
 async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
     Обрабатывает запрос пользователя на получение базы Telegram-групп и каналов.
@@ -347,24 +350,26 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
     await state.clear()
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     await message.answer(
-        text=t("get_database_menu", lang=user.language),
-        reply_markup=search_group_ai(),
+        text=t("get_database_menu", lang=user_lang),
+        reply_markup=search_group_ai(lang=user_lang),
         parse_mode="HTML"
     )
 
 
-@router.message(F.text == "📂 Выбрать категорию")
+@router.message((F.text == t('select_category_button', 'ru')) | (F.text == t('select_category_button', 'en')))
 async def start_category_export(message: Message, state: FSMContext):
     """
     Запускает процесс выбора категории для экспорта.
     Показывает клавиатуру с категориями и переводит в состояние ожидания выбора.
     """
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     await message.answer(
-        t("select_category_prompt", lang=user.language),
-        reply_markup=get_categories_keyboard()
+        t("select_category_prompt", lang=user_lang),
+        reply_markup=get_categories_keyboard(lang=user_lang)
     )
     await state.set_state(ExportStates.waiting_for_category)
 
@@ -375,11 +380,12 @@ async def handle_category_selection(message: Message, state: FSMContext):
     Обрабатывает выбор категории и формирует файл со списком групп.
     """
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     selected_category = message.text.strip()
 
     # Проверка на кнопку "Назад"
-    if selected_category == "⬅️ Назад":
-        await message.answer(t("action_cancelled", lang=user.language), reply_markup=ReplyKeyboardRemove())
+    if selected_category == t('back_button', lang=user_lang):
+        await message.answer(t("action_cancelled", lang=user_lang), reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
 
@@ -410,8 +416,8 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
     if selected_category not in valid_categories:
         await message.answer(
-            t("invalid_category", lang=user.language),
-            reply_markup=get_categories_keyboard()
+            t("invalid_category", lang=user_lang),
+            reply_markup=get_categories_keyboard(lang=user_lang)
         )
         return
 
@@ -421,7 +427,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
     if group_count == 0:
         await message.answer(
-            t("category_empty", lang=user.language, category=selected_category),
+            t("category_empty", lang=user_lang, category=selected_category),
             reply_markup=ReplyKeyboardRemove()
         )
         await state.clear()
@@ -430,10 +436,12 @@ async def handle_category_selection(message: Message, state: FSMContext):
     # === Создаём Excel-файл ===
     wb = Workbook()
     ws = wb.active
-    ws.title = "Группы"
+    ws.title = t('excel_sheet_name_groups', lang=user_lang)
 
     # Заголовки
-    headers = ["Username", "Название", "Описание", "Тип", "Участники", "Ссылка"]
+    headers = [t('excel_header_username', lang=user_lang), t('excel_header_group_name', lang=user_lang),
+               t('excel_header_group_description', lang=user_lang), t('excel_header_group_type', lang=user_lang),
+               t('excel_header_group_participants', lang=user_lang), t('excel_header_group_link', lang=user_lang)]
     ws.append(headers)
 
     # Жирный шрифт для заголовков
@@ -470,13 +478,13 @@ async def handle_category_selection(message: Message, state: FSMContext):
     output.seek(0)
 
     # Отправляем файл
-    file_name = f"groups_{selected_category.replace(' ', '_')}.xlsx"
+    file_name = t('excel_filename_groups_by_category', lang=user_lang, category=selected_category.replace(' ', '_'))
     await message.answer_document(
         document=BufferedInputFile(
             file=output.getvalue(),
             filename=file_name
         ),
-        caption=t("category_export_caption", lang=user.language, group_count=group_count, category=selected_category),
+        caption=t("category_export_caption", lang=user_lang, group_count=group_count, category=selected_category),
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -487,7 +495,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
 """Меню AI поиска"""
 
 
-@router.message(F.text == "✨ Поиск через AI")
+@router.message((F.text == t('ai_search_button', 'ru')) | (F.text == t('ai_search_button', 'en')))
 async def ai_search_menu(message: Message, state: FSMContext):
     """
     Обработчик команды "Поиск через AI".
@@ -499,10 +507,11 @@ async def ai_search_menu(message: Message, state: FSMContext):
     await state.clear()  # Сбрасывает состояние
 
     logger.info(f"Пользователь {message.from_user.id} {message.from_user.username} перешел в меню поиска групп")
-
+    user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     await message.answer(
-        t("ai_search_welcome", lang=User.get(User.user_id == message.from_user.id).language),
-        reply_markup=ai_search_keyboard(),
+        t("ai_search_welcome", lang=user_lang),
+        reply_markup=ai_search_keyboard(lang=user_lang),
         parse_mode='HTML'
     )
 
@@ -510,7 +519,7 @@ async def ai_search_menu(message: Message, state: FSMContext):
 """Одиночный AI поиск"""
 
 
-@router.message(F.text == "🤖 AI поиск")
+@router.message((F.text == t('ai_search_button_user', 'ru')) | (F.text == t('ai_search_button_user', 'en')))
 async def ai_search(message: Message, state: FSMContext):
     """
     Обработчик команды "Получить базу".
@@ -527,13 +536,14 @@ async def ai_search(message: Message, state: FSMContext):
 
     telegram_user = message.from_user
     user = User.get(User.user_id == telegram_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(
         f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню поиска групп")
 
     await message.answer(
-        t("enter_keyword", lang=user.language),
-        reply_markup=back_keyboard()
+        t("enter_keyword", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang)
     )
     await state.set_state(MyStates.entering_keyword_ai_search)
 
@@ -567,8 +577,9 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     # telegram_user = message.from_user
     user_input = message.text.strip()
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     # Отправляем сообщение о начале поиска
-    processing_msg = await message.answer(t("searching_groups", lang=user.language))
+    processing_msg = await message.answer(t("searching_groups", lang=user_lang))
 
     try:
         answer = await get_groq_response(user_input)  # Получаем ответ от AI
@@ -593,8 +604,8 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         if not client:
             await message.answer(
-                t("search_no_available_accounts", lang=user.language),
-                reply_markup=back_keyboard()
+                t("search_no_available_accounts", lang=user_lang),
+                reply_markup=back_keyboard(lang=user_lang)
             )
             await state.clear()
             return
@@ -620,30 +631,31 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         if saved_groups:
 
             # Создаём Excel-файл
-            excel_bytes = create_excel_file(saved_groups)
-            filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            excel_bytes = create_excel_file(saved_groups, lang=user_lang)
+            filename = t('excel_filename_telegram_groups', lang=user_lang,
+                         timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
             excel_file = BufferedInputFile(excel_bytes, filename=filename)
 
-            summary = format_summary_message(len(saved_groups), lang=user.language)
+            summary = format_summary_message(len(saved_groups), lang=user_lang)
             await message.answer(summary, parse_mode="HTML")
             # Отправляем CSV файл
             await message.answer_document(
                 document=excel_file,
-                caption=t("search_results_caption", lang=user.language, query=user_input),
+                caption=t("search_results_caption", lang=user_lang, query=user_input),
                 parse_mode="HTML"
             )
             logger.info(f"Отправлено {len(saved_groups)} групп пользователю {message.from_user.id} в Excel файле")
         else:
             await message.answer(
-                t("search_no_results", lang=user.language),
-                reply_markup=back_keyboard()
+                t("search_no_results", lang=user_lang),
+                reply_markup=back_keyboard(lang=user_lang)
             )
     except Exception as e:
         logger.error(f"Ошибка при обработке запроса: {e}")
         await processing_msg.delete()
         await message.answer(
-            t("search_error", lang=user.language),
-            reply_markup=back_keyboard()
+            t("search_error", lang=user_lang),
+            reply_markup=back_keyboard(lang=user_lang)
         )
     finally:
         if client:
@@ -654,7 +666,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 """Глобальный AI поиск"""
 
 
-@router.message(F.text == "🌐 Глобальный AI поиск")
+@router.message((F.text == t('global_ai_search_button', 'ru')) | (F.text == t('global_ai_search_button', 'en')))
 async def ai_search_global(message: Message, state: FSMContext):
     """
     Обработчик команды "Глобальный AI поиск".
@@ -664,14 +676,15 @@ async def ai_search_global(message: Message, state: FSMContext):
 
     telegram_user = message.from_user
     user = User.get(User.user_id == telegram_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(
         f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню глобального поиска групп"
     )
 
     await message.answer(
-        t("enter_keyword", lang=user.language),
-        reply_markup=back_keyboard()
+        t("enter_keyword", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang)
     )
     await state.set_state(MyStates.entering_keyword_ai_search_global)
 
@@ -684,6 +697,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     """
     telegram_user = message.from_user
     user = User.get(User.user_id == telegram_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
     user_input = message.text.strip()
 
     # Парсим ввод в список запросов
@@ -691,13 +705,13 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
     if not search_terms:
         await message.answer(
-            t("global_search_no_terms", lang=user.language),
-            reply_markup=back_keyboard()
+            t("global_search_no_terms", lang=user_lang),
+            reply_markup=back_keyboard(lang=user_lang)
         )
         await state.clear()
         return
 
-    processing_msg = await message.answer(t("global_search_processing", lang=user.language, total=len(search_terms)))
+    processing_msg = await message.answer(t("global_search_processing", lang=user_lang, total=len(search_terms)))
 
     all_saved_groups = []
     successful_queries = 0
@@ -718,7 +732,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             if not client:
                 logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
-                await message.answer(t("global_search_skipped", lang=user.language, term=term))
+                await message.answer(t("global_search_skipped", lang=user_lang, term=term))
                 continue
 
             try:
@@ -757,7 +771,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 # 📊 Обновляем статус в Telegram (опционально)
                 if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
                     await processing_msg.edit_text(
-                        t("global_search_progress", lang=user.language, current=idx, total=len(search_terms),
+                        t("global_search_progress", lang=user_lang, current=idx, total=len(search_terms),
                           successful=successful_queries)
                     )
 
@@ -779,32 +793,33 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         # 📤 Отправляем результаты
         if all_saved_groups:
-            excel_bytes = create_excel_file(all_saved_groups)
-            filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
+            filename = t('excel_filename_telegram_groups', lang=user_lang,
+                         timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
             excel_file = BufferedInputFile(excel_bytes, filename=filename)
 
-            summary = format_summary_message(len(all_saved_groups), lang=user.language)
+            summary = format_summary_message(len(all_saved_groups), lang=user_lang)
             await message.answer(summary, parse_mode="HTML")
 
             await message.answer_document(
                 document=excel_file,
-                caption=t("global_search_results_caption", lang=user.language, total=len(all_saved_groups),
+                caption=t("global_search_results_caption", lang=user_lang, total=len(all_saved_groups),
                           successful=successful_queries, total_queries=len(search_terms)),
                 parse_mode="HTML"
             )
             logger.info(f"✅ Отправлено {len(all_saved_groups)} групп пользователю {telegram_user.id}")
         else:
             await message.answer(
-                t("global_search_no_results", lang=user.language),
-                reply_markup=back_keyboard()
+                t("global_search_no_results", lang=user_lang),
+                reply_markup=back_keyboard(lang=user_lang)
             )
 
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
         await processing_msg.delete()
         await message.answer(
-            t("search_error", lang=user.language),
-            reply_markup=back_keyboard()
+            t("search_error", lang=user_lang),
+            reply_markup=back_keyboard(lang=user_lang)
         )
     finally:
         await state.clear()
@@ -820,7 +835,7 @@ def parse_search_input(user_input: str) -> list[str]:
         return []
 
     # Нормализуем разделители → перенос строки
-    normalized = user_input.replace(',', '\n').replace(';', '\n').replace('\r\n', '\n')
+    normalized = user_input.replace(',', '\n').replace(';', '\n')
 
     # Чистим, фильтруем пустые, убираем дубликаты с сохранением порядка
     seen = set()

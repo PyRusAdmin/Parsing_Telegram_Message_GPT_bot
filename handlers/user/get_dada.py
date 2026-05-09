@@ -87,7 +87,7 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
     return filepath
 
 
-@router.message(F.text == "🔍 Список ключевых слов")
+@router.message((F.text == t('keywords_list_button', 'ru')) | (F.text == t('keywords_list_button', 'en')))
 async def get_keywords_list(message: Message, state: FSMContext):
     """
     Обработчик команды "🔍 Список ключевых слов" для экспорта ключевых слов в Excel.
@@ -110,6 +110,7 @@ async def get_keywords_list(message: Message, state: FSMContext):
     await state.clear()  # Завершаем текущее состояние машины состояния
     telegram_user = message.from_user
     user = User.get(User.user_id == telegram_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ключевых слов")
 
@@ -119,14 +120,14 @@ async def get_keywords_list(message: Message, state: FSMContext):
     # Проверяем, существует ли таблица
     if not KeywordsModel.table_exists():
         KeywordsModel.create_table()
-        await message.answer(t("no_keywords", lang=user.language))
+        await message.answer(t("no_keywords_found", lang=user_lang))
         return
 
     # Извлекаем все ключевые слова
     keywords = list(KeywordsModel.select())
 
     if not keywords:
-        await message.answer(t("no_keywords", lang=user.language))
+        await message.answer(t("no_keywords_found", lang=user_lang))
         return
 
     # Формируем список данных для записи в Excel
@@ -137,7 +138,7 @@ async def get_keywords_list(message: Message, state: FSMContext):
     # Формируем имя файла
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"keywords_{telegram_user.id}_{timestamp}.xlsx"
-    headers = ["№", "Ключевое слово / Keyword"]
+    headers = [t('excel_header_number', lang=user_lang), t('excel_header_keyword', lang=user_lang)]
 
     try:
         # Создаём Excel-файл
@@ -152,8 +153,7 @@ async def get_keywords_list(message: Message, state: FSMContext):
         document = FSInputFile(filepath)
         await message.answer_document(
             document=document,
-            caption=f"📋 {t('keywords_export', lang=user.language)}\n"
-                    f"Всего записей: {len(data)}"
+            caption=t("keywords_export_caption", lang=user_lang, count=len(data))
         )
 
         # Удаляем файл после отправки
@@ -162,10 +162,10 @@ async def get_keywords_list(message: Message, state: FSMContext):
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла с ключевыми словами: {e}")
-        await message.answer(t("export_error", lang=user.language))
+        await message.answer(t("export_error", lang=user_lang))
 
 
-@router.message(F.text == "🌐 Ссылки для отслеживания")
+@router.message((F.text == t('tracking_links_button', 'ru')) | (F.text == t('tracking_links_button', 'en')))
 async def get_tracking_links_list(message: Message, state: FSMContext):
     """
     Обработчик команды "🌐 Ссылки для отслеживания" для экспорта списка отслеживаемых чатов.
@@ -180,6 +180,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     await state.clear()
     telegram_user = message.from_user
     user = User.get(User.user_id == telegram_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ссылок для отслеживания")
 
@@ -187,7 +188,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     usernames_list, total_count = get_user_channel_usernames(telegram_user.id)
 
     if not usernames_list:
-        await message.answer(t("no_tracking_links", lang=user.language))
+        await message.answer(t("no_tracking_links_found", lang=user_lang))
         return
 
     # Формируем список данных для Excel
@@ -198,7 +199,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
     # Формируем имя файла
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"tracking_links_{telegram_user.id}_{timestamp}.xlsx"
-    headers = ["№", "Username канала/группы / Channel/Group Username"]
+    headers = [t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)]
 
     try:
         # Создаём Excel-файл
@@ -213,7 +214,7 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
         document = FSInputFile(filepath)
         await message.answer_document(
             document=document,
-            caption=f"🔗 Всего записей: {total_count}"
+            caption=t("tracking_links_export_caption", lang=user_lang, count=total_count)
         )
 
         # Удаляем файл после отправки
@@ -222,4 +223,4 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла со ссылками: {e}")
-        await message.answer(t("export_error", lang=user.language))
+        await message.answer(t("export_error", lang=user_lang))

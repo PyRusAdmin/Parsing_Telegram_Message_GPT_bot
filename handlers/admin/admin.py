@@ -16,8 +16,9 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.parser import determine_telegram_chat_type
 from database.database import TelegramGroup, db, getting_account, User, get_all_questions
-from keyboards.admin.keyboards import admin_keyboard
+from keyboards.admin.keyboards import admin_keyboard, category_method_keyboard
 from locales.locales import t
+from states.states import CategoryMethod
 
 router = Router(name=__name__)
 
@@ -105,8 +106,6 @@ async def admin_panel(message: Message, state: FSMContext):
         )
     except Exception as e:
         logger.exception(e)
-
-
 
 
 @router.message(F.text == "🔄 Актуализация базы данных")
@@ -370,3 +369,39 @@ async def update_db(message: Message):
             db.close()
 
         logger.info("Актуализация завершена.")
+
+
+@router.message((F.text == t('check_accounts_button', 'ru')) | (F.text == t('check_accounts_button', 'en')))
+async def checking_accounts_handler(message: Message, state: FSMContext):
+    """✅ Проверка аккаунтов на валидность"""
+    try:
+        await state.clear()  # Сбрасываем текущее состояние FSM
+        user = User.get(User.user_id == message.from_user.id)
+        records = getting_account()  # Получаем все аккаунты в базе данных
+        logger.info(f"Получено аккаунтов: {len(records)}")
+        await message.answer(t("checking_accounts_start", lang=user.language, count=len(records)))
+        for session_name in records:
+            logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
+            # ✅ Проверка аккаунтов на валидность
+            checker = CheckingAccountsValidity(
+                message=message,
+                # path=path
+            )
+            await checker.verify_account(session_name)
+        await message.answer(
+            t("checking_accounts_complete", lang=user.language)
+        )
+    except Exception as e:
+        logger.exception(e)
+
+
+@router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
+async def checking_group_for_ai_db(message: Message, state: FSMContext):
+    """Предлагает выбор метода присвоения категорий"""
+    await state.set_state(CategoryMethod.waiting_for_method)
+    user = User.get(User.user_id == message.from_user.id)
+    await message.answer(
+        t("ai_category_select_method", lang=user.language),
+        reply_markup=category_method_keyboard(lang=user.language),
+        parse_mode="HTML"
+    )

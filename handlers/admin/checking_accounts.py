@@ -10,7 +10,7 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-@router.message(F.text == "✅ Проверка аккаунтов")
+@router.message((F.text == t('check_accounts_button', 'ru')) | (F.text == t('check_accounts_button', 'en')))
 async def checking_accounts_handler(message: Message, state: FSMContext):
     """✅ Проверка аккаунтов на валидность"""
     try:

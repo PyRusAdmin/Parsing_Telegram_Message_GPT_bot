@@ -27,7 +27,7 @@ def load_knowledge_base():
         return "База знаний не найдена. Пожалуйста, создайте файл doc/doc.md."
 
 
-@router.message(F.text == "📖 Инструкция по использованию")
+@router.message((F.text == t('instruction_button', 'ru')) | (F.text == t('instruction_button', 'en')))
 async def send_instruction(message: Message, state: FSMContext):
     """
     Обработчик команды "Инструкция по использованию".
@@ -35,22 +35,23 @@ async def send_instruction(message: Message, state: FSMContext):
     """
     await state.clear()
     user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
 
     try:
         # Отправляем файл инструкции
         await message.answer(
-            text=f"🤖 <b>Вы можете задать мне любой вопрос по использованию бота, и я отвечу вам!</b>",
+            text=t("instruction_question_prompt", lang=user_lang),
             parse_mode="html",
-            reply_markup=back_keyboard()
+            reply_markup=back_keyboard(lang=user_lang)
         )
         # Устанавливаем состояние для ожидания вопроса
         await state.set_state(MyStates.waiting_for_instruction_question)
 
     except FileNotFoundError:
-        await message.answer(t("instruction_file_not_found", lang=user.language))
+        await message.answer(t("instruction_file_not_found", lang=user_lang))
     except Exception as e:
         logger.exception(e)
-        await message.answer(t("instruction_send_error", lang=user.language))
+        await message.answer(t("instruction_send_error", lang=user_lang))
 
 
 @router.message(MyStates.waiting_for_instruction_question)
@@ -59,13 +60,14 @@ async def handle_instruction_question(message: Message, state: FSMContext):
     Обрабатывает вопросы пользователя по инструкции с использованием Groq AI.
     """
     text_question = message.text  # Получаем вопрос пользователя
+    user_db = User.get(User.user_id == message.from_user.id)
+    user_lang = user_db.language if user_db.language != "unset" else "ru"
 
-    if message.text == "⬅️ Назад":
+    if message.text == t('back_button', lang=user_lang):
         await handle_back_to_main_menu(message, state)
         return
 
     knowledge_base_content = load_knowledge_base()  # Загружаем базу знаний из файла doc/doc.md
-    user_db = User.get(User.user_id == message.from_user.id)
 
     # Индикация того, что бот "печатает"
     await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
@@ -74,13 +76,7 @@ async def handle_instruction_question(message: Message, state: FSMContext):
         setup_proxy()
         client = AsyncGroq(api_key=GROQ_API_KEY)
 
-        system_prompt = (
-            "Вы — квалифицированный помощник службы поддержки Telegram-бота AutoParseAlertBot. "
-            "Ваша задача — отвечать на вопросы пользователей, основываясь СТРОГО на предоставленной базе знаний. "
-            "Если ответа нет в базе знаний, вежливо сообщите, что вы не обладаете данной информацией и "
-            "посоветуйте обратиться в поддержку. "
-            "Отвечайте на языке пользователя. Используйте HTML-разметку для оформления ответа."
-        )
+        system_prompt = t('ai_support_assistant_system_prompt', lang=user_lang)
 
         chat_completion = await client.chat.completions.create(
             messages=[
@@ -94,7 +90,7 @@ async def handle_instruction_question(message: Message, state: FSMContext):
 
         add_question(user_id=message.from_user.id, question=text_question, answer=answer)
 
-        await message.answer(answer, parse_mode="HTML", reply_markup=back_keyboard())
+        await message.answer(answer, parse_mode="HTML", reply_markup=back_keyboard(lang=user_lang))
 
     except Exception as e:
         logger.exception(e)
