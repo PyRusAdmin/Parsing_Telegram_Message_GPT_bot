@@ -499,3 +499,14 @@ admin_account_error =
 
 admin_critical_error =
     ❌ Критическая ошибка: { $error }
+
+# === Экспорт вопросов ===
+no_questions_in_db =
+    📭 В базе данных нет вопросов.
+
+questions_export_caption =
+    📦 Экспорт вопросов и ответов.
+
+export_error =
+    ❌ Произошла ошибка при экспорте: { $error }
+

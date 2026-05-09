@@ -499,3 +499,13 @@ admin_account_error =
 
 admin_critical_error =
     ❌ Critical error: { $error }
+
+# === Question Export ===
+no_questions_in_db =
+    📭 There are no questions in the database.
+
+questions_export_caption =
+    📦 Export of questions and answers.
+
+export_error =
+    ❌ An error occurred during export: { $error }

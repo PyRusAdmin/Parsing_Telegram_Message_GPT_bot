@@ -1,9 +1,12 @@
 import asyncio
+import csv
+import os
+from datetime import datetime
 
 import peewee
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 from loguru import logger
 from telethon.errors import (
     FloodWaitError, AuthKeyUnregisteredError, UsernameInvalidError, UsernameNotOccupiedError, TypeNotFoundError
@@ -12,11 +15,52 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.parser import determine_telegram_chat_type
-from database.database import TelegramGroup, db, getting_account, User
+from database.database import TelegramGroup, db, getting_account, User, get_all_questions
 from keyboards.admin.keyboards import admin_keyboard
 from locales.locales import t
 
 router = Router(name=__name__)
+
+
+@router.message(F.text == "Выгрузить вопросы")
+async def export_questions(message: Message):
+    """
+    Экспортирует вопросы и ответы из базы данных в CSV файл.
+    """
+    try:
+        user = User.get(User.user_id == message.from_user.id)
+        user_lang = user.language if user.language != "unset" else "ru"
+    except Exception:
+        user_lang = "ru"
+
+    try:
+        questions = get_all_questions()
+        if not questions:
+            await message.answer(t("no_questions_in_db", lang=user_lang))
+            return
+
+        # Создаем директорию exports, если она не существует
+        if not os.path.exists("exports"):
+            os.makedirs("exports")
+
+        file_path = f"exports/questions_export_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+
+        with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+            fieldnames = ["user_id", "question", "answer"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for question_data in questions:
+                writer.writerow(question_data)
+
+        await message.answer_document(FSInputFile(file_path), caption=t("questions_export_caption", lang=user_lang))
+
+        # Удаляем файл после отправки
+        os.remove(file_path)
+
+    except Exception as e:
+        logger.exception(e)
+        await message.answer(t("export_error", lang=user_lang, error=str(e)))
 
 
 @router.message(F.text == "🛡️ Панель администратора")
@@ -49,7 +93,7 @@ async def admin_panel(message: Message, state: FSMContext):
 
         # Получаем язык пользователя
         try:
-            user = User.get(User.user_id == message.from_user.id)
+            user = User.get(User.get(User.user_id == message.from_user.id))
             user_lang = user.language if user.language != "unset" else "ru"
         except Exception:
             user_lang = "ru"
@@ -61,6 +105,7 @@ async def admin_panel(message: Message, state: FSMContext):
         )
     except Exception as e:
         logger.exception(e)
+
 
 
 @router.message(F.text == "🔄 Актуализация базы данных")

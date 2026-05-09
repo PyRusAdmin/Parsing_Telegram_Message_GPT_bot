@@ -79,6 +79,7 @@ def admin_keyboard():
                 KeyboardButton(text="🔄 Актуализация базы данных", style='primary')
             ],
             [
+                KeyboardButton(text="Выгрузить вопросы", style='primary'),
                 KeyboardButton(text="🏷️ Присвоить категорию", style='primary'
                                ),
                 KeyboardButton(text="✅ Проверка аккаунтов", style='success')

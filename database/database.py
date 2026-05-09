@@ -58,6 +58,28 @@ def add_question(user_id: int, question: str, answer: str):
     #     logger
 
 
+def get_all_questions():
+    """
+    Получает все вопросы и ответы из базы данных.
+
+    :return: Список словарей с вопросами и ответами
+    """
+    try:
+        questions = Question.select()
+        result = [
+            {
+                'user_id': q.user_id,
+                'question': q.question,
+                'answer': q.answer
+            }
+            for q in questions
+        ]
+        return result
+    except Exception as e:
+        logger.exception(f"❌ Ошибка получения всех вопросов: {e}")
+        return []
+
+
 """
 Работа с группами пользователя для отслеживания ключевых слов. Все данные пользователей хранится в одной таблице, 
 для удобства масштабирования
