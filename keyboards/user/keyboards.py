@@ -164,9 +164,9 @@ def main_menu_keyboard():
                 KeyboardButton(text="🤖 AI поиск", style="primary"),
                 KeyboardButton(text="📥 Получить базу", style="primary")
             ],
-            [
-                KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
-            ],
+            # [
+            #     KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
+            # ],
             [
                 KeyboardButton(text="📖 Инструкция по использованию", style="primary")
             ],
@@ -176,6 +176,27 @@ def main_menu_keyboard():
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
+    )
+
+
+def ai_search_keyboard():
+    """
+    Клавиатура для поиска новых групп / каналов с помощью AI.
+    :return:
+    """
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+
+                KeyboardButton(text="🤖 AI поиск", style="primary"),
+            ],
+            [
+                KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
+            ],
+            [
+                KeyboardButton(text="⬅️ Назад", style="danger")
+            ],
+        ]
     )
 
 
