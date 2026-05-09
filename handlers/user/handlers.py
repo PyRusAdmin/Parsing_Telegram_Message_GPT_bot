@@ -1,7 +1,6 @@
 import os
 
-from aiogram import F
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -48,11 +47,6 @@ async def handle_start_command(message, state: FSMContext) -> None:
         await state.clear()  # Завершаем текущее состояние машины состояний
 
         user = get_or_create_user(message.from_user)  # Получаем или создаём пользователя
-
-        # Проверяем, является ли пользователь администратором
-        # from config import ADMIN_USER_ID  # Импортируем ID администраторов
-        is_admin = message.from_user.id in ADMIN_USER_ID
-
         # Если язык ещё не выбран — просим выбрать
         if user.language == "unset":
             await message.answer(
@@ -60,16 +54,17 @@ async def handle_start_command(message, state: FSMContext) -> None:
                 reply_markup=get_lang_keyboard()
             )
         else:
-            # Генерируем приветственное сообщение
-            text = generate_welcome_message(user_language=user.language, user_tg_id=message.from_user.id)
-
-            # Выбираем клавиатуру в зависимости от роли
-            if is_admin:
+            # Выбираем клавиатуру в зависимости от роли пользователя
+            if message.from_user.id in ADMIN_USER_ID:  # Если пользователь является администратором
                 reply_markup = main_admin_keyboard()
-            else:
+            else:  # Если пользователь является обычным пользователем
                 reply_markup = main_menu_keyboard()
 
-            await message.answer(text=text, reply_markup=reply_markup, parse_mode="HTML")
+            await message.answer(
+                text=generate_welcome_message(user_language=user.language, user_tg_id=message.from_user.id),
+                reply_markup=reply_markup,
+                parse_mode="HTML"
+            )
 
     except TelegramForbiddenError:
         logger.error(f"Пользователь {message.from_user.telegram_id, message.from_user.username} заблокировал бота")
