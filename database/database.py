@@ -26,7 +26,36 @@ def init_database():
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
     db.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
     db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
+    db.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
     db.close()
+
+
+"""
+Запись в базу данных вопросов пользователей, что бы расширить базу знаний
+"""
+
+
+class Question(BaseModel):
+    id = AutoField()  # автоинкремент
+    user_id = IntegerField()  # ID пользователя Telegram
+    question = TextField()  # Вопрос пользователя
+    answer = TextField(null=True)  # Ответ на вопрос
+
+
+def add_question(user_id: int, question: str, answer: str):
+    """
+    Добавляет вопрос в базу данных.
+
+    :param user_id: Telegram ID пользователя
+    :param question: Вопрос пользователя
+    :param answer: Ответ на вопрос
+    :return: True, если вопрос добавлен, иначе False
+    """
+    # try:
+    Question.create(user_id=user_id, question=question, answer=answer)
+    return True
+    # except Exception as e:
+    #     logger
 
 
 """

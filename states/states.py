@@ -3,6 +3,8 @@ from aiogram.fsm.state import StatesGroup, State
 
 
 class MyStates(StatesGroup):
+    # ... (existing states)
+    waiting_for_instruction_question = State()
     """
     Группа состояний машины состояний (FSM) для бота AutoParseAlertBot.
 
