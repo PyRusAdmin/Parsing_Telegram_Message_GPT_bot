@@ -600,33 +600,6 @@ no_tracking_links_found = 📭 У вас нет ссылок для отслеж
 tracking_links_export_caption = 🔗 Экспорт ссылок для отслеживания. Всего записей: { $count }
 no_keywords_found = 📭 У вас нет сохраненных ключевых слов.
 keywords_export_caption = 📋 Экспорт ключевых слов. Всего записей: { $count }
-connect_free_account_button = 🔐 Подключить свободный аккаунт
-change_language_button = 🌐 Сменить язык
-connect_group_for_messages_button = 📤 Подключить группу для сообщений
-tracking_links_button = 🌐 Ссылки для отслеживания
-keywords_list_button = 🔍 Список ключевых слов
-delete_group_from_tracking_button = 🗑️ Удалить группу из отслеживания
-enter_keyword_button = 🔍 Ввод ключевого слова
-update_list_button = 🔁 Обновить список
-stop_tracking_button = 🛑 Остановить отслеживание
-global_ai_search_button = 🌐 Глобальный AI поиск
-english_language_button = 🇬🇧 English
-russian_language_button = 🇷🇺 Русский
-hobbies_and_creativity_button = хобби и творчество
-fashion_and_beauty_button = мода и красота
-cooking_and_food_button = кулинария и еда
-sports_and_fitness_button = спорт и фитнес
-science_and_research_button = наука и исследования
-politics_and_society_button = политика и общество
-entertainment_and_leisure_button = развлечения и досуг
-shopping_and_discounts_button = шоппинг и скидки
-auto_and_transport_button = авто и транспорт
-travel_button = путешествия
-health_and_medicine_button = здоровье и медицина
-real_estate_button = недвижимость
-work_and_career_button = работа и карьера
-education_and_self_development_button = образование и саморазвитие
-tech_and_it_button = технологии и it
 
 
 # language_detection.py
