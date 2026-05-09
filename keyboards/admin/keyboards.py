@@ -9,28 +9,45 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
 def menu_user_admin_keyboard():
-    """Клавиатура админа и пользователя"""
-    return [[
-        KeyboardButton(text="🚀 Запуск отслеживания", style='primary')
-    ],
-        [
-            KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style='primary')
-        ],
-        [
-            KeyboardButton(text="🤖 AI поиск", style='primary'),
-            KeyboardButton(text="📥 Получить базу", style='primary')
-        ],
+    """
+    Создаёт клавиатуру главного меню бота.
 
-        [
-            KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
-        ],
+    Предоставляет пользователю доступ к основным функциям:
+        - Запуск и остановка отслеживания
+        - Просмотр и управление ключевыми словами и ссылками
+        - Поиск новых групп через ИИ
+        - Настройки
+        - Инструкция по использованию
 
+    - Клавиатура подстраивается по размеру и остаётся видимой после использования.
+
+    Layout:
+        [Запуск отслеживания]
+        [🔍 Список ключевых слов] [🌐 Ссылки для отслеживания]
+        [Получить базу]
+        [Инструкция по использованию]
+        [Настройки]
+
+    :return: (ReplyKeyboardMarkup) Объект клавиатуры с основными командами.
+    """
+    return [
         [
-            KeyboardButton(text="📖 Инструкция по использованию", style='primary')
+            KeyboardButton(text="🚀 Запуск отслеживания", style="success")
         ],
         [
-            KeyboardButton(text="⚙️ Настройки", style='primary')
-        ]]
+            KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style="primary")
+        ],
+        [
+            KeyboardButton(text="✨ Поиск через AI", style="primary"),
+            KeyboardButton(text="📥 Получить базу", style="primary")
+        ],
+        [
+            KeyboardButton(text="📖 Инструкция по использованию", style="primary")
+        ],
+        [
+            KeyboardButton(text="⚙️ Настройки", style="primary")
+        ]
+    ]
 
 
 def main_admin_keyboard():

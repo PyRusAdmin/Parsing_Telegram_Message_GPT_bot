@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+from keyboards.admin.keyboards import menu_user_admin_keyboard
 
 
 def search_group_ai():
@@ -140,7 +141,7 @@ def main_menu_keyboard():
         - Настройки
         - Инструкция по использованию
 
-    :return: (ReplyKeyboardMarkup) Объект клавиатуры с основными командами.
+    - Клавиатура подстраивается по размеру и остаётся видимой после использования.
 
     Layout:
         [Запуск отслеживания]
@@ -149,27 +150,11 @@ def main_menu_keyboard():
         [Инструкция по использованию]
         [Настройки]
 
-    Notes:
-        - Клавиатура подстраивается по размеру и остаётся видимой после использования.
+    :return: (ReplyKeyboardMarkup) Объект клавиатуры с основными командами.
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [
-                KeyboardButton(text="🚀 Запуск отслеживания", style="success")
-            ],
-            [
-                KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style="primary")
-            ],
-            [
-                KeyboardButton(text="✨ Поиск через AI", style="primary"),
-                KeyboardButton(text="📥 Получить базу", style="primary")
-            ],
-            [
-                KeyboardButton(text="📖 Инструкция по использованию", style="primary")
-            ],
-            [
-                KeyboardButton(text="⚙️ Настройки", style="primary")
-            ]
+            *menu_user_admin_keyboard(),
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
