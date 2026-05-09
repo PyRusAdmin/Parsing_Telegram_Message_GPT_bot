@@ -15,7 +15,7 @@ from peewee import fn
 from account_manager.auth import CheckingAccountsValidity
 from ai.ai import get_groq_response, search_groups_in_telegram
 from database.database import User, TelegramGroup
-from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard
+from keyboards.user.keyboards import back_keyboard, search_group_ai, get_categories_keyboard, ai_search_keyboard
 from locales.locales import t
 from states.states import MyStates, ExportStates
 
@@ -482,6 +482,31 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
     logger.info(f"Пользователь {message.from_user.id} экспортировал Excel по категории: {selected_category}")
     await state.clear()
+
+
+"""Меню AI поиска"""
+
+
+@router.message(F.text == "✨ Поиск через AI")
+async def ai_search_menu(message: Message, state: FSMContext):
+    """
+    Обработчик команды "Поиск через AI".
+
+    Очищает состояние FSM, получает данные пользователя, логирует действие
+    и запрашивает у пользователя ключевое слово для поиска групп через AI.
+    Переводит пользователя в состояние ожидания ввода (MyStates.entering_keyword_ai_search).
+    """
+    await state.clear()  # Сбрасывает состояние
+
+    telegram_user = message.from_user
+    user = User.get(User.user_id == telegram_user.id)
+
+    logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню поиска групп")
+
+    await message.answer(
+        t("ai_search_welcome", lang=user.language),
+        reply_markup=ai_search_keyboard()
+    )
 
 
 """Одиночный AI поиск"""

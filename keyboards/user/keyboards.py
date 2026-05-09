@@ -161,7 +161,7 @@ def main_menu_keyboard():
                 KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style="primary")
             ],
             [
-                KeyboardButton(text="🤖 AI поиск", style="primary"),
+                KeyboardButton(text="✨ Поиск через AI", style="primary"),
                 KeyboardButton(text="📥 Получить базу", style="primary")
             ],
             # [
@@ -196,7 +196,9 @@ def ai_search_keyboard():
             [
                 KeyboardButton(text="⬅️ Назад", style="danger")
             ],
-        ]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False  # Отправлять сообщение только один раз
     )
 
 

@@ -67,6 +67,16 @@ account_missing_2 =
     ⚠️ The session file for your Telegram account is invalid — you need to log in again. Send a valid session file.
 enter_keyword =
     🔍 Enter a keyword / phrase to track
+ai_search_welcome =
+    🤖 <b>Welcome to the AI Search menu!</b>
+
+    Here you can find new thematic groups and channels using the power of artificial intelligence.
+
+    🚀 <b>Available modes:</b>
+    • 🤖 <b>AI Search:</b> Fast search for groups based on your database and keywords.
+    • 🌐 <b>Global AI Search:</b> Advanced search across the entire Telegram space to find new communities.
+
+    Just select the desired mode on the keyboard or enter a request! 👇
 enter_group =
     🔍 Enter a link to the group in the format @username to which the message will be forwarded when a keyword is detected
 admin_panel_message =
