@@ -12,7 +12,6 @@ async def subscription_telegram(client, target_username):
     Подписка на группы каналы Telegram
     :param client: Telethon Client
     :param target_username: Имя канала Telegram
-    :return: None
     """
     try:
         await client.get_entity(target_username)

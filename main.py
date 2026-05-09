@@ -4,7 +4,7 @@ import sys
 
 from loguru import logger
 
-from database.database import clean_telegram_id_duplicates, init_database, migrate_add_availability_column
+from database.database import clean_telegram_id_duplicates, init_database
 from database.database import migrate_categories_to_lowercase
 from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import router as checking_accounts
@@ -51,7 +51,6 @@ async def main() -> None:
         Рабата с базой данных
         """
         init_database()
-        migrate_add_availability_column()
         clean_telegram_id_duplicates()
 
         """

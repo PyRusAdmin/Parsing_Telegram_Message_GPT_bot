@@ -614,7 +614,6 @@ async def stop_tracking(user_id, message):
 
     :param user_id: (int) Идентификатор пользователя Telegram.
     :param message: (Message) Объект сообщения aiogram для отправки подтверждения.
-    :return: None
     """
     user = User.get(User.user_id == message.from_user.id)
     user_id = str(user_id)  # <-- ✅ преобразуем в строку
