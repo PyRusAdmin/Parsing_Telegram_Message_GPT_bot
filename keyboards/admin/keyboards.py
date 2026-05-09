@@ -11,26 +11,27 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 def menu_user_admin_keyboard():
     """Клавиатура админа и пользователя"""
     return [[
-        KeyboardButton(text="🚀 Запуск отслеживания")
+        KeyboardButton(text="🚀 Запуск отслеживания", style='primary')
     ],
         [
-            KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов")
+            KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style='primary')
         ],
         [
-            KeyboardButton(text="🤖 AI поиск"),
-            KeyboardButton(text="📥 Получить базу")
-        ],
-
-        [
-            KeyboardButton(text="🌐 Глобальный AI поиск")
+            KeyboardButton(text="🤖 AI поиск", style='primary'),
+            KeyboardButton(text="📥 Получить базу", style='primary')
         ],
 
         [
-            KeyboardButton(text="📖 Инструкция по использованию")
+            KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
+        ],
+
+        [
+            KeyboardButton(text="📖 Инструкция по использованию", style='primary')
         ],
         [
-            KeyboardButton(text="⚙️ Настройки")
+            KeyboardButton(text="⚙️ Настройки", style='primary')
         ]]
+
 
 def main_admin_keyboard():
     """
@@ -41,7 +42,7 @@ def main_admin_keyboard():
         keyboard=[
             *menu_user_admin_keyboard(),
             [
-                KeyboardButton(text="🛡️ Панель администратора")
+                KeyboardButton(text="🛡️ Панель администратора", style='success')
             ]
         ],
         resize_keyboard=True,
@@ -57,19 +58,20 @@ def admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📄 Получить лог файл"),
-                KeyboardButton(text="🔄 Актуализация базы данных")
+                KeyboardButton(text="📄 Получить лог файл", style='primary'),
+                KeyboardButton(text="🔄 Актуализация базы данных", style='primary')
             ],
             [
-                KeyboardButton(text="🏷️ Присвоить категорию"),
-                KeyboardButton(text="✅ Проверка аккаунтов")
+                KeyboardButton(text="🏷️ Присвоить категорию", style='primary'
+                               ),
+                KeyboardButton(text="✅ Проверка аккаунтов", style='success')
             ],
             [
-                KeyboardButton(text="🌐 Присвоить язык"),
-                KeyboardButton(text="🔐 Подключение аккаунта")
+                KeyboardButton(text="🌐 Присвоить язык", style='primary'),
+                KeyboardButton(text="🔐 Подключение аккаунта", style='primary')
             ],
             [
-                KeyboardButton(text="⬅️ Назад")
+                KeyboardButton(text="⬅️ Назад", style='danger')
             ]
         ],
         resize_keyboard=True,
@@ -85,16 +87,16 @@ def category_method_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="⚡️ Быстро (g4f.free)")
+                KeyboardButton(text="⚡️ Быстро (g4f.free)", style='primary')
             ],
             [
-                KeyboardButton(text="🚀 Мощно (Openrouter API)")
+                KeyboardButton(text="🚀 Мощно (Openrouter API)", style='success')
             ],
             [
-                KeyboardButton(text="🚀 Мощно (GROQ API)")
+                KeyboardButton(text="🚀 Мощно (GROQ API)", style='success')
             ],
             [
-                KeyboardButton(text="⬅️ Назад")
+                KeyboardButton(text="⬅️ Назад", style='danger')
             ]
         ],
         resize_keyboard=True,
