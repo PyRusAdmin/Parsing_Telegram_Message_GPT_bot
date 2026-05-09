@@ -16,17 +16,17 @@ def search_group_ai():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📥 Вся база", style="primary")
+                KeyboardButton(text="📥 Вся база")
             ],
             [
-                KeyboardButton(text="📥 База каналов", style="primary"),
-                KeyboardButton(text="📥 База групп", style="primary")
+                KeyboardButton(text="📥 База каналов"),
+                KeyboardButton(text="📥 База групп")
             ],
             [
-                KeyboardButton(text="📂 Выбрать категорию", style="primary")
+                KeyboardButton(text="📂 Выбрать категорию")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ],
         ],
         resize_keyboard=True,
@@ -38,65 +38,65 @@ def get_categories_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="инвестиции", style="primary")
+                KeyboardButton(text="инвестиции")
             ],
             [
-                KeyboardButton(text="финансы и личный бюджет", style="primary")
+                KeyboardButton(text="финансы и личный бюджет")
             ],
             [
-                KeyboardButton(text="криптовалюты и блокчейн", style="primary"),
-                KeyboardButton(text="бизнес и предпринимательство", style="primary")
+                KeyboardButton(text="криптовалюты и блокчейн"),
+                KeyboardButton(text="бизнес и предпринимательство")
             ],
             [
-                KeyboardButton(text="маркетинг и продвижение", style="primary")
+                KeyboardButton(text="маркетинг и продвижение")
             ],
             [
-                KeyboardButton(text="технологии и it", style="primary")
+                KeyboardButton(text="технологии и it")
             ],
             [
-                KeyboardButton(text="образование и саморазвитие", style="primary")
+                KeyboardButton(text="образование и саморазвитие")
             ],
             [
-                KeyboardButton(text="работа и карьера", style="primary")
+                KeyboardButton(text="работа и карьера")
             ],
             [
-                KeyboardButton(text="недвижимость", style="primary")
+                KeyboardButton(text="недвижимость")
             ],
             [
-                KeyboardButton(text="здоровье и медицина", style="primary")
+                KeyboardButton(text="здоровье и медицина")
             ],
             [
-                KeyboardButton(text="путешествия", style="primary")
+                KeyboardButton(text="путешествия")
             ],
             [
-                KeyboardButton(text="авто и транспорт", style="primary")
+                KeyboardButton(text="авто и транспорт")
             ],
             [
-                KeyboardButton(text="шоппинг и скидки", style="primary")
+                KeyboardButton(text="шоппинг и скидки")
             ],
             [
-                KeyboardButton(text="развлечения и досуг", style="primary")
+                KeyboardButton(text="развлечения и досуг")
             ],
             [
-                KeyboardButton(text="политика и общество", style="primary")
+                KeyboardButton(text="политика и общество")
             ],
             [
-                KeyboardButton(text="наука и исследования", style="primary")
+                KeyboardButton(text="наука и исследования")
             ],
             [
-                KeyboardButton(text="спорт и фитнес", style="primary")
+                KeyboardButton(text="спорт и фитнес")
             ],
             [
-                KeyboardButton(text="кулинария и еда", style="primary")
+                KeyboardButton(text="кулинария и еда")
             ],
             [
-                KeyboardButton(text="мода и красота", style="primary")
+                KeyboardButton(text="мода и красота")
             ],
             [
-                KeyboardButton(text="хобби и творчество", style="primary")
+                KeyboardButton(text="хобби и творчество")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ],
         ],
         resize_keyboard=True,
@@ -120,8 +120,8 @@ def get_lang_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🇷🇺 Русский", style="primary"),
-                KeyboardButton(text="🇬🇧 English", style="primary")
+                KeyboardButton(text="🇷🇺 Русский"),
+                KeyboardButton(text="🇬🇧 English")
             ]
         ],
         resize_keyboard=True,
@@ -155,20 +155,20 @@ def main_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🚀 Запуск отслеживания", style="success")
+                KeyboardButton(text="🚀 Запуск отслеживания")
             ],
             [
-                KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов", style="primary")
+                KeyboardButton(text="🔍 Проверка группы на наличие ключевых слов")
             ],
             [
-                KeyboardButton(text="✨ Поиск через AI", style="primary"),
-                KeyboardButton(text="📥 Получить базу", style="primary")
+                KeyboardButton(text="✨ Поиск через AI"),
+                KeyboardButton(text="📥 Получить базу")
             ],
             [
-                KeyboardButton(text="📖 Инструкция по использованию", style="primary")
+                KeyboardButton(text="📖 Инструкция по использованию")
             ],
             [
-                KeyboardButton(text="⚙️ Настройки", style="primary")
+                KeyboardButton(text="⚙️ Настройки")
             ]
         ],
         resize_keyboard=True,
@@ -185,13 +185,13 @@ def ai_search_keyboard():
         keyboard=[
             [
 
-                KeyboardButton(text="🤖 AI поиск", style="primary"),
+                KeyboardButton(text="🤖 AI поиск"),
             ],
             [
-                KeyboardButton(text="🌐 Глобальный AI поиск", style='primary')
+                KeyboardButton(text="🌐 Глобальный AI поиск")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ],
         ],
         resize_keyboard=True,
@@ -220,10 +220,10 @@ def menu_launch_tracking_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🛑 Остановить отслеживание", style="danger")
+                KeyboardButton(text="🛑 Остановить отслеживание")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ],
         ],
         resize_keyboard=True,
@@ -259,25 +259,25 @@ def settings_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🔁 Обновить список", style="primary"),
-                KeyboardButton(text="🔍 Ввод ключевого слова", style="primary")
+                KeyboardButton(text="🔁 Обновить список"),
+                KeyboardButton(text="🔍 Ввод ключевого слова")
             ],
             [
-                KeyboardButton(text="🗑️ Удалить группу из отслеживания", style="danger")
+                KeyboardButton(text="🗑️ Удалить группу из отслеживания")
             ],
             [
-                KeyboardButton(text="🔍 Список ключевых слов", style="primary"),
-                KeyboardButton(text="🌐 Ссылки для отслеживания", style="primary")
+                KeyboardButton(text="🔍 Список ключевых слов"),
+                KeyboardButton(text="🌐 Ссылки для отслеживания")
             ],
             [
-                KeyboardButton(text="🔐 Подключить аккаунт", style="success"),
-                KeyboardButton(text="📤 Подключить группу для сообщений", style="success")
+                KeyboardButton(text="🔐 Подключить аккаунт"),
+                KeyboardButton(text="📤 Подключить группу для сообщений")
             ],
             [
-                KeyboardButton(text="🌐 Сменить язык", style="primary")
+                KeyboardButton(text="🌐 Сменить язык")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ]
         ],
         resize_keyboard=True,
@@ -290,13 +290,13 @@ def connect_keyboard_account():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="🔐 Подключить аккаунт", style="success")
+                KeyboardButton(text="🔐 Подключить аккаунт")
             ],
             [
-                KeyboardButton(text="🔐 Подключить свободный аккаунт", style="success")
+                KeyboardButton(text="🔐 Подключить свободный аккаунт")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ]
         ],
         resize_keyboard=True,
@@ -311,10 +311,10 @@ def connect_grup_keyboard_tech():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📤 Подключить группу для сообщений", style="success")
+                KeyboardButton(text="📤 Подключить группу для сообщений")
             ],
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ]
         ],
         resize_keyboard=True,
@@ -337,7 +337,7 @@ def back_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="⬅️ Назад", style="danger")
+                KeyboardButton(text="⬅️ Назад")
             ]
         ],
         resize_keyboard=True,
