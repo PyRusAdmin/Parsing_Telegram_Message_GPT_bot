@@ -24,7 +24,7 @@ ENV/
 # Сессии и логи
 sessions.txt
 *.log
-logs/
+.logs/
 
 # ОС
 .DS_Store
@@ -33,3 +33,6 @@ Thumbs.db
 /.venv/
 
 .qwen
+.gigacode
+.idea
+.vscode
