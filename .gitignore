@@ -29,10 +29,10 @@ sessions.txt
 # ОС
 .DS_Store
 Thumbs.db
-/.idea/
 /.venv/
 
 .qwen
 .gigacode
 .idea
 .vscode
+.antigravitycli

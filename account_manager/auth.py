@@ -13,7 +13,7 @@ from telethon.errors import (
 )
 from telethon.sessions import StringSession
 
-from core.config import API_ID, API_HASH, MT_PROXY_IP
+from core.config import API_ID, API_HASH
 from core.proxy import Proxy
 from database.database import delete_account_from_db, getting_account
 
@@ -38,11 +38,11 @@ async def get_account_info(client: TelegramClient) -> dict:
     logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
 
     return {
-        "id": me.id,
-        "phone": phone,
-        "first_name": me.first_name,
-        "last_name": me.last_name,
-        "username": me.username
+        "id": me.id,  # Идентификатор пользователя Telegram
+        "phone": phone,  # Номер телефона пользователя Telegram
+        "first_name": me.first_name,  # Имя пользователя Telegram
+        "last_name": me.last_name,  # Фамилия пользователя Telegram
+        "username": me.username  # Никнейм пользователя Telegram
     }
 
 
@@ -65,7 +65,7 @@ class CheckingAccountsValidity:
         :param session_name: Имя аккаунта для подключения (файл .session)
         :return: Клиент Telegram или None, если подключение не удалось
         """
-        logger.info(f"🔗 Подключение через MTProxy: {MT_PROXY_IP}:{443}")
+        # logger.info(f"🔗 Подключение через MTProxy: {MT_PROXY_IP}:{443}")
         client = TelegramClient(
             StringSession(session_name),
             api_id=API_ID,

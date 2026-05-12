@@ -48,12 +48,12 @@ async def join_target_group(client, user_id, message):
     :raises Exception: Логируется при любых других ошибках.
     """
     user = User.get(User.user_id == message.from_user.id)
-    GroupModel = create_group_model(user_id=user_id)
-    logger.info(f"🔍 Проверяю целевую группу... {GroupModel}")
-    if not GroupModel.table_exists():
-        GroupModel.create_table()
+    group_model = create_group_model(user_id=user_id)
+    logger.info(f"🔍 Проверяю целевую группу... {group_model}")
+    if not group_model.table_exists():
+        group_model.create_table()
         return None
-    groups = list(GroupModel.select())
+    groups = list(group_model.select())
     logger.info(f"🔍 Проверяю целевую группу... {groups}")
     if not groups:
         logger.warning(f"❌ Не найдена целевая группа для пользователя {user_id}")
@@ -119,15 +119,15 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         return
 
     # Получаем ключевые слова из базы данных для данного пользователя
-    Keywords = create_keywords_model(user_id=user_id)
+    keywords = create_keywords_model(user_id=user_id)
 
     # Создаем таблицу, если она не существует
-    if not Keywords.table_exists():
-        Keywords.create_table()
+    if not keywords.table_exists():
+        keywords.create_table()
         logger.info(f"Создана таблица ключевых слов для пользователя {user_id}")
         return  # Таблица только что создана, ключевых слов еще нет
 
-    keywords = [keyword.user_keyword for keyword in Keywords.select() if keyword.user_keyword]
+    keywords = [keyword.user_keyword for keyword in keywords.select() if keyword.user_keyword]
 
     # Если нет ключевых слов, выходим
     if not keywords:
@@ -164,7 +164,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                         message_link = f"https://t.me/{chat_entity.username}/{message.id}"
                     else:
                         message_link = "Ссылка недоступна (нет username)"
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Не удалось получить ссылку на сообщение: {e}")
                     message_link = "Ссылка недоступна"
 
             try:
