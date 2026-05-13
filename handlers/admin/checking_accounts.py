@@ -29,7 +29,6 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
             # ✅ Проверка аккаунтов на валидность
             checker = CheckingAccountsValidity(
                 message=message,
-                # path=path
             )
 
             await checker.verify_account(session_name)

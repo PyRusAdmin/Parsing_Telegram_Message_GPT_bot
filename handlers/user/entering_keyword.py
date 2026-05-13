@@ -80,11 +80,11 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
         return
 
     # Создаём модель с таблицей, уникальной для конкретного пользователя
-    KeywordsModel = create_keywords_model(user_id=telegram_user.id)  # Создаём таблицу для групп / ключевых слов
+    keywords_model = create_keywords_model(user_id=telegram_user.id)  # Создаём таблицу для групп / ключевых слов
 
     # Проверяем, существует ли таблица (если нет — создаём)
-    if not KeywordsModel.table_exists():
-        KeywordsModel.create_table()
+    if not keywords_model.table_exists():
+        keywords_model.create_table()
         logger.info(f"Создана новая таблица для пользователя {telegram_user.id}")
 
     added_keywords = []
@@ -94,7 +94,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     # Add each keyword one by one
     for keyword in keywords_list:
         try:
-            KeywordsModel.create(user_keyword=keyword)
+            keywords_model.create(user_keyword=keyword)
             added_keywords.append(keyword)
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):

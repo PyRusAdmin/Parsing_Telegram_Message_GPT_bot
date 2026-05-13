@@ -115,16 +115,16 @@ async def get_keywords_list(message: Message, state: FSMContext):
     logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ключевых слов")
 
     # Получаем модель таблицы ключевых слов для данного пользователя
-    KeywordsModel = create_keywords_model(user_id=telegram_user.id)
+    keywords_model = create_keywords_model(user_id=telegram_user.id)
 
     # Проверяем, существует ли таблица
-    if not KeywordsModel.table_exists():
-        KeywordsModel.create_table()
+    if not keywords_model.table_exists():
+        keywords_model.create_table()
         await message.answer(t("no_keywords_found", lang=user_lang))
         return
 
     # Извлекаем все ключевые слова
-    keywords = list(KeywordsModel.select())
+    keywords = list(keywords_model.select())
 
     if not keywords:
         await message.answer(t("no_keywords_found", lang=user_lang))

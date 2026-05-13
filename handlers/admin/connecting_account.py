@@ -3,7 +3,7 @@ from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, Document
 from loguru import logger
 from telethon.sessions import StringSession
 
@@ -81,6 +81,7 @@ async def receive_session_file(message: Message, state: FSMContext):
         local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
 
         # ✅ Скачиваем файл
+        # ToDo проверить в будущем document.file_id вместо document
         await message.bot.download(document, destination=local_file_path)
         # ✅ Извлекаем путь без расширения для Telethon
         session_path_without_ext = str(local_file_path.with_suffix(""))
