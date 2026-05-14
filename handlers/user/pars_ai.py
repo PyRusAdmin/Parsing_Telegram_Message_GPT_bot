@@ -75,7 +75,6 @@ def save_group_to_db(group_data: dict):
             existing.language = group_data.get('language', '')
             existing.availability = group_data.get('availability', 'unknown')
             existing.link = group_data.get('link')
-            # date_added оставляем оригинальным (дата первого добавления)
             # Если хочешь обновлять на "последнее обнаружение" — раскомментируй:
 
             existing.save()

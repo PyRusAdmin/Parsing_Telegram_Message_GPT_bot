@@ -3,7 +3,7 @@ from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, Document
+from aiogram.types import Message
 from loguru import logger
 from telethon.sessions import StringSession
 
