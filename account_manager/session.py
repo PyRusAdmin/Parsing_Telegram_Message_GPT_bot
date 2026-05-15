@@ -90,6 +90,7 @@ async def _is_session_valid(session_string: str) -> bool:
         logger.debug(f"⚠️ Проверка сессии не прошла: {type(e).__name__}")
         try:
             await client.disconnect()
-        except:
-            pass
+        except Exception as e:
+            logger.exception(e)
+            # pass
         return False
