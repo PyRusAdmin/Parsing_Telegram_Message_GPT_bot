@@ -12,6 +12,7 @@ from telethon.errors import (
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
+from account_manager.subscription import subscription_telegram
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
     User
@@ -73,6 +74,7 @@ async def join_target_group(client, user_id, message):
         return None
     try:
         target_usernames = f'https://t.me/{target_username.lstrip("@")}'
+        # ToDo сделать общую функцию для подписки на канал / группу
         await client(JoinChannelRequest(target_usernames))
         # Получаем ID группы
         entity = await client.get_entity(target_username)
@@ -81,6 +83,7 @@ async def join_target_group(client, user_id, message):
         logger.error(f"⚠️ FloodWait {e.seconds} сек.")
         await asyncio.sleep(e.seconds)
         try:
+            # ToDo сделать общую функцию для подписки на канал / группу
             await client(JoinChannelRequest(target_usernames))
         except InviteRequestSentError:
             logger.error(f"✉️ Приглашение уже отправлено: {target_usernames}")
@@ -345,15 +348,14 @@ async def join_required_channels(client, user_id, message, already_subscribed):
     for channel in list(db_channels - already_subscribed)[:500]:  # Ограничиваем до 500 записей
         random_delay = random.choice(
             [
-                15, 16, 17, 18, 19,
-                20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-                30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
-                40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-                50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
-                60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
-                70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
-                80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
-                90, 91, 92, 93, 94, 95, 96, 97, 98, 99,
+                15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+                25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+                35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+                45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+                55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+                65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
+                75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+                85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99,
                 100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
                 110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
                 120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
@@ -395,29 +397,36 @@ async def join_required_channels(client, user_id, message, already_subscribed):
         )
         try:
             logger.warning(f"🔗 Подписка на {channel}")
-            await client(JoinChannelRequest(channel))
+            # ToDo сделать общую функцию для подписки на канал / группу
+            # await client(JoinChannelRequest(channel))  # Подписываемся на канал / группу
+
+            await subscription_telegram(client=client, target_username=channel)
+
             await message.answer(
                 t("channel_subscribed", lang=user.language, channel=channel, delay=random_delay)
             )
             await asyncio.sleep(random_delay)
-        except ChannelPrivateError:
-            logger.error(f"⚠️ Канал {channel} приватный")
-        except UserAlreadyParticipantError:
-            logger.error(f"ℹ️ Уже подписан на {channel}")
-        except FloodWaitError as e:
-            logger.error(f"⚠️ FloodWait {e.seconds} сек.")
-            await asyncio.sleep(e.seconds)
-            try:
-                await client(JoinChannelRequest(channel))
-            except InviteRequestSentError:
-                logger.error(f"✉️ Приглашение уже отправлено: {channel}")
-        except InviteRequestSentError:
-            logger.error(f"✉️ Приглашение уже отправлено: {channel}")
-        except ValueError:
-            logger.error(f"❌ Невалидный username: {channel}")
-            # delete_group_by_username(user_id, channel)  # Удаляем невалидный канал / группу
         except Exception as e:
-            logger.exception(f"❌ Ошибка при подписке на {channel}: {e}")
+            logger.exception(e)
+        # except ChannelPrivateError:
+        #     logger.error(f"⚠️ Канал {channel} приватный")
+        # except UserAlreadyParticipantError:
+        #     logger.error(f"ℹ️ Уже подписан на {channel}")
+        # except FloodWaitError as e:
+        #     logger.error(f"⚠️ FloodWait {e.seconds} сек.")
+        #     await asyncio.sleep(e.seconds)
+        #     try:
+        #         ToDo сделать общую функцию для подписки на канал / группу
+        #         await client(JoinChannelRequest(channel)) # Подписываемся на канал / группу
+        #     except InviteRequestSentError:
+        #         logger.error(f"✉️ Приглашение уже отправлено: {channel}")
+        # except InviteRequestSentError:
+        #     logger.error(f"✉️ Приглашение уже отправлено: {channel}")
+        # except ValueError:
+        #     logger.error(f"❌ Невалидный username: {channel}")
+        #     delete_group_by_username(user_id, channel)  # Удаляем невалидный канал / группу
+        # except Exception as e:
+        #     logger.exception(f"❌ Ошибка при подписке на {channel}: {e}")
 
 
 async def ensure_joined_target_group(client, message, user_id: int):

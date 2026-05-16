@@ -7,12 +7,13 @@ from asgiref.sync import sync_to_async
 from loguru import logger
 from openai import OpenAI
 
+from core.config import OPENROUTER_API_KEY
 from database.database import TelegramGroup, db, User
 from locales.locales import t
 
 router = Router(name=__name__)
 
-from core.config import OPENROUTER_API_KEY
+
 
 
 def ai_llama_fri(group_data: dict, lang: str = 'ru'):
