@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
 from loguru import logger
@@ -260,17 +261,26 @@ async def export_all_groups(message: Message, state: FSMContext):
             await message.answer(t("database_empty", lang=user_lang))
             return
 
-        excel_bytes = create_excel_file(groups, lang=user_lang)
-        document = BufferedInputFile(excel_bytes, filename=t('excel_filename_all_db', lang=user_lang))
-        await message.answer_document(
-            document=document,
-            caption=t(
-                "export_all_caption",
-                lang=user_lang,
-                total_records=len(groups),
-                deleted_duplicates=deleted_count
+        try:
+            await message.answer_document(
+                document=BufferedInputFile(
+                    create_excel_file(groups, lang=user_lang),
+                    filename=t(
+                        'excel_filename_all_db',
+                        lang=user_lang
+                    )
+                ),
+                caption=t(
+                    "export_all_caption",
+                    lang=user_lang,
+                    total_records=len(groups),
+                    deleted_duplicates=deleted_count
+                )
             )
-        )
+        except TelegramForbiddenError:
+            logger.error(f"Пользователь {message.from_user.id} заблокировал бота")
+        except Exception as e:
+            logger.exception(e)
 
     except Exception as e:
         await message.answer(t("export_error_generic", lang=user_lang))
