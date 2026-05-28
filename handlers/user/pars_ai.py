@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, ReplyKeyboardRemove, Message
 from loguru import logger
@@ -620,8 +620,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             return
 
         for group_name in group_names:
-            # Ищем в Telegram
-            results = await search_groups_in_telegram(
+            results = await search_groups_in_telegram(  # Ищем в Telegram
                 client=client,
                 group_names=[group_name]
             )
@@ -633,8 +632,12 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 if saved_group:
                     saved_groups.append(saved_group)
 
-        # Удаляем сообщение о поиске
-        await processing_msg.delete()
+        try:
+            await processing_msg.delete()  # Удаляем сообщение о поиске
+        except TelegramBadRequest as e:
+            logger.error(e)  # Если сообщение удалено, логируем ошибку
+        except Exception as e:
+            logger.exception(e)
 
         # Отправляем результаты пользователю
         if saved_groups:
