@@ -10,7 +10,7 @@ from loguru import logger
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from database.database import User
+from database.database import User, getting_free_account
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
@@ -45,7 +45,12 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
     )
     user_lang = user.language if user.language != "unset" else "ru"
 
-    available_sessions = await CheckingAccountsValidity(message=message, path='accounts/free').get_available_sessions()
+    # Подключение свободного аккаунта
+    # TODO сделать удаление выбраного аккаунта и запись в аккаунты пользователя. 
+    records = getting_free_account()
+    available_sessions = random.choice(records)
+
+    # available_sessions = await CheckingAccountsValidity(message=message, path='accounts/free').get_available_sessions()
     logger.info(f"Подключаем аккаунт {available_sessions}")
     random_session = random.choice(available_sessions)
     logger.info(f"Подключаем аккаунт {random_session}")

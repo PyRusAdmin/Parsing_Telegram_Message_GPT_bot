@@ -23,6 +23,7 @@ def init_database():
     """Инициализация БД и создание таблиц"""
     db.connect(reuse_if_open=True)
     db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
+    db.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
     db.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
     db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
@@ -51,11 +52,8 @@ def add_question(user_id: int, question: str, answer: str):
     :param answer: Ответ на вопрос
     :return: True, если вопрос добавлен, иначе False
     """
-    # try:
     Question.create(user_id=user_id, question=question, answer=answer)
     return True
-    # except Exception as e:
-    #     logger
 
 
 def get_all_questions():
@@ -227,6 +225,16 @@ class Account(Model):
         table_name = 'account'
 
 
+class AccountFree(Model):
+    """Свободные аккаунты для подключения, которые подключает администратор бота"""
+    session_string = CharField(unique=True)  # Уникальность для защиты от дубликатов
+    phone_number = CharField()  # Номер телефона аккаунта
+
+    class Meta:
+        database = db
+        table_name = 'account_free'
+
+
 def write_account_to_db(session_string, phone_number):
     """
     Запись аккаунта в базу данных
@@ -237,6 +245,18 @@ def write_account_to_db(session_string, phone_number):
         Account.insert(session_string=session_string, phone_number=phone_number).on_conflict(action='IGNORE').execute()
     except Exception as e:
         logger.exception(e)
+
+
+def getting_free_account():
+    """
+    Получение свободных аккаунтов для подключения
+    :return: Список аккаунтов
+    """
+    records = []
+    for record in AccountFree.select(AccountFree.session_string):
+        records.append(record.session_string)
+
+    return records
 
 
 def getting_account():
