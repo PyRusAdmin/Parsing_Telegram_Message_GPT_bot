@@ -46,7 +46,7 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
     user_lang = user.language if user.language != "unset" else "ru"
 
     # Подключение свободного аккаунта
-    # TODO сделать удаление выбраного аккаунта и запись в аккаунты пользователя. 
+    # TODO сделать удаление выбраного аккаунта и запись в аккаунты пользователя.
     records = getting_free_account()
     available_sessions = random.choice(records)
 

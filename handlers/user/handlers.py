@@ -67,7 +67,7 @@ async def handle_start_command(message, state: FSMContext) -> None:
             )
 
     except TelegramForbiddenError:
-        logger.error(f"Пользователь {message.from_user.telegram_id, message.from_user.username} заблокировал бота")
+        logger.error(f"Пользователь {message.from_user.id, message.from_user.username} заблокировал бота")
 
     except Exception as e:
         logger.exception(e)
