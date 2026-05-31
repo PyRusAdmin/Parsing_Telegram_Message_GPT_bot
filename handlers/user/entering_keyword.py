@@ -31,7 +31,8 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     user = User.get(User.user_id == telegram_user.id)
 
     logger.info(
-        f"Пользователь {telegram_user.id} {telegram_user.username} {telegram_user.first_name} {telegram_user.last_name} перешел в меню 🔍 Ввод ключевого слова")
+        f"Пользователь {telegram_user.id} {telegram_user.username} {telegram_user.first_name} {telegram_user.last_name} перешел в меню 🔍 Ввод ключевого слова"
+    )
 
     await message.answer(
         t("enter_keyword", lang=user.language),
@@ -91,7 +92,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     skipped_keywords = []
     error_keywords = []
 
-    # Add each keyword one by one
+    # Добавляйте каждое ключевое слово по очереди
     for keyword in keywords_list:
         try:
             keywords_model.create(user_keyword=keyword)
@@ -103,7 +104,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
                 error_keywords.append((keyword, str(e)))
                 logger.error(f"Error adding keyword {keyword}: {e}")
 
-    # Format response message
+    # Форматирование ответного сообщения
     response_parts = []
 
     if added_keywords:
@@ -130,18 +131,19 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
             error_text += f"\n...\n{t('keywords_and_more_errors', lang=user.language, count=len(error_keywords) - 3)}\n"
         response_parts.append(f"❌ {t('keywords_add_errors', lang=user.language)}:\n{error_text}\n")
 
-    # Summary
-    summary = (
-        f"\n📊 {t('keywords_summary', lang=user.language)}\n"
-        f"• {t('keywords_added', lang=user.language)}: {len(added_keywords)}\n"
-        f"• {t('keywords_skipped', lang=user.language)}: {len(skipped_keywords)}\n"
-        f"• {t('keywords_errors', lang=user.language)}: {len(error_keywords)}"
+    # Резюме
+    response_parts.append(
+        (
+            f"\n📊 {t('keywords_summary', lang=user.language)}\n"
+            f"• {t('keywords_added', lang=user.language)}: {len(added_keywords)}\n"
+            f"• {t('keywords_skipped', lang=user.language)}: {len(skipped_keywords)}\n"
+            f"• {t('keywords_errors', lang=user.language)}: {len(error_keywords)}"
+        )
     )
-    response_parts.append(summary)
 
     await message.answer("\n\n".join(response_parts))
 
-    # Log statistics
+    # Регистрация статистики
     logger.info(
         f"Keywords import for user {telegram_user.id}: "
         f"added={len(added_keywords)}, skipped={len(skipped_keywords)}, errors={len(error_keywords)}"

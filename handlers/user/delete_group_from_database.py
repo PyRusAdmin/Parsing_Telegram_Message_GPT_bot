@@ -52,8 +52,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
             text=t("group_not_found", lang=user.language, group=group_username),
             reply_markup=main_menu_keyboard(lang=user.language)
         )
-        logger.warning(f"Попытка удалить несуществующую группу @{group_username} "
-                       f"пользователем {message.from_user.id}")
+        logger.warning(f"Попытка удалить несуществующую группу @{group_username} пользователем {message.from_user.id}")
 
     # Получаем все аккаунты пользователя из его персональной таблицы
     accounts = get_user_accounts(message.from_user.id)

@@ -47,8 +47,7 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
 
     # Подключение свободного аккаунта
     # TODO сделать удаление выбраного аккаунта и запись в аккаунты пользователя.
-    records = getting_free_account()
-    available_sessions = random.choice(records)
+    available_sessions = random.choice(getting_free_account())
 
     # available_sessions = await CheckingAccountsValidity(message=message, path='accounts/free').get_available_sessions()
     logger.info(f"Подключаем аккаунт {available_sessions}")
