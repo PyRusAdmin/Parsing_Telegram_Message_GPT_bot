@@ -6,8 +6,7 @@ from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
 from telethon.errors import (
-    FloodWaitError, UserAlreadyParticipantError, InviteRequestSentError, ChannelPrivateError, MessageIdInvalidError,
-    ChatForwardsRestrictedError, MessageTooLongError
+    FloodWaitError, InviteRequestSentError, MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
 )
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 

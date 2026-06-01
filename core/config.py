@@ -15,6 +15,3 @@ PROXY_USER = os.getenv("PROXY_USER")
 PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
-
-# MTProto прокси для Telethon
-# MT_PROXY_IP = os.getenv("MT_PROXY_IP")

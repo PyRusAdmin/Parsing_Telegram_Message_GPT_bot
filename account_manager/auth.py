@@ -14,7 +14,6 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
-from core.proxy import Proxy
 from database.database import delete_account_from_db, getting_account
 
 mobile_device = {
@@ -56,7 +55,6 @@ class CheckingAccountsValidity:
         self.message = message
         self.path = Path(path) if path else None
         self.user_id = message.from_user.id
-        self.proxy = Proxy()  # Инициализация класса Proxy для проверки прокси.
 
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """
@@ -65,7 +63,6 @@ class CheckingAccountsValidity:
         :param session_name: Имя аккаунта для подключения (файл .session)
         :return: Клиент Telegram или None, если подключение не удалось
         """
-        # logger.info(f"🔗 Подключение через MTProxy: {MT_PROXY_IP}:{443}")
         client = TelegramClient(
             StringSession(session_name),
             api_id=API_ID,
