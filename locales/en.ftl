@@ -618,14 +618,15 @@ lang_detect_summary = ✅ Processing completed!
 name_prompt = Name
 description_prompt = Description
 no_data_prompt = No data
-ai_lang_detect_prompt = Determine the main language of the text or community description.
-Respond STRICTLY with a single word — the language code in ISO 639-1 format (two-letter code).
-Examples of correct answers: ru, en, es, zh, ar, hi, ja, ko, fr, de, pt, it, nl, sv, pl, tr, vi, th, id, fa, he, uk, cs, el, ro, hu, fi, da, no, sk, bg, hr, sr, sl, et, lv, lt, mk, sq, mt, cy, eu, gl, ga, is, ms, sw, tl, ur, bn, ta, te, mr, gu, kn, ml, si, km, lo, my, am, hy, ka, az, uz, kk, ky, tg, tk, mn, ps, ku, sd, ne, si, lo, km, my, dz, bo, ug, yi, ha, yo, ig, zu, xh, st, tn, ts, ve, nr, ss, ch, rw, rn, mg, ln, kg, sw, tn.
-If the language cannot be determined unambiguously or the text contains a mixture of languages without a dominant one — answer: unknown.
-DO NOT add any explanations, punctuation, spaces, or additional text. Only the language code or 'unknown'.
-
-Text for analysis:
-{ $user_input }
+ai_lang_detect_prompt =
+    Determine the main language of the text or community description.
+    Respond STRICTLY with a single word — the language code in ISO 639-1 format (two-letter code).
+    Examples of correct answers: ru, en, es, zh, ar, hi, ja, ko, fr, de, pt, it, nl, sv, pl, tr, vi, th, id, fa, he, uk, cs, el, ro, hu, fi, da, no, sk, bg, hr, sr, sl, et, lv, lt, mk, sq, mt, cy, eu, gl, ga, is, ms, sw, tl, ur, bn, ta, te, mr, gu, kn, ml, si, km, lo, my, am, hy, ka, az, uz, kk, ky, tg, tk, mn, ps, ku, sd, ne, si, lo, km, my, dz, bo, ug, yi, ha, yo, ig, zu, xh, st, tn, ts, ve, nr, ss, ch, rw, rn, mg, ln, kg, sw, tn.
+    If the language cannot be determined unambiguously or the text contains a mixture of languages without a dominant one — answer: unknown.
+    DO NOT add any explanations, punctuation, spaces, or additional text. Only the language code or 'unknown'.
+    
+    Text for analysis:
+    { $user_input }
 
 # checking_group_for_ai.py
 get_groups_without_category_message = 📊 <b>Category Statistics:</b>

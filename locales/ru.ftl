@@ -615,14 +615,15 @@ lang_detect_summary = ✅ Обработка завершена!
 name_prompt = Название
 description_prompt = Описание
 no_data_prompt = Нет данных
-ai_lang_detect_prompt = Определи основной язык текста или описания сообщества.
-Ответь СТРОГО одним словом — кодом языка в формате ISO 639-1 (двухбуквенный код).
-Примеры корректных ответов: ru, en, es, zh, ar, hi, ja, ko, fr, de, pt, it, nl, sv, pl, tr, vi, th, id, fa, he, uk, cs, el, ro, hu, fi, da, no, sk, bg, hr, sr, sl, et, lv, lt, mk, sq, mt, cy, eu, gl, ga, is, ms, sw, tl, ur, bn, ta, te, mr, gu, kn, ml, si, km, lo, my, am, hy, ka, az, uz, kk, ky, tg, tk, mn, ps, ku, sd, ne, si, lo, km, my, dz, bo, ug, yi, ha, yo, ig, zu, xh, st, tn, ts, ve, nr, ss, ch, rw, rn, mg, ln, kg, sw, tn.
-Если язык невозможно определить однозначно или текст содержит смесь языков без доминирующего — ответь: unknown.
-НЕ добавляй никаких пояснений, пунктуации, пробелов или дополнительного текста. Только код языка или 'unknown'.
-
-Текст для анализа:
-{ $user_input }
+ai_lang_detect_prompt =
+    Определи основной язык текста или описания сообщества.
+    Ответь СТРОГО одним словом — кодом языка в формате ISO 639-1 (двухбуквенный код).
+    Примеры корректных ответов: ru, en, es, zh, ar, hi, ja, ko, fr, de, pt, it, nl, sv, pl, tr, vi, th, id, fa, he, uk, cs, el, ro, hu, fi, da, no, sk, bg, hr, sr, sl, et, lv, lt, mk, sq, mt, cy, eu, gl, ga, is, ms, sw, tl, ur, bn, ta, te, mr, gu, kn, ml, si, km, lo, my, am, hy, ka, az, uz, kk, ky, tg, tk, mn, ps, ku, sd, ne, si, lo, km, my, dz, bo, ug, yi, ha, yo, ig, zu, xh, st, tn, ts, ve, nr, ss, ch, rw, rn, mg, ln, kg, sw, tn.
+    Если язык невозможно определить однозначно или текст содержит смесь языков без доминирующего — ответь: unknown.
+    НЕ добавляй никаких пояснений, пунктуации, пробелов или дополнительного текста. Только код языка или 'unknown'.
+    
+    Текст для анализа:
+    { $user_input }
 
 # checking_group_for_ai.py
 get_groups_without_category_message = 📊 <b>Статистика категорий:</b>

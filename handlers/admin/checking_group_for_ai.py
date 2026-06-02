@@ -109,11 +109,11 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=OPENROUTER_API_KEY,
-            timeout=30
+            # timeout=30
         )
         # Лучшие бесплатные модели для классификации (выберите нужную):
         # 🏆 Лучшая для русского языка:
-        model = "google/gemma-3-27b:free"
+        model = "deepseek/deepseek-v4-flash"
         # 🔥 Самая умная (уровень GPT-4):
         # model = "meta-llama/llama-3.3-70b-instruct:free"
         # ⚖️ Баланс скорости и качества:

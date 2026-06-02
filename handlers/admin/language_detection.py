@@ -45,12 +45,11 @@ def ai_llama_fri(group_data: dict, lang: str = 'ru'):
             max_tokens=10
         )
 
-        detected_lang = (
-            completion.choices[0].message.content
-            .strip()
-            .lower()
-            .split()[0]
-        )
+        raw_content = completion.choices[0].message.content
+        if not raw_content:
+            raise ValueError("Модель вернула пустой ответ (content=None)")
+
+        detected_lang = raw_content.strip().lower().split()[0]
 
         ISO_639_1_CODES = {
             "aa", "ab", "ae", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh", "bi",
@@ -264,6 +263,8 @@ async def language_detection(message):
     successful_results = []
     ai_failed = 0
 
+    logger.debug(f"📋 Всего результатов от AI: {len(results)}")
+
     for result in results:
         if isinstance(result, Exception):
             logger.error(f"❌ Исключение: {result}")
@@ -277,12 +278,17 @@ async def language_detection(message):
                 "language": result["language"]
             })
         else:
+            logger.warning(f"⚠️ Пропущен (success={result.get('success')}, language={result.get('language')}): {result.get('name')}")
             ai_failed += 1
+
+    logger.info(f"📊 Для записи в БД: {len(successful_results)}, AI ошибок: {ai_failed}")
 
     # 4️⃣ Обновляем БД одним батчем (в основном потоке)
     if successful_results:
         await message.answer(t("lang_detect_saving", lang=user_lang, count=len(successful_results)))
+        logger.info(f"💾 Запуск batch_update_languages для {len(successful_results)} групп")
         updated, db_failed = await batch_update_languages(successful_results)
+        logger.info(f"💾 Результат записи: обновлено={updated}, ошибок={db_failed}")
     else:
         updated = 0
         db_failed = 0
