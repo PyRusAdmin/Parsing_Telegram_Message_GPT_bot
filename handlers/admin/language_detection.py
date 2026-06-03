@@ -14,8 +14,6 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-
-
 def ai_llama_fri(group_data: dict, lang: str = 'ru'):
     """Определение языка (ТОЛЬКО AI-запрос через OpenRouter Free, БЕЗ записи в БД)"""
     try:
@@ -278,7 +276,8 @@ async def language_detection(message):
                 "language": result["language"]
             })
         else:
-            logger.warning(f"⚠️ Пропущен (success={result.get('success')}, language={result.get('language')}): {result.get('name')}")
+            logger.warning(
+                f"⚠️ Пропущен (success={result.get('success')}, language={result.get('language')}): {result.get('name')}")
             ai_failed += 1
 
     logger.info(f"📊 Для записи в БД: {len(successful_results)}, AI ошибок: {ai_failed}")
@@ -294,8 +293,6 @@ async def language_detection(message):
         db_failed = 0
 
     # 5️⃣ Итоговая статистика
-    total_failed = ai_failed + db_failed
-
     await message.answer(
         f"{t('lang_detect_complete', lang=user_lang)}\n\n"
         f"📊 {t('lang_detect_stats_title', lang=user_lang)}:\n"
@@ -304,5 +301,5 @@ async def language_detection(message):
         f"• {t('lang_detect_stats_db_success', lang=user_lang)}: {updated}\n"
         f"• {t('lang_detect_stats_ai_fail', lang=user_lang)}: {ai_failed}\n"
         f"• {t('lang_detect_stats_db_fail', lang=user_lang)}: {db_failed}\n"
-        f"• {t('lang_detect_stats_total_fail', lang=user_lang)}: {total_failed}"
+        f"• {t('lang_detect_stats_total_fail', lang=user_lang)}: {ai_failed + db_failed}"
     )
