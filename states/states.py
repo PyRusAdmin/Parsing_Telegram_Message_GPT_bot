@@ -22,6 +22,8 @@ class MyStates(StatesGroup):
 
     waiting_for_session_file_user = State()  # Ждем файл в формате session
 
+    get_id_user_transfer = State()  # Ожидание ввода ID
+
 
 class MyStatesParsing(StatesGroup):
     get_url = State()  # Ожидание ввода URL для парсинга

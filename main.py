@@ -22,6 +22,7 @@ from handlers.user.handlers import router as handlers
 from handlers.user.pars_ai import router as pars_ai
 from handlers.user.post_doc import router as post_doc
 from handlers.user.stop_tracking import router as stop_tracking
+from handlers.user.transfer_rights import router as transfer_settings
 from system.dispatcher import dp, bot
 
 logger.add("logs/log.log", rotation="1 MB", compression="zip", enqueue=True)  # Логирование бота
@@ -66,6 +67,7 @@ async def main() -> None:
         dp.include_router(connect_account)
         dp.include_router(checking_group_for_keywords)
         dp.include_router(delete_group_from_database)
+        dp.include_router(transfer_settings)
 
         """
         Панель администратора Telegram бота

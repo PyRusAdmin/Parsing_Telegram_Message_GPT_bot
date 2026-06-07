@@ -260,8 +260,11 @@ def settings_keyboard(lang: str = 'ru'):
                 KeyboardButton(text=t("change_language_button", lang=lang), style="primary")
             ],
             [
+                KeyboardButton(text="🔄 Передать настройки пользователю", style="primary")
+            ],
+            [
                 KeyboardButton(text=t("back_button", lang=lang), style="danger")
-            ]
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
