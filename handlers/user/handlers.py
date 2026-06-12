@@ -15,9 +15,10 @@ from database.database import (
 from keyboards.admin.keyboards import main_admin_keyboard
 from keyboards.user.keyboards import (
     get_lang_keyboard, main_menu_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
-    connect_keyboard_account
+    connect_keyboard_account, get_stars_topup_inline_keyboard
 )
 from locales.locales import t
+from aiogram.types import CallbackQuery, LabeledPrice, Message
 from states.states import MyStates
 from system.dispatcher import ADMIN_USER_ID
 
@@ -416,3 +417,44 @@ async def handle_group_usernames_file(message, state: FSMContext, bot):
     )
     await message.answer(response)
     await state.clear()
+
+
+@router.message((F.text == t('topup_stars_button', 'ru')) | (F.text == t('topup_stars_button', 'en')))
+async def handle_stars_balance(message: Message, state: FSMContext):
+    await state.clear()
+    user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+    
+    keyboard = get_stars_topup_inline_keyboard(user_lang)
+    msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
+    
+    await message.answer(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
+
+
+@router.callback_query(F.data.startswith("buy_stars_"))
+async def handle_buy_stars_callback(callback: CallbackQuery, state: FSMContext):
+    user = User.get(User.user_id == callback.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+    
+    action = callback.data.split("_")[2]
+    
+    if action == "cancel":
+        await callback.message.delete()
+        await callback.answer()
+        return
+        
+    try:
+        amount = int(action)
+    except ValueError:
+        await callback.answer("Error", show_alert=True)
+        return
+        
+    await callback.message.answer_invoice(
+        title=t("stars_invoice_title", lang=user_lang),
+        description=t("stars_invoice_desc", lang=user_lang, amount=amount),
+        payload=f"topup_stars_{amount}",
+        provider_token="",  # must be empty for Telegram Stars
+        currency="XTR",
+        prices=[LabeledPrice(label="Stars", amount=amount)]
+    )
+    await callback.answer()

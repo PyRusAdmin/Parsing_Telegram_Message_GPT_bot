@@ -1,5 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from keyboards.admin.keyboards import menu_user_admin_keyboard
 from locales.locales import t
 
@@ -257,7 +256,8 @@ def settings_keyboard(lang: str = 'ru'):
                 KeyboardButton(text=t("connect_group_for_messages_button", lang=lang), style="success")
             ],
             [
-                KeyboardButton(text=t("change_language_button", lang=lang), style="primary")
+                KeyboardButton(text=t("change_language_button", lang=lang), style="primary"),
+                KeyboardButton(text=t("topup_stars_button", lang=lang), style="primary")
             ],
             [
                 KeyboardButton(text="🔄 Передать настройки пользователю", style="primary")
@@ -329,3 +329,20 @@ def back_keyboard(lang: str = 'ru'):
         resize_keyboard=True,
         one_time_keyboard=False  # Отправлять сообщение только один раз
     )
+
+
+def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
+    buttons = [
+        [
+            InlineKeyboardButton(text="⭐ 5 Stars", callback_data="buy_stars_5"),
+            InlineKeyboardButton(text="⭐ 15 Stars", callback_data="buy_stars_15")
+        ],
+        [
+            InlineKeyboardButton(text="⭐ 50 Stars", callback_data="buy_stars_50"),
+            InlineKeyboardButton(text="⭐ 100 Stars", callback_data="buy_stars_100")
+        ],
+        [
+            InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="buy_stars_cancel")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

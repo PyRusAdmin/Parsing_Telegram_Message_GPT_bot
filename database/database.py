@@ -28,6 +28,19 @@ def init_database():
     db.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
     db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
     db.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
+    db.create_tables([User], safe=True)  # Создание таблицы пользователей
+
+    # Проверка наличия колонок stars и last_free_download_at в таблице user (SQLite-миграция)
+    cursor = db.cursor()
+    cursor.execute("PRAGMA table_info(user)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "stars" not in columns:
+        logger.info("Migrating database: adding 'stars' column to user table")
+        db.execute_sql('ALTER TABLE "user" ADD COLUMN "stars" INTEGER DEFAULT 0;')
+    if "last_free_download_at" not in columns:
+        logger.info("Migrating database: adding 'last_free_download_at' column to user table")
+        db.execute_sql('ALTER TABLE "user" ADD COLUMN "last_free_download_at" DATETIME;')
+
     db.close()
 
 
@@ -316,6 +329,8 @@ class User(BaseModel):
     first_name = CharField(null=True)
     last_name = CharField(null=True)
     language = CharField(default="ru")  # "ru" или "en"
+    stars = IntegerField(default=0)
+    last_free_download_at = DateTimeField(null=True)
 
 
 def create_keywords_model(user_id):

@@ -38,6 +38,7 @@ class ExportStates(StatesGroup):
     с функцией экспорта, например, ожидание выбора категории.
     """
     waiting_for_category = State()  # Ожидание выбора категории для экспорта
+    waiting_for_payment_choice = State()  # Ожидание выбора способа оплаты звезд
 
 
 class CategoryMethod(StatesGroup):

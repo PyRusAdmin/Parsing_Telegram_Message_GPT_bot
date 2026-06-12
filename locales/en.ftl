@@ -5,7 +5,7 @@ welcome_message_template =
     🤖 Welcome to the Telegram bot for tracking 🔍 keywords in groups and channels, as well as searching for groups and channels with AI!
 
     📋 <b>Version:</b> { $version }
-    📅 <b>Release date:</b> March 06, 2026
+    📅 <b>Release date:</b> July 02, 2026
 
     📊 <b>Groups/channels found by users:</b> { $groups_count }
 
@@ -634,5 +634,31 @@ get_groups_without_category_message = 📊 <b>Category Statistics:</b>
     🗃️ Groups without category: { $count }
 
     Press '🏷️ Assign Category' to start AI
+
+
+# === Download limits and Stars ===
+download_free_success = 📥 Exporting database (1 free download per day). Starting download...
+download_cooldown_message =
+    ⚠️ You have already downloaded the database in the last 24 hours.
+    Next free download will be available in <b>{ $time }</b>.
+    
+    You can download the database now for 5 ⭐.
+    Your star balance in the bot: <b>{ $stars }</b> ⭐
+pay_from_balance_btn = 🪙 Deduct 5 ⭐ from balance
+pay_direct_btn = ⭐ Pay 5 ⭐ directly
+cancel_btn = ❌ Cancel
+download_paid_success = ✅ Payment/deduction of 5 ⭐ successful. Starting database download...
+download_insufficient_stars = ❌ Insufficient stars on your balance.
+stars_topup_success = 🎉 Balance successfully topped up by { $amount } ⭐! Your current balance: { $balance } ⭐.
+stars_added_admin = ⭐ Administrator credited { $amount } ⭐ to you. Current balance: { $balance } ⭐.
+topup_stars_button = 💳 Top up Stars
+stars_balance_msg = 👤 <b>Your Star Profile:</b>\n\nBalance: <b>{ $stars }</b> ⭐\n\nHere you can top up your Telegram Stars balance for paid database downloads.
+stars_invoice_title = Top up Star Balance
+stars_invoice_desc = Purchase of { $amount } Telegram Stars for use in the bot
+stars_invoice_dl_title = Database Download
+stars_invoice_dl_desc = One-time database download bypassing the daily limit
+excel_filename_category_db = category_database.xlsx
+export_category_caption = 📂 Database by category "{ $category }". Total records: { $total_records }.
+generating_database_wait = ⏳ Generating database file, this might take some time. Please wait...
 
 

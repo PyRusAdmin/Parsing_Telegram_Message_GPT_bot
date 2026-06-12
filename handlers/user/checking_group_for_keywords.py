@@ -137,8 +137,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                         except Exception as e:
                             logger.warning(f"Не удалось создать ссылку на сообщение: {e}")
 
-                    # Формируем итоговое сообщение с контекстом
-                    # Обрезаем текст если он слишком длинный
+                    # Формируем итоговое сообщение с контекстом. Обрезаем текст если он слишком длинный
                     display_text = text if len(text) <= 500 else text[:500] + "..."
 
                     # Отправляем в целевую группу
