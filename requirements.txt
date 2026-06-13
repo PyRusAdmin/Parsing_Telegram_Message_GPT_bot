@@ -10,3 +10,8 @@ asgiref
 g4f
 pysocks
 aiohttp-socks
+fastapi
+uvicorn
+python-multipart
+fluent.runtime
+

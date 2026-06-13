@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AutoParse Alert Bot Panel</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div id="app-container" class="loading">
+        <!-- Top Navigation / User Header -->
+        <header class="glass-panel">
+            <div class="user-profile">
+                <div id="user-avatar" class="avatar-gradient">T</div>
+                <div class="user-info">
+                    <h3 id="user-fullname">Loading...</h3>
+                    <p id="user-tag">@username</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div id="stars-badge" class="stars-badge">
+                    <i class="fa-solid fa-star star-glow"></i>
+                    <span id="stars-count">0</span>
+                </div>
+                <button id="lang-toggle-btn" class="icon-btn-round" title="Switch Language">
+                    <i class="fa-solid fa-globe"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Notification Banner -->
+        <div id="notification-banner" class="notification-banner hidden">
+            <span id="notification-message">Notification here</span>
+            <button id="notification-close-btn">&times;</button>
+        </div>
+
+        <!-- Main Workspace -->
+        <main class="content-area">
+            <!-- TAB 1: DASHBOARD -->
+            <section id="tab-dashboard" class="tab-content active">
+                <!-- Status & Control Card -->
+                <div class="hero-card glass-panel">
+                    <div class="status-pulse-container">
+                        <div id="status-pulse" class="status-pulse inactive"></div>
+                        <span id="status-text" class="status-label">Tracking Inactive</span>
+                    </div>
+                    <h1 class="hero-title">AutoParse Alert Monitor</h1>
+                    <p class="hero-desc">Real-time keyword tracking in Telegram groups & channels</p>
+                    
+                    <div class="hero-actions">
+                        <button id="btn-toggle-tracking" class="btn-primary glow-effect">
+                            <i class="fa-solid fa-play"></i> <span>Start Tracking</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card glass-panel" onclick="switchTab('channels')">
+                        <div class="stat-icon icon-blue"><i class="fa-solid fa-tower-broadcast"></i></div>
+                        <div class="stat-data">
+                            <h4 id="stat-channels">0</h4>
+                            <p>Monitored Channels</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel" onclick="switchTab('keywords')">
+                        <div class="stat-icon icon-purple"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <div class="stat-data">
+                            <h4 id="stat-keywords">0</h4>
+                            <p>Active Keywords</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel" onclick="switchTab('accounts')">
+                        <div class="stat-icon icon-green"><i class="fa-solid fa-user-shield"></i></div>
+                        <div class="stat-data">
+                            <h4 id="stat-accounts">0</h4>
+                            <p>Connected Sessions</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon icon-orange"><i class="fa-solid fa-database"></i></div>
+                        <div class="stat-data">
+                            <h4 id="stat-db-groups">0</h4>
+                            <p>Telegram Groups DB</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Settings -->
+                <div class="card glass-panel">
+                    <h3><i class="fa-solid fa-gears icon-inline"></i> Forwarding Settings</h3>
+                    <div class="settings-row">
+                        <div class="setting-info">
+                            <h5>Alert Target Channel</h5>
+                            <p>Messages with keywords will be forwarded here</p>
+                        </div>
+                        <div class="setting-action">
+                            <div class="input-action-group">
+                                <input type="text" id="target-group-input" placeholder="@your_channel" class="glass-input">
+                                <button id="btn-save-target-group" class="btn-secondary">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stars Top Up Card -->
+                <div class="card glass-panel topup-card">
+                    <div class="topup-info">
+                        <h3><i class="fa-solid fa-coins icon-inline icon-orange"></i> Balance & Utilities</h3>
+                        <p>Purchase Stars to bypass the 24-hour limit on database exports.</p>
+                    </div>
+                    <div class="topup-action">
+                        <button id="btn-topup-modal" class="btn-success"><i class="fa-solid fa-plus"></i> Buy Stars</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: CHANNELS -->
+            <section id="tab-channels" class="tab-content">
+                <div class="card glass-panel">
+                    <h3><i class="fa-solid fa-square-plus icon-inline"></i> Add Channels to Track</h3>
+                    
+                    <div class="input-action-group inline-form">
+                        <input type="text" id="channel-username-input" placeholder="@channel_username" class="glass-input">
+                        <button id="btn-add-channel" class="btn-primary">Add</button>
+                    </div>
+                    
+                    <div class="drag-drop-area" id="channel-drop-zone">
+                        <i class="fa-solid fa-file-arrow-up drag-icon"></i>
+                        <p>Drag & Drop <strong>.txt</strong> file with channels or <span class="browse-link">browse</span></p>
+                        <input type="file" id="channel-file-input" accept=".txt" class="hidden">
+                    </div>
+                </div>
+
+                <div class="card glass-panel list-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-list icon-inline"></i> Monitored Channels</h3>
+                        <span id="channels-count" class="badge">0</span>
+                    </div>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="search-channels-filter" placeholder="Search channels..." class="glass-input search-input">
+                    </div>
+                    <div class="list-container scrollable" id="channels-list">
+                        <!-- Channels item placeholder -->
+                        <div class="empty-state">No channels added yet.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: KEYWORDS -->
+            <section id="tab-keywords" class="tab-content">
+                <div class="card glass-panel">
+                    <h3><i class="fa-solid fa-key icon-inline"></i> Add Alert Keyword</h3>
+                    <div class="input-action-group inline-form">
+                        <input type="text" id="keyword-input" placeholder="e.g. freelance, python, developer" class="glass-input">
+                        <button id="btn-add-keyword" class="btn-primary">Add Keyword</button>
+                    </div>
+                </div>
+
+                <div class="card glass-panel list-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-tag icon-inline"></i> Active Keywords</h3>
+                        <span id="keywords-count" class="badge">0</span>
+                    </div>
+                    <div class="list-container scrollable" id="keywords-list">
+                        <!-- Keywords item placeholder -->
+                        <div class="empty-state">No keywords defined.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: ACCOUNTS -->
+            <section id="tab-accounts" class="tab-content">
+                <div class="card glass-panel">
+                    <h3><i class="fa-solid fa-user-plus icon-inline"></i> Connect Telegram Account</h3>
+                    <p class="card-desc">Upload a valid <strong>.session</strong> (Telethon) session file to connect an account for monitoring or searching.</p>
+                    
+                    <div class="drag-drop-area" id="session-drop-zone">
+                        <i class="fa-solid fa-key drag-icon"></i>
+                        <p>Drag & Drop <strong>.session</strong> file or <span class="browse-link">browse</span></p>
+                        <input type="file" id="session-file-input" accept=".session" class="hidden">
+                    </div>
+                </div>
+
+                <div class="card glass-panel list-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-circle-user icon-inline"></i> Active Sessions</h3>
+                        <span id="accounts-count" class="badge">0</span>
+                    </div>
+                    <div class="list-container scrollable" id="accounts-list">
+                        <div class="empty-state">No accounts connected.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: AI SEARCH -->
+            <section id="tab-search" class="tab-content">
+                <!-- Search panel -->
+                <div class="card glass-panel">
+                    <h3><i class="fa-solid fa-robot icon-inline"></i> AI Target Group Finder</h3>
+                    <p class="card-desc">Use AI (Groq Llama 3) to generate search queries, then find active Telegram groups on your topic.</p>
+                    
+                    <div class="search-form">
+                        <div class="input-action-group">
+                            <input type="text" id="ai-search-query" placeholder="e.g. Python Developer Jobs, Crypto Trades" class="glass-input">
+                            <button id="btn-trigger-ai-search" class="btn-primary glow-effect">
+                                <i class="fa-solid fa-circle-notch fa-spin hidden" id="search-spinner"></i>
+                                <span>Find Groups</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Database Card -->
+                <div class="card glass-panel">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-file-excel icon-inline icon-green"></i> Export Groups Database</h3>
+                    </div>
+                    <p class="card-desc">Download a filtered Excel sheet of all discovered Telegram groups and channels.</p>
+                    
+                    <div class="export-options">
+                        <div class="export-row">
+                            <label>Export Format:</label>
+                            <select id="export-type" class="glass-select">
+                                <option value="all">All Records</option>
+                                <option value="channels">Channels Only</option>
+                                <option value="groups">Groups Only</option>
+                            </select>
+                        </div>
+                        <div class="export-row">
+                            <label>Filter Category:</label>
+                            <select id="export-category" class="glass-select">
+                                <option value="all">All Categories</option>
+                                <option value="инвестиции">Инвестиции</option>
+                                <option value="финансы и личный бюджет">Финансы и личный бюджет</option>
+                                <option value="криптовалюты и блокчейн">Криптовалюты и блокчейн</option>
+                                <option value="бизнес и предпринимательство">Бизнес и предпринимательство</option>
+                                <option value="маркетинг и продвижение">Маркетинг и продвижение</option>
+                                <option value="технологии и it">Технологии и IT</option>
+                                <option value="образование и саморазвитие">Образование и саморазвитие</option>
+                                <option value="работа и карьера">Работа и карьера</option>
+                                <option value="недвижимость">Недвижимость</option>
+                                <option value="здоровье и медицина">Здоровье и медицина</option>
+                                <option value="путешествия">Путешествия</option>
+                                <option value="авто и транспорт">Авто и транспорт</option>
+                                <option value="шоппинг и скидки">Шоппинг и скидки</option>
+                                <option value="развлечения и досуг">Развлечения и досуг</option>
+                                <option value="политика и общество">Политика и общество</option>
+                                <option value="наука и исследования">Наука и исследования</option>
+                                <option value="спорт и фитнес">Спорт и фитнес</option>
+                                <option value="кулинария и еда">Кулинария и еда</option>
+                                <option value="мода и красота">Мода и красота</option>
+                                <option value="хобби и творчество">Хобби и творчество</option>
+                            </select>
+                        </div>
+                        <div id="export-limit-warning" class="warning-text hidden">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Free download limit reached (1/24h). Next download will deduct 5 Stars.
+                        </div>
+                        <button id="btn-export-db" class="btn-success block-btn"><i class="fa-solid fa-download"></i> Export to Excel</button>
+                    </div>
+                </div>
+
+                <!-- AI Search Results -->
+                <div class="card glass-panel hidden" id="search-results-card">
+                    <div class="card-header">
+                        <h3>Search Results</h3>
+                        <span id="results-count" class="badge">0</span>
+                    </div>
+                    <div class="table-container scrollable">
+                        <table class="glass-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Username</th>
+                                    <th>Type</th>
+                                    <th>Members</th>
+                                    <th>Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="search-results-list">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: ADMIN PANEL (Conditional) -->
+            <section id="tab-admin" class="tab-content">
+                <div class="card glass-panel">
+                    <h3><i class="fa-solid fa-shield-halved icon-inline"></i> Admin Control Panel</h3>
+                    <p class="card-desc">Execute maintenance operations, update group details, run AI classification, and retrieve system logs.</p>
+                </div>
+
+                <!-- Active Admin Task status -->
+                <div class="card glass-panel hidden" id="admin-task-card">
+                    <h3>Background Process Running</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="admin-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-details">
+                        <span id="admin-task-name">Updating...</span>
+                        <span id="admin-progress-text">0 / 0</span>
+                    </div>
+                    <p id="admin-task-message" class="status-msg">Processing data...</p>
+                </div>
+
+                <!-- Maintenance Grid -->
+                <div class="admin-actions-grid">
+                    <div class="admin-action-card glass-panel" onclick="triggerAdminAction('check-accounts')">
+                        <i class="fa-solid fa-users-gear admin-icon icon-green"></i>
+                        <h4>Check Accounts</h4>
+                        <p>Verify active Telethon sessions validity</p>
+                    </div>
+                    <div class="admin-action-card glass-panel" onclick="triggerAdminAction('actualize')">
+                        <i class="fa-solid fa-arrows-spin admin-icon icon-blue"></i>
+                        <h4>Actualize DB</h4>
+                        <p>Fetch latest Telegram IDs & titles</p>
+                    </div>
+                    <div class="admin-action-card glass-panel" onclick="openCategorizeModal()">
+                        <i class="fa-solid fa-shapes admin-icon icon-purple"></i>
+                        <h4>Classify AI</h4>
+                        <p>Assign categories using LLM</p>
+                    </div>
+                    <div class="admin-action-card glass-panel" onclick="triggerAdminAction('detect-language')">
+                        <i class="fa-solid fa-language admin-icon icon-orange"></i>
+                        <h4>Detect Languages</h4>
+                        <p>Detect languages of active chats</p>
+                    </div>
+                </div>
+
+                <!-- Logs & Exports -->
+                <div class="card glass-panel">
+                    <h3>System Files</h3>
+                    <div class="admin-download-row">
+                        <div class="download-info">
+                            <h5>User Questions & Feedback</h5>
+                            <p>Download user inquiries from the database (CSV)</p>
+                        </div>
+                        <button class="btn-secondary" onclick="downloadAdminFile('export-questions')"><i class="fa-solid fa-download"></i> Download</button>
+                    </div>
+                    <div class="admin-download-row border-top">
+                        <div class="download-info">
+                            <h5>Application Logs</h5>
+                            <p>View bot's raw trace logging file (logs/log.log)</p>
+                        </div>
+                        <button class="btn-secondary" onclick="downloadAdminFile('logs')"><i class="fa-solid fa-download"></i> Download</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Navigation Bar (Tabs) -->
+        <nav class="nav-bar glass-panel">
+            <button class="nav-item active" onclick="switchTab('dashboard')">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('channels')">
+                <i class="fa-solid fa-tower-broadcast"></i>
+                <span>Channels</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('keywords')">
+                <i class="fa-solid fa-tag"></i>
+                <span>Keywords</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('accounts')">
+                <i class="fa-solid fa-user-shield"></i>
+                <span>Accounts</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('search')">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI Search</span>
+            </button>
+            <button class="nav-item hidden" id="nav-admin" onclick="switchTab('admin')">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Admin</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- MODAL: STARS TOPUP -->
+    <div id="topup-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>Buy Telegram Stars</h3>
+                <button class="close-btn" onclick="closeModal('topup')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Choose the number of stars you want to buy for your balance:</p>
+                <div class="stars-option-grid">
+                    <button class="star-opt-btn" onclick="buyStars(10)">
+                        <i class="fa-solid fa-star star-glow"></i>
+                        <span>10 Stars</span>
+                    </button>
+                    <button class="star-opt-btn" onclick="buyStars(25)">
+                        <i class="fa-solid fa-star star-glow"></i>
+                        <span>25 Stars</span>
+                    </button>
+                    <button class="star-opt-btn" onclick="buyStars(50)">
+                        <i class="fa-solid fa-star star-glow"></i>
+                        <span>50 Stars</span>
+                    </button>
+                    <button class="star-opt-btn" onclick="buyStars(100)">
+                        <i class="fa-solid fa-star star-glow"></i>
+                        <span>100 Stars</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CATEGORIZE MODEL METHOD SELECT -->
+    <div id="categorize-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>Select Classification Method</h3>
+                <button class="close-btn" onclick="closeModal('categorize')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Select the AI provider and model to perform chat categorization:</p>
+                <div class="categorize-methods">
+                    <button class="method-btn" onclick="triggerCategorize('fast')">
+                        <i class="fa-solid fa-bolt icon-blue"></i>
+                        <div class="method-desc">
+                            <h5>Fast Method (G4F Free)</h5>
+                            <p>Uses free models (gpt-4o-mini, llama-3) sequentially</p>
+                        </div>
+                    </button>
+                    <button class="method-btn" onclick="triggerCategorize('openrouter')">
+                        <i class="fa-solid fa-server icon-purple"></i>
+                        <div class="method-desc">
+                            <h5>Powerful Method (OpenRouter DeepSeek)</h5>
+                            <p>Uses deepseek-v4-flash via OpenRouter API</p>
+                        </div>
+                    </button>
+                    <button class="method-btn" onclick="triggerCategorize('groq')">
+                        <i class="fa-solid fa-brain icon-green"></i>
+                        <div class="method-desc">
+                            <h5>Powerful Method (Groq Llama)</h5>
+                            <p>Uses llama-3.1-8b via Groq API</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App JavaScript Logic -->
+    <script src="js/app.js"></script>
+</body>
+</html>

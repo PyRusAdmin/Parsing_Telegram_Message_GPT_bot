@@ -476,7 +476,7 @@ def clean_telegram_id_duplicates():
         )
         deleted_count += deleted
 
-    print(f"✅ Очищено дубликатов по telegram_id: {deleted_count}")
+    logger.info(f"Очищено дубликатов по telegram_id: {deleted_count}")
     return deleted_count
 
 

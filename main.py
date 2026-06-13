@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import sys
+import os
+import uvicorn
 
 from loguru import logger
 
@@ -24,6 +26,8 @@ from handlers.user.post_doc import router as post_doc
 from handlers.user.stop_tracking import router as stop_tracking
 from handlers.user.transfer_rights import router as transfer_settings
 from system.dispatcher import dp, bot
+from web.server import app
+
 
 logger.add("logs/log.log", rotation="1 MB", compression="zip", enqueue=True)  # Логирование бота
 
@@ -86,7 +90,21 @@ async def main() -> None:
         if updated:
             logger.info(f"✅ Обновлено {updated} категорий на нижний регистр")
 
-        await dp.start_polling(bot)
+        # Determine port
+        port_env = os.getenv("PORT")
+        if not port_env or port_env == "_____" or not port_env.isdigit():
+            port = 8000
+        else:
+            port = int(port_env)
+
+        logger.info(f"🌐 Starting FastAPI Web Server on http://0.0.0.0:{port}")
+        config = uvicorn.Config(app, host="0.0.0.0", port=port, loop="asyncio")
+        server = uvicorn.Server(config)
+
+        await asyncio.gather(
+            dp.start_polling(bot),
+            server.serve()
+        )
 
     except Exception as e:
         logger.exception(e)

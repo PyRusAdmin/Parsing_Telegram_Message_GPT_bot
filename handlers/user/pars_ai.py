@@ -4,7 +4,8 @@ import re
 from datetime import datetime
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     BufferedInputFile, ReplyKeyboardRemove, Message,
@@ -601,7 +602,7 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
     logger.info(f"✅ PreCheckoutQuery одобрен")
 
 
-@router.message(F.successful_payment, state="*")
+@router.message(F.successful_payment, StateFilter("*"))
 async def process_successful_payment(message: Message, state: FSMContext):
     logger.info(f"⭐ Получен successful_payment от {message.from_user.id}")
     user = User.get(User.user_id == message.from_user.id)
