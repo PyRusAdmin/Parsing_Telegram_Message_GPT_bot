@@ -16,7 +16,7 @@ if (tg && tg.initData) {
     console.warn("Using mock developer credentials.");
 }
 
-// Translations Dictionary
+// Словарь переводов
 const translations = {
     ru: {
         title: "AutoParse Панель",
@@ -164,14 +164,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // Update UI text values based on active language
 function applyTranslations() {
-    const t = translations[userLanguage];
+    const t = translations[userLanguage] || translations.en || {};
     
     // Page-wide elements
-    document.querySelector(".hero-title").innerText = t.title;
-    document.querySelector(".hero-desc").innerText = translations[userLanguage].hero_desc || t.title;
+    document.querySelector(".hero-title").innerText = t.title || "Title";
+    document.querySelector(".hero-desc").innerText = t.hero_desc || t.title || "";
     
     // Set labels of stat blocks
-    document.querySelector("[onclick=\"switchTab('channels')\"] p").innerText = t.monitored_channels;
+    document.querySelector("[onclick=\"switchTab('channels')\"] p").innerText = t.monitored_channels || "Monitored Channels";
     document.querySelector("[onclick=\"switchTab('keywords')\"] p").innerText = t.active_keywords;
     document.querySelector("[onclick=\"switchTab('accounts')\"] p").innerText = t.connected_sessions;
     document.querySelector("[onclick=\"switchTab('admin')\"] span").innerText = "Admin";

@@ -1,34 +1,28 @@
 import asyncio
 import os
-import shutil
 import hmac
 import hashlib
 import urllib.parse
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Form, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
-from peewee import fn
-from asgiref.sync import sync_to_async
-from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-from core.config import BOT_TOKEN, API_ID, API_HASH, GROQ_API_KEY, OPENROUTER_API_KEY
+from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 from database.database import (
-    db, User, TelegramGroup, Groups, Account, AccountFree, UserAccountsTable,
-    create_keywords_model, create_group_model, get_user_accounts, get_user_channel_usernames,
-    get_tracked_channels_count, get_target_group_count, get_session_count, get_keywords_count,
-    getting_number_records_database, get_all_questions, clean_telegram_id_duplicates
+    db, User, TelegramGroup, Groups, Account, UserAccountsTable,
+    create_keywords_model, create_group_model, get_user_accounts, get_tracked_channels_count, get_target_group_count, get_session_count, get_keywords_count,
+    getting_number_records_database, get_all_questions
 )
 from system.dispatcher import ADMIN_USER_ID
 from locales.locales import t
-from keyboards.user.keyboards import connect_grup_keyboard_tech
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import (
     filter_messages, stop_tracking, active_clients, stop_flags
