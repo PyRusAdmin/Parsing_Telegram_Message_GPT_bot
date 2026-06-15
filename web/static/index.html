@@ -22,7 +22,7 @@
             <div class="user-profile">
                 <div id="user-avatar" class="avatar-gradient">T</div>
                 <div class="user-info">
-                    <h3 id="user-fullname">Loading...</h3>
+                    <h3 id="user-fullname">Загрузка...</h3>
                     <p id="user-tag">@username</p>
                 </div>
             </div>
@@ -39,7 +39,7 @@
 
         <!-- Notification Banner -->
         <div id="notification-banner" class="notification-banner hidden">
-            <span id="notification-message">Notification here</span>
+            <span id="notification-message">Уведомление здесь</span>
             <button id="notification-close-btn">&times;</button>
         </div>
 
@@ -51,14 +51,14 @@
                 <div class="hero-card glass-panel">
                     <div class="status-pulse-container">
                         <div id="status-pulse" class="status-pulse inactive"></div>
-                        <span id="status-text" class="status-label">Tracking Inactive</span>
+                        <span id="status-text" class="status-label">Отслеживание неактивно</span>
                     </div>
                     <h1 class="hero-title">AutoParse Alert Monitor</h1>
-                    <p class="hero-desc">Real-time keyword tracking in Telegram groups & channels</p>
+                    <p class="hero-desc">Отслеживание ключевых слов в режиме реального времени в группах и каналах Telegram</p>
                     
                     <div class="hero-actions">
                         <button id="btn-toggle-tracking" class="btn-primary glow-effect">
-                            <i class="fa-solid fa-play"></i> <span>Start Tracking</span>
+                            <i class="fa-solid fa-play"></i> <span>Начать отслеживание</span>
                         </button>
                     </div>
                 </div>
@@ -69,44 +69,44 @@
                         <div class="stat-icon icon-blue"><i class="fa-solid fa-tower-broadcast"></i></div>
                         <div class="stat-data">
                             <h4 id="stat-channels">0</h4>
-                            <p>Monitored Channels</p>
+                            <p>Контролируемые каналы</p>
                         </div>
                     </div>
                     <div class="stat-card glass-panel" onclick="switchTab('keywords')">
                         <div class="stat-icon icon-purple"><i class="fa-solid fa-magnifying-glass"></i></div>
                         <div class="stat-data">
                             <h4 id="stat-keywords">0</h4>
-                            <p>Active Keywords</p>
+                            <p>Активные ключевые слова</p>
                         </div>
                     </div>
                     <div class="stat-card glass-panel" onclick="switchTab('accounts')">
                         <div class="stat-icon icon-green"><i class="fa-solid fa-user-shield"></i></div>
                         <div class="stat-data">
                             <h4 id="stat-accounts">0</h4>
-                            <p>Connected Sessions</p>
+                            <p>Связанные сеансы</p>
                         </div>
                     </div>
                     <div class="stat-card glass-panel">
                         <div class="stat-icon icon-orange"><i class="fa-solid fa-database"></i></div>
                         <div class="stat-data">
                             <h4 id="stat-db-groups">0</h4>
-                            <p>Telegram Groups DB</p>
+                            <p>База данных групп Telegram</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quick Settings -->
                 <div class="card glass-panel">
-                    <h3><i class="fa-solid fa-gears icon-inline"></i> Forwarding Settings</h3>
+                    <h3><i class="fa-solid fa-gears icon-inline"></i> Настройки переадресации</h3>
                     <div class="settings-row">
                         <div class="setting-info">
-                            <h5>Alert Target Channel</h5>
-                            <p>Messages with keywords will be forwarded here</p>
+                            <h5>Целевой канал оповещения</h5>
+                            <p>Сообщения с ключевыми словами будут пересылаться сюда</p>
                         </div>
                         <div class="setting-action">
                             <div class="input-action-group">
                                 <input type="text" id="target-group-input" placeholder="@your_channel" class="glass-input">
-                                <button id="btn-save-target-group" class="btn-secondary">Save</button>
+                                <button id="btn-save-target-group" class="btn-secondary">Сохранить</button>
                             </div>
                         </div>
                     </div>
@@ -207,8 +207,8 @@
             <section id="tab-search" class="tab-content">
                 <!-- Search panel -->
                 <div class="card glass-panel">
-                    <h3><i class="fa-solid fa-robot icon-inline"></i> AI Target Group Finder</h3>
-                    <p class="card-desc">Use AI (Groq Llama 3) to generate search queries, then find active Telegram groups on your topic.</p>
+                    <h3><i class="fa-solid fa-robot icon-inline"></i>Поиск целевой группы с помощью искусственного интеллекта</h3>
+                    <p class="card-desc">Используйте искусственный интеллект (Groq Llama 3) для генерации поисковых запросов, а затем найдите активные группы Telegram по вашей теме.</p>
                     
                     <div class="search-form">
                         <div class="input-action-group">
@@ -224,17 +224,17 @@
                 <!-- Export Database Card -->
                 <div class="card glass-panel">
                     <div class="card-header">
-                        <h3><i class="fa-solid fa-file-excel icon-inline icon-green"></i> Export Groups Database</h3>
+                        <h3><i class="fa-solid fa-file-excel icon-inline icon-green"></i>База данных экспортных групп</h3>
                     </div>
-                    <p class="card-desc">Download a filtered Excel sheet of all discovered Telegram groups and channels.</p>
+                    <p class="card-desc">Загрузите отфильтрованную таблицу Excel со всеми обнаруженными группами и каналами Telegram.</p>
                     
                     <div class="export-options">
                         <div class="export-row">
                             <label>Export Format:</label>
                             <select id="export-type" class="glass-select">
-                                <option value="all">All Records</option>
-                                <option value="channels">Channels Only</option>
-                                <option value="groups">Groups Only</option>
+                                <option value="all">Все записи</option>
+                                <option value="channels">Только каналы</option>
+                                <option value="groups">Только для групп</option>
                             </select>
                         </div>
                         <div class="export-row">
@@ -298,44 +298,44 @@
             <!-- TAB 6: ADMIN PANEL (Conditional) -->
             <section id="tab-admin" class="tab-content">
                 <div class="card glass-panel">
-                    <h3><i class="fa-solid fa-shield-halved icon-inline"></i> Admin Control Panel</h3>
-                    <p class="card-desc">Execute maintenance operations, update group details, run AI classification, and retrieve system logs.</p>
+                    <h3><i class="fa-solid fa-shield-halved icon-inline"></i>Панель управления администратора</h3>
+                    <p class="card-desc">Выполняйте операции технического обслуживания, обновляйте сведения о группах, запускайте классификацию с помощью искусственного интеллекта и извлекайте системные журналы.</p>
                 </div>
 
                 <!-- Active Admin Task status -->
                 <div class="card glass-panel hidden" id="admin-task-card">
-                    <h3>Background Process Running</h3>
+                    <h3>Запущенный фоновый процесс</h3>
                     <div class="progress-bar-container">
                         <div class="progress-bar-fill" id="admin-progress-fill" style="width: 0%"></div>
                     </div>
                     <div class="progress-details">
-                        <span id="admin-task-name">Updating...</span>
+                        <span id="admin-task-name">Обновление...</span>
                         <span id="admin-progress-text">0 / 0</span>
                     </div>
-                    <p id="admin-task-message" class="status-msg">Processing data...</p>
+                    <p id="admin-task-message" class="status-msg">Обработка данных...</p>
                 </div>
 
                 <!-- Maintenance Grid -->
                 <div class="admin-actions-grid">
                     <div class="admin-action-card glass-panel" onclick="triggerAdminAction('check-accounts')">
                         <i class="fa-solid fa-users-gear admin-icon icon-green"></i>
-                        <h4>Check Accounts</h4>
-                        <p>Verify active Telethon sessions validity</p>
+                        <h4>Текущие счета</h4>
+                        <p>Проверка действительности активных сеансов телемарафона</p>
                     </div>
                     <div class="admin-action-card glass-panel" onclick="triggerAdminAction('actualize')">
                         <i class="fa-solid fa-arrows-spin admin-icon icon-blue"></i>
                         <h4>Actualize DB</h4>
-                        <p>Fetch latest Telegram IDs & titles</p>
+                        <p>Получение последних идентификаторов и названий Telegram</p>
                     </div>
                     <div class="admin-action-card glass-panel" onclick="openCategorizeModal()">
                         <i class="fa-solid fa-shapes admin-icon icon-purple"></i>
                         <h4>Classify AI</h4>
-                        <p>Assign categories using LLM</p>
+                        <p>Назначайте категории с помощью LLM</p>
                     </div>
                     <div class="admin-action-card glass-panel" onclick="triggerAdminAction('detect-language')">
                         <i class="fa-solid fa-language admin-icon icon-orange"></i>
                         <h4>Detect Languages</h4>
-                        <p>Detect languages of active chats</p>
+                        <p>Определение языков активных чатов</p>
                     </div>
                 </div>
 
@@ -344,8 +344,8 @@
                     <h3>System Files</h3>
                     <div class="admin-download-row">
                         <div class="download-info">
-                            <h5>User Questions & Feedback</h5>
-                            <p>Download user inquiries from the database (CSV)</p>
+                            <h5>Вопросы и отзывы пользователей</h5>
+                            <p>Загрузка запросов пользователей из базы данных (CSV)</p>
                         </div>
                         <button class="btn-secondary" onclick="downloadAdminFile('export-questions')"><i class="fa-solid fa-download"></i> Download</button>
                     </div>
@@ -364,27 +364,27 @@
         <nav class="nav-bar glass-panel">
             <button class="nav-item active" onclick="switchTab('dashboard')">
                 <i class="fa-solid fa-chart-pie"></i>
-                <span>Home</span>
+                <span>Домой</span>
             </button>
             <button class="nav-item" onclick="switchTab('channels')">
                 <i class="fa-solid fa-tower-broadcast"></i>
-                <span>Channels</span>
+                <span>Каналы</span>
             </button>
             <button class="nav-item" onclick="switchTab('keywords')">
                 <i class="fa-solid fa-tag"></i>
-                <span>Keywords</span>
+                <span>Ключевые слова</span>
             </button>
             <button class="nav-item" onclick="switchTab('accounts')">
                 <i class="fa-solid fa-user-shield"></i>
-                <span>Accounts</span>
+                <span>Счета</span>
             </button>
             <button class="nav-item" onclick="switchTab('search')">
                 <i class="fa-solid fa-robot"></i>
-                <span>AI Search</span>
+                <span>AI поиск</span>
             </button>
             <button class="nav-item hidden" id="nav-admin" onclick="switchTab('admin')">
                 <i class="fa-solid fa-shield-halved"></i>
-                <span>Admin</span>
+                <span>Администратор</span>
             </button>
         </nav>
     </div>
@@ -397,23 +397,23 @@
                 <button class="close-btn" onclick="closeModal('topup')">&times;</button>
             </div>
             <div class="modal-body">
-                <p>Choose the number of stars you want to buy for your balance:</p>
+                <p>Выберите количество звездочек, которые вы хотите приобрести для своего баланса:</p>
                 <div class="stars-option-grid">
                     <button class="star-opt-btn" onclick="buyStars(10)">
                         <i class="fa-solid fa-star star-glow"></i>
-                        <span>10 Stars</span>
+                        <span>10 звезд</span>
                     </button>
                     <button class="star-opt-btn" onclick="buyStars(25)">
                         <i class="fa-solid fa-star star-glow"></i>
-                        <span>25 Stars</span>
+                        <span>25 звезд</span>
                     </button>
                     <button class="star-opt-btn" onclick="buyStars(50)">
                         <i class="fa-solid fa-star star-glow"></i>
-                        <span>50 Stars</span>
+                        <span>50 звезд</span>
                     </button>
                     <button class="star-opt-btn" onclick="buyStars(100)">
                         <i class="fa-solid fa-star star-glow"></i>
-                        <span>100 Stars</span>
+                        <span>100 звезд</span>
                     </button>
                 </div>
             </div>
@@ -424,31 +424,31 @@
     <div id="categorize-modal" class="modal-overlay hidden">
         <div class="modal-content glass-panel">
             <div class="modal-header">
-                <h3>Select Classification Method</h3>
+                <h3>Выберите метод классификации</h3>
                 <button class="close-btn" onclick="closeModal('categorize')">&times;</button>
             </div>
             <div class="modal-body">
-                <p>Select the AI provider and model to perform chat categorization:</p>
+                <p>Выберите поставщика искусственного интеллекта и модель для выполнения категоризации чата:</p>
                 <div class="categorize-methods">
                     <button class="method-btn" onclick="triggerCategorize('fast')">
                         <i class="fa-solid fa-bolt icon-blue"></i>
                         <div class="method-desc">
-                            <h5>Fast Method (G4F Free)</h5>
-                            <p>Uses free models (gpt-4o-mini, llama-3) sequentially</p>
+                            <h5>Быстрый метод (без G4F)</h5>
+                            <p>Последовательно использует бесплатные модели (gpt-4o-mini, llama-3)</p>
                         </div>
                     </button>
                     <button class="method-btn" onclick="triggerCategorize('openrouter')">
                         <i class="fa-solid fa-server icon-purple"></i>
                         <div class="method-desc">
-                            <h5>Powerful Method (OpenRouter DeepSeek)</h5>
-                            <p>Uses deepseek-v4-flash via OpenRouter API</p>
+                            <h5>Мощный метод (OpenRouter DeepSeek)</h5>
+                            <p>Использует deepseek-v4-flash через OpenRouter API</p>
                         </div>
                     </button>
                     <button class="method-btn" onclick="triggerCategorize('groq')">
                         <i class="fa-solid fa-brain icon-green"></i>
                         <div class="method-desc">
-                            <h5>Powerful Method (Groq Llama)</h5>
-                            <p>Uses llama-3.1-8b via Groq API</p>
+                            <h5>Мощный метод (Groq Llama)</h5>
+                            <p>Использует llama-3.1-8b через Groq API</p>
                         </div>
                     </button>
                 </div>
