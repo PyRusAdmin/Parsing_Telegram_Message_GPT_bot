@@ -11,7 +11,6 @@ import sys
 import os
 import uvicorn
 
-
 from database.database import clean_telegram_id_duplicates, init_database
 from database.database import migrate_categories_to_lowercase
 from handlers.admin.admin import router as admin
@@ -33,7 +32,6 @@ from handlers.user.stop_tracking import router as stop_tracking
 from handlers.user.transfer_rights import router as transfer_settings
 from system.dispatcher import dp, bot
 from web.server import app
-
 
 logger.add("logs/log.log", rotation="1 MB", compression="zip", enqueue=True)  # Логирование бота
 
@@ -119,7 +117,3 @@ async def main() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
-
-
-
-

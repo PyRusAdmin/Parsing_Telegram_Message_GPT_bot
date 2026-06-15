@@ -564,20 +564,16 @@ def get_target_group_count(user_id: int) -> int:
 
 def get_session_count(user_id: int) -> int:
     """
-    Подсчитывает количество .session файлов в папке accounts/{user_id}/.
+    Подсчитывает количество подключенных аккаунтов пользователя в базе данных.
 
     :param user_id: (int) ID пользователя Telegram.
-    :return int: Количество .session файлов (0, если папка не существует или файлов нет).
+    :return int: Количество сессий (0, если аккаунты отсутствуют).
     """
-    session_dir = os.path.join("accounts", str(user_id))
-    if not os.path.exists(session_dir):
+    try:
+        return UserAccountsTable.select().where(UserAccountsTable.user_id == user_id).count()
+    except Exception as e:
+        logger.error(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
         return 0
-
-    session_files = [
-        f for f in os.listdir(session_dir)
-        if f.endswith(".session")
-    ]
-    return len(session_files)
 
 
 def get_keywords_count(user_id: int):

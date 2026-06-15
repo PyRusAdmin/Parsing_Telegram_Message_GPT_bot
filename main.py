@@ -5,7 +5,6 @@ import sys
 
 from loguru import logger
 
-
 # logger.add("logs/log.log", rotation="1 MB", compression="zip", enqueue=True)  # Логирование бота
 
 
@@ -90,8 +89,6 @@ from loguru import logger
 # if __name__ == "__main__":
 #     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 #     asyncio.run(main())
-
-
 
 
 # Настройка логирования: указываем файл, размер ротации и сжатие

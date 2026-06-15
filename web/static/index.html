@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Main Style -->
+    <!-- Основной стиль -->
     <link rel="stylesheet" href="css/style.css">
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -116,7 +116,7 @@
                 <div class="card glass-panel topup-card">
                     <div class="topup-info">
                         <h3><i class="fa-solid fa-coins icon-inline icon-orange"></i> Balance & Utilities</h3>
-                        <p>Purchase Stars to bypass the 24-hour limit on database exports.</p>
+                        <p>Покупайте Stars, чтобы обойти 24-часовое ограничение на экспорт баз данных.</p>
                     </div>
                     <div class="topup-action">
                         <button id="btn-topup-modal" class="btn-success"><i class="fa-solid fa-plus"></i> Buy Stars</button>
@@ -127,7 +127,7 @@
             <!-- TAB 2: CHANNELS -->
             <section id="tab-channels" class="tab-content">
                 <div class="card glass-panel">
-                    <h3><i class="fa-solid fa-square-plus icon-inline"></i> Add Channels to Track</h3>
+                    <h3><i class="fa-solid fa-square-plus icon-inline"></i> Добавить каналы для отслеживания</h3>
                     
                     <div class="input-action-group inline-form">
                         <input type="text" id="channel-username-input" placeholder="@channel_username" class="glass-input">
@@ -143,7 +143,7 @@
 
                 <div class="card glass-panel list-card">
                     <div class="card-header">
-                        <h3><i class="fa-solid fa-list icon-inline"></i> <span data-i18n="monitored_channels">Monitored Channels</span></h3>
+                        <h3><i class="fa-solid fa-list icon-inline"></i> <span data-i18n="monitored_channels">Контролируемые каналы</span></h3>
                         <span id="channels-count" class="badge">0</span>
                     </div>
                     <div class="search-box">
@@ -152,7 +152,7 @@
                     </div>
                     <div class="list-container scrollable" id="channels-list">
                         <!-- Channels item placeholder -->
-                        <div class="empty-state" data-i18n="no_channels">No channels added yet.</div>
+                        <div class="empty-state" data-i18n="no_channels">Пока не добавлены каналы.</div>
                     </div>
                 </div>
             </section>
@@ -163,18 +163,18 @@
                     <h3><i class="fa-solid fa-key icon-inline"></i> Add Alert Keyword</h3>
                     <div class="input-action-group inline-form">
                         <input type="text" id="keyword-input" placeholder="e.g. freelance, python, developer" class="glass-input">
-                        <button id="btn-add-keyword" class="btn-primary">Add Keyword</button>
+                        <button id="btn-add-keyword" class="btn-primary">Добавить ключевое слово</button>
                     </div>
                 </div>
 
                 <div class="card glass-panel list-card">
                     <div class="card-header">
-                        <h3><i class="fa-solid fa-tag icon-inline"></i> Active Keywords</h3>
+                        <h3><i class="fa-solid fa-tag icon-inline"></i> Активные ключевые слова</h3>
                         <span id="keywords-count" class="badge">0</span>
                     </div>
                     <div class="list-container scrollable" id="keywords-list">
                         <!-- Keywords item placeholder -->
-                        <div class="empty-state">No keywords defined.</div>
+                        <div class="empty-state">Ключевые слова не определены.</div>
                     </div>
                 </div>
             </section>
@@ -182,23 +182,23 @@
             <!-- TAB 4: ACCOUNTS -->
             <section id="tab-accounts" class="tab-content">
                 <div class="card glass-panel">
-                    <h3><i class="fa-solid fa-user-plus icon-inline"></i> Connect Telegram Account</h3>
-                    <p class="card-desc">Upload a valid <strong>.session</strong> (Telethon) session file to connect an account for monitoring or searching.</p>
+                    <h3><i class="fa-solid fa-user-plus icon-inline"></i> Подключить аккаунт Telegram</h3>
+                    <p class="card-desc">Загрузить действительное <strong>.session</strong> (Телемарафон) файл сессии для подключения аккаунта для мониторинга или поиска.</p>
                     
                     <div class="drag-drop-area" id="session-drop-zone">
                         <i class="fa-solid fa-key drag-icon"></i>
-                        <p>Drag & Drop <strong>.session</strong> file or <span class="browse-link">browse</span></p>
+                        <p>Drag & Drop <strong>.session</strong> файл или <span class="browse-link">browse</span></p>
                         <input type="file" id="session-file-input" accept=".session" class="hidden">
                     </div>
                 </div>
 
                 <div class="card glass-panel list-card">
                     <div class="card-header">
-                        <h3><i class="fa-solid fa-circle-user icon-inline"></i> Active Sessions</h3>
+                        <h3><i class="fa-solid fa-circle-user icon-inline"></i> Активные занятия</h3>
                         <span id="accounts-count" class="badge">0</span>
                     </div>
                     <div class="list-container scrollable" id="accounts-list">
-                        <div class="empty-state">No accounts connected.</div>
+                        <div class="empty-state">Аккаунты не связаны.</div>
                     </div>
                 </div>
             </section>
@@ -215,7 +215,7 @@
                             <input type="text" id="ai-search-query" placeholder="e.g. Python Developer Jobs, Crypto Trades" class="glass-input">
                             <button id="btn-trigger-ai-search" class="btn-primary glow-effect">
                                 <i class="fa-solid fa-circle-notch fa-spin hidden" id="search-spinner"></i>
-                                <span>Find Groups</span>
+                                <span>Найти группы</span>
                             </button>
                         </div>
                     </div>
@@ -230,7 +230,7 @@
                     
                     <div class="export-options">
                         <div class="export-row">
-                            <label>Export Format:</label>
+                            <label>Формат экспорта:</label>
                             <select id="export-type" class="glass-select">
                                 <option value="all">Все записи</option>
                                 <option value="channels">Только каналы</option>
@@ -238,9 +238,9 @@
                             </select>
                         </div>
                         <div class="export-row">
-                            <label>Filter Category:</label>
+                            <label>Категория фильтров:</label>
                             <select id="export-category" class="glass-select">
-                                <option value="all">All Categories</option>
+                                <option value="all">Все категории</option>
                                 <option value="инвестиции">Инвестиции</option>
                                 <option value="финансы и личный бюджет">Финансы и личный бюджет</option>
                                 <option value="криптовалюты и блокчейн">Криптовалюты и блокчейн</option>
@@ -264,16 +264,16 @@
                             </select>
                         </div>
                         <div id="export-limit-warning" class="warning-text hidden">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Free download limit reached (1/24h). Next download will deduct 5 Stars.
+                            <i class="fa-solid fa-triangle-exclamation"></i> Достигнут лимит бесплатного скачивания (1/24 часа). Следующая загрузка вычитает 5 звёзд.
                         </div>
-                        <button id="btn-export-db" class="btn-success block-btn"><i class="fa-solid fa-download"></i> Export to Excel</button>
+                        <button id="btn-export-db" class="btn-success block-btn"><i class="fa-solid fa-download"></i> Экспорт в Excel</button>
                     </div>
                 </div>
 
                 <!-- AI Search Results -->
                 <div class="card glass-panel hidden" id="search-results-card">
                     <div class="card-header">
-                        <h3>Search Results</h3>
+                        <h3>Результаты поиска</h3>
                         <span id="results-count" class="badge">0</span>
                     </div>
                     <div class="table-container scrollable">
@@ -324,37 +324,37 @@
                     </div>
                     <div class="admin-action-card glass-panel" onclick="triggerAdminAction('actualize')">
                         <i class="fa-solid fa-arrows-spin admin-icon icon-blue"></i>
-                        <h4>Actualize DB</h4>
+                        <h4>Актуализировать базу данных</h4>
                         <p>Получение последних идентификаторов и названий Telegram</p>
                     </div>
                     <div class="admin-action-card glass-panel" onclick="openCategorizeModal()">
                         <i class="fa-solid fa-shapes admin-icon icon-purple"></i>
-                        <h4>Classify AI</h4>
+                        <h4>Классифицировать ИИ</h4>
                         <p>Назначайте категории с помощью LLM</p>
                     </div>
                     <div class="admin-action-card glass-panel" onclick="triggerAdminAction('detect-language')">
                         <i class="fa-solid fa-language admin-icon icon-orange"></i>
-                        <h4>Detect Languages</h4>
+                        <h4>Языки обнаружения</h4>
                         <p>Определение языков активных чатов</p>
                     </div>
                 </div>
 
                 <!-- Logs & Exports -->
                 <div class="card glass-panel">
-                    <h3>System Files</h3>
+                    <h3>Системные файлы</h3>
                     <div class="admin-download-row">
                         <div class="download-info">
                             <h5>Вопросы и отзывы пользователей</h5>
                             <p>Загрузка запросов пользователей из базы данных (CSV)</p>
                         </div>
-                        <button class="btn-secondary" onclick="downloadAdminFile('export-questions')"><i class="fa-solid fa-download"></i> Download</button>
+                        <button class="btn-secondary" onclick="downloadAdminFile('export-questions')"><i class="fa-solid fa-download"></i> Загрузка</button>
                     </div>
                     <div class="admin-download-row border-top">
                         <div class="download-info">
-                            <h5>Application Logs</h5>
-                            <p>View bot's raw trace logging file (logs/log.log)</p>
+                            <h5>Журналы приложений</h5>
+                            <p>Просмотр сырого файла журналирования следов бота (logs/log.log)</p>
                         </div>
-                        <button class="btn-secondary" onclick="downloadAdminFile('logs')"><i class="fa-solid fa-download"></i> Download</button>
+                        <button class="btn-secondary" onclick="downloadAdminFile('logs')"><i class="fa-solid fa-download"></i> Загрузка</button>
                     </div>
                 </div>
             </section>
@@ -393,7 +393,7 @@
     <div id="topup-modal" class="modal-overlay hidden">
         <div class="modal-content glass-panel">
             <div class="modal-header">
-                <h3>Buy Telegram Stars</h3>
+                <h3>Купить Telegram Stars</h3>
                 <button class="close-btn" onclick="closeModal('topup')">&times;</button>
             </div>
             <div class="modal-body">
@@ -420,7 +420,7 @@
         </div>
     </div>
 
-    <!-- MODAL: CATEGORIZE MODEL METHOD SELECT -->
+    <!-- МОДАЛЬ: КАТЕГОРИЗИРОВАТЬ ВЫБОР МЕТОДА МОДЕЛИ -->
     <div id="categorize-modal" class="modal-overlay hidden">
         <div class="modal-content glass-panel">
             <div class="modal-header">

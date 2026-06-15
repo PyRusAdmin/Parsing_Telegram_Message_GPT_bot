@@ -10,7 +10,7 @@ from loguru import logger
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from database.database import User, getting_free_account
+from database.database import User, getting_free_account, AccountFree
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
@@ -46,18 +46,31 @@ async def handle_connect_account_free(message: Message, state: FSMContext):
     user_lang = user.language if user.language != "unset" else "ru"
 
     # Подключение свободного аккаунта
-    # TODO сделать удаление выбраного аккаунта и запись в аккаунты пользователя.
-    available_sessions = random.choice(getting_free_account())
+    free_accounts = list(AccountFree.select())
+    if not free_accounts:
+        logger.warning(f"Нет доступных свободных аккаунтов для пользователя {user.user_id}")
+        await message.answer(
+            text=t("no_free_accounts", lang=user_lang),
+            reply_markup=back_keyboard(lang=user_lang)
+        )
+        return
 
-    # available_sessions = await CheckingAccountsValidity(message=message, path='accounts/free').get_available_sessions()
-    logger.info(f"Подключаем аккаунт {available_sessions}")
-    random_session = random.choice(available_sessions)
-    logger.info(f"Подключаем аккаунт {random_session}")
+    # Выбираем случайный свободный аккаунт
+    selected_account = random.choice(free_accounts)
+    session_string = selected_account.session_string
+    phone_number = selected_account.phone_number
 
-    shutil.move(
-        os.path.join('accounts/free', f'{random_session}.session'),
-        os.path.join(f'accounts/{user.user_id}', f'{random_session}.session')
+    logger.info(f"Подключаем свободный аккаунт {phone_number} пользователю {user.user_id}")
+
+    # Записываем в персональную таблицу аккаунтов пользователя
+    write_account_to_user_table(
+        user_id=user.user_id,
+        session_string=session_string,
+        phone_number=phone_number
     )
+
+    # Удаляем аккаунт из свободных аккаунтов, чтобы другие не могли его использовать
+    selected_account.delete_instance()
 
     await message.answer(
         text=t("account_connected_free", lang=user_lang),

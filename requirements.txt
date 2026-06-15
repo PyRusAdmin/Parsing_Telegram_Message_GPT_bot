@@ -14,4 +14,3 @@ fastapi
 uvicorn
 python-multipart
 fluent.runtime
-

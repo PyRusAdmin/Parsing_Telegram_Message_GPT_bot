@@ -452,6 +452,9 @@ log_file_caption =
 account_connected_free =
     ✅ Account successfully connected
 
+no_free_accounts =
+    ❌ No free accounts available. Please try again later or contact the administrator.
+
 invalid_session_file =
     ❌ This is not a session file! Send a file with `.session` extension
 

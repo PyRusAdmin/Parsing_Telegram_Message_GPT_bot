@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 from locales.locales import t
 
@@ -48,6 +48,9 @@ def menu_user_admin_keyboard(lang: str = 'ru'):
         ],
         [
             KeyboardButton(text=t("settings_button", lang=lang), style="primary")
+        ],
+        [
+            KeyboardButton(text="Веб панель", web_app=WebAppInfo(url="https://parsingbot.ru.tuna.am/"))
         ]
     ]
 
