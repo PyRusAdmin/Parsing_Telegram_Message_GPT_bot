@@ -1,20 +1,25 @@
 import asyncio
-import os
-import hmac
 import hashlib
-import urllib.parse
+import hmac
 import json
+import os
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Form, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from telethon.sessions import StringSession
 
+from account_manager.auth import CheckingAccountsValidity, get_account_info
+from account_manager.parser import (
+    filter_messages, stop_tracking, active_clients, stop_flags
+)
+from ai.ai import get_groq_response, search_groups_in_telegram
 from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 from database.database import (
     db, User, TelegramGroup, Groups, Account, UserAccountsTable,
@@ -22,13 +27,9 @@ from database.database import (
     get_session_count, get_keywords_count,
     getting_number_records_database, get_all_questions, getting_account
 )
-from system.dispatcher import ADMIN_USER_ID
+from handlers.user.pars_ai import create_excel_file
 from locales.locales import t
-from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import (
-    filter_messages, stop_tracking, active_clients, stop_flags
-)
-from ai.ai import get_groq_response, search_groups_in_telegram
+from system.dispatcher import ADMIN_USER_ID
 
 # Initialize FastAPI
 app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
@@ -58,14 +59,14 @@ class MockMessage:
         from system.dispatcher import bot
         self.bot = bot
 
-    async def answer(self, text: str, reply_markup=None, parse_mode=None, **kwargs):
+    async def answer(self, text: str, parse_mode=None):
         from system.dispatcher import bot
         try:
             await bot.send_message(chat_id=self.from_user.id, text=text, parse_mode=parse_mode)
         except Exception as e:
             logger.error(f"Failed to send mock answer to {self.from_user.id}: {e}")
 
-    async def answer_document(self, document, caption=None, parse_mode=None, **kwargs):
+    async def answer_document(self, document, caption=None, parse_mode=None):
         from system.dispatcher import bot
         try:
             from aiogram.types import BufferedInputFile, FSInputFile
@@ -668,7 +669,7 @@ async def download_database(
     groups = list(query)
 
     # Generate Excel in memory
-    from handlers.user.pars_ai import create_excel_file
+
     user_lang = user.language if user.language != "unset" else "ru"
     excel_bytes = create_excel_file(groups, lang=user_lang)
 

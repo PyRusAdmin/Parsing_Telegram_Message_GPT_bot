@@ -210,6 +210,7 @@ def create_excel_file(groups, lang='ru'):
 
 from datetime import timedelta
 
+
 def can_user_download_free(user: User) -> tuple[bool, int]:
     """
     Проверяет, может ли пользователь скачать базу бесплатно (1 раз в 24 часа).
@@ -249,10 +250,11 @@ def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardM
 
 
 async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None):
-    logger.info(f"Checking download limits for user={message.from_user.id}, download_type={download_type}, category={category}")
+    logger.info(
+        f"Checking download limits for user={message.from_user.id}, download_type={download_type}, category={category}")
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     can_dl, remaining_sec = can_user_download_free(user)
     if can_dl:
         logger.info(f"User {message.from_user.id} is allowed to download for free.")
@@ -266,13 +268,13 @@ async def check_and_start_download(message: Message, state: FSMContext, download
         hours = remaining_sec // 3600
         minutes = (remaining_sec % 3600) // 60
         time_str = f"{hours}ч {minutes}м" if user_lang == "ru" else f"{hours}h {minutes}m"
-        
+
         await state.set_state(ExportStates.waiting_for_payment_choice)
         await state.update_data(download_type=download_type, category=category)
-        
+
         keyboard = get_payment_inline_keyboard(user.stars, user_lang)
         msg_text = t("download_cooldown_message", lang=user_lang, time=time_str, stars=user.stars)
-        
+
         await message.answer(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
 
 
@@ -280,11 +282,11 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
     logger.info(f"📥 Начало perform_download для user_id={user_id}, download_type={download_type}, category={category}")
     user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     # Оповещаем пользователя о начале генерации
     status_msg = await message.answer(t("generating_database_wait", lang=user_lang))
     logger.info(f"Отправлено статусное сообщение: '{t('generating_database_wait', lang=user_lang)}'")
-    
+
     try:
         if download_type == "all":
             logger.info("Обработка экспорта всей базы...")
@@ -332,7 +334,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
 
             excel_bytes = create_excel_file(groups, lang=user_lang)
             logger.info("Excel файл всей базы успешно сформирован")
-            
+
             await message.answer_document(
                 document=BufferedInputFile(
                     excel_bytes,
@@ -399,8 +401,10 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
             ws.title = t('excel_sheet_name_groups', lang=user_lang)
 
             headers = [t('excel_header_username', lang=user_lang), t('excel_header_group_name', lang=user_lang),
-                       t('excel_header_group_description', lang=user_lang), t('excel_header_group_type', lang=user_lang),
-                       t('excel_header_group_participants', lang=user_lang), t('excel_header_group_link', lang=user_lang)]
+                       t('excel_header_group_description', lang=user_lang),
+                       t('excel_header_group_type', lang=user_lang),
+                       t('excel_header_group_participants', lang=user_lang),
+                       t('excel_header_group_link', lang=user_lang)]
             ws.append(headers)
 
             for col in range(1, len(headers) + 1):
@@ -432,13 +436,15 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
             wb.save(output)
             output.seek(0)
 
-            file_name = t('excel_filename_groups_by_category', lang=user_lang, category=selected_category.replace(' ', '_'))
+            file_name = t('excel_filename_groups_by_category', lang=user_lang,
+                          category=selected_category.replace(' ', '_'))
             await message.answer_document(
                 document=BufferedInputFile(
                     file=output.getvalue(),
                     filename=file_name
                 ),
-                caption=t("category_export_caption", lang=user_lang, group_count=group_count, category=selected_category),
+                caption=t("category_export_caption", lang=user_lang, group_count=group_count,
+                          category=selected_category),
                 reply_markup=ReplyKeyboardRemove()
             )
             logger.info(f"Документ категории '{selected_category}' отправлен пользователю {user_id}")
@@ -546,22 +552,22 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     if user.stars < 5:
         logger.warning(f"Недостаточно звезд у {callback.from_user.id} (баланс: {user.stars})")
         await callback.answer(t("download_insufficient_stars", lang=user_lang), show_alert=True)
         return
-        
+
     user.stars -= 5
     user.save()
     logger.info(f"Списано 5 звезд у {callback.from_user.id}. Новый баланс: {user.stars}")
-    
+
     await callback.message.edit_text(t("download_paid_success", lang=user_lang))
-    
+
     data = await state.get_data()
     download_type = data.get("download_type", "all")
     category = data.get("category")
-    
+
     await perform_download(callback.message, callback.from_user.id, download_type, category)
     await state.clear()
     await callback.answer()
@@ -572,7 +578,7 @@ async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
     logger.info(f"⭐ Пользователь {callback.from_user.id} выбрал прямую оплату 5 звезд")
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     await callback.message.answer_invoice(
         title=t("stars_invoice_dl_title", lang=user_lang),
         description=t("stars_invoice_dl_desc", lang=user_lang),
@@ -589,7 +595,7 @@ async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
     logger.info(f"❌ Пользователь {callback.from_user.id} отменил оплату")
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     await callback.message.edit_text(t("action_cancelled", lang=user_lang))
     await state.clear()
     await callback.answer()
@@ -607,30 +613,30 @@ async def process_successful_payment(message: Message, state: FSMContext):
     logger.info(f"⭐ Получен successful_payment от {message.from_user.id}")
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     payment_info = message.successful_payment
     payload = payment_info.invoice_payload
     logger.info(f"Платеж: payload={payload}, Stars={payment_info.total_amount}")
-    
+
     if payload == "pay_download_database":
         await message.answer(t("download_paid_success", lang=user_lang))
         data = await state.get_data()
         download_type = data.get("download_type", "all")
         category = data.get("category")
-        
+
         await perform_download(message, message.from_user.id, download_type, category)
         await state.clear()
-        
+
     elif payload.startswith("topup_stars_"):
         try:
             amount = int(payload.split("_")[2])
         except (IndexError, ValueError):
             amount = payment_info.total_amount
-            
+
         user.stars += amount
         user.save()
         logger.info(f"Зачислено {amount} звезд для {message.from_user.id}. Новый баланс: {user.stars}")
-        
+
         await message.answer(
             t("stars_topup_success", lang=user_lang, amount=amount, balance=user.stars)
         )

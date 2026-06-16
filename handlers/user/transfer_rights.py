@@ -20,8 +20,7 @@ def rename_old_table_to_new_table(user_id, id_transfer_user):
         migrator.rename_table(f"{user_id}_keywords", f"{id_transfer_user}_keywords")
     )
     logger.warning("Таблица успешно переименована!")
-    
-    
+
     migrate(
         migrator.rename_table(f"{user_id}_group", f"{user_id}_group")
     )
@@ -45,9 +44,9 @@ async def get_id_for_transferring(message, state: FSMContext, bot):
     await state.clear()  # Завершаем текущее состояние машины состояния
 
     rename_old_table_to_new_table(
-        user_id=message.from_user.id, 
+        user_id=message.from_user.id,
         id_transfer_user=id_transfer_user
 
-        )
+    )
 
     await message.answer(f"Настройки успешно переданы! пользователю с id {id_transfer_user}")

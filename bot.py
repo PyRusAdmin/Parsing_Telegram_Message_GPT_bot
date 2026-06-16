@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
-import os
-import subprocess
-import sys
-
-from loguru import logger
-
 import asyncio
 import logging
-import sys
 import os
+import sys
+
 import uvicorn
+from loguru import logger
 
 from database.database import clean_telegram_id_duplicates, init_database
 from database.database import migrate_categories_to_lowercase

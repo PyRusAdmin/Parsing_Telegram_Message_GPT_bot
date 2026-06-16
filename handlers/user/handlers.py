@@ -424,10 +424,10 @@ async def handle_stars_balance(message: Message, state: FSMContext):
     await state.clear()
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     keyboard = get_stars_topup_inline_keyboard(user_lang)
     msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
-    
+
     await message.answer(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
 
 
@@ -435,20 +435,20 @@ async def handle_stars_balance(message: Message, state: FSMContext):
 async def handle_buy_stars_callback(callback: CallbackQuery, state: FSMContext):
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-    
+
     action = callback.data.split("_")[2]
-    
+
     if action == "cancel":
         await callback.message.delete()
         await callback.answer()
         return
-        
+
     try:
         amount = int(action)
     except ValueError:
         await callback.answer("Error", show_alert=True)
         return
-        
+
     await callback.message.answer_invoice(
         title=t("stars_invoice_title", lang=user_lang),
         description=t("stars_invoice_desc", lang=user_lang, amount=amount),
