@@ -1,6 +1,8 @@
 import asyncio
+import csv
 import hashlib
 import hmac
+import io
 import json
 import os
 import urllib.parse
@@ -8,28 +10,36 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from aiogram.types import LabeledPrice
 from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Form, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from g4f.client import Client
+from groq import AsyncGroq
 from loguru import logger
+from openai import AsyncOpenAI
 from telethon.sessions import StringSession
+from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import (
-    filter_messages, stop_tracking, active_clients, stop_flags
-)
-from ai.ai import get_groq_response, search_groups_in_telegram
+from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags
+from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
+
 from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 from database.database import (
-    db, User, TelegramGroup, Groups, Account, UserAccountsTable,
-    create_keywords_model, create_group_model, get_user_accounts, get_tracked_channels_count, get_target_group_count,
-    get_session_count, get_keywords_count,
-    getting_number_records_database, get_all_questions, getting_account
+    db, User, TelegramGroup, Groups, Account, UserAccountsTable, create_keywords_model, create_group_model,
+    get_user_accounts, get_tracked_channels_count, get_target_group_count, get_session_count, get_keywords_count,
+    getting_number_records_database, get_all_questions, getting_account, get_groups_without_category,
+    write_account_to_user_table
 )
-from handlers.user.pars_ai import create_excel_file
+
+from handlers.admin.checking_group_for_ai import get_best_g4f_model
+from handlers.admin.language_detection import ai_llama_fri
+from handlers.user.pars_ai import can_user_download_free, clean_group_name, save_group_to_db, create_excel_file
+
 from locales.locales import t
-from system.dispatcher import ADMIN_USER_ID
+from system.dispatcher import ADMIN_USER_ID, bot
 
 # Initialize FastAPI
 app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
@@ -473,7 +483,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
             session_string = StringSession.save(client.session)
 
             # Save account to user table
-            from database.database import write_account_to_user_table
+
             write_account_to_user_table(
                 user_id=user_id,
                 session_string=session_string,
@@ -542,9 +552,6 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
         raise HTTPException(status_code=404, detail="User not found")
     user_lang = user.language if user.language != "unset" else "ru"
 
-    from system.dispatcher import bot
-    from aiogram.types import LabeledPrice
-
     try:
         invoice_link = await bot.create_invoice_link(
             title=t("stars_invoice_title", lang=user_lang),
@@ -572,7 +579,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     # Try generating names
     try:
         answer = await get_groq_response(query)
-        from handlers.user.pars_ai import clean_group_name, save_group_to_db
+
         group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
         group_names = [name for name in group_names if len(name) > 2]
 
@@ -616,7 +623,6 @@ async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    from handlers.user.pars_ai import can_user_download_free
     is_free, remaining = can_user_download_free(user)
     return {
         "is_free": is_free,
@@ -637,7 +643,7 @@ async def download_database(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Check if download is free or requires Stars
-    from handlers.user.pars_ai import can_user_download_free
+
     is_free, remaining = can_user_download_free(user)
 
     if not is_free:
@@ -684,7 +690,6 @@ async def download_database(
 
 
 def io_bytes_stream(data: bytes):
-    import io
     stream = io.BytesIO(data)
     yield from stream
 
@@ -699,7 +704,7 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
 
 
 @app.get("/api/admin/status")
-async def get_admin_status(user_id: int = Depends(require_admin)):
+async def get_admin_status():
     # Calculate groups without category
     uncategorized_count = TelegramGroup.select().where(
         (TelegramGroup.username.is_null(False)) &
@@ -783,8 +788,6 @@ async def bg_actualize_db():
         if not client:
             raise Exception("Failed to connect to Telegram client session")
 
-        from telethon.tl.functions.channels import GetFullChannelRequest
-
         for idx, group in enumerate(groups_to_update, 1):
             admin_task_status["progress"] = idx
             admin_task_status["message"] = f"Updating {group.name or group.username} ({idx}/{total})..."
@@ -829,21 +832,18 @@ async def bg_categorize_db(method: str):
     admin_task_status["message"] = "Initializing category assignment..."
 
     try:
-        from database.database import get_groups_without_category
-        from ai.ai import category_assignment
-        from handlers.admin.checking_group_for_ai import get_best_g4f_model
 
         # 1. Setup client based on method
         if method == "fast":
-            from g4f.client import Client
+
             client = Client()
             model = await get_best_g4f_model(client)
         elif method == "openrouter":
-            from openai import AsyncOpenAI
+
             client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
             model = "deepseek/deepseek-v4-flash"
         elif method == "groq":
-            from groq import AsyncGroq
+
             client = AsyncGroq(api_key=GROQ_API_KEY)
             model = "llama-3.1-8b-instant"
         else:
@@ -893,7 +893,6 @@ async def bg_detect_language():
     admin_task_status["message"] = "Initializing language detection..."
 
     try:
-        from handlers.admin.language_detection import ai_llama_fri
 
         groups_to_detect = list(TelegramGroup.select().where(
             (TelegramGroup.username.is_null(False)) &
@@ -975,9 +974,6 @@ async def admin_export_questions():
     questions = get_all_questions()
     if not questions:
         raise HTTPException(status_code=404, detail="No questions found in database")
-
-    import csv
-    import io
 
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=["user_id", "question", "answer"])
