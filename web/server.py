@@ -54,7 +54,7 @@ app.add_middleware(
 )
 
 
-# Mock Message for compatibility with Bot Handlers
+# Mock Message для совместимости с обработчиками ботов
 class MockMessage:
     def __init__(self, user_id: int, username: Optional[str] = "web_user"):
         self.from_user = type('User', (), {
@@ -65,7 +65,7 @@ class MockMessage:
         })()
         self.chat = type('Chat', (), {'id': user_id})()
 
-        # Access bot lazily to prevent circular dependencies or uninitialized variables
+        # Лениво обращайтесь к боту для предотвращения круговых зависимостей или неинициализированных переменных
         from system.dispatcher import bot
         self.bot = bot
 
@@ -74,7 +74,7 @@ class MockMessage:
         try:
             await bot.send_message(chat_id=self.from_user.id, text=text, parse_mode=parse_mode)
         except Exception as e:
-            logger.error(f"Failed to send mock answer to {self.from_user.id}: {e}")
+            logger.exception(f"Failed to send mock answer to {self.from_user.id}: {e}")
 
     async def answer_document(self, document, caption=None, parse_mode=None):
         from system.dispatcher import bot
@@ -87,10 +87,10 @@ class MockMessage:
                 await bot.send_document(chat_id=self.from_user.id, document=document, caption=caption,
                                         parse_mode=parse_mode)
         except Exception as e:
-            logger.error(f"Failed to send mock document to {self.from_user.id}: {e}")
+            logger.exception(f"Failed to send mock document to {self.from_user.id}: {e}")
 
 
-# Database Connection Middleware
+# Промежуточное программное обеспечение для подключения к базе данных
 @app.middleware("http")
 async def db_session_middleware(request, call_next):
     if db.is_closed():
@@ -103,7 +103,7 @@ async def db_session_middleware(request, call_next):
     return response
 
 
-# Dependency to check auth from initData
+# Зависимость для проверки аутентификации из initData
 def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
@@ -113,7 +113,7 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
 
     token = authorization[7:]
 
-    # Allow mock login for local development and testing
+    # Разрешить имитация входа для локальной разработки и тестирования
     if token.startswith("mock_"):
         try:
             mock_id = int(token.split("_")[1])
@@ -148,11 +148,11 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
         user_data = json.loads(params['user'])
         return user_data
     except Exception as e:
-        logger.error(f"Telegram auth failed: {e}")
+        logger.exception(f"Telegram auth failed: {e}")
         raise HTTPException(status_code=401, detail="Authentication failed")
 
 
-# Global admin status dictionary for showing progress to admin in Web UI
+# Глобальный словарь статуса администратора для показа прогресса в работе администратора в веб-интерфейсе
 admin_task_status = {
     "action": "none",  # "categorize", "lang_detect", "check_accounts", "actualize", "none"
     "progress": 0,
@@ -172,16 +172,16 @@ def init_web_directories():
 init_web_directories()
 
 
-# ==================== PUBLIC API ENDPOINTS ====================
+# ==================== ПУБЛИЧНЫЕ API-ЭНДПОИНТЫ ====================
 
 @app.get("/api/status")
 async def get_status(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
 
-    # Get user
+    # Получить пользователя
     user = User.get_or_none(User.user_id == user_id)
     if not user:
-        # Register user in database
+        # Зарегистрировать пользователя в базе данных
         user = User.create(
             user_id=user_id,
             username=user_data.get("username"),
@@ -192,14 +192,14 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
 
     user_lang = user.language if user.language != "unset" else "ru"
 
-    # Get stats
+    # Получите статистику
     groups_count = getting_number_records_database()
     session_count = get_session_count(user_id=user_id)
     group_count = get_target_group_count(user_id=user_id)
     tracked_channels = get_tracked_channels_count(user_id=user_id)
     keywords_count = get_keywords_count(user_id=user_id)
 
-    # Get current target group username
+    # Получите текущее имя целевой группы пользователя
     GroupModel = create_group_model(user_id)
     target_group = None
     if GroupModel.table_exists():
@@ -255,7 +255,7 @@ async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict
     if str(user_id) in active_clients:
         return {"status": "already_running"}
 
-    # Start tracking asynchronously
+    # Начинайте асинхронное отслеживание
     mock_msg = MockMessage(user_id=user_id, username=user.username)
     background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_id, user=user)
 
@@ -278,7 +278,7 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
     return {"status": "stopping"}
 
 
-# Keywords Management
+# Управление ключевыми словами
 @app.get("/api/keywords")
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -325,7 +325,7 @@ async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_us
     raise HTTPException(status_code=404, detail="Keyword not found")
 
 
-# Tracked Channels Management
+# Управление отслеживаемыми каналами
 @app.get("/api/channels")
 async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -424,7 +424,7 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
     if not GroupModel.table_exists():
         GroupModel.create_table()
 
-    # Clear previous group
+    # Очистить предыдущую группу
     GroupModel.delete().execute()
 
     try:
@@ -434,12 +434,12 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Telegram Accounts Management
+# Управление аккаунтами Telegram
 @app.get("/api/accounts")
 async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
     accounts = get_user_accounts(user_id)
-    # Return serializable dict (excluding the full session string)
+    # Возвращать сериализируемый дикт (исключая полную сессионную строку)
     return [
         {
             "phone_number": acc["phone_number"],
@@ -459,11 +459,11 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
     if not file.filename.endswith(".session"):
         raise HTTPException(status_code=400, detail="Only .session files are supported")
 
-    # Make temporary accounts directory
+    # Создать временный каталог счетов
     sessions_dir = Path("accounts")
     sessions_dir.mkdir(exist_ok=True)
 
-    # Sanitize and write session file
+    # Дезинфицируйте и записывайте сессионный файл
     safe_name = "".join(c for c in file.filename if c.isalnum() or c in "._-")
     temp_path = sessions_dir / f"temp_{user_id}_{safe_name}"
 
@@ -482,7 +482,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
             phone = account_info["phone"] or "unknown"
             session_string = StringSession.save(client.session)
 
-            # Save account to user table
+            # Сохранить аккаунт в пользовательскую таблицу
 
             write_account_to_user_table(
                 user_id=user_id,
@@ -492,7 +492,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 
             await client.disconnect()
 
-            # Send notification via Bot
+            # Отправьте уведомление через бота
             user_lang = user.language if user.language != "unset" else "ru"
             await mock_msg.answer(t("session_connected_success", lang=user_lang, filename=safe_name, phone=phone,
                                     name=account_info["first_name"]))
@@ -512,7 +512,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
 
-    # Retrieve user account list to find the session string matching this phone
+    # Получите список пользовательских аккаунтов, чтобы найти сессионную строку, соответствующую этому телефону
     accounts = get_user_accounts(user_id)
     session_to_delete = None
     for acc in accounts:
@@ -523,16 +523,16 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
     if not session_to_delete:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    # Delete from user accounts table
+    # Удаление из таблицы учетных записей пользователей
     deleted = UserAccountsTable.delete().where(
         UserAccountsTable.user_id == user_id,
         UserAccountsTable.phone_number == phone
     ).execute()
 
     if deleted:
-        # Also clean from global active clients if connected
+        # Также чисто от глобальных активных клиентов, если подключены
         if str(user_id) in active_clients:
-            # We must disconnect active client
+            # Нужно отключить активного клиента
             client = active_clients.pop(str(user_id))
             if client.is_connected():
                 await client.disconnect()
@@ -567,7 +567,7 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# AI Group Search Endpoint
+# Конечная точка поиска групп ИИ
 @app.post("/api/search/ai")
 async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -576,7 +576,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
         raise HTTPException(status_code=404, detail="User not found")
     user_lang = user.language if user.language != "unset" else "ru"
 
-    # Try generating names
+    # Попробуйте генерировать имена
     try:
         answer = await get_groq_response(query)
 
@@ -615,7 +615,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Get Database / Export XLSX Endpoint
+# Получить базу данных / Экспортировать XLSX Endpoint
 @app.get("/api/export/check")
 async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -642,12 +642,12 @@ async def download_database(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if download is free or requires Stars
+    # Проверьте, бесплатная ли загрузка или требуется ли звёздочки.
 
     is_free, remaining = can_user_download_free(user)
 
     if not is_free:
-        # Needs to deduct 5 Stars from balance
+        # Нужно вычесть 5 звёзд из баланса
         if user.stars < 5:
             raise HTTPException(
                 status_code=402,
@@ -811,7 +811,7 @@ async def bg_actualize_db():
                 ).where(TelegramGroup.id == group.id).execute()
 
             except Exception as e:
-                logger.warning(f"Failed to update group {group.username}: {e}")
+                logger.exception(f"Failed to update group {group.username}: {e}")
 
             await asyncio.sleep(1.5)
 
@@ -870,7 +870,7 @@ async def bg_categorize_db(method: str):
                         TelegramGroup.telegram_id == result["telegram_id"]
                     ).execute()
             except Exception as e:
-                logger.error(f"Failed to categorize {group_data['name']}: {e}")
+                logger.exception(f"Failed to categorize {group_data['name']}: {e}")
 
             if method == "fast":
                 await asyncio.sleep(0.5)
@@ -925,7 +925,7 @@ async def bg_detect_language():
                         TelegramGroup.group_hash == res["group_hash"]
                     ).execute()
             except Exception as e:
-                logger.error(f"Failed to detect language for {group.name}: {e}")
+                logger.exception(f"Failed to detect language for {group.name}: {e}")
 
             await asyncio.sleep(2.0)
 

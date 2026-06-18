@@ -457,7 +457,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
             logger.info("Удаляем статусное сообщение...")
             await status_msg.delete()
         except Exception as e:
-            logger.warning(f"Не удалось удалить статусное сообщение: {e}")
+            logger.exception(f"Не удалось удалить статусное сообщение: {e}")
 
 
 @router.message((F.text == t('all_database_button', 'ru')) | (F.text == t('all_database_button', 'en')))
@@ -749,7 +749,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         try:
             client = await checker.start_random_client()
         except Exception as e:
-            logger.error(f"❌ Ошибка запуска клиента: {e}")
+            logger.exception(f"❌ Ошибка запуска клиента: {e}")
             await state.clear()
             return
 
@@ -805,7 +805,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 reply_markup=back_keyboard(lang=user_lang)
             )
     except Exception as e:
-        logger.error(f"Ошибка при обработке запроса: {e}")
+        logger.exception(f"Ошибка при обработке запроса: {e}")
         await processing_msg.delete()
         await message.answer(
             t("search_error", lang=user_lang),
@@ -881,7 +881,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
             try:
                 client = await checker.start_random_client()
             except Exception as e:
-                logger.error(f"❌ Ошибка запуска клиента для '{term}': {e}")
+                logger.exception(f"❌ Ошибка запуска клиента для '{term}': {e}")
                 continue
 
             if not client:

@@ -139,7 +139,7 @@ def get_tracked_channels_count(user_id: int) -> int:
         )
         return count
     except Exception as e:
-        logger.error(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
+        logger.exception(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
         return 0
 
 
@@ -160,7 +160,7 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
         return usernames, len(usernames)
 
     except Exception as e:
-        logger.error(f"Ошибка при получении каналов пользователя {user_id}: {e}")
+        logger.exception(f"Ошибка при получении каналов пользователя {user_id}: {e}")
         return [], 0
 
 
@@ -571,7 +571,7 @@ def get_session_count(user_id: int) -> int:
     try:
         return UserAccountsTable.select().where(UserAccountsTable.user_id == user_id).count()
     except Exception as e:
-        logger.error(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
+        logger.exception(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
         return 0
 
 

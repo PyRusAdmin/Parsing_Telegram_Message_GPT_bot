@@ -134,7 +134,7 @@ async def category_assignment(group_data: dict, client, model) -> dict:
         }
 
     except Exception as e:
-        logger.warning(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
+        logger.exception(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
         return {
             "telegram_id": group_data.get("telegram_id"),
             "category": None,
@@ -206,7 +206,7 @@ async def search_groups_in_telegram(client, group_names):
             try:
                 await client.connect()
             except Exception as e:
-                logger.error(f"Не удалось подключить клиента: {e}")
+                logger.exception(f"Не удалось подключить клиента: {e}")
                 break
 
         try:
@@ -252,7 +252,7 @@ async def search_groups_in_telegram(client, group_names):
                         logger.warning(f"⚠️ В группе '{title}' нет сообщений")
 
                 except Exception as e:
-                    logger.warning(f"Не удалось получить дату последнего сообщения для '{title}': {e}")
+                    logger.exception(f"Не удалось получить дату последнего сообщения для '{title}': {e}")
                     availability = 'unknown'  # Не удалось определить
 
                 # ========== Сохранение в базу данных ==========
@@ -317,7 +317,7 @@ async def search_groups_in_telegram(client, group_names):
 
         except Exception as e:
             if "disconnected" in str(e).lower() or "cannot send" in str(e).lower():
-                logger.error("Клиент отключён. Прекращаем поиск.")
+                logger.exception("Клиент отключён. Прекращаем поиск.")
                 break
             logger.exception(f"Ошибка при поиске '{name}': {e}")
 

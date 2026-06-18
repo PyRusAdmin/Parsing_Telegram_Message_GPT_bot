@@ -149,7 +149,7 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                 chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "username",
                                                                             None) or "Неизвестно"
             except Exception as e:
-                logger.warning(f"Не удалось получить название чата: {e}")
+                logger.exception(f"Не удалось получить название чата: {e}")
                 chat_title = "Неизвестно"
 
             # Формируем ссылку на сообщение
@@ -167,7 +167,7 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                     else:
                         message_link = "Ссылка недоступна (нет username)"
                 except Exception as e:
-                    logger.warning(f"Не удалось получить ссылку на сообщение: {e}")
+                    logger.exception(f"Не удалось получить ссылку на сообщение: {e}")
                     message_link = "Ссылка недоступна"
 
             try:
@@ -261,7 +261,7 @@ async def get_grup_accaunt(client):
                     participants_count = full_entity.full_chat.participants_count or 0
                     description = full_entity.full_chat.about or ""
                 except Exception as e:
-                    logger.warning(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
+                    logger.exception(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
                     participants_count = 0
                     description = ""
 

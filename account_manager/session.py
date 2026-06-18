@@ -87,7 +87,7 @@ async def _is_session_valid(session_string: str) -> bool:
         await client.disconnect()
         return is_authorized
     except Exception as e:
-        logger.debug(f"⚠️ Проверка сессии не прошла: {type(e).__name__}")
+        logger.exception(f"⚠️ Проверка сессии не прошла: {type(e).__name__}")
         try:
             await client.disconnect()
         except Exception as e:

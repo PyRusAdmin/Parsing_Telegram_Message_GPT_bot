@@ -69,7 +69,7 @@ async def get_best_g4f_model(client: Client) -> str:
         except asyncio.TimeoutError:
             logger.warning(f"⏱️ Таймаут модели {model}, пробуем следующую...")
         except Exception as e:
-            logger.warning(f"❌ Модель {model} не работает: {type(e).__name__}")
+            logger.exception(f"❌ Модель {model} не работает: {type(e).__name__}")
             continue
 
     # Если ничего не работает, возвращаем последнюю надежду
@@ -177,7 +177,7 @@ async def assign_categories(message: Message, client, model):
                     await asyncio.sleep(0.5)
 
             except Exception as e:
-                logger.error(f"❌ Ошибка {group_data.get('name')}: {e}")
+                logger.exception(f"❌ Ошибка {group_data.get('name')}: {e}")
                 continue
 
         # 3️⃣ Финал
