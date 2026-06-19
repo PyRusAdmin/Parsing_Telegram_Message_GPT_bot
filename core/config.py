@@ -15,3 +15,5 @@ PROXY_USER = os.getenv("PROXY_USER")
 PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
+
+ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID"))  # ID администратора Telegram

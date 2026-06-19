@@ -8,8 +8,8 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
-    BufferedInputFile, ReplyKeyboardRemove, Message,
-    InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, LabeledPrice, PreCheckoutQuery
+    BufferedInputFile, ReplyKeyboardRemove, Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery,
+    LabeledPrice, PreCheckoutQuery
 )
 from loguru import logger
 from openpyxl import Workbook
@@ -732,8 +732,9 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     # Отправляем сообщение о начале поиска
     processing_msg = await message.answer(t("searching_groups", lang=user_lang))
 
+    client = None
     try:
-        answer = await get_groq_response(user_input)  # Получаем ответ от AI
+        answer = await get_groq_response(user_input, message)  # Получаем ответ от AI
         logger.info(f"Ответ от Groq: {answer}")
 
         # Разбиваем ответ на строки и очищаем
@@ -745,7 +746,6 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
-        # client = None
         try:
             client = await checker.start_random_client()
         except Exception as e:
@@ -891,7 +891,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             try:
                 # Получаем варианты названий от AI
-                answer = await get_groq_response(term)
+                answer = await get_groq_response(term, message)
                 logger.info(f"Ответ от Groq для '{term}': {answer}")
 
                 # Чистим и фильтруем названия

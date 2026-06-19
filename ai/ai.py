@@ -8,9 +8,11 @@ from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMeth
 from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
-from core.config import GROQ_API_KEY
+from core.config import GROQ_API_KEY, ADMIN_USER_ID
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
+from system.dispatcher import bot
+
 
 """
 Категории для присваивания группам и каналам из базы данных
@@ -143,7 +145,7 @@ async def category_assignment(group_data: dict, client, model) -> dict:
         }
 
 
-async def get_groq_response(user_input):
+async def get_groq_response(user_input, message):
     """
     Асинхронно отправляет запрос к модели Llama 4 Scout через Groq API для генерации вариантов названий групп.
 
@@ -151,6 +153,7 @@ async def get_groq_response(user_input):
     - Ответ должен содержать только названия, без нумерации и пояснений.
     - Перед выполнением устанавливается прокси с помощью `setup_proxy()`.
 
+    :param message: (str) Сообщение пользователя
     :param user_input: (str) Тема или ключевое слово, на основе которого нужно придумать названия групп.
     :return: str: Строка с 10 вариациями названий групп, разделёнными переносами строк. Возвращает пустую строку при
                   ошибке аутентификации или других исключениях.
@@ -161,7 +164,7 @@ async def get_groq_response(user_input):
     client_groq = AsyncGroq(api_key=GROQ_API_KEY)
     try:
         chat_completion = await client_groq.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {
                     "role": "user",
@@ -176,7 +179,14 @@ async def get_groq_response(user_input):
             logger.error("Ошибка аутентификации с ключом Groq API.")
         else:
             logger.error("API ключ Groq API не установлен.")
-
+        return ""
+    except groq.NotFoundError as e:
+        logger.error(e)  # Ошибка аутентификации с ключом Groq API, Возможно нужно сменить модель ИИ
+        await bot.send_message(
+            chat_id=int(ADMIN_USER_ID),  # ID Администратора бота
+            text=f"Ошибка аутентификации с ключом Groq API: {e}"
+        )
+        return ""
     except Exception as e:
         logger.exception(e)
         return ""

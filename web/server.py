@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from aiogram.client import bot
 from aiogram.types import LabeledPrice
 from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Form, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,7 +27,7 @@ from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
 
-from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
+from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ADMIN_USER_ID
 from database.database import (
     db, User, TelegramGroup, Groups, Account, UserAccountsTable, create_keywords_model, create_group_model,
     get_user_accounts, get_tracked_channels_count, get_target_group_count, get_session_count, get_keywords_count,
@@ -39,7 +40,8 @@ from handlers.admin.language_detection import ai_llama_fri
 from handlers.user.pars_ai import can_user_download_free, clean_group_name, save_group_to_db, create_excel_file
 
 from locales.locales import t
-from system.dispatcher import ADMIN_USER_ID, bot
+
+# from system.dispatcher import ADMIN_USER_ID, bot
 
 # Initialize FastAPI
 app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
@@ -553,6 +555,7 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
     user_lang = user.language if user.language != "unset" else "ru"
 
     try:
+        # TODO Сделать проверку на валидность ссылки
         invoice_link = await bot.create_invoice_link(
             title=t("stars_invoice_title", lang=user_lang),
             description=t("stars_invoice_desc", lang=user_lang, amount=amount),
@@ -578,7 +581,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
 
     # Попробуйте генерировать имена
     try:
-        answer = await get_groq_response(query)
+        answer = await get_groq_response(query, message)
 
         group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
         group_names = [name for name in group_names if len(name) > 2]

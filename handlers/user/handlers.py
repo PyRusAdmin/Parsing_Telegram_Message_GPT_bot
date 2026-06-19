@@ -8,6 +8,7 @@ from loguru import logger
 
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
+from core.config import ADMIN_USER_ID
 from database.database import (
     User, getting_number_records_database, get_session_count, get_target_group_count, get_keywords_count,
     get_tracked_channels_count, Groups
@@ -20,7 +21,10 @@ from keyboards.user.keyboards import (
 from locales.locales import t
 from aiogram.types import CallbackQuery, LabeledPrice, Message
 from states.states import MyStates
-from system.dispatcher import ADMIN_USER_ID
+
+# from system.dispatcher import ADMIN_USER_ID
+
+ADMIN_USER_ID = {ADMIN_USER_ID}
 
 router = Router(name=__name__)
 
@@ -432,7 +436,7 @@ async def handle_stars_balance(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data.startswith("buy_stars_"))
-async def handle_buy_stars_callback(callback: CallbackQuery, state: FSMContext):
+async def handle_buy_stars_callback(callback: CallbackQuery):
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 
