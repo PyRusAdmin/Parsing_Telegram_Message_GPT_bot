@@ -96,7 +96,8 @@ async def admin_panel(message: Message, state: FSMContext):
         try:
             user = User.get(User.user_id == message.from_user.id)
             user_lang = user.language if user.language != "unset" else "ru"
-        except Exception:
+        except Exception as e:
+            logger.exception(e)
             user_lang = "ru"
 
         await message.answer(

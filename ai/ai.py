@@ -13,7 +13,6 @@ from core.proxy import setup_proxy
 from database.database import TelegramGroup
 from system.dispatcher import bot
 
-
 """
 Категории для присваивания группам и каналам из базы данных
 

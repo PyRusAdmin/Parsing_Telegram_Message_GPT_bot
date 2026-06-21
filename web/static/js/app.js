@@ -92,7 +92,7 @@ const translations = {
     }
 };
 
-// API Fetch Helper with Auth Header
+// Помощник по выборке API с заголовком аутентификации
 async function apiRequest(endpoint, options = {}) {
     options.headers = options.headers || {};
     options.headers["Authorization"] = `Bearer ${authToken}`;
@@ -110,16 +110,16 @@ async function apiRequest(endpoint, options = {}) {
     }
 }
 
-// App Initialization
+// Инициализация приложения
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        // Determine language
+        // Определить язык
         if (tg && tg.initDataUnsafe?.user?.language_code) {
             const lang = tg.initDataUnsafe.user.language_code.toLowerCase();
             userLanguage = lang === "ru" || lang === "be" || lang === "uk" ? "ru" : "en";
         }
         
-        // Check local storage for language preference
+        // Проверьте локальное хранилище на предмет языковых предпочтений.
         const savedLang = localStorage.getItem("lang_pref");
         if (savedLang) {
             userLanguage = savedLang;
@@ -151,32 +151,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {
         console.error("Initialization failed:", e);
     } finally {
-        // Always hide loading screen
+        // Всегда скрывать экран загрузки
         const container = document.getElementById("app-container");
         if (container) {
             container.classList.remove("loading");
         }
     }
     
-    // Set up status auto-refresh interval (every 5 seconds)
+    // Настройка интервала автоматического обновления статуса (каждые 5 секунд)
     statusInterval = setInterval(refreshStatusAndTasks, 5000);
 });
 
-// Update UI text values based on active language
+// Обновить текстовые значения пользовательского интерфейса в зависимости от активного языка.
 function applyTranslations() {
     const t = translations[userLanguage] || translations.en || {};
     
-    // Page-wide elements
+    // Элементы всей страницы
     document.querySelector(".hero-title").innerText = t.title || "Title";
     document.querySelector(".hero-desc").innerText = t.hero_desc || t.title || "";
     
-    // Set labels of stat blocks
+    // Установить метки блоков статистики
     document.querySelector("[onclick=\"switchTab('channels')\"] p").innerText = t.monitored_channels || "Monitored Channels";
     document.querySelector("[onclick=\"switchTab('keywords')\"] p").innerText = t.active_keywords;
     document.querySelector("[onclick=\"switchTab('accounts')\"] p").innerText = t.connected_sessions;
     document.querySelector("[onclick=\"switchTab('admin')\"] span").innerText = "Admin";
     
-    // Inline headers
+    // Встроенные заголовки
     document.querySelector("#tab-dashboard .card h3").innerHTML = `<i class="fa-solid fa-gears icon-inline"></i> ${t.target_group_title}`;
     document.querySelector("#tab-channels .card h3").innerHTML = `<i class="fa-solid fa-square-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить каналы" : "Add Channels to Track"}`;
     document.querySelector("#tab-keywords .card h3").innerHTML = `<i class="fa-solid fa-key icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить ключевое слово" : "Add Alert Keyword"}`;
@@ -184,19 +184,19 @@ function applyTranslations() {
     document.querySelector("#tab-search .card h3").innerHTML = `<i class="fa-solid fa-robot icon-inline"></i> ${t.classify_ai}`;
 }
 
-// Switch Active Navigation Tabs
+// Переключение активных вкладок навигации
 function switchTab(tabId) {
-    // Hide all tabs
+    // Скрыть все вкладки
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
     
-    // Show select tab
+    // Показать вкладку выбора
     const targetTab = document.getElementById(`tab-${tabId}`);
     if (targetTab) {
         targetTab.classList.add("active");
     }
     
-    // Highlight menu button
+    // Выделить кнопку меню
     const navButtons = document.querySelectorAll(".nav-item");
     navButtons.forEach(btn => {
         if (btn.getAttribute("onclick").includes(`'${tabId}'`)) {
@@ -204,7 +204,7 @@ function switchTab(tabId) {
         }
     });
     
-    // Load tab-specific data
+    // Загрузить данные для конкретной вкладки
     if (tabId === "channels") {
         loadChannelsList();
     } else if (tabId === "keywords") {
@@ -216,35 +216,35 @@ function switchTab(tabId) {
     }
 }
 
-// Load status statistics and user limits
+// Статистика статуса загрузки и ограничения пользователей
 async function loadDashboardData() {
     try {
         const res = await apiRequest("/api/status");
         if (res.ok) {
             const data = await res.json();
             
-            // Set User profile
+            // Установить профиль пользователя
             const initials = data.first_name ? data.first_name.charAt(0) : (data.username ? data.username.charAt(0) : "T");
             document.getElementById("user-avatar").innerText = initials.toUpperCase();
             document.getElementById("user-fullname").innerText = data.first_name || data.username || "User";
             document.getElementById("user-tag").innerText = data.username ? `@${data.username}` : `ID: ${data.user_id}`;
             document.getElementById("stars-count").innerText = data.stars;
             
-            // Stats
+            // Статистика
             document.getElementById("stat-channels").innerText = data.stats.tracked_channels;
             document.getElementById("stat-keywords").innerText = data.stats.keywords;
             document.getElementById("stat-accounts").innerText = data.stats.connected_accounts;
             document.getElementById("stat-db-groups").innerText = data.stats.db_total_groups;
             
-            // Target group
+            // Целевая группа
             if (data.stats.target_group_username) {
                 document.getElementById("target-group-input").value = data.stats.target_group_username;
             }
             
-            // Tracking status UI
+            // Интерфейс отслеживания статуса
             setTrackingStatusUI(data.tracking_active);
             
-            // Show admin tab button if user is admin
+            // Показывать кнопку вкладки администратора, если пользователь является администратором
             isAdmin = data.is_admin;
             if (isAdmin) {
                 document.getElementById("nav-admin").classList.remove("hidden");
@@ -252,14 +252,14 @@ async function loadDashboardData() {
                 document.getElementById("nav-admin").classList.add("hidden");
             }
             
-            // Update lang preferred config
+            // Обновить предпочтительную конфигурацию языка
             if (data.language && data.language !== "unset" && data.language !== userLanguage) {
                 userLanguage = data.language;
                 localStorage.setItem("lang_pref", userLanguage);
                 applyTranslations();
             }
             
-            // Check export warning
+            // Проверьте предупреждение об экспорте
             checkExportLimits();
         }
     } catch (e) {
@@ -267,7 +267,7 @@ async function loadDashboardData() {
     }
 }
 
-// Refresh active tracking pulse and active admin operations
+// Обновить активный пульс отслеживания и активные операции администратора.
 async function refreshStatusAndTasks() {
     try {
         const res = await apiRequest("/api/status");

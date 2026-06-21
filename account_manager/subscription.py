@@ -19,7 +19,8 @@ async def subscription_telegram(client, target_username):
         await client.get_entity(target_username)
         logger.info(f"✅ Уже подписаны на группу {target_username}")
         return
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         pass  # Не подписаны, продолжаем подписку
 
     try:
