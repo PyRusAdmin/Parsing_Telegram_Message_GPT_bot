@@ -91,8 +91,8 @@ class CheckingAccountsValidity:
 
         except AuthKeyDuplicatedError:
             logger.error(
-                "❌ AuthKeyDuplicatedError: Повторный ввод ключа авторизации "
-                "(сессия используется в другом месте)")
+                "❌ AuthKeyDuplicatedError: Повторный ввод ключа авторизации (сессия используется в другом месте)"
+            )
             await client.disconnect()
             await self.write_csv(data=session_name)
             return None

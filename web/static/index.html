@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AutoParse Alert Bot Panel</title>
-    <!-- Google Fonts Inter -->
+    <!-- Google Шрифты Интер -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
           rel="stylesheet">
-    <!-- FontAwesome for Icons -->
+    <!-- FontAwesome для иконок -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Основной стиль -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Telegram WebApp SDK -->
+    <!-- SDK веб-приложения Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <div id="app-container" class="loading">
-    <!-- Top Navigation / User Header -->
+    <!-- Верхняя навигация/заголовок пользователя -->
     <header class="glass-panel">
         <div class="user-profile">
             <div id="user-avatar" class="avatar-gradient">T</div>
@@ -38,17 +38,17 @@
         </div>
     </header>
 
-    <!-- Notification Banner -->
+    <!-- Баннер уведомлений -->
     <div id="notification-banner" class="notification-banner hidden">
         <span id="notification-message">Уведомление здесь</span>
         <button id="notification-close-btn">&times;</button>
     </div>
 
-    <!-- Main Workspace -->
+    <!-- Основное рабочее пространство -->
     <main class="content-area">
         <!-- TAB 1: DASHBOARD -->
         <section id="tab-dashboard" class="tab-content active">
-            <!-- Status & Control Card -->
+            <!-- Карта состояния и контроля -->
             <div class="hero-card glass-panel">
                 <div class="status-pulse-container">
                     <div id="status-pulse" class="status-pulse inactive"></div>
@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- Stats Grid -->
+            <!-- Таблица статистики -->
             <div class="stats-grid">
                 <div class="stat-card glass-panel" onclick="switchTab('channels')">
                     <div class="stat-icon icon-blue"><i class="fa-solid fa-tower-broadcast"></i></div>
@@ -97,7 +97,7 @@
                 </div>
             </div>
 
-            <!-- Quick Settings -->
+            <!-- Быстрые настройки -->
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-gears icon-inline"></i> Настройки переадресации</h3>
                 <div class="settings-row">
@@ -114,7 +114,7 @@
                 </div>
             </div>
 
-            <!-- Stars Top Up Card -->
+            <!-- Карта пополнения счета Stars -->
             <div class="card glass-panel topup-card">
                 <div class="topup-info">
                     <h3><i class="fa-solid fa-coins icon-inline icon-orange"></i> Balance & Utilities</h3>
@@ -126,7 +126,7 @@
             </div>
         </section>
 
-        <!-- TAB 2: CHANNELS -->
+        <!-- ВКЛАДКА 2: КАНАЛЫ -->
         <section id="tab-channels" class="tab-content">
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-square-plus icon-inline"></i> Добавить каналы для отслеживания</h3>
@@ -156,13 +156,13 @@
                            class="glass-input search-input">
                 </div>
                 <div class="list-container scrollable" id="channels-list">
-                    <!-- Channels item placeholder -->
+                    <!-- Заполнитель элемента каналов -->
                     <div class="empty-state" data-i18n="no_channels">Пока не добавлены каналы.</div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 3: KEYWORDS -->
+        <!-- ВКЛАДКА 3: КЛЮЧЕВЫЕ СЛОВА -->
         <section id="tab-keywords" class="tab-content">
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-key icon-inline"></i> Add Alert Keyword</h3>
@@ -179,13 +179,13 @@
                     <span id="keywords-count" class="badge">0</span>
                 </div>
                 <div class="list-container scrollable" id="keywords-list">
-                    <!-- Keywords item placeholder -->
+                    <!-- Заполнитель элемента ключевых слов -->
                     <div class="empty-state">Ключевые слова не определены.</div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 4: ACCOUNTS -->
+        <!-- ВКЛАДКА 4: СЧЕТА -->
         <section id="tab-accounts" class="tab-content">
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-user-plus icon-inline"></i> Подключить аккаунт Telegram</h3>
@@ -210,9 +210,9 @@
             </div>
         </section>
 
-        <!-- TAB 5: AI SEARCH -->
+        <!-- ВКЛАДКА 5: ПОИСК ПО ИИ -->
         <section id="tab-search" class="tab-content">
-            <!-- Search panel -->
+            <!-- Панель поиска -->
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-robot icon-inline"></i>Поиск целевой группы с помощью искусственного
                     интеллекта</h3>
@@ -231,7 +231,7 @@
                 </div>
             </div>
 
-            <!-- Export Database Card -->
+            <!-- Экспорт карты базы данных -->
             <div class="card glass-panel">
                 <div class="card-header">
                     <h3><i class="fa-solid fa-file-excel icon-inline icon-green"></i>База данных экспортных групп</h3>
@@ -284,7 +284,7 @@
                 </div>
             </div>
 
-            <!-- AI Search Results -->
+            <!-- Результаты поиска ИИ -->
             <div class="card glass-panel hidden" id="search-results-card">
                 <div class="card-header">
                     <h3>Результаты поиска</h3>
@@ -302,14 +302,14 @@
                         </tr>
                         </thead>
                         <tbody id="search-results-list">
-                        <!-- Dynamic rows -->
+                        <!-- Динамические строки -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 6: ADMIN PANEL (Conditional) -->
+        <!-- ВКЛАДКА 6: ПАНЕЛЬ АДМИНИСТРАТОРА (Условно) -->
         <section id="tab-admin" class="tab-content">
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-shield-halved icon-inline"></i>Панель управления администратора</h3>
@@ -317,7 +317,7 @@
                     запускайте классификацию с помощью искусственного интеллекта и извлекайте системные журналы.</p>
             </div>
 
-            <!-- Active Admin Task status -->
+            <!-- Статус активной задачи администратора -->
             <div class="card glass-panel hidden" id="admin-task-card">
                 <h3>Запущенный фоновый процесс</h3>
                 <div class="progress-bar-container">
@@ -330,7 +330,7 @@
                 <p id="admin-task-message" class="status-msg">Обработка данных...</p>
             </div>
 
-            <!-- Maintenance Grid -->
+            <!-- Сетка обслуживания -->
             <div class="admin-actions-grid">
                 <div class="admin-action-card glass-panel" onclick="triggerAdminAction('check-accounts')">
                     <i class="fa-solid fa-users-gear admin-icon icon-green"></i>
@@ -354,7 +354,7 @@
                 </div>
             </div>
 
-            <!-- Logs & Exports -->
+            <!-- Журналы и экспорт -->
             <div class="card glass-panel">
                 <h3>Системные файлы</h3>
                 <div class="admin-download-row">
@@ -379,7 +379,7 @@
         </section>
     </main>
 
-    <!-- Navigation Bar (Tabs) -->
+    <!-- Панель навигации (вкладки) -->
     <nav class="nav-bar glass-panel">
         <button class="nav-item active" onclick="switchTab('dashboard')">
             <i class="fa-solid fa-chart-pie"></i>
@@ -408,7 +408,7 @@
     </nav>
 </div>
 
-<!-- MODAL: STARS TOPUP -->
+<!-- КАПИТАЛ: ПОПОЛНЕНИЕ ЗВЕЗД -->
 <div id="topup-modal" class="modal-overlay hidden">
     <div class="modal-content glass-panel">
         <div class="modal-header">
@@ -475,7 +475,7 @@
     </div>
 </div>
 
-<!-- App JavaScript Logic -->
+<!-- Логика JavaScript приложения -->
 <script src="js/app.js"></script>
 </body>
 </html>

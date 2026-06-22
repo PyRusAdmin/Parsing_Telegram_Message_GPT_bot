@@ -185,7 +185,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                 await client.send_message(target_group_id, context_text)
             except MessageTooLongError:
                 logger.warning(
-                    f"Не удалось отправить сообщение с контекстом, так как оно слишком длинное ({len(context_text)})")
+                    f"Не удалось отправить сообщение с контекстом, так как оно слишком длинное ({len(context_text)})"
+                )
             try:
                 await client.forward_messages(target_group_id, message)
                 logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
@@ -271,7 +272,8 @@ async def get_grup_accaunt(client):
                 new_group_type = determine_telegram_chat_type(entity)
 
                 logger.info(
-                    f"👥 {participants_count} | 📝 {title} | Тип: {new_group_type} | 🔗 {link} | 💬 {description}")
+                    f"👥 {participants_count} | 📝 {title} | Тип: {new_group_type} | 🔗 {link} | 💬 {description}"
+                )
 
                 # Сохранение или обновление в базе
                 TelegramGroup.insert(

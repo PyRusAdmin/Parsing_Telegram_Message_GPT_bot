@@ -92,5 +92,4 @@ async def _is_session_valid(session_string: str) -> bool:
             await client.disconnect()
         except Exception as e:
             logger.exception(e)
-            # pass
         return False
