@@ -26,7 +26,6 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
-
 from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ADMIN_USER_ID
 from database.database import (
     db, User, TelegramGroup, Groups, Account, UserAccountsTable, create_keywords_model, create_group_model,
@@ -34,19 +33,15 @@ from database.database import (
     getting_number_records_database, get_all_questions, getting_account, get_groups_without_category,
     write_account_to_user_table
 )
-
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
 from handlers.user.pars_ai import can_user_download_free, clean_group_name, save_group_to_db, create_excel_file
-
 from locales.locales import t
 
-# from system.dispatcher import ADMIN_USER_ID, bot
-
-# Initialize FastAPI
+# Инициализировать FastAPI
 app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
 
-# Add CORS Middleware
+# Добавьте промежуточное ПО CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -178,58 +173,66 @@ init_web_directories()
 
 @app.get("/api/status")
 async def get_status(user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
+    try:
+        user_id = user_data["id"]
 
-    # Получить пользователя
-    user = User.get_or_none(User.user_id == user_id)
-    if not user:
-        # Зарегистрировать пользователя в базе данных
-        user = User.create(
-            user_id=user_id,
-            username=user_data.get("username"),
-            first_name=user_data.get("first_name"),
-            last_name=user_data.get("last_name"),
-            language="unset"
-        )
+        # Получить пользователя
+        user = User.get_or_none(User.user_id == user_id)
+        if not user:
+            # Зарегистрировать пользователя в базе данных
+            user = User.create(
+                user_id=user_id,
+                username=user_data.get("username"),
+                first_name=user_data.get("first_name"),
+                last_name=user_data.get("last_name"),
+                language="unset"
+            )
 
-    user_lang = user.language if user.language != "unset" else "ru"
+        user_lang = user.language if user.language != "unset" else "ru"
 
-    # Получите статистику
-    groups_count = getting_number_records_database()
-    session_count = get_session_count(user_id=user_id)
-    group_count = get_target_group_count(user_id=user_id)
-    tracked_channels = get_tracked_channels_count(user_id=user_id)
-    keywords_count = get_keywords_count(user_id=user_id)
+        # Получите статистику
+        groups_count = getting_number_records_database()
+        session_count = get_session_count(user_id=user_id)
+        group_count = get_target_group_count(user_id=user_id)
+        tracked_channels = get_tracked_channels_count(user_id=user_id)
+        keywords_count = get_keywords_count(user_id=user_id)
 
-    # Получите текущее имя целевой группы пользователя
-    GroupModel = create_group_model(user_id)
-    target_group = None
-    if GroupModel.table_exists():
-        groups = list(GroupModel.select())
-        if groups:
-            target_group = groups[0].user_group
+        # Получите текущее имя целевой группы пользователя
+        GroupModel = create_group_model(user_id)
+        target_group = None
+        if GroupModel.table_exists():
+            groups = list(GroupModel.select())
+            if groups:
+                target_group = groups[0].user_group
 
-    tracking_active = str(user_id) in active_clients
-    is_admin = user_id in ADMIN_USER_ID
+        tracking_active = str(user_id) in active_clients
 
-    return {
-        "user_id": user_id,
-        "username": user.username,
-        "first_name": user.first_name,
-        "language": user.language,
-        "stars": user.stars,
-        "is_admin": is_admin,
-        "stats": {
-            "version": "0.0.9",
-            "db_total_groups": groups_count,
-            "connected_accounts": session_count,
-            "target_groups": group_count,
-            "tracked_channels": tracked_channels,
-            "keywords": keywords_count,
-            "target_group_username": target_group
-        },
-        "tracking_active": tracking_active
-    }
+        logger.info(type(ADMIN_USER_ID))
+        logger.info(type(user_id))
+        # is_admin = user_id in int(ADMIN_USER_ID)
+        is_admin = user_id == ADMIN_USER_ID
+        logger.info(f"Это администратор: {is_admin}")
+
+        return {
+            "user_id": user_id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "language": user.language,
+            "stars": user.stars,
+            "is_admin": is_admin,
+            "stats": {
+                "version": "0.0.9",
+                "db_total_groups": groups_count,
+                "connected_accounts": session_count,
+                "target_groups": group_count,
+                "tracked_channels": tracked_channels,
+                "keywords": keywords_count,
+                "target_group_username": target_group
+            },
+            "tracking_active": tracking_active
+        }
+    except Exception as e:
+        logger.exception(f"Error getting status: {e}")
 
 
 @app.post("/api/settings/language")
@@ -545,7 +548,7 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
     raise HTTPException(status_code=500, detail="Failed to delete account")
 
 
-# Stars Top Up Invoice Link
+# Ссылка на счет пополнения Stars
 @app.post("/api/payment/stars-topup")
 async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -665,7 +668,7 @@ async def download_database(
         user.last_free_download_at = datetime.now()
         user.save()
 
-    # Query groups
+    # Группы запросов
     query = TelegramGroup.select()
     if export_type == "channels":
         query = query.where(TelegramGroup.group_type == "Канал")
@@ -677,14 +680,14 @@ async def download_database(
 
     groups = list(query)
 
-    # Generate Excel in memory
+    # Создать Excel в памяти
 
     user_lang = user.language if user.language != "unset" else "ru"
     excel_bytes = create_excel_file(groups, lang=user_lang)
 
     filename = f"db_export_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
 
-    # Return as streaming response
+    # Вернуться в виде потокового ответа
     return StreamingResponse(
         io_bytes_stream(excel_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -697,7 +700,7 @@ def io_bytes_stream(data: bytes):
     yield from stream
 
 
-# ==================== ADMIN PANEL API ENDPOINTS ====================
+# ==================== КОНЕЧНЫЕ ТОЧКИ API ПАНЕЛИ АДМИНИСТРАТОРА ====================
 
 def require_admin(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -708,13 +711,13 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
 
 @app.get("/api/admin/status")
 async def get_admin_status():
-    # Calculate groups without category
+    # Рассчитать группы без категории
     uncategorized_count = TelegramGroup.select().where(
         (TelegramGroup.username.is_null(False)) &
         (TelegramGroup.category == '')
     ).count()
 
-    # Get total accounts
+    # Получить общее количество счетов
     total_accounts = Account.select().count()
 
     return {
@@ -724,7 +727,7 @@ async def get_admin_status():
     }
 
 
-# Background Admin Tasks
+# Фоновые задачи администрирования
 
 async def bg_check_accounts():
     global admin_task_status
@@ -738,8 +741,8 @@ async def bg_check_accounts():
         total = len(available_sessions)
         admin_task_status["total"] = total
 
-        # We need a dummy MockMessage for CheckingAccountsValidity
-        # Use first admin ID
+        # Нам нужен фиктивный MockMessage для CheckingAccountsValidity.
+        # Использовать первый идентификатор администратора
         admin_id = list(ADMIN_USER_ID)[0]
         mock_msg = MockMessage(user_id=admin_id)
         checker = CheckingAccountsValidity(message=mock_msg)
@@ -782,7 +785,7 @@ async def bg_actualize_db():
             admin_task_status["message"] = "All database records are already actualized!"
             return
 
-        # Setup checker
+        # Проверка настроек
         admin_id = list(ADMIN_USER_ID)[0]
         mock_msg = MockMessage(user_id=admin_id)
         checker = CheckingAccountsValidity(message=mock_msg)
@@ -800,12 +803,12 @@ async def bg_actualize_db():
                 telegram_id = entity.id
                 group_type = "Канал" if getattr(entity, 'broadcast', False) else "Группа"
 
-                # Fetch full info
+                # Получить полную информацию
                 full_channel = await client(GetFullChannelRequest(channel=entity))
                 description = full_channel.full_chat.about or ""
                 participants = full_channel.full_chat.participants_count or 0
 
-                # Update DB
+                # Обновить БД
                 TelegramGroup.update(
                     telegram_id=telegram_id,
                     group_type=group_type,
@@ -836,7 +839,7 @@ async def bg_categorize_db(method: str):
 
     try:
 
-        # 1. Setup client based on method
+        # 1. Настройка клиента на основе метода
         if method == "fast":
 
             client = Client()
@@ -1001,5 +1004,5 @@ async def admin_download_logs():
     return FileResponse(log_path, media_type="text/plain", filename="bot_log.txt")
 
 
-# Mount Static Files
+# Монтировать статические файлы
 app.mount("/", StaticFiles(directory="web/static", html=True), name="static")

@@ -885,10 +885,10 @@ async function checkExportLimits() {
             const warning = document.getElementById("export-limit-warning");
             if (!data.is_free) {
                 warning.classList.remove("hidden");
-                // Update warning text with countdown or balance information
+                // Обновить текст предупреждения, добавив информацию об обратном отсчете или балансе
                 const hours = Math.floor(data.remaining_seconds / 3600);
                 const minutes = Math.floor((data.remaining_seconds % 3600) / 60);
-                warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 24h export limit reached (Next free: ${hours}h ${minutes}m). Next download will cost 5 Stars (Your balance: ${data.stars_balance}).`;
+                warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Достигнут 24-часовой лимит экспорта (Следующий бесплатно: ${hours} часов ${minutes} минут). Следующая загрузка будет стоить 5 звезд. (Ваш баланс: ${data.stars_balance}).`;
             } else {
                 warning.classList.add("hidden");
             }
@@ -898,14 +898,14 @@ async function checkExportLimits() {
     }
 }
 
-// Admin tasks
+// Задачи администратора
 async function triggerAdminAction(endpoint) {
     if (!confirm(`Are you sure you want to trigger admin action '${endpoint}'?`)) return;
     try {
         const res = await apiRequest(`/api/admin/${endpoint}`, { method: "POST" });
         if (res.ok) {
             showNotification(`Started background operation: ${endpoint}`, "success");
-            // Show task status panel and load progress
+            // Показывать панель состояния задачи и прогресс загрузки
             refreshStatusAndTasks();
         } else {
             showNotification("Operation busy or rejected.", "danger");
