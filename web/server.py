@@ -188,7 +188,7 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
                 language="unset"
             )
 
-        user_lang = user.language if user.language != "unset" else "ru"
+        # user_lang = user.language if user.language != "unset" else "ru"
 
         # Получите статистику
         groups_count = getting_number_records_database()
@@ -207,9 +207,12 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
 
         tracking_active = str(user_id) in active_clients
 
-        logger.info(type(ADMIN_USER_ID))
-        logger.info(type(user_id))
-        # is_admin = user_id in int(ADMIN_USER_ID)
+        # logger.info(type(ADMIN_USER_ID))
+        # logger.info(type(user_id))
+
+        logger.info(
+            f"ID пользователя: {user_id}. Тип входящих данных user_id: {type(user_id)}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
+
         is_admin = user_id == ADMIN_USER_ID
         logger.info(f"Это администратор: {is_admin}")
 
@@ -730,6 +733,11 @@ async def get_admin_status():
 # Фоновые задачи администрирования
 
 async def bg_check_accounts():
+    """
+    Проверка аккаунтов на валидность
+    """
+    logger.info("Начинаем проверку аккаунтов...")
+
     global admin_task_status
     admin_task_status["action"] = "check_accounts"
     admin_task_status["status"] = "running"
@@ -743,8 +751,15 @@ async def bg_check_accounts():
 
         # Нам нужен фиктивный MockMessage для CheckingAccountsValidity.
         # Использовать первый идентификатор администратора
-        admin_id = list(ADMIN_USER_ID)[0]
-        mock_msg = MockMessage(user_id=admin_id)
+        # admin_id = list(ADMIN_USER_ID)[0]
+
+        # user_id = user_data["id"]
+
+        # logger.info(f"ID пользователя: {user_id}. Тип входящих данных user_id: {type(user_id)}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
+
+        # is_admin = user_id == ADMIN_USER_ID
+        # logger.info(f"Это администратор: {is_admin}")
+        mock_msg = MockMessage(user_id=ADMIN_USER_ID)
         checker = CheckingAccountsValidity(message=mock_msg)
 
         for idx, session in enumerate(available_sessions, 1):
@@ -786,8 +801,7 @@ async def bg_actualize_db():
             return
 
         # Проверка настроек
-        admin_id = list(ADMIN_USER_ID)[0]
-        mock_msg = MockMessage(user_id=admin_id)
+        mock_msg = MockMessage(user_id=ADMIN_USER_ID)
         checker = CheckingAccountsValidity(message=mock_msg)
 
         client = await checker.client_connect_string_session(available_sessions[0])

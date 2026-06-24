@@ -1,17 +1,17 @@
-// Telegram WebApp Initialization
+// Инициализация веб-приложения Telegram
 const tg = window.Telegram?.WebApp;
 let authToken = "";
-let userLanguage = "ru"; // default fallback
+let userLanguage = "ru"; // резерв по умолчанию
 let isAdmin = false;
 let statusInterval = null;
 
 if (tg && tg.initData) {
     authToken = tg.initData;
-    tg.expand(); // Expand Mini App to maximum height
+    tg.expand(); // Развернуть мини-приложение до максимальной высоты
     tg.ready();
     console.log("Telegram WebApp loaded successfully.");
 } else {
-    // Local dev fallback (Use first Admin ID: 535185511)
+    // Резервный вариант для локальных разработчиков (используйте первый идентификатор администратора: 535185511)
     authToken = "mock_535185511";
     console.warn("Using mock developer credentials.");
 }
@@ -31,8 +31,10 @@ const translations = {
         target_group_title: "Группа для пересылки",
         save: "Сохранить",
         add: "Добавить",
-        upload_txt: "Перетащите файл <strong>.txt</strong> со списком или <span>выберите</span>",
-        upload_session: "Перетащите файл <strong>.session</strong> или <span>выберите</span>",
+        upload_txt:
+            "Перетащите файл <strong>.txt</strong> со списком или <span>выберите</span>",
+        upload_session:
+            "Перетащите файл <strong>.session</strong> или <span>выберите</span>",
         search_results: "Результаты поиска",
         all_records: "Вся база",
         channels_only: "Только каналы",
@@ -52,7 +54,7 @@ const translations = {
         error_load: "Ошибка загрузки данных.",
         invalid_file: "Неверный формат файла.",
         starting: "Запуск...",
-        stopping: "Остановка..."
+        stopping: "Остановка...",
     },
     en: {
         title: "AutoParse Panel",
@@ -67,8 +69,10 @@ const translations = {
         target_group_title: "Forwarding Settings",
         save: "Save",
         add: "Add",
-        upload_txt: "Drag & Drop <strong>.txt</strong> file with channels or <span>browse</span>",
-        upload_session: "Drag & Drop <strong>.session</strong> file or <span>browse</span>",
+        upload_txt:
+            "Drag & Drop <strong>.txt</strong> file with channels or <span>browse</span>",
+        upload_session:
+            "Drag & Drop <strong>.session</strong> file or <span>browse</span>",
         search_results: "Search Results",
         all_records: "All Records",
         channels_only: "Channels Only",
@@ -88,19 +92,22 @@ const translations = {
         error_load: "Error loading data.",
         invalid_file: "Invalid file format.",
         starting: "Starting...",
-        stopping: "Stopping..."
-    }
+        stopping: "Stopping...",
+    },
 };
 
 // Помощник по выборке API с заголовком аутентификации
 async function apiRequest(endpoint, options = {}) {
     options.headers = options.headers || {};
     options.headers["Authorization"] = `Bearer ${authToken}`;
-    
+
     try {
         const response = await fetch(endpoint, options);
         if (response.status === 401) {
-            showNotification("Unauthorized. Please relaunch the app in Telegram.", "danger");
+            showNotification(
+                "Unauthorized. Please relaunch the app in Telegram.",
+                "danger",
+            );
             throw new Error("Unauthorized");
         }
         return response;
@@ -116,33 +123,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Определить язык
         if (tg && tg.initDataUnsafe?.user?.language_code) {
             const lang = tg.initDataUnsafe.user.language_code.toLowerCase();
-            userLanguage = lang === "ru" || lang === "be" || lang === "uk" ? "ru" : "en";
+            userLanguage =
+                lang === "ru" || lang === "be" || lang === "uk" ? "ru" : "en";
         }
-        
+
         // Проверьте локальное хранилище на предмет языковых предпочтений.
         const savedLang = localStorage.getItem("lang_pref");
         if (savedLang) {
             userLanguage = savedLang;
         }
-        
+
         try {
             applyTranslations();
         } catch (e) {
             console.error("applyTranslations failed:", e);
         }
-        
+
         try {
             await loadDashboardData();
         } catch (e) {
             console.error("loadDashboardData failed:", e);
         }
-        
+
         try {
             setupEventListeners();
         } catch (e) {
             console.error("setupEventListeners failed:", e);
         }
-        
+
         try {
             setupDragAndDrop();
         } catch (e) {
@@ -157,7 +165,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             container.classList.remove("loading");
         }
     }
-    
+
     // Настройка интервала автоматического обновления статуса (каждые 5 секунд)
     statusInterval = setInterval(refreshStatusAndTasks, 5000);
 });
@@ -165,45 +173,59 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Обновить текстовые значения пользовательского интерфейса в зависимости от активного языка.
 function applyTranslations() {
     const t = translations[userLanguage] || translations.en || {};
-    
+
     // Элементы всей страницы
     document.querySelector(".hero-title").innerText = t.title || "Title";
-    document.querySelector(".hero-desc").innerText = t.hero_desc || t.title || "";
-    
+    document.querySelector(".hero-desc").innerText =
+        t.hero_desc || t.title || "";
+
     // Установить метки блоков статистики
-    document.querySelector("[onclick=\"switchTab('channels')\"] p").innerText = t.monitored_channels || "Monitored Channels";
-    document.querySelector("[onclick=\"switchTab('keywords')\"] p").innerText = t.active_keywords;
-    document.querySelector("[onclick=\"switchTab('accounts')\"] p").innerText = t.connected_sessions;
-    document.querySelector("[onclick=\"switchTab('admin')\"] span").innerText = "Admin";
-    
+    document.querySelector("[onclick=\"switchTab('channels')\"] p").innerText =
+        t.monitored_channels || "Monitored Channels";
+    document.querySelector("[onclick=\"switchTab('keywords')\"] p").innerText =
+        t.active_keywords;
+    document.querySelector("[onclick=\"switchTab('accounts')\"] p").innerText =
+        t.connected_sessions;
+    document.querySelector("[onclick=\"switchTab('admin')\"] span").innerText =
+        "Admin";
+
     // Встроенные заголовки
-    document.querySelector("#tab-dashboard .card h3").innerHTML = `<i class="fa-solid fa-gears icon-inline"></i> ${t.target_group_title}`;
-    document.querySelector("#tab-channels .card h3").innerHTML = `<i class="fa-solid fa-square-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить каналы" : "Add Channels to Track"}`;
-    document.querySelector("#tab-keywords .card h3").innerHTML = `<i class="fa-solid fa-key icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить ключевое слово" : "Add Alert Keyword"}`;
-    document.querySelector("#tab-accounts .card h3").innerHTML = `<i class="fa-solid fa-user-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Подключить аккаунт Telegram" : "Connect Telegram Account"}`;
-    document.querySelector("#tab-search .card h3").innerHTML = `<i class="fa-solid fa-robot icon-inline"></i> ${t.classify_ai}`;
+    document.querySelector("#tab-dashboard .card h3").innerHTML =
+        `<i class="fa-solid fa-gears icon-inline"></i> ${t.target_group_title}`;
+    document.querySelector("#tab-channels .card h3").innerHTML =
+        `<i class="fa-solid fa-square-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить каналы" : "Add Channels to Track"}`;
+    document.querySelector("#tab-keywords .card h3").innerHTML =
+        `<i class="fa-solid fa-key icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить ключевое слово" : "Add Alert Keyword"}`;
+    document.querySelector("#tab-accounts .card h3").innerHTML =
+        `<i class="fa-solid fa-user-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Подключить аккаунт Telegram" : "Connect Telegram Account"}`;
+    document.querySelector("#tab-search .card h3").innerHTML =
+        `<i class="fa-solid fa-robot icon-inline"></i> ${t.classify_ai}`;
 }
 
 // Переключение активных вкладок навигации
 function switchTab(tabId) {
     // Скрыть все вкладки
-    document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-    document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
-    
+    document
+        .querySelectorAll(".tab-content")
+        .forEach((el) => el.classList.remove("active"));
+    document
+        .querySelectorAll(".nav-item")
+        .forEach((el) => el.classList.remove("active"));
+
     // Показать вкладку выбора
     const targetTab = document.getElementById(`tab-${tabId}`);
     if (targetTab) {
         targetTab.classList.add("active");
     }
-    
+
     // Выделить кнопку меню
     const navButtons = document.querySelectorAll(".nav-item");
-    navButtons.forEach(btn => {
+    navButtons.forEach((btn) => {
         if (btn.getAttribute("onclick").includes(`'${tabId}'`)) {
             btn.classList.add("active");
         }
     });
-    
+
     // Загрузить данные для конкретной вкладки
     if (tabId === "channels") {
         loadChannelsList();
@@ -222,28 +244,41 @@ async function loadDashboardData() {
         const res = await apiRequest("/api/status");
         if (res.ok) {
             const data = await res.json();
-            
+
             // Установить профиль пользователя
-            const initials = data.first_name ? data.first_name.charAt(0) : (data.username ? data.username.charAt(0) : "T");
-            document.getElementById("user-avatar").innerText = initials.toUpperCase();
-            document.getElementById("user-fullname").innerText = data.first_name || data.username || "User";
-            document.getElementById("user-tag").innerText = data.username ? `@${data.username}` : `ID: ${data.user_id}`;
+            const initials = data.first_name
+                ? data.first_name.charAt(0)
+                : data.username
+                  ? data.username.charAt(0)
+                  : "T";
+            document.getElementById("user-avatar").innerText =
+                initials.toUpperCase();
+            document.getElementById("user-fullname").innerText =
+                data.first_name || data.username || "User";
+            document.getElementById("user-tag").innerText = data.username
+                ? `@${data.username}`
+                : `ID: ${data.user_id}`;
             document.getElementById("stars-count").innerText = data.stars;
-            
+
             // Статистика
-            document.getElementById("stat-channels").innerText = data.stats.tracked_channels;
-            document.getElementById("stat-keywords").innerText = data.stats.keywords;
-            document.getElementById("stat-accounts").innerText = data.stats.connected_accounts;
-            document.getElementById("stat-db-groups").innerText = data.stats.db_total_groups;
-            
+            document.getElementById("stat-channels").innerText =
+                data.stats.tracked_channels;
+            document.getElementById("stat-keywords").innerText =
+                data.stats.keywords;
+            document.getElementById("stat-accounts").innerText =
+                data.stats.connected_accounts;
+            document.getElementById("stat-db-groups").innerText =
+                data.stats.db_total_groups;
+
             // Целевая группа
             if (data.stats.target_group_username) {
-                document.getElementById("target-group-input").value = data.stats.target_group_username;
+                document.getElementById("target-group-input").value =
+                    data.stats.target_group_username;
             }
-            
+
             // Интерфейс отслеживания статуса
             setTrackingStatusUI(data.tracking_active);
-            
+
             // Показывать кнопку вкладки администратора, если пользователь является администратором
             isAdmin = data.is_admin;
             if (isAdmin) {
@@ -251,14 +286,18 @@ async function loadDashboardData() {
             } else {
                 document.getElementById("nav-admin").classList.add("hidden");
             }
-            
+
             // Обновить предпочтительную конфигурацию языка
-            if (data.language && data.language !== "unset" && data.language !== userLanguage) {
+            if (
+                data.language &&
+                data.language !== "unset" &&
+                data.language !== userLanguage
+            ) {
                 userLanguage = data.language;
                 localStorage.setItem("lang_pref", userLanguage);
                 applyTranslations();
             }
-            
+
             // Проверьте предупреждение об экспорте
             checkExportLimits();
         }
@@ -275,34 +314,42 @@ async function refreshStatusAndTasks() {
             const data = await res.json();
             setTrackingStatusUI(data.tracking_active);
             document.getElementById("stars-count").innerText = data.stars;
-            
+
             // Update stats
-            document.getElementById("stat-channels").innerText = data.stats.tracked_channels;
-            document.getElementById("stat-keywords").innerText = data.stats.keywords;
-            document.getElementById("stat-accounts").innerText = data.stats.connected_accounts;
-            document.getElementById("stat-db-groups").innerText = data.stats.db_total_groups;
+            document.getElementById("stat-channels").innerText =
+                data.stats.tracked_channels;
+            document.getElementById("stat-keywords").innerText =
+                data.stats.keywords;
+            document.getElementById("stat-accounts").innerText =
+                data.stats.connected_accounts;
+            document.getElementById("stat-db-groups").innerText =
+                data.stats.db_total_groups;
         }
-        
+
         // If admin, check admin task progress
         if (isAdmin) {
             const adminRes = await apiRequest("/api/admin/status");
             if (adminRes.ok) {
                 const adminData = await adminRes.json();
                 const task = adminData.task;
-                
+
                 const taskCard = document.getElementById("admin-task-card");
                 if (task.status === "running") {
                     taskCard.classList.remove("hidden");
-                    
-                    document.getElementById("admin-task-name").innerText = `Action: ${task.action.toUpperCase()}`;
-                    document.getElementById("admin-task-message").innerText = task.message;
-                    
+
+                    document.getElementById("admin-task-name").innerText =
+                        `Action: ${task.action.toUpperCase()}`;
+                    document.getElementById("admin-task-message").innerText =
+                        task.message;
+
                     const progress = task.progress || 0;
                     const total = task.total || 0;
-                    document.getElementById("admin-progress-text").innerText = `${progress} / ${total}`;
-                    
+                    document.getElementById("admin-progress-text").innerText =
+                        `${progress} / ${total}`;
+
                     const pct = total > 0 ? (progress / total) * 100 : 0;
-                    document.getElementById("admin-progress-fill").style.width = `${pct}%`;
+                    document.getElementById("admin-progress-fill").style.width =
+                        `${pct}%`;
                 } else {
                     taskCard.classList.add("hidden");
                 }
@@ -313,13 +360,13 @@ async function refreshStatusAndTasks() {
     }
 }
 
-// Helper to switch tracking state pulse
+// Помощник для переключения импульса состояния отслеживания
 function setTrackingStatusUI(isActive) {
     const t = translations[userLanguage];
     const pulse = document.getElementById("status-pulse");
     const label = document.getElementById("status-text");
     const toggleBtn = document.getElementById("btn-toggle-tracking");
-    
+
     if (isActive) {
         pulse.className = "status-pulse active";
         label.innerText = t.tracking_active;
@@ -335,328 +382,417 @@ function setTrackingStatusUI(isActive) {
     }
 }
 
-// Setup buttons and input events
+// Кнопки настройки и события ввода
 function setupEventListeners() {
-    // Language switch button
-    document.getElementById("lang-toggle-btn").addEventListener("click", async () => {
-        const nextLang = userLanguage === "ru" ? "en" : "ru";
-        try {
-            const res = await apiRequest(`/api/settings/language?lang=${nextLang}`, { method: "POST" });
-            if (res.ok) {
-                userLanguage = nextLang;
-                localStorage.setItem("lang_pref", userLanguage);
-                applyTranslations();
-                loadDashboardData();
-                showNotification(translations[userLanguage].success_saved, "success");
-            }
-        } catch (e) {
-            showNotification("Failed to update language.", "danger");
-        }
-    });
-
-    // Tracking toggle start/stop
-    document.getElementById("btn-toggle-tracking").addEventListener("click", async () => {
-        const btn = document.getElementById("btn-toggle-tracking");
-        const currentActive = btn.className.includes("btn-danger");
-        
-        btn.disabled = true;
-        
-        try {
-            if (currentActive) {
-                const res = await apiRequest("/api/tracking/stop", { method: "POST" });
+    // Кнопка переключения языка
+    document
+        .getElementById("lang-toggle-btn")
+        .addEventListener("click", async () => {
+            const nextLang = userLanguage === "ru" ? "en" : "ru";
+            try {
+                const res = await apiRequest(
+                    `/api/settings/language?lang=${nextLang}`,
+                    { method: "POST" },
+                );
                 if (res.ok) {
-                    showNotification("Tracking stop command sent.", "success");
+                    userLanguage = nextLang;
+                    localStorage.setItem("lang_pref", userLanguage);
+                    applyTranslations();
+                    loadDashboardData();
+                    showNotification(
+                        translations[userLanguage].success_saved,
+                        "success",
+                    );
                 }
-            } else {
-                const res = await apiRequest("/api/tracking/start", { method: "POST" });
+            } catch (e) {
+                showNotification("Failed to update language.", "danger");
+            }
+        });
+
+    // Переключение начала/остановки отслеживания
+    document
+        .getElementById("btn-toggle-tracking")
+        .addEventListener("click", async () => {
+            const btn = document.getElementById("btn-toggle-tracking");
+            const currentActive = btn.className.includes("btn-danger");
+
+            btn.disabled = true;
+
+            try {
+                if (currentActive) {
+                    const res = await apiRequest("/api/tracking/stop", {
+                        method: "POST",
+                    });
+                    if (res.ok) {
+                        showNotification(
+                            "Tracking stop command sent.",
+                            "success",
+                        );
+                    }
+                } else {
+                    const res = await apiRequest("/api/tracking/start", {
+                        method: "POST",
+                    });
+                    if (res.ok) {
+                        showNotification(
+                            "Tracking starting in background...",
+                            "success",
+                        );
+                    }
+                }
+                // Подождите 1 секунду, затем перезагрузите
+                setTimeout(loadDashboardData, 1000);
+            } catch (e) {
+                showNotification("Operation failed.", "danger");
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+    // Сохранить целевую/группу пересылки
+    document
+        .getElementById("btn-save-target-group")
+        .addEventListener("click", async () => {
+            const input = document.getElementById("target-group-input");
+            const username = input.value.trim();
+            if (!username) return;
+
+            const formData = new FormData();
+            formData.append("username", username);
+
+            try {
+                const res = await apiRequest("/api/target-group", {
+                    method: "POST",
+                    body: formData,
+                });
                 if (res.ok) {
-                    showNotification("Tracking starting in background...", "success");
+                    showNotification(
+                        translations[userLanguage].success_saved,
+                        "success",
+                    );
+                    loadDashboardData();
+                } else {
+                    showNotification(
+                        translations[userLanguage].failed_save,
+                        "danger",
+                    );
                 }
+            } catch (e) {
+                showNotification("Network error", "danger");
             }
-            // Give 1 second, then reload
-            setTimeout(loadDashboardData, 1000);
-        } catch (e) {
-            showNotification("Operation failed.", "danger");
-        } finally {
-            btn.disabled = false;
-        }
-    });
+        });
 
-    // Save target/forwarding group
-    document.getElementById("btn-save-target-group").addEventListener("click", async () => {
-        const input = document.getElementById("target-group-input");
-        const username = input.value.trim();
-        if (!username) return;
-        
-        const formData = new FormData();
-        formData.append("username", username);
-        
-        try {
-            const res = await apiRequest("/api/target-group", {
-                method: "POST",
-                body: formData
-            });
-            if (res.ok) {
-                showNotification(translations[userLanguage].success_saved, "success");
-                loadDashboardData();
-            } else {
-                showNotification(translations[userLanguage].failed_save, "danger");
+    // Добавить канал, отслеживаемый вручную
+    document
+        .getElementById("btn-add-channel")
+        .addEventListener("click", async () => {
+            const input = document.getElementById("channel-username-input");
+            const val = input.value.trim();
+            if (!val) return;
+
+            const fd = new FormData();
+            fd.append("username", val);
+
+            try {
+                const res = await apiRequest("/api/channels", {
+                    method: "POST",
+                    body: fd,
+                });
+                if (res.ok) {
+                    input.value = "";
+                    loadChannelsList();
+                    showNotification("Channel added successfully!", "success");
+                } else {
+                    const error = await res.json();
+                    showNotification(
+                        error.detail || "Error adding channel",
+                        "danger",
+                    );
+                }
+            } catch (e) {
+                showNotification("Network error", "danger");
             }
-        } catch (e) {
-            showNotification("Network error", "danger");
-        }
-    });
+        });
 
-    // Add manual tracked channel
-    document.getElementById("btn-add-channel").addEventListener("click", async () => {
-        const input = document.getElementById("channel-username-input");
-        const val = input.value.trim();
-        if (!val) return;
-        
-        const fd = new FormData();
-        fd.append("username", val);
-        
-        try {
-            const res = await apiRequest("/api/channels", {
-                method: "POST",
-                body: fd
-            });
-            if (res.ok) {
-                input.value = "";
-                loadChannelsList();
-                showNotification("Channel added successfully!", "success");
-            } else {
-                const error = await res.json();
-                showNotification(error.detail || "Error adding channel", "danger");
+    // Добавить ключевое слово
+    document
+        .getElementById("btn-add-keyword")
+        .addEventListener("click", async () => {
+            const input = document.getElementById("keyword-input");
+            const val = input.value.trim();
+            if (!val) return;
+
+            const fd = new FormData();
+            fd.append("keyword", val);
+
+            try {
+                const res = await apiRequest("/api/keywords", {
+                    method: "POST",
+                    body: fd,
+                });
+                if (res.ok) {
+                    input.value = "";
+                    loadKeywordsList();
+                    showNotification("Keyword added!", "success");
+                } else {
+                    const err = await res.json();
+                    showNotification(
+                        err.detail || "Error adding keyword",
+                        "danger",
+                    );
+                }
+            } catch (e) {
+                showNotification("Network error", "danger");
             }
-        } catch (e) {
-            showNotification("Network error", "danger");
-        }
-    });
+        });
 
-    // Add keyword
-    document.getElementById("btn-add-keyword").addEventListener("click", async () => {
-        const input = document.getElementById("keyword-input");
-        const val = input.value.trim();
-        if (!val) return;
-        
-        const fd = new FormData();
-        fd.append("keyword", val);
-        
-        try {
-            const res = await apiRequest("/api/keywords", {
-                method: "POST",
-                body: fd
-            });
-            if (res.ok) {
-                input.value = "";
-                loadKeywordsList();
-                showNotification("Keyword added!", "success");
-            } else {
-                const err = await res.json();
-                showNotification(err.detail || "Error adding keyword", "danger");
-            }
-        } catch (e) {
-            showNotification("Network error", "danger");
-        }
-    });
-
-    // Stars top up triggering modal
+    // Пополнение звезд вызывает модальное окно
     document.getElementById("btn-topup-modal").addEventListener("click", () => {
         document.getElementById("topup-modal").classList.remove("hidden");
     });
 
-    // Export DB spreadsheet
-    document.getElementById("btn-export-db").addEventListener("click", async () => {
-        const expType = document.getElementById("export-type").value;
-        const category = document.getElementById("export-category").value;
-        
-        const fd = new FormData();
-        fd.append("export_type", expType);
-        fd.append("category", category);
-        
-        showNotification("Generating database export...", "success");
-        
-        try {
-            const res = await apiRequest("/api/export/download", {
-                method: "POST",
-                body: fd
-            });
-            
-            if (res.ok) {
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                
-                // Get filename from header
-                const disposition = res.headers.get("content-disposition");
-                let filename = "db_export.xlsx";
-                if (disposition && disposition.indexOf("filename=") !== -1) {
-                    filename = disposition.split("filename=")[1].replace(/"/g, "");
-                }
-                
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-                
-                showNotification("Download started!", "success");
-                loadDashboardData(); // Reload for stars update if deducted
-            } else {
-                const err = await res.json();
-                showNotification(err.detail || "Failed to download export", "danger");
-            }
-        } catch (e) {
-            showNotification("Download failed", "danger");
-        }
-    });
+    // Экспорт таблицы БД
+    document
+        .getElementById("btn-export-db")
+        .addEventListener("click", async () => {
+            const expType = document.getElementById("export-type").value;
+            const category = document.getElementById("export-category").value;
 
-    // Search filter for monitored channels list
-    document.getElementById("search-channels-filter").addEventListener("input", (e) => {
-        const filterText = e.target.value.toLowerCase();
-        const items = document.querySelectorAll("#channels-list .list-item");
-        items.forEach(item => {
-            const username = item.querySelector(".item-title").innerText.toLowerCase();
-            if (username.includes(filterText)) {
-                item.style.display = "flex";
-            } else {
-                item.style.display = "none";
+            const fd = new FormData();
+            fd.append("export_type", expType);
+            fd.append("category", category);
+
+            showNotification("Generating database export...", "success");
+
+            try {
+                const res = await apiRequest("/api/export/download", {
+                    method: "POST",
+                    body: fd,
+                });
+
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+
+                    // Получить имя файла из заголовка
+                    const disposition = res.headers.get("content-disposition");
+                    let filename = "db_export.xlsx";
+                    if (
+                        disposition &&
+                        disposition.indexOf("filename=") !== -1
+                    ) {
+                        filename = disposition
+                            .split("filename=")[1]
+                            .replace(/"/g, "");
+                    }
+
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    showNotification("Download started!", "success");
+                    loadDashboardData(); // Перезагрузите обновление звезд, если они были вычтены.
+                } else {
+                    const err = await res.json();
+                    showNotification(
+                        err.detail || "Failed to download export",
+                        "danger",
+                    );
+                }
+            } catch (e) {
+                showNotification("Download failed", "danger");
             }
         });
-    });
 
-    // Trigger AI Search
-    document.getElementById("btn-trigger-ai-search").addEventListener("click", async () => {
-        const input = document.getElementById("ai-search-query");
-        const query = input.value.trim();
-        if (!query) return;
-        
-        const fd = new FormData();
-        fd.append("query", query);
-        
-        const btn = document.getElementById("btn-trigger-ai-search");
-        const spinner = document.getElementById("search-spinner");
-        
-        btn.disabled = true;
-        spinner.classList.remove("hidden");
-        
-        showNotification("AI Group Finder is running search in Telegram. Please wait...", "success");
-        
-        try {
-            const res = await apiRequest("/api/search/ai", {
-                method: "POST",
-                body: fd
+    // Фильтр поиска по списку отслеживаемых каналов
+    document
+        .getElementById("search-channels-filter")
+        .addEventListener("input", (e) => {
+            const filterText = e.target.value.toLowerCase();
+            const items = document.querySelectorAll(
+                "#channels-list .list-item",
+            );
+            items.forEach((item) => {
+                const username = item
+                    .querySelector(".item-title")
+                    .innerText.toLowerCase();
+                if (username.includes(filterText)) {
+                    item.style.display = "flex";
+                } else {
+                    item.style.display = "none";
+                }
             });
-            
-            if (res.ok) {
-                const data = await res.json();
-                
-                // Display results table
-                const resultsCard = document.getElementById("search-results-card");
-                const list = document.getElementById("search-results-list");
-                
-                list.innerHTML = "";
-                document.getElementById("results-count").innerText = data.groups.length;
-                
-                if (data.groups.length > 0) {
-                    resultsCard.classList.remove("hidden");
-                    data.groups.forEach(g => {
-                        const tr = document.createElement("tr");
-                        const statusClass = g.availability === "active" ? "status-active" : (g.availability === "inactive" ? "status-inactive" : "status-unknown");
-                        
-                        tr.innerHTML = `
+        });
+
+    // Запустить поиск AI
+    document
+        .getElementById("btn-trigger-ai-search")
+        .addEventListener("click", async () => {
+            const input = document.getElementById("ai-search-query");
+            const query = input.value.trim();
+            if (!query) return;
+
+            const fd = new FormData();
+            fd.append("query", query);
+
+            const btn = document.getElementById("btn-trigger-ai-search");
+            const spinner = document.getElementById("search-spinner");
+
+            btn.disabled = true;
+            spinner.classList.remove("hidden");
+
+            showNotification(
+                "AI Group Finder is running search in Telegram. Please wait...",
+                "success",
+            );
+
+            try {
+                const res = await apiRequest("/api/search/ai", {
+                    method: "POST",
+                    body: fd,
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Отобразить таблицу результатов
+                    const resultsCard = document.getElementById(
+                        "search-results-card",
+                    );
+                    const list = document.getElementById("search-results-list");
+
+                    list.innerHTML = "";
+                    document.getElementById("results-count").innerText =
+                        data.groups.length;
+
+                    if (data.groups.length > 0) {
+                        resultsCard.classList.remove("hidden");
+                        data.groups.forEach((g) => {
+                            const tr = document.createElement("tr");
+                            const statusClass =
+                                g.availability === "active"
+                                    ? "status-active"
+                                    : g.availability === "inactive"
+                                      ? "status-inactive"
+                                      : "status-unknown";
+
+                            tr.innerHTML = `
                             <td><strong>${g.name}</strong></td>
-                            <td><a href="${g.link || '#'}" target="_blank">${g.username || 'Private'}</a></td>
+                            <td><a href="${g.link || "#"}" target="_blank">${g.username || "Private"}</a></td>
                             <td>${g.group_type}</td>
                             <td>${g.participants.toLocaleString()}</td>
                             <td><span class="label-status ${statusClass}">${g.availability}</span></td>
                         `;
-                        list.appendChild(tr);
-                    });
+                            list.appendChild(tr);
+                        });
+                    } else {
+                        resultsCard.classList.add("hidden");
+                        showNotification(
+                            "No matching active groups found on Telegram.",
+                            "warning",
+                        );
+                    }
                 } else {
-                    resultsCard.classList.add("hidden");
-                    showNotification("No matching active groups found on Telegram.", "warning");
+                    const err = await res.json();
+                    showNotification(err.detail || "Search failed.", "danger");
                 }
-            } else {
-                const err = await res.json();
-                showNotification(err.detail || "Search failed.", "danger");
+            } catch (e) {
+                showNotification("Search failed.", "danger");
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add("hidden");
             }
-        } catch (e) {
-            showNotification("Search failed.", "danger");
-        } finally {
-            btn.disabled = false;
-            spinner.classList.add("hidden");
-        }
-    });
+        });
 }
 
-// Drag and drop helper binds
+// Перетащите вспомогательные привязки
 function setupDragAndDrop() {
-    // Channels TXT Drag & Drop
+    // Каналы TXT Перетаскивание
     const chZone = document.getElementById("channel-drop-zone");
     const chFileInput = document.getElementById("channel-file-input");
-    
+
     chZone.addEventListener("click", () => chFileInput.click());
-    chFileInput.addEventListener("change", (e) => handleChannelFileUpload(e.target.files[0]));
-    
+    chFileInput.addEventListener("change", (e) =>
+        handleChannelFileUpload(e.target.files[0]),
+    );
+
     bindDragEvents(chZone, handleChannelFileUpload);
-    
-    // Accounts Session Drag & Drop
+
+    // Перетаскивание сеанса учетных записей
     const accZone = document.getElementById("session-drop-zone");
     const accFileInput = document.getElementById("session-file-input");
-    
+
     accZone.addEventListener("click", () => accFileInput.click());
-    accFileInput.addEventListener("change", (e) => handleSessionFileUpload(e.target.files[0]));
-    
+    accFileInput.addEventListener("change", (e) =>
+        handleSessionFileUpload(e.target.files[0]),
+    );
+
     bindDragEvents(accZone, handleSessionFileUpload);
 }
 
 function bindDragEvents(zone, uploadCallback) {
-    ["dragenter", "dragover"].forEach(eventName => {
-        zone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            zone.classList.add("dragover");
-        }, false);
+    ["dragenter", "dragover"].forEach((eventName) => {
+        zone.addEventListener(
+            eventName,
+            (e) => {
+                e.preventDefault();
+                zone.classList.add("dragover");
+            },
+            false,
+        );
     });
-    
-    ["dragleave", "drop"].forEach(eventName => {
-        zone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            zone.classList.remove("dragover");
-        }, false);
+
+    ["dragleave", "drop"].forEach((eventName) => {
+        zone.addEventListener(
+            eventName,
+            (e) => {
+                e.preventDefault();
+                zone.classList.remove("dragover");
+            },
+            false,
+        );
     });
-    
-    zone.addEventListener("drop", (e) => {
-        const dt = e.dataTransfer;
-        const file = dt.files[0];
-        if (file) {
-            uploadCallback(file);
-        }
-    }, false);
+
+    zone.addEventListener(
+        "drop",
+        (e) => {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            if (file) {
+                uploadCallback(file);
+            }
+        },
+        false,
+    );
 }
 
-// File uploading implementations
+// Реализации загрузки файлов
 async function handleChannelFileUpload(file) {
     if (!file || !file.name.endsWith(".txt")) {
         showNotification("Only .txt lists are supported.", "danger");
         return;
     }
-    
+
     const fd = new FormData();
     fd.append("file", file);
-    
+
     showNotification("Uploading channel list...", "success");
-    
+
     try {
         const res = await apiRequest("/api/channels/upload", {
             method: "POST",
-            body: fd
+            body: fd,
         });
         if (res.ok) {
             const data = await res.json();
-            showNotification(`Imported: ${data.added} added, ${data.skipped} skipped.`, "success");
+            showNotification(
+                `Imported: ${data.added} added, ${data.skipped} skipped.`,
+                "success",
+            );
             loadChannelsList();
         } else {
             showNotification("File upload failed", "danger");
@@ -668,52 +804,61 @@ async function handleChannelFileUpload(file) {
 
 async function handleSessionFileUpload(file) {
     if (!file || !file.name.endsWith(".session")) {
-        showNotification("Only Telethon .session files are supported.", "danger");
+        showNotification(
+            "Only Telethon .session files are supported.",
+            "danger",
+        );
         return;
     }
-    
+
     const fd = new FormData();
     fd.append("file", file);
-    
+
     showNotification("Verifying & uploading session file...", "success");
-    
+
     try {
         const res = await apiRequest("/api/accounts/upload", {
             method: "POST",
-            body: fd
+            body: fd,
         });
         if (res.ok) {
             const data = await res.json();
-            showNotification(`Account ${data.phone} connected successfully!`, "success");
+            showNotification(
+                `Account ${data.phone} connected successfully!`,
+                "success",
+            );
             loadAccountsList();
             loadDashboardData();
         } else {
             const err = await res.json();
-            showNotification(err.detail || "Session validation failed", "danger");
+            showNotification(
+                err.detail || "Session validation failed",
+                "danger",
+            );
         }
     } catch (e) {
         showNotification("Network error during session verification", "danger");
     }
 }
 
-// Data loaders
+// Загрузчики данных
 async function loadChannelsList() {
     const list = document.getElementById("channels-list");
     list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading channels...</div>`;
-    
+
     try {
         const res = await apiRequest("/api/channels");
         if (res.ok) {
             const data = await res.json();
             document.getElementById("channels-count").innerText = data.length;
             list.innerHTML = "";
-            
+
             if (data.length === 0) {
                 list.innerHTML = `<div class="empty-state">No tracked channels yet.</div>`;
                 return;
             }
-            
-            data.forEach(item => {
+
+            data.forEach((item) => {
                 const el = document.createElement("div");
                 el.className = "list-item";
                 el.innerHTML = `
@@ -734,9 +879,12 @@ async function loadChannelsList() {
 }
 
 async function deleteChannel(id) {
-    if (!confirm("Are you sure you want to stop tracking this channel?")) return;
+    if (!confirm("Are you sure you want to stop tracking this channel?"))
+        return;
     try {
-        const res = await apiRequest(`/api/channels/${id}`, { method: "DELETE" });
+        const res = await apiRequest(`/api/channels/${id}`, {
+            method: "DELETE",
+        });
         if (res.ok) {
             showNotification("Channel removed.", "success");
             loadChannelsList();
@@ -750,20 +898,20 @@ async function deleteChannel(id) {
 async function loadKeywordsList() {
     const list = document.getElementById("keywords-list");
     list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading keywords...</div>`;
-    
+
     try {
         const res = await apiRequest("/api/keywords");
         if (res.ok) {
             const data = await res.json();
             document.getElementById("keywords-count").innerText = data.length;
             list.innerHTML = "";
-            
+
             if (data.length === 0) {
                 list.innerHTML = `<div class="empty-state">No active keywords.</div>`;
                 return;
             }
-            
-            data.forEach(item => {
+
+            data.forEach((item) => {
                 const el = document.createElement("div");
                 el.className = "list-item";
                 el.innerHTML = `
@@ -784,7 +932,9 @@ async function loadKeywordsList() {
 
 async function deleteKeyword(id) {
     try {
-        const res = await apiRequest(`/api/keywords/${id}`, { method: "DELETE" });
+        const res = await apiRequest(`/api/keywords/${id}`, {
+            method: "DELETE",
+        });
         if (res.ok) {
             showNotification("Keyword deleted.", "success");
             loadKeywordsList();
@@ -798,20 +948,20 @@ async function deleteKeyword(id) {
 async function loadAccountsList() {
     const list = document.getElementById("accounts-list");
     list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading sessions...</div>`;
-    
+
     try {
         const res = await apiRequest("/api/accounts");
         if (res.ok) {
             const data = await res.json();
             document.getElementById("accounts-count").innerText = data.length;
             list.innerHTML = "";
-            
+
             if (data.length === 0) {
                 list.innerHTML = `<div class="empty-state">No accounts connected.</div>`;
                 return;
             }
-            
-            data.forEach(item => {
+
+            data.forEach((item) => {
                 const el = document.createElement("div");
                 el.className = "list-item";
                 el.innerHTML = `
@@ -832,9 +982,12 @@ async function loadAccountsList() {
 }
 
 async function deleteAccount(phone) {
-    if (!confirm("Are you sure you want to disconnect this Telegram account?")) return;
+    if (!confirm("Are you sure you want to disconnect this Telegram account?"))
+        return;
     try {
-        const res = await apiRequest(`/api/accounts/${phone}`, { method: "DELETE" });
+        const res = await apiRequest(`/api/accounts/${phone}`, {
+            method: "DELETE",
+        });
         if (res.ok) {
             showNotification("Account disconnected.", "success");
             loadAccountsList();
@@ -845,31 +998,43 @@ async function deleteAccount(phone) {
     }
 }
 
-// Payment Star options trigger
+// Триггер вариантов оплаты Star
 async function buyStars(amount) {
     closeModal("topup");
     showNotification("Generating invoice link...", "success");
-    
+
     try {
-        const res = await apiRequest(`/api/payment/stars-topup?amount=${amount}`, { method: "POST" });
+        const res = await apiRequest(
+            `/api/payment/stars-topup?amount=${amount}`,
+            { method: "POST" },
+        );
         if (res.ok) {
             const data = await res.json();
             const link = data.invoice_link;
-            
-            // Check if TG WebApp SDK available and open natively
+
+            // Проверьте, доступен ли TG WebApp SDK и открыт ли он в исходном виде.
             if (tg && tg.openInvoice) {
                 tg.openInvoice(link, (status) => {
                     if (status === "paid") {
-                        showNotification(`Stars top up success! Added ${amount} stars.`, "success");
+                        showNotification(
+                            `Stars top up success! Added ${amount} stars.`,
+                            "success",
+                        );
                         setTimeout(loadDashboardData, 1000);
                     } else {
-                        showNotification("Payment cancelled or failed.", "warning");
+                        showNotification(
+                            "Payment cancelled or failed.",
+                            "warning",
+                        );
                     }
                 });
             } else {
-                // Regular browser fallback, open URL in new window
+                // Обычный резервный браузер, открыть URL-адрес в новом окне
                 window.open(link, "_blank");
-                showNotification("Invoice opened in new tab. Please complete payment.", "warning");
+                showNotification(
+                    "Invoice opened in new tab. Please complete payment.",
+                    "warning",
+                );
             }
         }
     } catch (e) {
@@ -887,7 +1052,9 @@ async function checkExportLimits() {
                 warning.classList.remove("hidden");
                 // Обновить текст предупреждения, добавив информацию об обратном отсчете или балансе
                 const hours = Math.floor(data.remaining_seconds / 3600);
-                const minutes = Math.floor((data.remaining_seconds % 3600) / 60);
+                const minutes = Math.floor(
+                    (data.remaining_seconds % 3600) / 60,
+                );
                 warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Достигнут 24-часовой лимит экспорта (Следующий бесплатно: ${hours} часов ${minutes} минут). Следующая загрузка будет стоить 5 звезд. (Ваш баланс: ${data.stars_balance}).`;
             } else {
                 warning.classList.add("hidden");
@@ -900,11 +1067,18 @@ async function checkExportLimits() {
 
 // Задачи администратора
 async function triggerAdminAction(endpoint) {
-    if (!confirm(`Are you sure you want to trigger admin action '${endpoint}'?`)) return;
+    if (
+        !confirm(
+            `Вы уверены, что хотите вызвать действие администратора? '${endpoint}'?`,
+        )
+    )
+        return;
     try {
-        const res = await apiRequest(`/api/admin/${endpoint}`, { method: "POST" });
+        const res = await apiRequest(`/api/admin/${endpoint}`, {
+            method: "POST",
+        });
         if (res.ok) {
-            showNotification(`Started background operation: ${endpoint}`, "success");
+            showNotification(`Начал фоновую операцию: ${endpoint}`, "success");
             // Показывать панель состояния задачи и прогресс загрузки
             refreshStatusAndTasks();
         } else {
@@ -922,9 +1096,14 @@ function openCategorizeModal() {
 async function triggerCategorize(method) {
     closeModal("categorize");
     try {
-        const res = await apiRequest(`/api/admin/categorize?method=${method}`, { method: "POST" });
+        const res = await apiRequest(`/api/admin/categorize?method=${method}`, {
+            method: "POST",
+        });
         if (res.ok) {
-            showNotification(`Started AI classification using method: ${method}`, "success");
+            showNotification(
+                `Started AI classification using method: ${method}`,
+                "success",
+            );
             refreshStatusAndTasks();
         }
     } catch (e) {
@@ -941,13 +1120,14 @@ async function downloadAdminFile(endpoint) {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            
-            let filename = endpoint === "logs" ? "bot_logs.txt" : "questions_export.csv";
+
+            let filename =
+                endpoint === "logs" ? "bot_logs.txt" : "questions_export.csv";
             const disposition = res.headers.get("content-disposition");
             if (disposition && disposition.indexOf("filename=") !== -1) {
                 filename = disposition.split("filename=")[1].replace(/"/g, "");
             }
-            
+
             a.download = filename;
             document.body.appendChild(a);
             a.click();
@@ -961,18 +1141,18 @@ async function downloadAdminFile(endpoint) {
     }
 }
 
-// Modal closing helpers
+// Помощники модального закрытия
 function closeModal(modalId) {
     document.getElementById(`${modalId}-modal`).classList.add("hidden");
 }
 
-// Custom alert notifications overlay banner
+// Баннер настраиваемых уведомлений о предупреждениях
 let bannerTimeout = null;
 function showNotification(msg, type = "success") {
     const banner = document.getElementById("notification-banner");
     const bannerText = document.getElementById("notification-message");
-    
-    // Style selection
+
+    // Выбор стиля
     if (type === "success") {
         banner.style.background = "rgba(16, 185, 129, 0.2)";
         banner.style.borderLeftColor = "var(--color-success)";
@@ -983,16 +1163,18 @@ function showNotification(msg, type = "success") {
         banner.style.background = "rgba(245, 158, 11, 0.2)";
         banner.style.borderLeftColor = "var(--color-warning)";
     }
-    
+
     bannerText.innerText = msg;
     banner.classList.remove("hidden");
-    
+
     if (bannerTimeout) clearTimeout(bannerTimeout);
     bannerTimeout = setTimeout(() => {
         banner.classList.add("hidden");
     }, 4500);
 }
 
-document.getElementById("notification-close-btn").addEventListener("click", () => {
-    document.getElementById("notification-banner").classList.add("hidden");
-});
+document
+    .getElementById("notification-close-btn")
+    .addEventListener("click", () => {
+        document.getElementById("notification-banner").classList.add("hidden");
+    });
