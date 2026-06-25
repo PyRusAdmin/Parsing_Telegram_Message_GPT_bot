@@ -21,10 +21,10 @@ from groq import AsyncGroq
 from loguru import logger
 from openai import AsyncOpenAI
 from telethon.sessions import StringSession
-from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags
+from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags, get_full_info_group, \
+    update_group_channels_data_base, determine_telegram_chat_type
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
 from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ADMIN_USER_ID
 from database.database import (
@@ -814,21 +814,55 @@ async def bg_actualize_db():
 
             try:
                 entity = await client.get_entity(group.username)
-                telegram_id = entity.id
-                group_type = "Канал" if getattr(entity, 'broadcast', False) else "Группа"
+                logger.info(entity)
+
+                # telegram_id = entity.id
+                # group_type = "Канал" if getattr(entity, 'broadcast', False) else "Группа"
 
                 # Получить полную информацию
-                full_channel = await client(GetFullChannelRequest(channel=entity))
-                description = full_channel.full_chat.about or ""
-                participants = full_channel.full_chat.participants_count or 0
+                # full_channel = await client(GetFullChannelRequest(channel=entity))
+                # description = full_channel.full_chat.about or ""
+                # participants = full_channel.full_chat.participants_count or 0
+                data = await get_full_info_group(client, entity)
+                logger.info(f"Full info: {data}")
+                logger.info(f"Описание: {data["description"]}")
+
+                new_group_type = determine_telegram_chat_type(entity)  # Определяем тип сущности
+                # === Формируем username с @ ===
+                actual_username = f"@{entity.username}" if entity.username else ""
+
+                # Обновляем запись через UPDATE запрос со всеми доступными данными
+                TelegramGroup.update(
+                    id=entity.id,
+                    group_hash=entity.access_hash,
+                    group_type=new_group_type,
+                    username=actual_username,
+                    description=data["description"],
+                    participants=data["participants"],
+                    name=entity.title,  # Также обновляем название на актуальное
+                    availability=''  # Группа активна
+                ).where(
+                    TelegramGroup.group_hash == group.group_hash
+                ).execute()
+
+                # processed += 1
+                # updated += 1
+
+                logger.info(
+                    # f"[{processed}/{total_count}] Обновлено: {group.username} | "
+                    f"ID: {entity.id} | Тип: {new_group_type} | Описание: {data["description"]} | Участники: {data["participants"]} | "
+                    # f"Аккаунт: {current_account}"
+                )
 
                 # Обновить БД
-                TelegramGroup.update(
-                    telegram_id=telegram_id,
-                    group_type=group_type,
-                    description=description,
-                    participants=participants
-                ).where(TelegramGroup.id == group.id).execute()
+                # TelegramGroup.update(
+                #     telegram_id=telegram_id,
+                #     group_type=group_type,
+                #     description=data["description"],
+                #     participants=data["participants"]
+                # ).where(TelegramGroup.id == group.id).execute()
+                # update_group_channels_data_base(data, entity)
+
 
             except Exception as e:
                 logger.exception(f"Failed to update group {group.username}: {e}")

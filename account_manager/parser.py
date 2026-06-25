@@ -8,7 +8,8 @@ from telethon import events, types
 from telethon.errors import (
     FloodWaitError, InviteRequestSentError, MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
 )
-from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
+from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl.functions.channels import JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
@@ -25,6 +26,31 @@ forwarded_messages = set()
 # 🛑 Словарь активных клиентов и флагов остановки
 active_clients = {}  # {user_id: client}
 stop_flags = {}  # {user_id: asyncio.Event}
+
+
+async def get_full_info_group(client, entity):
+    """
+    Получение полной информации о группе или канале Telegram
+    :return: Объект с полной информацией о группе или канале Telegram
+    """
+    full_channel = await client(GetFullChannelRequest(channel=entity))
+    description = full_channel.full_chat.about or ""
+    participants = full_channel.full_chat.participants_count or 0
+    link = f"https://t.me/{entity.username}" if entity.username else None or ""
+    new_group_type = determine_telegram_chat_type(entity)
+    actual_username = f"@{entity.username}" if entity.username else ""
+    title = entity.title or "Без названия"
+
+    data = {
+        "description": description,
+        "participants": participants,
+        "link": link,
+        "group_type": new_group_type,
+        "actual_username": actual_username,
+        "title": title
+    }
+
+    return data
 
 
 async def join_target_group(client, user_id, message):
@@ -258,50 +284,28 @@ async def get_grup_accaunt(client):
 
                 # Получаем полную информацию через GetFullChannelRequest
                 try:
-                    full_entity = await client(GetFullChannelRequest(channel=entity))
-                    participants_count = full_entity.full_chat.participants_count or 0
-                    description = full_entity.full_chat.about or ""
+
+                    data = await get_full_info_group(client, entity)
+                    # full_entity = await client(GetFullChannelRequest(channel=entity))
+                    # participants_count = full_entity.full_chat.participants_count or 0
+                    # description = full_entity.full_chat.about or ""
+
+
                 except Exception as e:
                     logger.exception(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
-                    participants_count = 0
-                    description = ""
+                    # participants_count = 0
+                    # description = ""
 
-                actual_username = f"@{entity.username}" if entity.username else ""
-                link = f"https://t.me/{entity.username}" if entity.username else None
-                title = entity.title or "Без названия"
-                new_group_type = determine_telegram_chat_type(entity)
+                # actual_username = f"@{entity.username}" if entity.username else ""
+
+                # title = entity.title or "Без названия"
+                # new_group_type = determine_telegram_chat_type(entity)
 
                 logger.info(
-                    f"👥 {participants_count} | 📝 {title} | Тип: {new_group_type} | 🔗 {link} | 💬 {description}"
+                    f"👥 {data["participants"]} | 📝 {data["title"]} | Тип: {data["group_type"]} | 🔗 {data["link"]} | 💬 {data["description"]}"
                 )
 
-                # Сохранение или обновление в базе
-                TelegramGroup.insert(
-                    group_hash=entity.access_hash,
-                    name=title,
-                    username=actual_username,
-                    description=description,
-                    participants=participants_count,
-                    group_type=new_group_type,
-                    language='',
-                    availability='',
-                    link=link or "",
-                    date_added=datetime.now()
-                ).on_conflict(
-                    conflict_target=[TelegramGroup.group_hash],
-                    update={
-                        TelegramGroup.name: title,
-                        TelegramGroup.username: actual_username,
-                        TelegramGroup.description: description,
-                        TelegramGroup.participants: participants_count,
-                        TelegramGroup.group_type: new_group_type,
-                        TelegramGroup.language: '',
-                        TelegramGroup.availability: '',
-                        TelegramGroup.link: link or "",
-                    }
-                ).execute()
-
-                logger.debug(f"🔄 Обновлена группа: {title}")
+                update_group_channels_data_base(data, entity)
 
                 await asyncio.sleep(1)
             except Exception as e:
@@ -311,6 +315,43 @@ async def get_grup_accaunt(client):
         logger.exception(f"🔥 Критическая ошибка в get_grup_accaunt: {error}")
 
     return subscribed_usernames
+
+
+def update_group_channels_data_base(data, entity):
+    """
+    Обновляет данные в базе данных для каналов и групп.
+    :param data: Данные для сохранения или обновления в базе данных
+    :param entity: Сущность Telegram (User или Channel)
+    """
+
+    # Сохранение или обновление в базе
+    TelegramGroup.insert(
+        group_hash=entity.access_hash,
+        name=data["title"],
+        username=data["actual_username"],
+        description=data["description"],
+        participants=data["participants"],
+        group_type=data["group_type"],
+        language='',
+        availability='',
+        # link=link or "",
+        link=data["link"],
+        date_added=datetime.now()
+    ).on_conflict(
+        conflict_target=[TelegramGroup.group_hash],
+        update={
+            TelegramGroup.name: data["title"],
+            TelegramGroup.username: data["actual_username"],
+            TelegramGroup.description: data["description"],
+            TelegramGroup.participants: data["participants"],
+            TelegramGroup.group_type: data["group_type"],
+            TelegramGroup.language: '',
+            TelegramGroup.availability: '',
+            TelegramGroup.link: data["link"],
+        }
+    ).execute()
+
+    logger.debug(f"🔄 Обновлена группа: {data["title"]}")
 
 
 async def join_required_channels(client, user_id, message, already_subscribed):

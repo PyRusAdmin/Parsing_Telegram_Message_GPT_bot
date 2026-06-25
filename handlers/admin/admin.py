@@ -11,10 +11,9 @@ from loguru import logger
 from telethon.errors import (
     FloodWaitError, AuthKeyUnregisteredError, UsernameInvalidError, UsernameNotOccupiedError, TypeNotFoundError
 )
-from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
-from account_manager.parser import determine_telegram_chat_type
+from account_manager.parser import determine_telegram_chat_type, get_full_info_group
 from database.database import TelegramGroup, db, getting_account, User, get_all_questions
 from keyboards.admin.keyboards import admin_keyboard, category_method_keyboard
 from locales.locales import t
@@ -183,7 +182,6 @@ async def update_db(message: Message):
 
                         # Получаем сущность Telegram по username
                         entity = await client.get_entity(group.username)
-
                         logger.info(entity)
 
                         if hasattr(entity, 'bot') or not hasattr(entity, 'broadcast'):
@@ -201,12 +199,13 @@ async def update_db(message: Message):
                             continue
 
                         # Получаем полную информацию
-                        full_entity = await client(GetFullChannelRequest(channel=entity))
-
+                        # full_entity = await client(GetFullChannelRequest(channel=entity))
                         # Извлекаем данные из полной сущности
-                        description = full_entity.full_chat.about or ""
-                        participants_count = full_entity.full_chat.participants_count or 0
-                        logger.info(f"Описание: {description}")
+                        # description = full_entity.full_chat.about or ""
+                        # participants_count = full_entity.full_chat.participants_count or 0
+                        data = await get_full_info_group(client, entity)
+
+                        logger.info(f"Описание: {data["description"]}")
 
                         new_group_type = determine_telegram_chat_type(entity)  # Определяем тип сущности
 
@@ -219,8 +218,8 @@ async def update_db(message: Message):
                             group_hash=entity.access_hash,
                             group_type=new_group_type,
                             username=actual_username,
-                            description=description,
-                            participants=participants_count,
+                            description=data["description"],
+                            participants=data["participants"],
                             name=entity.title,  # Также обновляем название на актуальное
                             availability=''  # Группа активна
                         ).where(
@@ -232,7 +231,7 @@ async def update_db(message: Message):
 
                         logger.info(
                             f"[{processed}/{total_count}] Обновлено: {group.username} | "
-                            f"ID: {entity.id} | Тип: {new_group_type} | Описание: {description} | Участники: {participants_count} | Аккаунт: {current_account}"
+                            f"ID: {entity.id} | Тип: {new_group_type} | Описание: {data["description"]} | Участники: {data["participants"]} | Аккаунт: {current_account}"
                         )
 
                         # Каждые 10 обновлений отправляем прогресс
