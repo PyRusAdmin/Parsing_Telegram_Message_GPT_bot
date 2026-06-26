@@ -1,6 +1,5 @@
 import asyncio
 import random
-from datetime import datetime
 
 from aiogram.types import Message
 from loguru import logger  # https://github.com/Delgan/loguru
@@ -284,23 +283,9 @@ async def get_grup_accaunt(client):
 
                 # Получаем полную информацию через GetFullChannelRequest
                 try:
-
                     data = await get_full_info_group(client, entity)
-                    # full_entity = await client(GetFullChannelRequest(channel=entity))
-                    # participants_count = full_entity.full_chat.participants_count or 0
-                    # description = full_entity.full_chat.about or ""
-
-
                 except Exception as e:
                     logger.exception(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
-                    # participants_count = 0
-                    # description = ""
-
-                # actual_username = f"@{entity.username}" if entity.username else ""
-
-                # title = entity.title or "Без названия"
-                # new_group_type = determine_telegram_chat_type(entity)
-
                 logger.info(
                     f"👥 {data["participants"]} | 📝 {data["title"]} | Тип: {data["group_type"]} | 🔗 {data["link"]} | 💬 {data["description"]}"
                 )
@@ -317,7 +302,7 @@ async def get_grup_accaunt(client):
     return subscribed_usernames
 
 
-def update_group_channels_data_base(data, entity):
+def update_group_channels_data_base(data, entity, group):
     """
     Обновляет данные в базе данных для каналов и групп.
     :param data: Данные для сохранения или обновления в базе данных
@@ -325,32 +310,22 @@ def update_group_channels_data_base(data, entity):
     """
 
     # Сохранение или обновление в базе
-    TelegramGroup.insert(
+    TelegramGroup.update(
+        id=entity.id,
         group_hash=entity.access_hash,
-        name=data["title"],
+        group_type=data["group_type"],
         username=data["actual_username"],
         description=data["description"],
         participants=data["participants"],
-        group_type=data["group_type"],
-        language='',
-        availability='',
-        # link=link or "",
-        link=data["link"],
-        date_added=datetime.now()
-    ).on_conflict(
-        conflict_target=[TelegramGroup.group_hash],
-        update={
-            TelegramGroup.name: data["title"],
-            TelegramGroup.username: data["actual_username"],
-            TelegramGroup.description: data["description"],
-            TelegramGroup.participants: data["participants"],
-            TelegramGroup.group_type: data["group_type"],
-            TelegramGroup.language: '',
-            TelegramGroup.availability: '',
-            TelegramGroup.link: data["link"],
-        }
+        name=entity.title,  # Также обновляем название на актуальное
+        availability=''  # Группа активна
+    ).where(
+        TelegramGroup.group_hash == group.group_hash
     ).execute()
 
+    logger.info(
+        f"ID: {entity.id} | Тип: {data["group_type"]} | Описание: {data["description"]} | Участники: {data["participants"]} | "
+    )
     logger.debug(f"🔄 Обновлена группа: {data["title"]}")
 
 
@@ -372,7 +347,6 @@ async def join_required_channels(client, user_id, message, already_subscribed):
     """
     user = User.get(User.user_id == message.from_user.id)
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
-    # already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
 
     # ✅ Приводим к set для операции вычитания
     db_channels = set(db_channels)

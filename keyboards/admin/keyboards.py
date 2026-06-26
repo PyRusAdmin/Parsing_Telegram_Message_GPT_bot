@@ -81,7 +81,6 @@ def admin_keyboard(lang: str = 'ru'):
         keyboard=[
             [
                 KeyboardButton(text=t("get_log_file_button", lang=lang), style='primary'),
-                KeyboardButton(text=t("update_database_button", lang=lang), style='primary')
             ],
             [
                 KeyboardButton(text=t("export_questions_button", lang=lang), style='primary'),

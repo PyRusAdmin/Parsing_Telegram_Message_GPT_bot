@@ -816,54 +816,17 @@ async def bg_actualize_db():
                 entity = await client.get_entity(group.username)
                 logger.info(entity)
 
-                # telegram_id = entity.id
-                # group_type = "Канал" if getattr(entity, 'broadcast', False) else "Группа"
-
                 # Получить полную информацию
-                # full_channel = await client(GetFullChannelRequest(channel=entity))
-                # description = full_channel.full_chat.about or ""
-                # participants = full_channel.full_chat.participants_count or 0
                 data = await get_full_info_group(client, entity)
                 logger.info(f"Full info: {data}")
                 logger.info(f"Описание: {data["description"]}")
+                # Обновить базу данных
+                update_group_channels_data_base(data, entity, group)
 
-                new_group_type = determine_telegram_chat_type(entity)  # Определяем тип сущности
-                # === Формируем username с @ ===
-                actual_username = f"@{entity.username}" if entity.username else ""
-
-                # Обновляем запись через UPDATE запрос со всеми доступными данными
-                TelegramGroup.update(
-                    id=entity.id,
-                    group_hash=entity.access_hash,
-                    group_type=new_group_type,
-                    username=actual_username,
-                    description=data["description"],
-                    participants=data["participants"],
-                    name=entity.title,  # Также обновляем название на актуальное
-                    availability=''  # Группа активна
-                ).where(
-                    TelegramGroup.group_hash == group.group_hash
-                ).execute()
-
-                # processed += 1
-                # updated += 1
-
-                logger.info(
-                    # f"[{processed}/{total_count}] Обновлено: {group.username} | "
-                    f"ID: {entity.id} | Тип: {new_group_type} | Описание: {data["description"]} | Участники: {data["participants"]} | "
-                    # f"Аккаунт: {current_account}"
+            except ValueError:
+                logger.error(
+                    f"Не валидный username {group.username}"
                 )
-
-                # Обновить БД
-                # TelegramGroup.update(
-                #     telegram_id=telegram_id,
-                #     group_type=group_type,
-                #     description=data["description"],
-                #     participants=data["participants"]
-                # ).where(TelegramGroup.id == group.id).execute()
-                # update_group_channels_data_base(data, entity)
-
-
             except Exception as e:
                 logger.exception(f"Failed to update group {group.username}: {e}")
 

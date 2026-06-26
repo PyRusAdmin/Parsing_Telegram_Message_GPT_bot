@@ -13,7 +13,7 @@ from telethon.errors import (
 )
 
 from account_manager.auth import CheckingAccountsValidity
-from account_manager.parser import determine_telegram_chat_type, get_full_info_group
+from account_manager.parser import get_full_info_group, update_group_channels_data_base
 from database.database import TelegramGroup, db, getting_account, User, get_all_questions
 from keyboards.admin.keyboards import admin_keyboard, category_method_keyboard
 from locales.locales import t
@@ -199,39 +199,18 @@ async def update_db(message: Message):
                             continue
 
                         # Получаем полную информацию
-                        # full_entity = await client(GetFullChannelRequest(channel=entity))
-                        # Извлекаем данные из полной сущности
-                        # description = full_entity.full_chat.about or ""
-                        # participants_count = full_entity.full_chat.participants_count or 0
                         data = await get_full_info_group(client, entity)
 
                         logger.info(f"Описание: {data["description"]}")
 
-                        new_group_type = determine_telegram_chat_type(entity)  # Определяем тип сущности
-
-                        # === Формируем username с @ ===
-                        actual_username = f"@{entity.username}" if entity.username else ""
-
-                        # Обновляем запись через UPDATE запрос со всеми доступными данными
-                        TelegramGroup.update(
-                            id=entity.id,
-                            group_hash=entity.access_hash,
-                            group_type=new_group_type,
-                            username=actual_username,
-                            description=data["description"],
-                            participants=data["participants"],
-                            name=entity.title,  # Также обновляем название на актуальное
-                            availability=''  # Группа активна
-                        ).where(
-                            TelegramGroup.group_hash == group.group_hash
-                        ).execute()
+                        update_group_channels_data_base(data, entity, group)
 
                         processed += 1
                         updated += 1
 
                         logger.info(
                             f"[{processed}/{total_count}] Обновлено: {group.username} | "
-                            f"ID: {entity.id} | Тип: {new_group_type} | Описание: {data["description"]} | Участники: {data["participants"]} | Аккаунт: {current_account}"
+                            f"ID: {entity.id} | Тип: {data["group_type"]} | Описание: {data["description"]} | Участники: {data["participants"]} | Аккаунт: {current_account}"
                         )
 
                         # Каждые 10 обновлений отправляем прогресс
