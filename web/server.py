@@ -20,11 +20,12 @@ from g4f.client import Client
 from groq import AsyncGroq
 from loguru import logger
 from openai import AsyncOpenAI
+from telethon.errors import FloodWaitError, AuthKeyUnregisteredError
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags, get_full_info_group, \
-    update_group_channels_data_base, determine_telegram_chat_type
+    update_group_channels_data_base
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
 from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ADMIN_USER_ID
 from database.database import (
@@ -800,41 +801,94 @@ async def bg_actualize_db():
             admin_task_status["message"] = "All database records are already actualized!"
             return
 
-        # Проверка настроек
         mock_msg = MockMessage(user_id=ADMIN_USER_ID)
         checker = CheckingAccountsValidity(message=mock_msg)
 
-        client = await checker.client_connect_string_session(available_sessions[0])
-        if not client:
-            raise Exception("Failed to connect to Telegram client session")
+        processed = 0
+        current_session_index = 0
 
-        for idx, group in enumerate(groups_to_update, 1):
-            admin_task_status["progress"] = idx
-            admin_task_status["message"] = f"Updating {group.name or group.username} ({idx}/{total})..."
+        while processed < total and current_session_index < len(available_sessions):
+            session_file = available_sessions[current_session_index]
+            account_name = session_file.split('/')[-1] if isinstance(session_file, str) else f"Session #{current_session_index+1}"
+
+            logger.info(f"Используется аккаунт: {account_name}")
+            admin_task_status["message"] = f"Connecting to account: {account_name}..."
+
+            client = None
+            try:
+                client = await checker.client_connect_string_session(session_file)
+            except Exception as e:
+                logger.error(f"Failed to connect session {account_name}: {e}")
+                current_session_index += 1
+                continue
+
+            if not client:
+                logger.error(f"Client session {account_name} is invalid or failed to connect.")
+                current_session_index += 1
+                continue
+
+            # Обрабатываем группы с текущим аккаунтом
+            while processed < total:
+                group = groups_to_update[processed]
+                admin_task_status["progress"] = processed + 1
+                admin_task_status["message"] = f"Updating {group.name or group.username} ({processed + 1}/{total}) using {account_name}..."
+
+                try:
+                    entity = await client.get_entity(group.username)
+                    logger.info(entity)
+
+                    # Получить полную информацию
+                    data = await get_full_info_group(client, entity)
+                    logger.info(f"Full info: {data}")
+                    logger.info(f"Описание: {data['description']}")
+
+                    # Обновить базу данных
+                    update_group_channels_data_base(data, entity, group)
+
+                    processed += 1
+
+                except ValueError:
+                    logger.error(f"Не валидный username {group.username}")
+                    processed += 1
+                except FloodWaitError as e:
+                    wait_time = e.seconds
+                    logger.warning(
+                        f"FloodWait для {group.username} (аккаунт {account_name}): "
+                        f"нужно подождать {wait_time} секунд ({wait_time / 3600:.1f} часов). Переключаемся на следующий аккаунт."
+                    )
+                    current_session_index += 1
+                    try:
+                        await client.disconnect()
+                    except Exception:
+                        pass
+                    break  # Выходим из цикла групп, переключаемся на следующий аккаунт
+
+                except AuthKeyUnregisteredError:
+                    logger.error(f"Не валидный session файл: {account_name}")
+                    current_session_index += 1
+                    try:
+                        await client.disconnect()
+                    except Exception:
+                        pass
+                    break  # Выходим из цикла групп, переключаемся на следующий аккаунт
+
+                except Exception as e:
+                    logger.exception(f"Failed to update group {group.username}: {e}")
+                    processed += 1
+
+                await asyncio.sleep(1.5)
 
             try:
-                entity = await client.get_entity(group.username)
-                logger.info(entity)
+                await client.disconnect()
+            except Exception:
+                pass
 
-                # Получить полную информацию
-                data = await get_full_info_group(client, entity)
-                logger.info(f"Full info: {data}")
-                logger.info(f"Описание: {data["description"]}")
-                # Обновить базу данных
-                update_group_channels_data_base(data, entity, group)
-
-            except ValueError:
-                logger.error(
-                    f"Не валидный username {group.username}"
-                )
-            except Exception as e:
-                logger.exception(f"Failed to update group {group.username}: {e}")
-
-            await asyncio.sleep(1.5)
-
-        await client.disconnect()
-        admin_task_status["status"] = "completed"
-        admin_task_status["message"] = f"Database actualization finished! Updated {total} groups."
+        if processed >= total:
+            admin_task_status["status"] = "completed"
+            admin_task_status["message"] = f"Database actualization finished! Processed {processed}/{total} groups."
+        else:
+            admin_task_status["status"] = "completed"
+            admin_task_status["message"] = f"Database actualization finished. Processed {processed}/{total} groups. All available accounts were used."
     except Exception as e:
         logger.exception(f"Error in bg_actualize_db: {e}")
         admin_task_status["status"] = "error"
