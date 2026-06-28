@@ -879,7 +879,9 @@ async function loadChannelsList() {
 }
 
 async function deleteChannel(id) {
-    if (!confirm("Are you sure you want to stop tracking this channel?"))
+    if (
+        !confirm("Вы уверены, что хотите прекратить отслеживание этого канала?")
+    )
         return;
     try {
         const res = await apiRequest(`/api/channels/${id}`, {
@@ -982,7 +984,11 @@ async function loadAccountsList() {
 }
 
 async function deleteAccount(phone) {
-    if (!confirm("Are you sure you want to disconnect this Telegram account?"))
+    if (
+        !confirm(
+            "Вы уверены, что хотите отключить эту учетную запись Telegram?",
+        )
+    )
         return;
     try {
         const res = await apiRequest(`/api/accounts/${phone}`, {

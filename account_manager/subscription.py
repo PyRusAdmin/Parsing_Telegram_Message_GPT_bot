@@ -19,6 +19,8 @@ async def subscription_telegram(client, target_username):
         await client.get_entity(target_username)
         logger.info(f"✅ Уже подписаны на группу {target_username}")
         return
+    except FloodWaitError as e:
+        logger.error(f"⚠️ FloodWait {e.seconds} сек.")
     except Exception as e:
         logger.exception(e)
         pass  # Не подписаны, продолжаем подписку

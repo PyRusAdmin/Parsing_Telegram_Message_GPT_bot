@@ -20,12 +20,13 @@ from g4f.client import Client
 from groq import AsyncGroq
 from loguru import logger
 from openai import AsyncOpenAI
-from telethon.errors import FloodWaitError, AuthKeyUnregisteredError
+from telethon.errors import FloodWaitError, AuthKeyUnregisteredError, UsernameInvalidError
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import filter_messages, stop_tracking, active_clients, stop_flags, get_full_info_group, \
-    update_group_channels_data_base
+from account_manager.parser import (
+    filter_messages, stop_tracking, active_clients, stop_flags, get_full_info_group, update_group_channels_data_base
+)
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
 from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ADMIN_USER_ID
 from database.database import (
@@ -207,9 +208,6 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
                 target_group = groups[0].user_group
 
         tracking_active = str(user_id) in active_clients
-
-        # logger.info(type(ADMIN_USER_ID))
-        # logger.info(type(user_id))
 
         logger.info(
             f"ID пользователя: {user_id}. Тип входящих данных user_id: {type(user_id)}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
@@ -750,16 +748,6 @@ async def bg_check_accounts():
         total = len(available_sessions)
         admin_task_status["total"] = total
 
-        # Нам нужен фиктивный MockMessage для CheckingAccountsValidity.
-        # Использовать первый идентификатор администратора
-        # admin_id = list(ADMIN_USER_ID)[0]
-
-        # user_id = user_data["id"]
-
-        # logger.info(f"ID пользователя: {user_id}. Тип входящих данных user_id: {type(user_id)}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
-
-        # is_admin = user_id == ADMIN_USER_ID
-        # logger.info(f"Это администратор: {is_admin}")
         mock_msg = MockMessage(user_id=ADMIN_USER_ID)
         checker = CheckingAccountsValidity(message=mock_msg)
 
@@ -809,7 +797,8 @@ async def bg_actualize_db():
 
         while processed < total and current_session_index < len(available_sessions):
             session_file = available_sessions[current_session_index]
-            account_name = session_file.split('/')[-1] if isinstance(session_file, str) else f"Session #{current_session_index+1}"
+            account_name = session_file.split('/')[-1] if isinstance(session_file,
+                                                                     str) else f"Session #{current_session_index + 1}"
 
             logger.info(f"Используется аккаунт: {account_name}")
             admin_task_status["message"] = f"Connecting to account: {account_name}..."
@@ -831,7 +820,8 @@ async def bg_actualize_db():
             while processed < total:
                 group = groups_to_update[processed]
                 admin_task_status["progress"] = processed + 1
-                admin_task_status["message"] = f"Updating {group.name or group.username} ({processed + 1}/{total}) using {account_name}..."
+                admin_task_status[
+                    "message"] = f"Updating {group.name or group.username} ({processed + 1}/{total}) using {account_name}..."
 
                 try:
                     entity = await client.get_entity(group.username)
@@ -845,6 +835,10 @@ async def bg_actualize_db():
                     # Обновить базу данных
                     update_group_channels_data_base(data, entity, group)
 
+                    processed += 1
+
+                except UsernameInvalidError:
+                    logger.error(f"Не валидный username {group.username}")
                     processed += 1
 
                 except ValueError:
@@ -888,7 +882,8 @@ async def bg_actualize_db():
             admin_task_status["message"] = f"Database actualization finished! Processed {processed}/{total} groups."
         else:
             admin_task_status["status"] = "completed"
-            admin_task_status["message"] = f"Database actualization finished. Processed {processed}/{total} groups. All available accounts were used."
+            admin_task_status[
+                "message"] = f"Database actualization finished. Processed {processed}/{total} groups. All available accounts were used."
     except Exception as e:
         logger.exception(f"Error in bg_actualize_db: {e}")
         admin_task_status["status"] = "error"
