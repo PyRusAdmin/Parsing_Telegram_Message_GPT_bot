@@ -116,7 +116,8 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
     if token.startswith("mock_"):
         try:
             mock_id = int(token.split("_")[1])
-            is_admin = mock_id in ADMIN_USER_ID
+            is_admin = mock_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
+                                                                  (list, set, tuple)) else mock_id in ADMIN_USER_ID
             return {
                 "id": mock_id,
                 "first_name": "Test",
@@ -212,7 +213,8 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
         logger.info(
             f"ID пользователя: {user_id}. Тип входящих данных user_id: {type(user_id)}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
 
-        is_admin = user_id == ADMIN_USER_ID
+        is_admin = user_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
+                                                              (list, set, tuple)) else user_id in ADMIN_USER_ID
         logger.info(f"Это администратор: {is_admin}")
 
         return {
@@ -706,7 +708,9 @@ def io_bytes_stream(data: bytes):
 
 def require_admin(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
-    if user_id not in ADMIN_USER_ID:
+    is_admin = user_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
+                                                          (list, set, tuple)) else user_id in ADMIN_USER_ID
+    if not is_admin:
         raise HTTPException(status_code=403, detail="Access denied: Admin only")
     return user_id
 
@@ -765,7 +769,11 @@ async def bg_check_accounts():
 
 
 async def bg_actualize_db():
-    global admin_task_status
+    """
+    Актуализирует базу с группами и каналами
+    :return:
+    """
+    # global admin_task_status
     admin_task_status["action"] = "actualize"
     admin_task_status["status"] = "running"
     admin_task_status["progress"] = 0

@@ -22,8 +22,6 @@ from locales.locales import t
 from aiogram.types import CallbackQuery, LabeledPrice, Message
 from states.states import MyStates
 
-# from system.dispatcher import ADMIN_USER_ID
-
 ADMIN_USER_ID = {ADMIN_USER_ID}
 
 router = Router(name=__name__)

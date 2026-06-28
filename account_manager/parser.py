@@ -305,6 +305,7 @@ async def get_grup_accaunt(client):
 def update_group_channels_data_base(data, entity, group):
     """
     Обновляет данные в базе данных для каналов и групп.
+    :param group: Группа / канал Telegram
     :param data: Данные для сохранения или обновления в базе данных
     :param entity: Сущность Telegram (User или Channel)
     """
