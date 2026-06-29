@@ -33,7 +33,7 @@ from database.database import (
     db, User, TelegramGroup, Groups, Account, UserAccountsTable, create_keywords_model, create_group_model,
     get_user_accounts, get_tracked_channels_count, get_target_group_count, get_session_count, get_keywords_count,
     getting_number_records_database, get_all_questions, getting_account, get_groups_without_category,
-    write_account_to_user_table
+    write_account_to_user_table, get_all_data_telegram_groups
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
@@ -780,10 +780,15 @@ async def bg_actualize_db():
     admin_task_status["message"] = "Initializing database actualization..."
 
     try:
-        available_sessions = getting_account()
+        available_sessions = getting_account()  # Получение аккаунтов из базы данных
         if not available_sessions:
-            raise Exception("No active Telegram sessions available")
+            raise Exception("Нет активных сеансов Telegram.")
 
+        data = get_all_data_telegram_groups()  # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и зополните недостающие данные.
+        for group in data:
+            logger.info(f"{group['name']} | {group['link']} | {group['category']}")
+
+        # Чтение таблицы telegram_groups из базы данных
         groups_to_update = list(TelegramGroup.select().where(
             (TelegramGroup.username.is_null(False)) &
             (TelegramGroup.group_type == '')
@@ -815,12 +820,12 @@ async def bg_actualize_db():
             try:
                 client = await checker.client_connect_string_session(session_file)
             except Exception as e:
-                logger.error(f"Failed to connect session {account_name}: {e}")
+                logger.error(f"Не удалось подключиться к сеансу {account_name}: {e}")
                 current_session_index += 1
                 continue
 
             if not client:
-                logger.error(f"Client session {account_name} is invalid or failed to connect.")
+                logger.error(f"Клиентская сессия {account_name} недействителен или не удалось подключиться.")
                 current_session_index += 1
                 continue
 
@@ -837,7 +842,7 @@ async def bg_actualize_db():
 
                     # Получить полную информацию
                     data = await get_full_info_group(client, entity)
-                    logger.info(f"Full info: {data}")
+                    logger.info(f"Полная информация: {data}")
                     logger.info(f"Описание: {data['description']}")
 
                     # Обновить базу данных
@@ -875,7 +880,7 @@ async def bg_actualize_db():
                     break  # Выходим из цикла групп, переключаемся на следующий аккаунт
 
                 except Exception as e:
-                    logger.exception(f"Failed to update group {group.username}: {e}")
+                    logger.exception(f"Не удалось обновить группу {group.username}: {e}")
                     processed += 1
 
                 await asyncio.sleep(1.5)
@@ -891,7 +896,7 @@ async def bg_actualize_db():
         else:
             admin_task_status["status"] = "completed"
             admin_task_status[
-                "message"] = f"Database actualization finished. Processed {processed}/{total} groups. All available accounts were used."
+                "message"] = f"Актуализация базы данных завершена. Обработано {processed}/{total} группы. Были использованы все доступные аккаунты."
     except Exception as e:
         logger.exception(f"Error in bg_actualize_db: {e}")
         admin_task_status["status"] = "error"

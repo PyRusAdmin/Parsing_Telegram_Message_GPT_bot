@@ -146,7 +146,7 @@ async def assign_categories(message: Message, client, model):
     try:
         # 1️⃣ Получаем группы для обработки
         groups_to_process = await get_groups_without_category()
-
+        logger.info(groups_to_process)
         if not groups_to_process:
             await status_msg.edit_text(t("ai_category_all_have_categories", lang=user_lang))
             return
@@ -159,6 +159,7 @@ async def assign_categories(message: Message, client, model):
         # 2️⃣ Обрабатываем последовательно с немедленной записью в БД
         for i, group_data in enumerate(groups_to_process, 1):
             try:
+                logger.info(group_data)
                 # AI запрос
                 result = await category_assignment(group_data, client, model)
 

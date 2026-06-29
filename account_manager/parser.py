@@ -97,9 +97,8 @@ async def join_target_group(client, user_id, message):
         )
         return None
     try:
-        target_usernames = f'https://t.me/{target_username.lstrip("@")}'
         # ToDo сделать общую функцию для подписки на канал / группу
-        await client(JoinChannelRequest(target_usernames))
+        await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
         # Получаем ID группы
         entity = await client.get_entity(target_username)
         return entity.id
@@ -108,9 +107,9 @@ async def join_target_group(client, user_id, message):
         await asyncio.sleep(e.seconds)
         try:
             # ToDo сделать общую функцию для подписки на канал / группу
-            await client(JoinChannelRequest(target_usernames))
+            await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
         except InviteRequestSentError:
-            logger.error(f"✉️ Приглашение уже отправлено: {target_usernames}")
+            logger.error(f"✉️ Приглашение уже отправлено: {f'https://t.me/{target_username.lstrip("@")}'}")
     except Exception as e:
         logger.exception(f"❌ Не удалось присоединиться к целевой группе {target_username}: {e}")
         return None
@@ -461,15 +460,13 @@ async def ensure_joined_target_group(client, message, user_id: int):
     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
     :return: int or None: Идентификатор целевой группы (entity.id) при успехе, иначе None.
     """
-    user = User.get(User.user_id == message.from_user.id)
     logger.info("Подключаемся к целевой группе для пересылки")
     target_group_id = await join_target_group(client=client, user_id=user_id, message=message)
 
     if not target_group_id:
-        text_error = t("target_group_join_error", lang=user.language)
-        logger.error(text_error)
+        logger.error(t("target_group_join_error", lang=User.get(User.user_id == message.from_user.id).language))
         await message.answer(
-            text=text_error,
+            text=t("target_group_join_error", lang=User.get(User.user_id == message.from_user.id).language),
             reply_markup=connect_grup_keyboard_tech()
         )
         # НЕ отключаем клиент здесь — это будет сделано в finally блоке filter_messages

@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from playhouse.shortcuts import model_to_dict
 from asgiref.sync import sync_to_async
 from loguru import logger
 from peewee import (
@@ -432,6 +432,11 @@ class TelegramGroup(BaseModel):
 
     class Meta:
         table_name = 'telegram_groups'
+
+
+def get_all_data_telegram_groups():
+    """Возвращает все записи из таблицы telegram_groups в виде списка словарей."""
+    return list(TelegramGroup.select().dicts())
 
 
 def clean_telegram_id_duplicates():

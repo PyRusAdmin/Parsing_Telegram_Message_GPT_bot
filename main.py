@@ -33,7 +33,13 @@ env = os.environ.copy()
 env["PYTHONPATH"] = project_root
 env["PORT"] = "3000"
 
-processes = [subprocess.Popen(cmd, env=env) for cmd in commands]
+processes = []
+for cmd in commands:
+    try:
+        p = subprocess.Popen(cmd, env=env)
+        processes.append(p)
+    except Exception as e:
+        logger.warning(f"⚠️ Не удалось запустить команду '{cmd[0]}': {e}")
 
 try:
     # Ожидаем завершения всех процессов
@@ -43,3 +49,4 @@ except KeyboardInterrupt:
     logger.info("Interrupt received, terminating subprocesses...")
     for p in processes:
         p.terminate()
+
