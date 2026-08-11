@@ -1,5 +1,4 @@
 from datetime import datetime
-from playhouse.shortcuts import model_to_dict
 from asgiref.sync import sync_to_async
 from loguru import logger
 from peewee import (
@@ -206,7 +205,8 @@ def get_user_accounts(user_id: int):
     try:
         accounts = (UserAccountsTable
                     .select()
-                    .where(UserAccountsTable.user_id == user_id))
+                    .where(UserAccountsTable.user_id == user_id)
+                    )
 
         # Преобразуем объекты модели в словари
         result = [

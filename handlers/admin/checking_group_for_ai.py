@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
 from g4f.client import Client
+import g4f.errors
 from groq import AsyncGroq
 from loguru import logger
 from openai import AsyncOpenAI
@@ -42,6 +43,7 @@ async def get_best_g4f_model(client: Client) -> str:
     Приоритет: llama-3.1-8b-instant → gpt-4o-mini → llama-3.2-3b → mistral-7b
     """
     # Список моделей по приоритету (от быстрой к медленной)
+    # TODO список моделей сделать в отдельном в файле, а не в коде, что бы можно было бы легко удалить не действительную модель
     models_to_check = [
         "llama-3.1-8b-instant",
         "gpt-4o-mini",
@@ -68,6 +70,8 @@ async def get_best_g4f_model(client: Client) -> str:
             return model
         except asyncio.TimeoutError:
             logger.warning(f"⏱️ Таймаут модели {model}, пробуем следующую...")
+        except g4f.errors.ModelNotFoundError:
+            logger.error(f"Модель {model} не найдена ни в одном провайдере.")
         except Exception as e:
             logger.exception(f"❌ Модель {model} не работает: {type(e).__name__}")
             continue

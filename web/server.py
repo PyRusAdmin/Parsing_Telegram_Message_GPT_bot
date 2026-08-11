@@ -12,33 +12,49 @@ from typing import Optional
 
 from aiogram.client import bot
 from aiogram.types import LabeledPrice
-from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Form, Query, BackgroundTasks
+from asgiref.sync import sync_to_async
+from fastapi import (BackgroundTasks, Depends, FastAPI, File, Form, Header,
+                     HTTPException, Query, UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+
 from g4f.client import Client
 from groq import AsyncGroq
 from loguru import logger
 from openai import AsyncOpenAI
-from telethon.errors import FloodWaitError, AuthKeyUnregisteredError, UsernameInvalidError
+from telethon.errors import (AuthKeyUnregisteredError, FloodWaitError,
+                             UsernameInvalidError)
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import (
-    filter_messages, stop_tracking, active_clients, stop_flags, get_full_info_group, update_group_channels_data_base
-)
-from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
-from core.config import BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ADMIN_USER_ID
-from database.database import (
-    db, User, TelegramGroup, Groups, Account, UserAccountsTable, create_keywords_model, create_group_model,
-    get_user_accounts, get_tracked_channels_count, get_target_group_count, get_session_count, get_keywords_count,
-    getting_number_records_database, get_all_questions, getting_account, get_groups_without_category,
-    write_account_to_user_table, get_all_data_telegram_groups
-)
+from account_manager.parser import (active_clients, filter_messages,
+                                    get_full_info_group, stop_flags,
+                                    stop_tracking,
+                                    update_group_channels_data_base)
+from ai.ai import (category_assignment, get_groq_response,
+                   search_groups_in_telegram)
+from core.config import (ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY,
+                         OPENROUTER_API_KEY)
+
+from database.database import (Account, Groups, TelegramGroup, User,
+                               UserAccountsTable, create_group_model,
+                               create_keywords_model, db,
+                               get_all_data_telegram_groups, get_all_questions,
+                               get_groups_without_category, get_keywords_count,
+                               get_session_count, get_target_group_count,
+                               get_tracked_channels_count, get_user_accounts,
+                               getting_account,
+                               getting_number_records_database,
+                               write_account_to_user_table)
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import can_user_download_free, clean_group_name, save_group_to_db, create_excel_file
+from handlers.user.pars_ai import (can_user_download_free, clean_group_name,
+                                   create_excel_file, save_group_to_db)
 from locales.locales import t
+
+
+
 
 # Инициализировать FastAPI
 app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
@@ -786,7 +802,38 @@ async def bg_actualize_db():
 
         data = get_all_data_telegram_groups()  # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и зополните недостающие данные.
         for group in data:
-            logger.info(f"{group['name']} | {group['link']} | {group['category']}")
+            logger.info(
+                f"{group['telegram_id']} | {group['group_hash']} | {group['name']} | {group['username']} | {group['description']} | {group['participants']} | {group['category']} | {group['group_type']} | {group['language']} | {group['link']} | {group['availability']} | {group['date_added']}"
+                )
+            if group['category'] == '':  # Проверка наличия категории у группы (если пустая строка, то пропускаем).
+                logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")
+                # await asyncio.sleep(20) # Засыпаем на время, что бы определить категорию
+
+                client = Client()                
+                model = await get_best_g4f_model(client)
+                
+                result = await category_assignment(
+                    group_data=group, 
+                    client=client, 
+                    model=model
+                    )
+
+                if result.get("success") and result.get("category"):
+                    # ✅ Сразу пишем в БД (в нижнем регистре)
+                    category_lower = result["category"].lower()
+                    await sync_to_async(lambda: TelegramGroup.update(category=category_lower)
+                                        .where(TelegramGroup.telegram_id == result["telegram_id"])
+                                        .execute(), thread_sensitive=True)()
+                    logger.info(f"✅ {group['name']} → {category_lower}")
+                else:
+                    logger.warning(f"❌ {group['name']} — AI не определил")
+
+                # Пауза только для g4f (чтобы не блокировали)
+                if type(client).__name__ == 'Client':  # g4f клиент
+                    await asyncio.sleep(0.5)
+
+
+
 
         # Чтение таблицы telegram_groups из базы данных
         groups_to_update = list(TelegramGroup.select().where(
