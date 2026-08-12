@@ -1,5 +1,6 @@
 import os
 
+import aiogram
 from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
@@ -217,6 +218,9 @@ async def handle_language_selection(message, state: FSMContext):
         user.save()
 
         await message.answer(confirmation_text, reply_markup=main_menu_keyboard(lang=user.language))
+
+    except aiogram.exceptions.TelegramForbiddenError:
+        logger.warning("Пользователь заблокировал бота")
     except Exception as e:
         logger.exception(e)
 

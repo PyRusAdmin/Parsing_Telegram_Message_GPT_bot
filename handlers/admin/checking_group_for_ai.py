@@ -45,7 +45,7 @@ async def get_best_g4f_model(client: Client) -> str:
     # Список моделей по приоритету (от быстрой к медленной)
     # TODO список моделей сделать в отдельном в файле, а не в коде, что бы можно было бы легко удалить не действительную модель
     models_to_check = [
-        "llama-3.1-8b-instant",
+        # "llama-3.1-8b-instant",
         "gpt-4o-mini",
         "llama-3.2-3b",
         "mistral-7b",
