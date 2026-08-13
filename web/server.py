@@ -817,8 +817,20 @@ async def bg_actualize_db():
         if not available_sessions:
             raise Exception("Нет активных сеансов Telegram.")
 
-        data = get_all_data_telegram_groups()  # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и зополните недостающие данные.
-        for group in data:
+        # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и
+        # заполнить недостающие данные.
+        data = get_all_data_telegram_groups()
+        total = len(data)  # Количество групп в базе данных
+        admin_task_status["total"] = total
+        admin_task_status["progress"] = 0
+        admin_task_status["message"] = f"Проверка групп: 0 / {total}"
+
+        for index, group in enumerate(data, start=1):
+            admin_task_status["progress"] = index
+            admin_task_status["message"] = (
+                f"Проверка группы {index} / {total}: {group['username']}"
+            )
+
             logger.info(
                 f"{group['telegram_id']} | {group['group_hash']} | {group['name']} | {group['username']} | {group['description']} | {group['participants']} | {group['category']} | {group['group_type']} | {group['language']} | {group['link']} | {group['availability']} | {group['date_added']}"
             )
@@ -905,7 +917,8 @@ async def bg_actualize_db():
                         acc_first = data_telegram.get("first_name")
                         acc_last = data_telegram.get("last_name")
                         acc_user = data_telegram.get("username")
-                        logger.info(f"Используется аккаунт: {acc_id}, {acc_phone}, {acc_first}, {acc_last}, @{acc_user}")
+                        logger.info(
+                            f"Используется аккаунт: {acc_id}, {acc_phone}, {acc_first}, {acc_last}, @{acc_user}")
                         admin_task_status[
                             "message"] = f"Подключение к аккаунту: {acc_id}, {acc_phone}, @{acc_user}..."
 
@@ -940,7 +953,8 @@ async def bg_actualize_db():
                         pass
 
                 await asyncio.sleep(1.5)
-
+            admin_task_status["progress"] = index
+        admin_task_status["status"] = "completed"
     except Exception as e:
         logger.exception(f"Error in bg_actualize_db: {e}")
         admin_task_status["status"] = "error"
