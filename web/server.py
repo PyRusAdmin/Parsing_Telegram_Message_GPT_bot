@@ -9,12 +9,13 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
+from aiogram.types import Message, FSInputFile
 from aiogram.client import bot
 from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
-from fastapi import (BackgroundTasks, Depends, FastAPI, File, Form, Header,
-                     HTTPException, Query, UploadFile)
+from fastapi import (
+    BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,32 +24,29 @@ from groq import AsyncGroq
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger
 from openai import AsyncOpenAI
-from telethon.errors import (AuthKeyUnregisteredError, FloodWaitError,
-                             UsernameInvalidError)
+from telethon.errors import (
+    AuthKeyUnregisteredError, FloodWaitError, UsernameInvalidError
+)
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import (active_clients, filter_messages,
-                                    get_full_info_group, stop_flags,
-                                    stop_tracking,
-                                    update_group_channels_data_base)
-from ai.ai import (category_assignment)
-from core.config import (ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY,
-                         OPENROUTER_API_KEY)
+from account_manager.parser import (
+    active_clients, filter_messages, get_full_info_group, stop_flags, stop_tracking, update_group_channels_data_base
+)
+from ai.ai import category_assignment
+from core.config import (
+    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
+)
 from core.constants import ISO_639_1_CODES
-from database.database import (Account, Groups, TelegramGroup, User,
-                               UserAccountsTable, create_group_model,
-                               create_keywords_model, db,
-                               get_all_data_telegram_groups, get_all_questions,
-                               get_groups_without_category, get_keywords_count,
-                               get_session_count, get_target_group_count,
-                               get_tracked_channels_count, get_user_accounts,
-                               getting_account,
-                               getting_number_records_database,
-                               write_account_to_user_table)
+from database.database import (
+    Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model, create_keywords_model, db,
+    get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
+    get_session_count, get_target_group_count, get_tracked_channels_count, get_user_accounts,
+    getting_account, getting_number_records_database, write_account_to_user_table
+)
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import (can_user_download_free, create_excel_file)
+from handlers.user.pars_ai import can_user_download_free, create_excel_file
 from locales.locales import t
 
 # Инициализировать FastAPI
@@ -79,25 +77,52 @@ class MockMessage:
         from system.dispatcher import bot
         self.bot = bot
 
-    async def answer(self, text: str, parse_mode=None):
+    async def answer(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
         from system.dispatcher import bot
         try:
-            await bot.send_message(chat_id=self.from_user.id, text=text, parse_mode=parse_mode)
+            return await bot.send_message(
+                chat_id=self.from_user.id,
+                text=text,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
+                **kwargs
+            )
         except Exception as e:
             logger.exception(f"Failed to send mock answer to {self.from_user.id}: {e}")
 
-    async def answer_document(self, document, caption=None, parse_mode=None):
+    async def reply(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
+        return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
+
+    async def answer_document(self, document, caption=None, parse_mode=None, reply_markup=None, **kwargs):
         from system.dispatcher import bot
         try:
-            from aiogram.types import BufferedInputFile, FSInputFile
-            if isinstance(document, BufferedInputFile):
-                await bot.send_document(chat_id=self.from_user.id, document=document, caption=caption,
-                                        parse_mode=parse_mode)
-            elif isinstance(document, FSInputFile):
-                await bot.send_document(chat_id=self.from_user.id, document=document, caption=caption,
-                                        parse_mode=parse_mode)
+            return await bot.send_document(
+                chat_id=self.from_user.id,
+                document=document,
+                caption=caption,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
+                **kwargs
+            )
         except Exception as e:
             logger.exception(f"Failed to send mock document to {self.from_user.id}: {e}")
+
+    async def answer_photo(self, photo, caption=None, parse_mode=None, reply_markup=None, **kwargs):
+        from system.dispatcher import bot
+        try:
+            return await bot.send_photo(
+                chat_id=self.from_user.id,
+                photo=photo,
+                caption=caption,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
+                **kwargs
+            )
+        except Exception as e:
+            logger.exception(f"Failed to send mock photo to {self.from_user.id}: {e}")
+
+    async def edit_text(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
+        return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
 
 
 # Промежуточное программное обеспечение для подключения к базе данных
@@ -201,8 +226,6 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
                 last_name=user_data.get("last_name"),
                 language="unset"
             )
-
-        # user_lang = user.language if user.language != "unset" else "ru"
 
         # Получите статистику
         groups_count = getting_number_records_database()
@@ -860,115 +883,71 @@ async def bg_actualize_db():
                 else:
                     logger.warning(f"Язык для группы {group['username']} не определён")
 
-        # Чтение таблицы telegram_groups из базы данных
-        groups_to_update = list(TelegramGroup.select().where(
-            (TelegramGroup.username.is_null(False)) &
-            (TelegramGroup.group_type == '')
-        ))
+            """
+            Определение типа группы и запись в базу данных
+            """
+            if group['group_type'] == '':  # Проверка наличия типа в группах / каналах
+                logger.info(f"Найдена группа {group['username']} без типа, определяем тип")
 
-        total = len(groups_to_update)
-        admin_task_status["total"] = total
+                mock_msg = MockMessage(user_id=ADMIN_USER_ID)
+                checker = CheckingAccountsValidity(message=mock_msg)  # path=None по умолчанию
+                client = await checker.start_random_client()
 
-        if total == 0:
-            admin_task_status["status"] = "completed"
-            admin_task_status["message"] = "All database records are already actualized!"
-            return
-
-        mock_msg = MockMessage(user_id=ADMIN_USER_ID)
-        checker = CheckingAccountsValidity(message=mock_msg)
-
-        processed = 0
-        current_session_index = 0
-
-        while processed < total and current_session_index < len(available_sessions):
-            session_file = available_sessions[current_session_index]
-            account_name = session_file.split('/')[-1] if isinstance(session_file,
-                                                                     str) else f"Session #{current_session_index + 1}"
-
-            logger.info(f"Используется аккаунт: {account_name}")
-            admin_task_status["message"] = f"Connecting to account: {account_name}..."
-
-            client = None
-            try:
-                client = await checker.client_connect_string_session(session_file)
-            except Exception as e:
-                logger.error(f"Не удалось подключиться к сеансу {account_name}: {e}")
-                current_session_index += 1
-                continue
-
-            if not client:
-                logger.error(f"Клиентская сессия {account_name} недействителен или не удалось подключиться.")
-                current_session_index += 1
-                continue
-
-            # Обрабатываем группы с текущим аккаунтом
-            while processed < total:
-                group = groups_to_update[processed]
-                admin_task_status["progress"] = processed + 1
-                admin_task_status[
-                    "message"] = f"Updating {group.name or group.username} ({processed + 1}/{total}) using {account_name}..."
+                if not client:
+                    logger.error(f"Не удалось запустить клиент для группы {group['username']}")
+                    continue
 
                 try:
-                    entity = await client.get_entity(group.username)
+                    data_telegram = await get_account_info(client)
+                    if data_telegram:
+                        acc_id = data_telegram.get("id")
+                        acc_phone = data_telegram.get("phone")
+                        acc_first = data_telegram.get("first_name")
+                        acc_last = data_telegram.get("last_name")
+                        acc_user = data_telegram.get("username")
+                        logger.info(f"Используется аккаунт: {acc_id}, {acc_phone}, {acc_first}, {acc_last}, @{acc_user}")
+                        admin_task_status[
+                            "message"] = f"Подключение к аккаунту: {acc_id}, {acc_phone}, @{acc_user}..."
+
+                    entity = await client.get_entity(group['username'])
                     logger.info(entity)
 
                     # Получить полную информацию
-                    data = await get_full_info_group(client, entity)
-                    logger.info(f"Полная информация: {data}")
-                    logger.info(f"Описание: {data['description']}")
+                    data_full = await get_full_info_group(client, entity)
+                    logger.info(f"Полная информация: {data_full}")
+                    logger.info(f"Описание: {data_full.get('description', '')}")
 
                     # Обновить базу данных
-                    update_group_channels_data_base(data, entity, group)
-
-                    processed += 1
+                    update_group_channels_data_base(data_full, entity, group)
 
                 except UsernameInvalidError:
-                    logger.error(f"Не валидный username {group.username}")
-                    processed += 1
-
+                    logger.error(f"Не валидный username {group['username']}")
                 except ValueError:
-                    logger.error(f"Не валидный username {group.username}")
-                    processed += 1
+                    logger.error(f"Не валидный username {group['username']}")
                 except FloodWaitError as e:
                     wait_time = e.seconds
                     logger.warning(
-                        f"FloodWait для {group.username} (аккаунт {account_name}): "
-                        f"нужно подождать {wait_time} секунд ({wait_time / 3600:.1f} часов). Переключаемся на следующий аккаунт."
+                        f"FloodWait для {group['username']}: нужно подождать {wait_time} секунд."
                     )
-                    current_session_index += 1
-                    try:
-                        await client.disconnect()
-                    except Exception:
-                        pass
-                    break  # Выходим из цикла групп, переключаемся на следующий аккаунт
-
                 except AuthKeyUnregisteredError:
-                    logger.error(f"Не валидный session файл: {account_name}")
-                    current_session_index += 1
+                    logger.error(f"Не валидная сессия для проверки группы {group['username']}")
+                except Exception as e:
+                    logger.exception(f"Не удалось обновить группу {group['username']}: {e}")
+                finally:
                     try:
                         await client.disconnect()
                     except Exception:
                         pass
-                    break  # Выходим из цикла групп, переключаемся на следующий аккаунт
-
-                except Exception as e:
-                    logger.exception(f"Не удалось обновить группу {group.username}: {e}")
-                    processed += 1
 
                 await asyncio.sleep(1.5)
 
-            try:
-                await client.disconnect()
-            except Exception:
-                pass
-
-        if processed >= total:
-            admin_task_status["status"] = "completed"
-            admin_task_status["message"] = f"Database actualization finished! Processed {processed}/{total} groups."
-        else:
-            admin_task_status["status"] = "completed"
-            admin_task_status[
-                "message"] = f"Актуализация базы данных завершена. Обработано {processed}/{total} группы. Были использованы все доступные аккаунты."
+                # if processed >= total:
+                #     admin_task_status["status"] = "completed"
+                #     admin_task_status["message"] = f"Database actualization finished! Processed {processed}/{total} groups."
+                # else:
+                #     admin_task_status["status"] = "completed"
+                #     admin_task_status[
+                #         "message"] = f"Актуализация базы данных завершена. Обработано {processed}/{total} группы. Были использованы все доступные аккаунты."
     except Exception as e:
         logger.exception(f"Error in bg_actualize_db: {e}")
         admin_task_status["status"] = "error"

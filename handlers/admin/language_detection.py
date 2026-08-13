@@ -15,24 +15,6 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-# async def get_language_grup(group_data, client, model):
-#     """Определение языка группы / канала с помощью ИИ"""
-#     setup_proxy()
-#
-#     # 🧩 Формируем контекст
-#     data_parts = []
-#     if group_data.get('name'):
-#         data_parts.append(f"Название: {group_data['name']}")
-#     if group_data.get('description'):
-#         data_parts.append(f"Описание: {group_data['description']}")
-#     if group_data.get('username'):
-#         data_parts.append(f"Username: @{group_data['username']}")
-#     if group_data.get('group_type'):
-#         data_parts.append(f"Тип: {group_data['group_type']}")
-#
-#     user_input = "\n".join(data_parts) if data_parts else t('no_data_prompt', lang=lang)
-
-
 def ai_llama_fri(group_data: dict, lang: str = 'ru'):
     """Определение языка (ТОЛЬКО AI-запрос через OpenRouter Free, БЕЗ записи в БД)"""
     try:

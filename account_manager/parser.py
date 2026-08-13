@@ -304,13 +304,18 @@ async def get_grup_accaunt(client):
 def update_group_channels_data_base(data, entity, group):
     """
     Обновляет данные в базе данных для каналов и групп.
-    :param group: Группа / канал Telegram
+    :param group: Группа / канал Telegram (объект или словарь)
     :param data: Данные для сохранения или обновления в базе данных
     :param entity: Сущность Telegram (User или Channel)
     """
+    if isinstance(group, dict):
+        group_hash = group.get('group_hash')
+        telegram_id = group.get('telegram_id')
+    else:
+        group_hash = getattr(group, 'group_hash', None)
+        telegram_id = getattr(group, 'telegram_id', None)
 
-    # Сохранение или обновление в базе
-    TelegramGroup.update(
+    query = TelegramGroup.update(
         id=entity.id,
         group_hash=entity.access_hash,
         group_type=data["group_type"],
@@ -319,14 +324,19 @@ def update_group_channels_data_base(data, entity, group):
         participants=data["participants"],
         name=entity.title,  # Также обновляем название на актуальное
         availability=''  # Группа активна
-    ).where(
-        TelegramGroup.group_hash == group.group_hash
-    ).execute()
+    )
+
+    if group_hash:
+        query = query.where(TelegramGroup.group_hash == group_hash)
+    elif telegram_id:
+        query = query.where(TelegramGroup.telegram_id == telegram_id)
+
+    query.execute()
 
     logger.info(
-        f"ID: {entity.id} | Тип: {data["group_type"]} | Описание: {data["description"]} | Участники: {data["participants"]} | "
+        f"ID: {entity.id} | Тип: {data['group_type']} | Описание: {data['description']} | Участники: {data['participants']} | "
     )
-    logger.debug(f"🔄 Обновлена группа: {data["title"]}")
+    logger.debug(f"🔄 Обновлена группа: {data['title']}")
 
 
 async def join_required_channels(client, user_id, message, already_subscribed):
