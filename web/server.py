@@ -9,7 +9,7 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from lingua import LanguageDetectorBuilder, Language # Библиотека для автоматического определения языка
+
 from aiogram.client import bot
 from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
@@ -18,9 +18,9 @@ from fastapi import (BackgroundTasks, Depends, FastAPI, File, Form, Header,
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-
 from g4f.client import Client
 from groq import AsyncGroq
+from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger
 from openai import AsyncOpenAI
 from telethon.errors import (AuthKeyUnregisteredError, FloodWaitError,
@@ -32,11 +32,10 @@ from account_manager.parser import (active_clients, filter_messages,
                                     get_full_info_group, stop_flags,
                                     stop_tracking,
                                     update_group_channels_data_base)
-from ai.ai import (category_assignment, get_groq_response,
-                   search_groups_in_telegram)
+from ai.ai import (category_assignment)
 from core.config import (ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY,
                          OPENROUTER_API_KEY)
-
+from core.constants import ISO_639_1_CODES
 from database.database import (Account, Groups, TelegramGroup, User,
                                UserAccountsTable, create_group_model,
                                create_keywords_model, db,
@@ -49,8 +48,7 @@ from database.database import (Account, Groups, TelegramGroup, User,
                                write_account_to_user_table)
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import (can_user_download_free, clean_group_name,
-                                   create_excel_file, save_group_to_db)
+from handlers.user.pars_ai import (can_user_download_free, create_excel_file)
 from locales.locales import t
 
 # Инициализировать FastAPI
@@ -801,11 +799,11 @@ async def bg_actualize_db():
             logger.info(
                 f"{group['telegram_id']} | {group['group_hash']} | {group['name']} | {group['username']} | {group['description']} | {group['participants']} | {group['category']} | {group['group_type']} | {group['language']} | {group['link']} | {group['availability']} | {group['date_added']}"
             )
-            
+
             """
             Определение категории группы / канала
             """
-            
+
             if group['category'] == '':  # Проверка наличия категории у группы (если пустая строка, то пропускаем).
                 logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")
 
@@ -831,33 +829,19 @@ async def bg_actualize_db():
                 # Пауза только для g4f (чтобы не блокировали)
                 if type(client).__name__ == 'Client':  # g4f клиент
                     await asyncio.sleep(0.5)
-            
+
             """
             Определение языка групп / каналов и запись в базу данных
             """
-            
+
             if group['language'] == '':  # Проверка наличия языка в гуппах / каналах
                 logger.info(f"Найдена группа {group['username']} без языка, определяем язык")
 
-                ISO_639_1_CODES = {
-                    "aa", "ab", "ae", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh", "bi",
-                    "bm", "bn", "bo", "br", "bs", "ca", "ce", "ch", "co", "cr", "cs", "cu", "cv", "cy", "da", "de", "dv",
-                    "dz", "ee", "el", "en", "eo", "es", "et", "eu", "fa", "ff", "fi", "fj", "fo", "fr", "fy", "ga", "gd",
-                    "gl", "gn", "gu", "gv", "ha", "he", "hi", "ho", "hr", "ht", "hu", "hy", "hz", "ia", "id", "ie", "ig",
-                    "ii", "ik", "io", "is", "it", "iu", "ja", "jv", "ka", "kg", "ki", "kj", "kk", "kl", "km", "kn", "ko",
-                    "kr", "ks", "ku", "kv", "kw", "ky", "la", "lb", "lg", "li", "ln", "lo", "lt", "lu", "lv", "mg", "mh",
-                    "mi", "mk", "ml", "mn", "mr", "ms", "mt", "my", "na", "nb", "nd", "ne", "ng", "nl", "nn", "no", "nr",
-                    "nv", "ny", "oc", "oj", "om", "or", "os", "pa", "pi", "pl", "ps", "pt", "qu", "rm", "rn", "ro", "ru",
-                    "rw", "sa", "sc", "sd", "se", "sg", "si", "sk", "sl", "sm", "sn", "so", "sq", "sr", "ss", "st", "su",
-                    "sv", "sw", "ta", "te", "tg", "th", "ti", "tk", "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty", "ug",
-                    "uk", "ur", "uz", "ve", "vi", "vo", "wa", "wo", "xh", "yi", "yo", "za", "zh", "zu"
-                }
-                
                 detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-                
+
                 text = group['name']
                 result = detector.detect_language_of(text)
-                
+
                 if result is not None:
                     lang_code = result.iso_code_639_1.name.lower()  # например, 'RU' → 'ru'
                     if lang_code in ISO_639_1_CODES:
@@ -875,9 +859,6 @@ async def bg_actualize_db():
                         logger.warning(f"Язык {lang_code} не найден в списке ISO_639_1")
                 else:
                     logger.warning(f"Язык для группы {group['username']} не определён")
-                
-
-                
 
         # Чтение таблицы telegram_groups из базы данных
         groups_to_update = list(TelegramGroup.select().where(
