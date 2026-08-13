@@ -801,6 +801,11 @@ async def bg_actualize_db():
             logger.info(
                 f"{group['telegram_id']} | {group['group_hash']} | {group['name']} | {group['username']} | {group['description']} | {group['participants']} | {group['category']} | {group['group_type']} | {group['language']} | {group['link']} | {group['availability']} | {group['date_added']}"
             )
+            
+            """
+            Определение категории группы / канала
+            """
+            
             if group['category'] == '':  # Проверка наличия категории у группы (если пустая строка, то пропускаем).
                 logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")
 
@@ -826,7 +831,11 @@ async def bg_actualize_db():
                 # Пауза только для g4f (чтобы не блокировали)
                 if type(client).__name__ == 'Client':  # g4f клиент
                     await asyncio.sleep(0.5)
-
+            
+            """
+            Определение языка групп / каналов и запись в базу данных
+            """
+            
             if group['language'] == '':  # Проверка наличия языка в гуппах / каналах
                 logger.info(f"Найдена группа {group['username']} без языка, определяем язык")
 
@@ -867,7 +876,6 @@ async def bg_actualize_db():
                 else:
                     logger.warning(f"Язык для группы {group['username']} не определён")
                 
-                # await asyncio.sleep(300) # Засыпаем на время, что бы определить категорию
 
                 
 
