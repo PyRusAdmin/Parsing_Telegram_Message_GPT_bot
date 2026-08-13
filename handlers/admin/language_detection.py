@@ -1,6 +1,6 @@
-import asyncio
+# import asyncio
 import os
-from concurrent.futures import ThreadPoolExecutor
+# from concurrent.futures import ThreadPoolExecutor
 
 from aiogram import F, Router
 from asgiref.sync import sync_to_async
@@ -198,81 +198,80 @@ async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
 
     return await sync_to_async(_batch_update, thread_sensitive=True)()
 
-
-@router.message((F.text == t('assign_language_button', 'ru')) | (F.text == t('assign_language_button', 'en')))
-async def language_detection(message):
-    """Присвоение языка группам"""
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
-
-    # 1️⃣ Получаем группы для обработки
-    groups_to_process = await get_groups_without_language()
-    if not groups_to_process:
-        await message.answer(t("lang_detect_no_groups", lang=user_lang))
-        return
-
-    total = len(groups_to_process)
-    await message.answer(t("lang_detect_starting", lang=user_lang, total=total))
-
-    # 2️⃣ Определяем языки параллельно (ТОЛЬКО AI, БЕЗ БД)
-    loop = asyncio.get_event_loop()
-
-    try:
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                loop.run_in_executor(executor, ai_llama_fri, group_data, user_lang)
-                for group_data in groups_to_process
-            ]
-            results = await asyncio.gather(*futures, return_exceptions=True)
-
-    except Exception as e:
-        logger.error(f"❌ Критическая ошибка: {e}")
-        await message.answer(t("lang_detect_error", lang=user_lang, error=str(e)))
-        return
-
-    # 3️⃣ Собираем успешные результаты для обновления
-    successful_results = []
-    ai_failed = 0
-
-    logger.debug(f"📋 Всего результатов от AI: {len(results)}")
-
-    for result in results:
-        if isinstance(result, Exception):
-            logger.error(f"❌ Исключение: {result}")
-            ai_failed += 1
-            continue
-
-        if result.get("success") and result.get("language"):
-            successful_results.append({
-                "group_hash": result["group_hash"],
-                "name": result["name"],
-                "language": result["language"]
-            })
-        else:
-            logger.warning(
-                f"⚠️ Пропущен (success={result.get('success')}, language={result.get('language')}): {result.get('name')}")
-            ai_failed += 1
-
-    logger.info(f"📊 Для записи в БД: {len(successful_results)}, AI ошибок: {ai_failed}")
-
-    # 4️⃣ Обновляем БД одним батчем (в основном потоке)
-    if successful_results:
-        await message.answer(t("lang_detect_saving", lang=user_lang, count=len(successful_results)))
-        logger.info(f"💾 Запуск batch_update_languages для {len(successful_results)} групп")
-        updated, db_failed = await batch_update_languages(successful_results)
-        logger.info(f"💾 Результат записи: обновлено={updated}, ошибок={db_failed}")
-    else:
-        updated = 0
-        db_failed = 0
-
-    # 5️⃣ Итоговая статистика
-    await message.answer(
-        f"{t('lang_detect_complete', lang=user_lang)}\n\n"
-        f"📊 {t('lang_detect_stats_title', lang=user_lang)}:\n"
-        f"• {t('lang_detect_stats_total', lang=user_lang)}: {total}\n"
-        f"• {t('lang_detect_stats_ai_success', lang=user_lang)}: {len(successful_results)}\n"
-        f"• {t('lang_detect_stats_db_success', lang=user_lang)}: {updated}\n"
-        f"• {t('lang_detect_stats_ai_fail', lang=user_lang)}: {ai_failed}\n"
-        f"• {t('lang_detect_stats_db_fail', lang=user_lang)}: {db_failed}\n"
-        f"• {t('lang_detect_stats_total_fail', lang=user_lang)}: {ai_failed + db_failed}"
-    )
+# @router.message((F.text == t('assign_language_button', 'ru')) | (F.text == t('assign_language_button', 'en')))
+# async def language_detection(message):
+#     """Присвоение языка группам"""
+#     user = User.get(User.user_id == message.from_user.id)
+#     user_lang = user.language if user.language != "unset" else "ru"
+#
+#     # 1️⃣ Получаем группы для обработки
+#     groups_to_process = await get_groups_without_language()
+#     if not groups_to_process:
+#         await message.answer(t("lang_detect_no_groups", lang=user_lang))
+#         return
+#
+#     total = len(groups_to_process)
+#     await message.answer(t("lang_detect_starting", lang=user_lang, total=total))
+#
+#     # 2️⃣ Определяем языки параллельно (ТОЛЬКО AI, БЕЗ БД)
+#     loop = asyncio.get_event_loop()
+#
+#     try:
+#         with ThreadPoolExecutor(max_workers=10) as executor:
+#             futures = [
+#                 loop.run_in_executor(executor, ai_llama_fri, group_data, user_lang)
+#                 for group_data in groups_to_process
+#             ]
+#             results = await asyncio.gather(*futures, return_exceptions=True)
+#
+#     except Exception as e:
+#         logger.error(f"❌ Критическая ошибка: {e}")
+#         await message.answer(t("lang_detect_error", lang=user_lang, error=str(e)))
+#         return
+#
+#     # 3️⃣ Собираем успешные результаты для обновления
+#     successful_results = []
+#     ai_failed = 0
+#
+#     logger.debug(f"📋 Всего результатов от AI: {len(results)}")
+#
+#     for result in results:
+#         if isinstance(result, Exception):
+#             logger.error(f"❌ Исключение: {result}")
+#             ai_failed += 1
+#             continue
+#
+#         if result.get("success") and result.get("language"):
+#             successful_results.append({
+#                 "group_hash": result["group_hash"],
+#                 "name": result["name"],
+#                 "language": result["language"]
+#             })
+#         else:
+#             logger.warning(
+#                 f"⚠️ Пропущен (success={result.get('success')}, language={result.get('language')}): {result.get('name')}")
+#             ai_failed += 1
+#
+#     logger.info(f"📊 Для записи в БД: {len(successful_results)}, AI ошибок: {ai_failed}")
+#
+#     # 4️⃣ Обновляем БД одним батчем (в основном потоке)
+#     if successful_results:
+#         await message.answer(t("lang_detect_saving", lang=user_lang, count=len(successful_results)))
+#         logger.info(f"💾 Запуск batch_update_languages для {len(successful_results)} групп")
+#         updated, db_failed = await batch_update_languages(successful_results)
+#         logger.info(f"💾 Результат записи: обновлено={updated}, ошибок={db_failed}")
+#     else:
+#         updated = 0
+#         db_failed = 0
+#
+#     # 5️⃣ Итоговая статистика
+#     await message.answer(
+#         f"{t('lang_detect_complete', lang=user_lang)}\n\n"
+#         f"📊 {t('lang_detect_stats_title', lang=user_lang)}:\n"
+#         f"• {t('lang_detect_stats_total', lang=user_lang)}: {total}\n"
+#         f"• {t('lang_detect_stats_ai_success', lang=user_lang)}: {len(successful_results)}\n"
+#         f"• {t('lang_detect_stats_db_success', lang=user_lang)}: {updated}\n"
+#         f"• {t('lang_detect_stats_ai_fail', lang=user_lang)}: {ai_failed}\n"
+#         f"• {t('lang_detect_stats_db_fail', lang=user_lang)}: {db_failed}\n"
+#         f"• {t('lang_detect_stats_total_fail', lang=user_lang)}: {ai_failed + db_failed}"
+#     )

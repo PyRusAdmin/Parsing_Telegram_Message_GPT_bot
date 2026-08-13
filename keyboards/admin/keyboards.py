@@ -89,7 +89,7 @@ def admin_keyboard(lang: str = 'ru'):
                 KeyboardButton(text=t("check_accounts_button", lang=lang), style='success')
             ],
             [
-                KeyboardButton(text=t("assign_language_button", lang=lang), style='primary'),
+                # KeyboardButton(text=t("assign_language_button", lang=lang), style='primary'),
                 KeyboardButton(text=t("connect_account_button", lang=lang), style='primary')
             ],
             [

@@ -941,13 +941,6 @@ async def bg_actualize_db():
 
                 await asyncio.sleep(1.5)
 
-                # if processed >= total:
-                #     admin_task_status["status"] = "completed"
-                #     admin_task_status["message"] = f"Database actualization finished! Processed {processed}/{total} groups."
-                # else:
-                #     admin_task_status["status"] = "completed"
-                #     admin_task_status[
-                #         "message"] = f"Актуализация базы данных завершена. Обработано {processed}/{total} группы. Были использованы все доступные аккаунты."
     except Exception as e:
         logger.exception(f"Error in bg_actualize_db: {e}")
         admin_task_status["status"] = "error"
