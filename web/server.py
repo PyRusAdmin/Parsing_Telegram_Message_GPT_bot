@@ -591,51 +591,51 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
 
 
 # Конечная точка поиска групп ИИ
-@app.post("/api/search/ai")
-async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    user_lang = user.language if user.language != "unset" else "ru"
+# @app.post("/api/search/ai")
+# async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+#     user_id = user_data["id"]
+#     user = User.get_or_none(User.user_id == user_id)
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     user_lang = user.language if user.language != "unset" else "ru"
 
-    # Попробуйте генерировать имена
-    try:
-        answer = await get_groq_response(query, message)
+#     # Попробуйте генерировать имена
+#     try:
+#         answer = await get_groq_response(query, message)
 
-        group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
-        group_names = [name for name in group_names if len(name) > 2]
+#         group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
+#         group_names = [name for name in group_names if len(name) > 2]
 
-        if not group_names:
-            return {"status": "no_names_generated", "groups": []}
+#         if not group_names:
+#             return {"status": "no_names_generated", "groups": []}
 
-        mock_msg = MockMessage(user_id=user_id, username=user.username)
-        checker = CheckingAccountsValidity(message=mock_msg)
-        client = await checker.start_random_client()
+#         mock_msg = MockMessage(user_id=user_id, username=user.username)
+#         checker = CheckingAccountsValidity(message=mock_msg)
+#         client = await checker.start_random_client()
 
-        if not client:
-            raise HTTPException(status_code=400, detail="No active Telegram accounts available for search")
+#         if not client:
+#             raise HTTPException(status_code=400, detail="No active Telegram accounts available for search")
 
-        saved_groups = []
-        for name in group_names:
-            results = await search_groups_in_telegram(client=client, group_names=[name])
-            for group_data in results:
-                saved = save_group_to_db(group_data)
-                if saved:
-                    saved_groups.append({
-                        "name": saved.name,
-                        "username": saved.username,
-                        "participants": saved.participants,
-                        "group_type": saved.group_type,
-                        "availability": saved.availability,
-                        "link": saved.link
-                    })
+#         saved_groups = []
+#         for name in group_names:
+#             results = await search_groups_in_telegram(client=client, group_names=[name])
+#             for group_data in results:
+#                 saved = save_group_to_db(group_data)
+#                 if saved:
+#                     saved_groups.append({
+#                         "name": saved.name,
+#                         "username": saved.username,
+#                         "participants": saved.participants,
+#                         "group_type": saved.group_type,
+#                         "availability": saved.availability,
+#                         "link": saved.link
+#                     })
 
-        await client.disconnect()
-        return {"status": "ok", "groups": saved_groups}
-    except Exception as e:
-        logger.exception(f"AI search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+#         await client.disconnect()
+#         return {"status": "ok", "groups": saved_groups}
+#     except Exception as e:
+#         logger.exception(f"AI search failed: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 # Получить базу данных / Экспортировать XLSX Endpoint
@@ -786,7 +786,6 @@ async def bg_actualize_db():
     Актуализирует базу с группами и каналами
     :return:
     """
-    # global admin_task_status
     admin_task_status["action"] = "actualize"
     admin_task_status["status"] = "running"
     admin_task_status["progress"] = 0
@@ -804,10 +803,7 @@ async def bg_actualize_db():
             )
             if group['category'] == '':  # Проверка наличия категории у группы (если пустая строка, то пропускаем).
                 logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")
-                # await asyncio.sleep(20) # Засыпаем на время, что бы определить категорию
 
-                # client = Client()                
-                # model = await get_best_g4f_model(client)
                 client = AsyncGroq(api_key=GROQ_API_KEY)
                 model = "llama-3.1-8b-instant"
 
@@ -856,14 +852,22 @@ async def bg_actualize_db():
                 if result is not None:
                     lang_code = result.iso_code_639_1.name.lower()  # например, 'RU' → 'ru'
                     if lang_code in ISO_639_1_CODES:
-                        logger.info(f"Определён язык группы {group['username']}: {lang_code}")
-                        # group['language'] = lang_code
+                        logger.info(f"Определён язык для группы {group['username']}: {lang_code}")
+                        # ✅ Сразу пишем в БД (в нижнем регистре)
+                        # lang_code уже строка, например 'ru' — её и сохраняем в поле language
+                        await sync_to_async(
+                            lambda: TelegramGroup.update(language=lang_code)
+                            .where(TelegramGroup.telegram_id == group['telegram_id'])
+                            .execute(),
+                            thread_sensitive=True
+                        )()
+                        logger.info(f"✅ {group['name']} → {lang_code}")
                     else:
                         logger.warning(f"Язык {lang_code} не найден в списке ISO_639_1")
                 else:
                     logger.warning(f"Язык для группы {group['username']} не определён")
                 
-                await asyncio.sleep(300) # Засыпаем на время, что бы определить категорию
+                # await asyncio.sleep(300) # Засыпаем на время, что бы определить категорию
 
                 
 
