@@ -133,7 +133,8 @@ async def category_assignment(group_data: dict, client, model) -> dict:
             "category": category,
             "success": True
         }
-
+    except groq.RateLimitError as e:
+        logger.error(f"Ошибка: {e}")
     except Exception as e:
         logger.exception(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
         return {
