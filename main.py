@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 import subprocess
@@ -49,4 +48,3 @@ except KeyboardInterrupt:
     logger.info("Interrupt received, terminating subprocesses...")
     for p in processes:
         p.terminate()
-

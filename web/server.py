@@ -9,7 +9,7 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from aiogram.types import Message, FSInputFile
+
 from aiogram.client import bot
 from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
