@@ -9,7 +9,7 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
+import random
 from aiogram.client import bot
 from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
@@ -843,7 +843,10 @@ async def bg_actualize_db():
                 logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")
 
                 client = AsyncGroq(api_key=GROQ_API_KEY)
-                model = "llama-3.1-8b-instant"
+
+                # Рандомно выбираем модель для определения категории
+                models = ["llama-3.1-8b-instant", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]
+                model = random.choice(models)
 
                 result = await category_assignment(
                     group_data=group,
