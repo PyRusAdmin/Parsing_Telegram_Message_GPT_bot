@@ -33,7 +33,7 @@ from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import (
     active_clients, filter_messages, get_full_info_group, stop_flags, stop_tracking, update_group_channels_data_base
 )
-from ai.ai import category_assignment
+from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
 from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 )
@@ -46,7 +46,7 @@ from database.database import (
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import can_user_download_free, create_excel_file
+from handlers.user.pars_ai import can_user_download_free, create_excel_file, clean_group_name, save_group_to_db
 from locales.locales import t
 
 # Инициализировать FastAPI
@@ -612,51 +612,54 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
 
 
 # Конечная точка поиска групп ИИ
-# @app.post("/api/search/ai")
-# async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-#     user_id = user_data["id"]
-#     user = User.get_or_none(User.user_id == user_id)
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     user_lang = user.language if user.language != "unset" else "ru"
+@app.post("/api/search/ai")
+async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_lang = user.language if user.language != "unset" else "ru"
 
-#     # Попробуйте генерировать имена
-#     try:
-#         answer = await get_groq_response(query, message)
+    try:
+        mock_msg = MockMessage(user_id=user_id, username=user.username)
+        answer = await get_groq_response(query)
 
-#         group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
-#         group_names = [name for name in group_names if len(name) > 2]
+        group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
+        group_names = [name for name in group_names if len(name) > 2]
 
-#         if not group_names:
-#             return {"status": "no_names_generated", "groups": []}
+        if not group_names:
+            return {"status": "no_names_generated", "groups": []}
 
-#         mock_msg = MockMessage(user_id=user_id, username=user.username)
-#         checker = CheckingAccountsValidity(message=mock_msg)
-#         client = await checker.start_random_client()
+        checker = CheckingAccountsValidity(message=mock_msg)
+        client = await checker.start_random_client()
 
-#         if not client:
-#             raise HTTPException(status_code=400, detail="No active Telegram accounts available for search")
+        if not client:
+            raise HTTPException(status_code=400, detail="No active Telegram accounts available for search")
 
-#         saved_groups = []
-#         for name in group_names:
-#             results = await search_groups_in_telegram(client=client, group_names=[name])
-#             for group_data in results:
-#                 saved = save_group_to_db(group_data)
-#                 if saved:
-#                     saved_groups.append({
-#                         "name": saved.name,
-#                         "username": saved.username,
-#                         "participants": saved.participants,
-#                         "group_type": saved.group_type,
-#                         "availability": saved.availability,
-#                         "link": saved.link
-#                     })
+        saved_groups = []
+        try:
+            for name in group_names:
+                results = await search_groups_in_telegram(client=client, group_names=[name])
+                for group_data in results:
+                    saved = save_group_to_db(group_data)
+                    if saved:
+                        saved_groups.append({
+                            "name": saved.name,
+                            "username": saved.username,
+                            "participants": saved.participants,
+                            "group_type": saved.group_type,
+                            "availability": saved.availability,
+                            "link": saved.link
+                        })
+        finally:
+            await client.disconnect()
 
-#         await client.disconnect()
-#         return {"status": "ok", "groups": saved_groups}
-#     except Exception as e:
-#         logger.exception(f"AI search failed: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "ok", "groups": saved_groups}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"AI search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Получить базу данных / Экспортировать XLSX Endpoint

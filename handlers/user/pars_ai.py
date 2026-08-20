@@ -734,7 +734,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
     client = None
     try:
-        answer = await get_groq_response(user_input, message)  # Получаем ответ от AI
+        answer = await get_groq_response(user_input)  # Получаем ответ от AI
         logger.info(f"Ответ от Groq: {answer}")
 
         # Разбиваем ответ на строки и очищаем
@@ -891,7 +891,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             try:
                 # Получаем варианты названий от AI
-                answer = await get_groq_response(term, message)
+                answer = await get_groq_response(term)
                 logger.info(f"Ответ от Groq для '{term}': {answer}")
 
                 # Чистим и фильтруем названия

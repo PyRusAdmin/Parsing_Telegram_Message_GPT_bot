@@ -145,7 +145,7 @@ async def category_assignment(group_data: dict, client, model) -> dict:
         }
 
 
-async def get_groq_response(user_input, message):
+async def get_groq_response(user_input):
     """
     Асинхронно отправляет запрос к модели Llama 4 Scout через Groq API для генерации вариантов названий групп.
 
@@ -153,7 +153,6 @@ async def get_groq_response(user_input, message):
     - Ответ должен содержать только названия, без нумерации и пояснений.
     - Перед выполнением устанавливается прокси с помощью `setup_proxy()`.
 
-    :param message: (str) Сообщение пользователя
     :param user_input: (str) Тема или ключевое слово, на основе которого нужно придумать названия групп.
     :return: str: Строка с 10 вариациями названий групп, разделёнными переносами строк. Возвращает пустую строку при
                   ошибке аутентификации или других исключениях.
