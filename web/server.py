@@ -848,7 +848,7 @@ async def bg_actualize_db():
                 client = AsyncGroq(api_key=GROQ_API_KEY)
 
                 # Рандомно выбираем модель для определения категории
-                models = ["llama-3.1-8b-instant", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]
+                models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
                 model = random.choice(models)
 
                 result = await category_assignment(

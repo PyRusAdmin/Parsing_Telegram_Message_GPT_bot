@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-
+import json
 import groq
 from groq import AsyncGroq
 from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
@@ -145,6 +145,15 @@ async def category_assignment(group_data: dict, client, model) -> dict:
         }
 
 
+import random
+
+
+def read_json(file_name):
+    """Читаем json файл"""
+    with open(file_name, "r") as f:
+        return json.load(f)
+
+
 async def get_groq_response(user_input):
     """
     Асинхронно отправляет запрос к модели Llama 4 Scout через Groq API для генерации вариантов названий групп.
@@ -162,8 +171,13 @@ async def get_groq_response(user_input):
     setup_proxy()  # Установка прокси
     client_groq = AsyncGroq(api_key=GROQ_API_KEY)
     try:
+        data = read_json(file_name="data/model.json")
+        models = data["model"]
+        model = random.choice(models)
+        logger.debug(f"Выбранная модель: {model}")
+
         chat_completion = await client_groq.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=model,
             messages=[
                 {
                     "role": "user",
