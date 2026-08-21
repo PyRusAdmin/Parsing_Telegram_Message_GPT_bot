@@ -685,12 +685,12 @@ async def ai_search(message: Message, state: FSMContext):
     """
     await state.clear()  # Сбрасывает состояние
 
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
+    # telegram_user = message.from_user
+    user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(
-        f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню поиска групп")
+        f"Пользователь {message.from_user.id} {message.from_user.username} перешел в меню поиска групп")
 
     await message.answer(
         t("enter_keyword", lang=user_lang),
@@ -786,12 +786,18 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
 
             # Создаём Excel-файл
             excel_bytes = create_excel_file(saved_groups, lang=user_lang)
-            filename = t('excel_filename_telegram_groups', lang=user_lang,
-                         timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
-            excel_file = BufferedInputFile(excel_bytes, filename=filename)
+            # filename = t('excel_filename_telegram_groups', lang=user_lang, timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
+            excel_file = BufferedInputFile(
+                excel_bytes,
+                filename=t('excel_filename_telegram_groups', lang=user_lang,
+                           timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
+            )
 
-            summary = format_summary_message(len(saved_groups), lang=user_lang)
-            await message.answer(summary, parse_mode="HTML")
+            # summary = format_summary_message(len(saved_groups), lang=user_lang)
+            await message.answer(
+                format_summary_message(len(saved_groups), lang=user_lang),
+                parse_mode="HTML"
+            )
             # Отправляем CSV файл
             await message.answer_document(
                 document=excel_file,
@@ -828,12 +834,12 @@ async def ai_search_global(message: Message, state: FSMContext):
     """
     await state.clear()
 
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
+    # telegram_user = message.from_user
+    user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 
     logger.info(
-        f"Пользователь {telegram_user.id} {telegram_user.username} перешел в меню глобального поиска групп"
+        f"Пользователь {message.from_user.id} {message.from_user.username} перешел в меню глобального поиска групп"
     )
 
     await message.answer(
@@ -849,8 +855,8 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
     Обработчик ввода ключевого слова (или списка) для AI-поиска.
     Каждый запрос обрабатывается через ОТДЕЛЬНЫЙ случайный аккаунт.
     """
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
+    # telegram_user = message.from_user
+    user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
     user_input = message.text.strip()
 
@@ -961,7 +967,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                           successful=successful_queries, total_queries=len(search_terms)),
                 parse_mode="HTML"
             )
-            logger.info(f"✅ Отправлено {len(all_saved_groups)} групп пользователю {telegram_user.id}")
+            logger.info(f"✅ Отправлено {len(all_saved_groups)} групп пользователю {message.from_user.id}")
         else:
             await message.answer(
                 t("global_search_no_results", lang=user_lang),
