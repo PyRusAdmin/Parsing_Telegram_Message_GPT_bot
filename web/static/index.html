@@ -287,8 +287,13 @@
             <!-- Результаты поиска ИИ -->
             <div class="card glass-panel hidden" id="search-results-card">
                 <div class="card-header">
-                    <h3>Результаты поиска</h3>
-                    <span id="results-count" class="badge">0</span>
+                    <div>
+                        <h3>Результаты поиска</h3>
+                        <span id="results-count" class="badge">0</span>
+                    </div>
+                    <button id="btn-export-search-results" class="btn-success" style="padding: 8px 16px; font-size: 0.9rem; cursor: pointer;">
+                        <i class="fa-solid fa-file-excel"></i> Скачать результаты в Excel
+                    </button>
                 </div>
                 <div class="table-container scrollable">
                     <table class="glass-table">
@@ -476,6 +481,6 @@
 </div>
 
 <!-- Логика JavaScript приложения -->
-<script src="js/app.js"></script>
+<script src="js/app.js?v=2"></script>
 </body>
 </html>

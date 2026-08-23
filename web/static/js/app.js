@@ -4,6 +4,7 @@ let authToken = "";
 let userLanguage = "ru"; // резерв по умолчанию
 let isAdmin = false;
 let statusInterval = null;
+let currentSearchResults = [];
 
 if (tg && tg.initData) {
     authToken = tg.initData;
@@ -658,6 +659,7 @@ function setupEventListeners() {
 
                 if (res.ok) {
                     const data = await res.json();
+                    currentSearchResults = data.groups || [];
 
                     // Отобразить таблицу результатов
                     const resultsCard = document.getElementById(
@@ -689,6 +691,11 @@ function setupEventListeners() {
                         `;
                             list.appendChild(tr);
                         });
+                        resultsCard.scrollIntoView({ behavior: "smooth" });
+                        setTimeout(() => {
+                            const btnExp = document.getElementById("btn-export-search-results");
+                            if (btnExp) btnExp.click();
+                        }, 500);
                     } else {
                         resultsCard.classList.add("hidden");
                         showNotification(
@@ -707,6 +714,59 @@ function setupEventListeners() {
                 spinner.classList.add("hidden");
             }
         });
+
+    const btnExportSearch = document.getElementById("btn-export-search-results");
+    if (btnExportSearch) {
+        btnExportSearch.addEventListener("click", async () => {
+            if (!currentSearchResults || currentSearchResults.length === 0) {
+                showNotification("Нет результатов поиска для экспорта", "warning");
+                return;
+            }
+            const ids = currentSearchResults.map(g => g.telegram_id).filter(Boolean);
+            if (ids.length === 0) {
+                showNotification("Не найдено ID результатов для экспорта", "warning");
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append("telegram_ids", ids.join(","));
+
+            showNotification("Формирование Excel файла...", "success");
+
+            try {
+                const res = await apiRequest("/api/search/export_excel", {
+                    method: "POST",
+                    body: fd,
+                });
+
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+
+                    const disposition = res.headers.get("content-disposition");
+                    let filename = "search_results.xlsx";
+                    if (disposition && disposition.indexOf("filename=") !== -1) {
+                        filename = disposition.split("filename=")[1].replace(/"/g, "");
+                    }
+
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    showNotification("Скачивание началось!", "success");
+                } else {
+                    const err = await res.json();
+                    showNotification(err.detail || "Не удалось скачать Excel", "danger");
+                }
+            } catch (e) {
+                showNotification("Ошибка при скачивании файла", "danger");
+            }
+        });
+    }
 }
 
 // Перетащите вспомогательные привязки

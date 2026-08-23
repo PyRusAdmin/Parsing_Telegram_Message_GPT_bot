@@ -43,6 +43,33 @@ def clean_group_name(name):
     return cleaned
 
 
+def parse_ai_group_names(answer: str) -> list[str]:
+    """
+    Извлекает список очищенных названий/ключевых слов из ответа ИИ.
+    Корректно обрабатывает разделение как переносом строки (\n), так и запятыми (,).
+    """
+    if not answer:
+        return []
+
+    lines = [line.strip() for line in answer.splitlines() if line.strip()]
+    if len(lines) <= 1 and answer.count(',') > 1:
+        raw_items = [item.strip() for item in answer.split(',') if item.strip()]
+    else:
+        raw_items = lines
+
+    cleaned_names = []
+    for item in raw_items:
+        name = clean_group_name(item)
+        if ':' in name and not name.startswith('http'):
+            name = name.split(':', 1)[1].strip()
+        name = re.sub(r'\[.*?\]', '', name).strip()
+        if 2 < len(name) <= 60:
+            if name not in cleaned_names:
+                cleaned_names.append(name)
+
+    return cleaned_names
+
+
 def save_group_to_db(group_data: dict):
     """
     Сохраняет или обновляет информацию о группе в централизованной базе данных.
@@ -738,8 +765,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
         logger.info(f"Ответ от Groq: {answer}")
 
         # Разбиваем ответ на строки и очищаем
-        group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
-        group_names = [name for name in group_names if len(name) > 2]
+        group_names = parse_ai_group_names(answer)
         logger.info(f"Получено {len(group_names)} названий: {group_names}")
 
         saved_groups = []
@@ -901,11 +927,7 @@ async def handle_enter_keyword(message: Message, state: FSMContext):
                 logger.info(f"Ответ от Groq для '{term}': {answer}")
 
                 # Чистим и фильтруем названия
-                group_names = [
-                    clean_group_name(line)
-                    for line in answer.splitlines()
-                    if line.strip() and len(clean_group_name(line)) > 2
-                ]
+                group_names = parse_ai_group_names(answer)
 
                 if not group_names:
                     logger.info(f"⚪ Нет названий для '{term}' после очистки")

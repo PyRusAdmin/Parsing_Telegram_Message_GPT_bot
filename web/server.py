@@ -46,7 +46,7 @@ from database.database import (
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import can_user_download_free, create_excel_file, clean_group_name, save_group_to_db
+from handlers.user.pars_ai import can_user_download_free, create_excel_file, clean_group_name, parse_ai_group_names, save_group_to_db
 from locales.locales import t
 
 # Инициализировать FastAPI
@@ -624,8 +624,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
         mock_msg = MockMessage(user_id=user_id, username=user.username)
         answer = await get_groq_response(query)
 
-        group_names = [clean_group_name(line) for line in answer.splitlines() if line.strip()]
-        group_names = [name for name in group_names if len(name) > 2]
+        group_names = parse_ai_group_names(answer)
 
         if not group_names:
             return {"status": "no_names_generated", "groups": []}
@@ -644,6 +643,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
                     saved = save_group_to_db(group_data)
                     if saved:
                         saved_groups.append({
+                            "telegram_id": saved.telegram_id,
                             "name": saved.name,
                             "username": saved.username,
                             "participants": saved.participants,
@@ -660,6 +660,39 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     except Exception as e:
         logger.exception(f"AI search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/search/export_excel")
+async def export_search_results_excel(
+        telegram_ids: str = Form(...),
+        user_data: dict = Depends(get_current_tg_user)
+):
+    user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    raw_ids = [i.strip() for i in telegram_ids.split(",") if i.strip()]
+    ids = []
+    for item in raw_ids:
+        try:
+            ids.append(int(item))
+        except ValueError:
+            pass
+
+    if not ids:
+        raise HTTPException(status_code=400, detail="No valid group IDs provided")
+
+    groups = list(TelegramGroup.select().where(TelegramGroup.telegram_id.in_(ids)))
+    user_lang = user.language if user.language != "unset" else "ru"
+    excel_bytes = create_excel_file(groups, lang=user_lang)
+
+    filename = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return StreamingResponse(
+        io_bytes_stream(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 # Получить базу данных / Экспортировать XLSX Endpoint
