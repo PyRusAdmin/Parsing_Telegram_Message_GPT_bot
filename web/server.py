@@ -5,11 +5,12 @@ import hmac
 import io
 import json
 import os
+import random
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import random
+
 from aiogram.client import bot
 from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
@@ -46,7 +47,9 @@ from database.database import (
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import can_user_download_free, create_excel_file, clean_group_name, parse_ai_group_names, save_group_to_db
+from handlers.user.pars_ai import (
+    can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db
+)
 from locales.locales import t
 
 # Инициализировать FastAPI

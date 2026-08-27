@@ -1,15 +1,13 @@
-# import asyncio
 import os
-# from concurrent.futures import ThreadPoolExecutor
 
-from aiogram import F, Router
+from aiogram import Router
 from asgiref.sync import sync_to_async
 from loguru import logger
 from openai import OpenAI
 
 from core.config import OPENROUTER_API_KEY
 from core.constants import ISO_639_1_CODES
-from database.database import TelegramGroup, db, User
+from database.database import TelegramGroup, db
 from locales.locales import t
 
 router = Router(name=__name__)
