@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from aiogram.client import bot
+from aiogram.types import BufferedInputFile
 from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
 from fastapi import (
@@ -51,6 +52,7 @@ from handlers.user.pars_ai import (
     can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db
 )
 from locales.locales import t
+from system.dispatcher import bot
 
 # Инициализировать FastAPI
 app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
@@ -177,7 +179,7 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
         sorted_params = sorted(params.items())
         data_check_string = "\n".join(f"{k}={v}" for k, v in sorted_params)
 
-        # Verify hash
+        # Проверить хеш
         secret_key = hmac.new("WebAppData".encode(), BOT_TOKEN.encode(), hashlib.sha256).digest()
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
@@ -201,7 +203,7 @@ admin_task_status = {
 }
 
 
-# Ensure directories exist
+# Убедитесь, что каталоги существуют
 def init_web_directories():
     os.makedirs("web/static", exist_ok=True)
     os.makedirs("web/static/css", exist_ok=True)
@@ -442,7 +444,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
     }
 
 
-# Target Group Configuration
+# Конфигурация целевой группы
 @app.get("/api/target-group")
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
@@ -667,10 +669,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
 
 
 @app.post("/api/search/export_excel")
-async def export_search_results_excel(
-        telegram_ids: str = Form(...),
-        user_data: dict = Depends(get_current_tg_user)
-):
+async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_id)
     if not user:
@@ -697,8 +696,7 @@ async def export_search_results_excel(
 
     # Отправляем документ также напрямую в чат Telegram пользователю
     try:
-        from aiogram.types import BufferedInputFile
-        from system.dispatcher import bot
+
         doc = BufferedInputFile(excel_bytes, filename=filename)
         caption_text = "📊 Результаты поиска групп в Excel" if user_lang == "ru" else "📊 Group search results in Excel"
         await bot.send_document(chat_id=user_id, document=doc, caption=caption_text)
@@ -779,8 +777,7 @@ async def download_database(
 
     # Отправляем документ также напрямую в чат Telegram пользователю
     try:
-        from aiogram.types import BufferedInputFile
-        from system.dispatcher import bot
+
         doc = BufferedInputFile(excel_bytes, filename=filename)
         caption_text = "📊 Экспорт базы данных в Excel" if user_lang == "ru" else "📊 Database export in Excel"
         await bot.send_document(chat_id=user_id, document=doc, caption=caption_text)
