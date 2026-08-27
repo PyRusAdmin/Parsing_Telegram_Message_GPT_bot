@@ -118,6 +118,28 @@ async function apiRequest(endpoint, options = {}) {
     }
 }
 
+// Вспомогательная функция для скачивания Blob (Excel файлов)
+function downloadBlob(blob, response, fallbackFilename = "export.xlsx") {
+    const disposition = response && response.headers ? response.headers.get("content-disposition") : null;
+    let filename = fallbackFilename;
+    if (disposition && disposition.indexOf("filename=") !== -1) {
+        filename = disposition.split("filename=")[1].replace(/"/g, "");
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(() => {
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    }, 2000);
+}
+
 // Инициализация приложения
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -563,7 +585,7 @@ function setupEventListeners() {
             fd.append("export_type", expType);
             fd.append("category", category);
 
-            showNotification("Generating database export...", "success");
+            showNotification("Формирование экспорта базы данных...", "success");
 
             try {
                 const res = await apiRequest("/api/export/download", {
@@ -573,39 +595,24 @@ function setupEventListeners() {
 
                 if (res.ok) {
                     const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
+                    downloadBlob(blob, res, "db_export.xlsx");
 
-                    // Получить имя файла из заголовка
-                    const disposition = res.headers.get("content-disposition");
-                    let filename = "db_export.xlsx";
-                    if (
-                        disposition &&
-                        disposition.indexOf("filename=") !== -1
-                    ) {
-                        filename = disposition
-                            .split("filename=")[1]
-                            .replace(/"/g, "");
+                    if (window.Telegram?.WebApp) {
+                        showNotification("Файл отправлен в ваш чат с ботом и скачивается!", "success");
+                    } else {
+                        showNotification("Скачивание началось!", "success");
                     }
-
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
-
-                    showNotification("Download started!", "success");
                     loadDashboardData(); // Перезагрузите обновление звезд, если они были вычтены.
                 } else {
                     const err = await res.json();
                     showNotification(
-                        err.detail || "Failed to download export",
+                        err.detail || "Не удалось скачать экспорт",
                         "danger",
                     );
                 }
             } catch (e) {
-                showNotification("Download failed", "danger");
+                console.error("Export DB error:", e);
+                showNotification("Ошибка скачивания", "danger");
             }
         });
 
@@ -692,10 +699,6 @@ function setupEventListeners() {
                             list.appendChild(tr);
                         });
                         resultsCard.scrollIntoView({ behavior: "smooth" });
-                        setTimeout(() => {
-                            const btnExp = document.getElementById("btn-export-search-results");
-                            if (btnExp) btnExp.click();
-                        }, 500);
                     } else {
                         resultsCard.classList.add("hidden");
                         showNotification(
@@ -722,7 +725,7 @@ function setupEventListeners() {
                 showNotification("Нет результатов поиска для экспорта", "warning");
                 return;
             }
-            const ids = currentSearchResults.map(g => g.telegram_id).filter(Boolean);
+            const ids = currentSearchResults.map(g => g.telegram_id || g.id).filter(Boolean);
             if (ids.length === 0) {
                 showNotification("Не найдено ID результатов для экспорта", "warning");
                 return;
@@ -741,28 +744,19 @@ function setupEventListeners() {
 
                 if (res.ok) {
                     const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
+                    downloadBlob(blob, res, "search_results.xlsx");
 
-                    const disposition = res.headers.get("content-disposition");
-                    let filename = "search_results.xlsx";
-                    if (disposition && disposition.indexOf("filename=") !== -1) {
-                        filename = disposition.split("filename=")[1].replace(/"/g, "");
+                    if (window.Telegram?.WebApp) {
+                        showNotification("Файл отправлен в ваш чат с ботом и скачивается!", "success");
+                    } else {
+                        showNotification("Скачивание началось!", "success");
                     }
-
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
-
-                    showNotification("Скачивание началось!", "success");
                 } else {
                     const err = await res.json();
                     showNotification(err.detail || "Не удалось скачать Excel", "danger");
                 }
             } catch (e) {
+                console.error("Export search excel error:", e);
                 showNotification("Ошибка при скачивании файла", "danger");
             }
         });

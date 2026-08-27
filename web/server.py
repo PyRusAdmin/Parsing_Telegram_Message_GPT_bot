@@ -17,7 +17,7 @@ from fastapi import (
     BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from g4f.client import Client
 from groq import AsyncGroq
@@ -643,7 +643,8 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
                     saved = save_group_to_db(group_data)
                     if saved:
                         saved_groups.append({
-                            "telegram_id": saved.telegram_id,
+                            "id": saved.id,
+                            "telegram_id": saved.telegram_id or saved.id,
                             "name": saved.name,
                             "username": saved.username,
                             "participants": saved.participants,
@@ -683,13 +684,27 @@ async def export_search_results_excel(
     if not ids:
         raise HTTPException(status_code=400, detail="No valid group IDs provided")
 
-    groups = list(TelegramGroup.select().where(TelegramGroup.telegram_id.in_(ids)))
+    groups = list(TelegramGroup.select().where(
+        (TelegramGroup.id.in_(ids)) | (TelegramGroup.telegram_id.in_(ids))
+    ))
     user_lang = user.language if user.language != "unset" else "ru"
     excel_bytes = create_excel_file(groups, lang=user_lang)
 
     filename = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    return StreamingResponse(
-        io_bytes_stream(excel_bytes),
+
+    # Отправляем документ также напрямую в чат Telegram пользователю
+    try:
+        from aiogram.types import BufferedInputFile
+        from system.dispatcher import bot
+        doc = BufferedInputFile(excel_bytes, filename=filename)
+        caption_text = "📊 Результаты поиска групп в Excel" if user_lang == "ru" else "📊 Group search results in Excel"
+        await bot.send_document(chat_id=user_id, document=doc, caption=caption_text)
+        logger.info(f"Excel-файл с результатами поиска отправлен в чат Telegram {user_id}")
+    except Exception as e:
+        logger.warning(f"Не удалось отправить Excel-файл с результатами поиска в чат {user_id}: {e}")
+
+    return Response(
+        content=excel_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
@@ -723,7 +738,6 @@ async def download_database(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Проверьте, бесплатная ли загрузка или требуется ли звёздочки.
-
     is_free, remaining = can_user_download_free(user)
 
     if not is_free:
@@ -755,15 +769,24 @@ async def download_database(
     groups = list(query)
 
     # Создать Excel в памяти
-
     user_lang = user.language if user.language != "unset" else "ru"
     excel_bytes = create_excel_file(groups, lang=user_lang)
 
     filename = f"db_export_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
 
-    # Вернуться в виде потокового ответа
-    return StreamingResponse(
-        io_bytes_stream(excel_bytes),
+    # Отправляем документ также напрямую в чат Telegram пользователю
+    try:
+        from aiogram.types import BufferedInputFile
+        from system.dispatcher import bot
+        doc = BufferedInputFile(excel_bytes, filename=filename)
+        caption_text = "📊 Экспорт базы данных в Excel" if user_lang == "ru" else "📊 Database export in Excel"
+        await bot.send_document(chat_id=user_id, document=doc, caption=caption_text)
+        logger.info(f"Excel-файл базы данных отправлен в чат Telegram {user_id}")
+    except Exception as e:
+        logger.warning(f"Не удалось отправить Excel-файл базы данных в чат {user_id}: {e}")
+
+    return Response(
+        content=excel_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
