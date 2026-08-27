@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -696,157 +695,154 @@ async def ai_search_menu(message: Message, state: FSMContext):
 
 """Одиночный AI поиск"""
 
-
-@router.message((F.text == t('ai_search_button_user', 'ru')) | (F.text == t('ai_search_button_user', 'en')))
-async def ai_search(message: Message, state: FSMContext):
-    """
-    Обработчик команды "Получить базу".
-
-    Очищает состояние FSM, получает данные пользователя, логирует действие
-    и запрашивает у пользователя ключевое слово для поиска групп через AI.
-    Переводит пользователя в состояние ожидания ввода (MyStates.entering_keyword_ai_search).
-
-    :param message: (Message) Входящее сообщение от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, сбрасывается при входе.
-    :return: None
-    """
-    await state.clear()  # Сбрасывает состояние
-
-    # telegram_user = message.from_user
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
-
-    logger.info(
-        f"Пользователь {message.from_user.id} {message.from_user.username} перешел в меню поиска групп")
-
-    await message.answer(
-        t("enter_keyword", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang)
-    )
-    await state.set_state(MyStates.entering_keyword_ai_search)
-
-
-@router.message(MyStates.entering_keyword_ai_search)
-async def handle_enter_keyword(message: Message, state: FSMContext):
-    """
-    Обработчик ввода ключевого слова для AI-поиска групп и каналов.
-
-    Получает запрос от пользователя, генерирует варианты названий через Groq API,
-    ищет соответствующие группы в Telegram, сохраняет их в базу данных и отправляет
-    результаты пользователю в виде XLSX-файла.
-
-    В процессе показывает статус "Ищу...", удаляет его после завершения и отправляет
-    сводку и файл.
-
-    Обрабатывает ошибки и пустые результаты.
-
-    - Использует `get_groq_response` для генерации названий.
-    - Использует `search_groups_in_telegram` для поиска в Telegram.
-    - Результаты сохраняются через `save_group_to_db`.
-    - Файл создаётся через `create_excel_file` и отправляется как документ.
-
-    :param message: (Message) Входящее сообщение с ключевым словом.
-    :param state: (FSMContext) Контекст машины состояний, сбрасывается после обработки.
-    :return: None
-
-    Raises:
-        Exception: Перехватывается локально, логируется и преобразуется в пользовательское сообщение.
-    """
-    # telegram_user = message.from_user
-    user_input = message.text.strip()
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
-    # Отправляем сообщение о начале поиска
-    processing_msg = await message.answer(t("searching_groups", lang=user_lang))
-
-    client = None
-    try:
-        answer = await get_groq_response(user_input)  # Получаем ответ от AI
-        logger.info(f"Ответ от Groq: {answer}")
-
-        # Разбиваем ответ на строки и очищаем
-        group_names = parse_ai_group_names(answer)
-        logger.info(f"Получено {len(group_names)} названий: {group_names}")
-
-        saved_groups = []
-
-        # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
-        checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
-        try:
-            client = await checker.start_random_client()
-        except Exception as e:
-            logger.exception(f"❌ Ошибка запуска клиента: {e}")
-            await state.clear()
-            return
-
-        if not client:
-            await message.answer(
-                t("search_no_available_accounts", lang=user_lang),
-                reply_markup=back_keyboard(lang=user_lang)
-            )
-            await state.clear()
-            return
-
-        for group_name in group_names:
-            results = await search_groups_in_telegram(  # Ищем в Telegram
-                client=client,
-                group_names=[group_name]
-            )
-            logger.info(f"Найдено {len(results)} групп для '{group_name}'")
-
-            # Сохраняем результаты в БД
-            for group_data in results:
-                saved_group = save_group_to_db(group_data)
-                if saved_group:
-                    saved_groups.append(saved_group)
-
-        try:
-            await processing_msg.delete()  # Удаляем сообщение о поиске
-        except TelegramBadRequest as e:
-            logger.error(e)  # Если сообщение удалено, логируем ошибку
-        except Exception as e:
-            logger.exception(e)
-
-        # Отправляем результаты пользователю
-        if saved_groups:
-
-            # Создаём Excel-файл
-            excel_bytes = create_excel_file(saved_groups, lang=user_lang)
-            # filename = t('excel_filename_telegram_groups', lang=user_lang, timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
-            excel_file = BufferedInputFile(
-                excel_bytes,
-                filename=t('excel_filename_telegram_groups', lang=user_lang,
-                           timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
-            )
-
-            # summary = format_summary_message(len(saved_groups), lang=user_lang)
-            await message.answer(
-                format_summary_message(len(saved_groups), lang=user_lang),
-                parse_mode="HTML"
-            )
-            # Отправляем CSV файл
-            await message.answer_document(
-                document=excel_file,
-                caption=t("search_results_caption", lang=user_lang, query=user_input),
-                parse_mode="HTML"
-            )
-            logger.info(f"Отправлено {len(saved_groups)} групп пользователю {message.from_user.id} в Excel файле")
-        else:
-            await message.answer(
-                t("search_no_results", lang=user_lang),
-                reply_markup=back_keyboard(lang=user_lang)
-            )
-    except Exception as e:
-        logger.exception(f"Ошибка при обработке запроса: {e}")
-        await processing_msg.delete()
-        await message.answer(
-            t("search_error", lang=user_lang),
-            reply_markup=back_keyboard(lang=user_lang)
-        )
-    finally:
-        if client:
-            await client.disconnect()
-        await state.clear()  # Завершаем текущее состояние машины состояния
+# @router.message((F.text == t('ai_search_button_user', 'ru')) | (F.text == t('ai_search_button_user', 'en')))
+# async def ai_search(message: Message, state: FSMContext):
+#     """
+#     Очищает состояние FSM, получает данные пользователя, логирует действие
+#     и запрашивает у пользователя ключевое слово для поиска групп через AI.
+#     Переводит пользователя в состояние ожидания ввода (MyStates.entering_keyword_ai_search).
+#
+#     :param message: (Message) Входящее сообщение от пользователя.
+#     :param state: (FSMContext) Контекст машины состояний, сбрасывается при входе.
+#     :return: None
+#     """
+#     await state.clear()  # Сбрасывает состояние
+#
+#     # telegram_user = message.from_user
+#     user = User.get(User.user_id == message.from_user.id)
+#     user_lang = user.language if user.language != "unset" else "ru"
+#
+#     logger.info(
+#         f"Пользователь {message.from_user.id} {message.from_user.username} перешел в меню поиска групп")
+#
+#     await message.answer(
+#         t("enter_keyword", lang=user_lang),
+#         reply_markup=back_keyboard(lang=user_lang)
+#     )
+#     await state.set_state(MyStates.entering_keyword_ai_search)
+#
+#
+# @router.message(MyStates.entering_keyword_ai_search)
+# async def handle_enter_keyword(message: Message, state: FSMContext):
+#     """
+#     Обработчик ввода ключевого слова для AI-поиска групп и каналов.
+#
+#     Получает запрос от пользователя, генерирует варианты названий через Groq API,
+#     ищет соответствующие группы в Telegram, сохраняет их в базу данных и отправляет
+#     результаты пользователю в виде XLSX-файла.
+#
+#     В процессе показывает статус "Ищу...", удаляет его после завершения и отправляет
+#     сводку и файл.
+#
+#     Обрабатывает ошибки и пустые результаты.
+#
+#     - Использует `get_groq_response` для генерации названий.
+#     - Использует `search_groups_in_telegram` для поиска в Telegram.
+#     - Результаты сохраняются через `save_group_to_db`.
+#     - Файл создаётся через `create_excel_file` и отправляется как документ.
+#
+#     :param message: (Message) Входящее сообщение с ключевым словом.
+#     :param state: (FSMContext) Контекст машины состояний, сбрасывается после обработки.
+#     :return: None
+#
+#     Raises:
+#         Exception: Перехватывается локально, логируется и преобразуется в пользовательское сообщение.
+#     """
+#     # telegram_user = message.from_user
+#     user_input = message.text.strip()
+#     user = User.get(User.user_id == message.from_user.id)
+#     user_lang = user.language if user.language != "unset" else "ru"
+#     # Отправляем сообщение о начале поиска
+#     processing_msg = await message.answer(t("searching_groups", lang=user_lang))
+#
+#     client = None
+#     try:
+#         answer = await get_groq_response(user_input)  # Получаем ответ от AI
+#         logger.info(f"Ответ от Groq: {answer}")
+#
+#         # Разбиваем ответ на строки и очищаем
+#         group_names = parse_ai_group_names(answer)
+#         logger.info(f"Получено {len(group_names)} названий: {group_names}")
+#
+#         saved_groups = []
+#
+#         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+#         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
+#         try:
+#             client = await checker.start_random_client()
+#         except Exception as e:
+#             logger.exception(f"❌ Ошибка запуска клиента: {e}")
+#             await state.clear()
+#             return
+#
+#         if not client:
+#             await message.answer(
+#                 t("search_no_available_accounts", lang=user_lang),
+#                 reply_markup=back_keyboard(lang=user_lang)
+#             )
+#             await state.clear()
+#             return
+#
+#         for group_name in group_names:
+#             results = await search_groups_in_telegram(  # Ищем в Telegram
+#                 client=client,
+#                 group_names=[group_name]
+#             )
+#             logger.info(f"Найдено {len(results)} групп для '{group_name}'")
+#
+#             # Сохраняем результаты в БД
+#             for group_data in results:
+#                 saved_group = save_group_to_db(group_data)
+#                 if saved_group:
+#                     saved_groups.append(saved_group)
+#
+#         try:
+#             await processing_msg.delete()  # Удаляем сообщение о поиске
+#         except TelegramBadRequest as e:
+#             logger.error(e)  # Если сообщение удалено, логируем ошибку
+#         except Exception as e:
+#             logger.exception(e)
+#
+#         # Отправляем результаты пользователю
+#         if saved_groups:
+#
+#             # Создаём Excel-файл
+#             excel_bytes = create_excel_file(saved_groups, lang=user_lang)
+#             # filename = t('excel_filename_telegram_groups', lang=user_lang, timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
+#             excel_file = BufferedInputFile(
+#                 excel_bytes,
+#                 filename=t('excel_filename_telegram_groups', lang=user_lang,
+#                            timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
+#             )
+#
+#             # summary = format_summary_message(len(saved_groups), lang=user_lang)
+#             await message.answer(
+#                 format_summary_message(len(saved_groups), lang=user_lang),
+#                 parse_mode="HTML"
+#             )
+#             # Отправляем CSV файл
+#             await message.answer_document(
+#                 document=excel_file,
+#                 caption=t("search_results_caption", lang=user_lang, query=user_input),
+#                 parse_mode="HTML"
+#             )
+#             logger.info(f"Отправлено {len(saved_groups)} групп пользователю {message.from_user.id} в Excel файле")
+#         else:
+#             await message.answer(
+#                 t("search_no_results", lang=user_lang),
+#                 reply_markup=back_keyboard(lang=user_lang)
+#             )
+#     except Exception as e:
+#         logger.exception(f"Ошибка при обработке запроса: {e}")
+#         await processing_msg.delete()
+#         await message.answer(
+#             t("search_error", lang=user_lang),
+#             reply_markup=back_keyboard(lang=user_lang)
+#         )
+#     finally:
+#         if client:
+#             await client.disconnect()
+#         await state.clear()  # Завершаем текущее состояние машины состояния
 
 
 """Глобальный AI поиск"""

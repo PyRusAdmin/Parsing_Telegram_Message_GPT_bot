@@ -249,7 +249,7 @@ async def search_groups_in_telegram(client, group_names):
 
                 # ========== Проверка даты последнего сообщения ==========
                 last_message_date = None
-                availability = 'unknown'
+                # availability = 'unknown'
 
                 try:
                     # Получаем историю сообщений (последнее сообщение)

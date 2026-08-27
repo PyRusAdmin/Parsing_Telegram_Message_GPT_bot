@@ -169,9 +169,9 @@ def ai_search_keyboard(lang: str = 'ru'):
     """
     return ReplyKeyboardMarkup(
         keyboard=[
-            [
-                KeyboardButton(text=t("ai_search_button_user", lang=lang), style="primary"),
-            ],
+            # [
+            #     KeyboardButton(text=t("ai_search_button_user", lang=lang), style="primary"),
+            # ],
             [
                 KeyboardButton(text=t("global_ai_search_button", lang=lang), style='primary')
             ],
