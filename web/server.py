@@ -627,17 +627,20 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     :param user_data: Данные пользователя
     :return: Список найденных групп
     """
-    logger.info(f"Запрос пользователя {user_data['id']}: {query}")
+    logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
 
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    # user_last_name = user_data["last_name"]
+    # user_first_name = user_data["first_name"]
+
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     # user_lang = user.language if user.language != "unset" else "ru"
 
     try:
-        mock_msg = MockMessage(user_id=user_id, username=user.username)
+        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
         answer = await get_groq_response(query)
 
         group_names = parse_ai_group_names(answer)
