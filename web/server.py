@@ -69,8 +69,9 @@ app.add_middleware(
 
 # TODO: После рефактинга удалить закоментированный код 29.08.2026
 
-# Mock Message для совместимости с обработчиками ботов
+
 class MockMessage:
+    # Mock Message для совместимости с обработчиками ботов
     def __init__(self, user_id: int, username: Optional[str] = "web_user"):
         self.from_user = type('User', (), {
             'id': user_id,
@@ -132,9 +133,9 @@ class MockMessage:
         return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
 
 
-# Промежуточное программное обеспечение для подключения к базе данных
 @app.middleware("http")
 async def db_session_middleware(request, call_next):
+    # Промежуточное программное обеспечение для подключения к базе данных
     if db.is_closed():
         db.connect(reuse_if_open=True)
     try:
@@ -145,8 +146,8 @@ async def db_session_middleware(request, call_next):
     return response
 
 
-# Зависимость для проверки аутентификации из initData
 def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
+    # Зависимость для проверки аутентификации из initData
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
 
@@ -205,8 +206,8 @@ admin_task_status = {
 }
 
 
-# Убедитесь, что каталоги существуют
 def init_web_directories():
+    # Убедитесь, что каталоги существуют
     os.makedirs("web/static", exist_ok=True)
     os.makedirs("web/static/css", exist_ok=True)
     os.makedirs("web/static/js", exist_ok=True)
@@ -328,9 +329,9 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
     return {"status": "stopping"}
 
 
-# Управление ключевыми словами
 @app.get("/api/keywords")
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
+    # Управление ключевыми словами
     user_id = user_data["id"]
     KeywordsModel = create_keywords_model(user_id)
 
@@ -375,9 +376,9 @@ async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_us
     raise HTTPException(status_code=404, detail="Keyword not found")
 
 
-# Управление отслеживаемыми каналами
 @app.get("/api/channels")
 async def list_channels(user_data: dict = Depends(get_current_tg_user)):
+    # Управление отслеживаемыми каналами
     user_id = user_data["id"]
     records = list(Groups.select().where(Groups.user_id == user_id).order_by(Groups.date_added.desc()))
     return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
@@ -446,9 +447,9 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
     }
 
 
-# Конфигурация целевой группы
 @app.get("/api/target-group")
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
+    # Конфигурация целевой группы
     user_id = user_data["id"]
     GroupModel = create_group_model(user_id)
     if not GroupModel.table_exists():
@@ -484,9 +485,9 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Управление аккаунтами Telegram
 @app.get("/api/accounts")
 async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
+    # Управление аккаунтами Telegram
     user_id = user_data["id"]
     accounts = get_user_accounts(user_id)
     # Возвращать сериализируемый дикт (исключая полную сессионную строку)
@@ -593,9 +594,9 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
     raise HTTPException(status_code=500, detail="Failed to delete account")
 
 
-# Ссылка на счет пополнения Stars
 @app.post("/api/payment/stars-topup")
 async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):
+    # Ссылка на счет пополнения Stars
     user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_id)
     if not user:
@@ -618,9 +619,16 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Конечная точка поиска групп ИИ
 @app.post("/api/search/ai")
 async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    """
+    Ищет группы в Telegram по запросу пользователя с помощью AI
+    :param query: Запрос пользователя
+    :param user_data: Данные пользователя
+    :return: Список найденных групп
+    """
+    logger.info(f"Запрос пользователя {user_data['id']}: {query}")
+
     user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_id)
     if not user:
@@ -714,9 +722,9 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
     )
 
 
-# Получить базу данных / Экспортировать XLSX Endpoint
 @app.get("/api/export/check")
 async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
+    # Получить базу данных / Экспортировать XLSX Endpoint
     user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_id)
     if not user:
@@ -867,7 +875,7 @@ async def bg_check_accounts():
 async def bg_actualize_db():
     """
     Актуализирует базу с группами и каналами
-    :return:
+    :return: None
     """
     admin_task_status["action"] = "actualize"
     admin_task_status["status"] = "running"
