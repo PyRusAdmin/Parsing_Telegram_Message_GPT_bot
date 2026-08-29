@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Optional
 
 from aiogram.client import bot
-from aiogram.types import BufferedInputFile
-from aiogram.types import LabeledPrice
+from aiogram.types import BufferedInputFile, LabeledPrice
+# from aiogram.types import LabeledPrice
 from asgiref.sync import sync_to_async
 from fastapi import (
     BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
@@ -66,6 +66,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# TODO: После рефактинга удалить закоментированный код 29.08.2026
 
 # Mock Message для совместимости с обработчиками ботов
 class MockMessage:
@@ -157,8 +159,8 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
     if token.startswith("mock_"):
         try:
             mock_id = int(token.split("_")[1])
-            is_admin = mock_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-                                                                  (list, set, tuple)) else mock_id in ADMIN_USER_ID
+            # is_admin = mock_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
+            #                                                       (list, set, tuple)) else mock_id in ADMIN_USER_ID
             return {
                 "id": mock_id,
                 "first_name": "Test",
@@ -623,7 +625,8 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     user = User.get_or_none(User.user_id == user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user_lang = user.language if user.language != "unset" else "ru"
+
+    # user_lang = user.language if user.language != "unset" else "ru"
 
     try:
         mock_msg = MockMessage(user_id=user_id, username=user.username)
@@ -1000,10 +1003,8 @@ async def bg_actualize_db():
                 except ValueError:
                     logger.error(f"Не валидный username {group['username']}")
                 except FloodWaitError as e:
-                    wait_time = e.seconds
-                    logger.warning(
-                        f"FloodWait для {group['username']}: нужно подождать {wait_time} секунд."
-                    )
+                    # wait_time = e.seconds
+                    logger.warning(f"FloodWait для {group['username']}: нужно подождать {e.seconds} секунд.")
                 except AuthKeyUnregisteredError:
                     logger.error(f"Не валидная сессия для проверки группы {group['username']}")
                 except Exception as e:
