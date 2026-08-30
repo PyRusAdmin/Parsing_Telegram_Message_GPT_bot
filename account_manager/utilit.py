@@ -1,6 +1,12 @@
 import re
 from typing import Optional
 
+MIN_USERNAME_LENGTH = 5
+MAX_USERNAME_LENGTH = 64
+
+# Формируем часть шаблона с длиной один раз, чтобы не дублировать
+len_pattern = f"{{{MIN_USERNAME_LENGTH},{MAX_USERNAME_LENGTH}}}"
+
 
 def normalize_telegram_link(input_link: str) -> Optional[str]:
     """
@@ -23,20 +29,26 @@ def normalize_telegram_link(input_link: str) -> Optional[str]:
         return None
 
     # 1. Вариант: @username (строка целиком)
-    match_at = re.fullmatch(r'@([a-zA-Z0-9_]{5,64})', link)
+    pattern_at = rf'^@([a-zA-Z0-9_]{len_pattern})$'
+    match_at = re.fullmatch(pattern_at, link)
     if match_at:
         return f"https://t.me/{match_at.group(1)}"
 
     # 2. Вариант: просто username (без @, без URL)
     # Важно: не должно быть в строке http/t.me и т.п., иначе это не «голый» юзернейм
     if not re.search(r'https?://|t\.me|telegram\.dog', link, flags=re.IGNORECASE):
-        match_bare = re.fullmatch(r'([a-zA-Z0-9_]{5,64})', link)
+        pattern_bare = rf'^([a-zA-Z0-9_]{len_pattern})$'
+        match_bare = re.fullmatch(pattern_bare, link)
         if match_bare:
             return f"https://t.me/{match_bare.group(1)}"
 
     # 3. Вариант: URL (t.me или telegram.dog)
-    pattern = r'(?:https?://)?(?:t\.me|telegram\.dog)/([a-zA-Z0-9_]{5,64})(?:[/?#].*)?$'
-    match_url = re.search(pattern, link, flags=re.IGNORECASE)
+    pattern_url = (
+        rf'(?:https?://)?(?:t\.me|telegram\.dog)/'
+        rf'([a-zA-Z0-9_]{len_pattern})'
+        r'(?:[/?#].*)?$'
+    )
+    match_url = re.search(pattern_url, link, flags=re.IGNORECASE)
     if match_url:
         return f"https://t.me/{match_url.group(1)}"
 
