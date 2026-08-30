@@ -658,6 +658,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
         try:
             for name in group_names:
                 results = await search_groups_in_telegram(client=client, group_names=[name])
+                logger.info(f"Результаты поиска: {results}")
                 for group_data in results:
                     saved = save_group_to_db(group_data)
                     if saved:

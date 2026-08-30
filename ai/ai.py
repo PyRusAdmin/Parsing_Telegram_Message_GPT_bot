@@ -278,7 +278,7 @@ async def search_groups_in_telegram(client, group_names):
                     logger.exception(f"Не удалось получить дату последнего сообщения для '{title}': {e}")
                     availability = 'unknown'  # Не удалось определить
 
-                # ========== Сохранение в базу данных ==========
+                # Сохранение в базу данных data/bot.db, таблица telegram_groups
                 try:
                     # Проверяем, существует ли уже группа
                     existing_group = TelegramGroup.get_or_none(
