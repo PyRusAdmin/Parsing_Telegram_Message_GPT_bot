@@ -51,39 +51,38 @@ def normalize_telegram_link(input_link: str) -> Optional[str]:
 
     return None
 
+# def preliminary_verification_of_the_link(input_link: str) -> bool:
+#     normalized = normalize_telegram_link(input_link)
+#     if normalized:
+#         print(f"Исходная: {input_link!r}")
+#         print(f"Нормализованная: {normalized}")
+#         print("Валидная ссылка")
+#         return True
+#     else:
+#         print(f"Исходная: {input_link!r}")
+#         print("Невалидная ссылка")
+#         return False
 
-def preliminary_verification_of_the_link(input_link: str) -> bool:
-    normalized = normalize_telegram_link(input_link)
-    if normalized:
-        print(f"Исходная: {input_link!r}")
-        print(f"Нормализованная: {normalized}")
-        print("Валидная ссылка")
-        return True
-    else:
-        print(f"Исходная: {input_link!r}")
-        print("Невалидная ссылка")
-        return False
 
-
-if __name__ == "__main__":
-    test_cases = [
-        "@https://t.me/promokod_skidki_tlt",
-        "@username",
-        "username",  # новый кейс: просто имя
-        "t.me/another_user",
-        "https://telegram.dog/user_xyz",
-        "not_a_link",  # теперь тоже невалидно, потому что не подходит под правила
-        "@",
-        "",
-        "  @valid_name  ",
-        "Some text with @my_channel and other stuff",  # будет невалидно: не вся строка — это ссылка
-        "https://t.me/test_bot",
-        "@user12345",
-        "user12345",  # валидный «голый» username
-        "t.me/short",
-        "https://t.me/a",
-    ]
-
-    for case in test_cases:
-        preliminary_verification_of_the_link(case)
-        print("-" * 40)
+# if __name__ == "__main__":
+#     test_cases = [
+#         "@https://t.me/promokod_skidki_tlt",
+#         "@username",
+#         "username",  # новый кейс: просто имя
+#         "t.me/another_user",
+#         "https://telegram.dog/user_xyz",
+#         "not_a_link",  # теперь тоже невалидно, потому что не подходит под правила
+#         "@",
+#         "",
+#         "  @valid_name  ",
+#         "Some text with @my_channel and other stuff",  # будет невалидно: не вся строка — это ссылка
+#         "https://t.me/test_bot",
+#         "@user12345",
+#         "user12345",  # валидный «голый» username
+#         "t.me/short",
+#         "https://t.me/a",
+#     ]
+#
+#     for case in test_cases:
+#         preliminary_verification_of_the_link(case)
+#         print("-" * 40)
