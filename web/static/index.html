@@ -232,6 +232,31 @@
         </div>
       </div>
 
+      <!-- Массовый поиск групп и каналов в телеграмм на основе искусственного интеллекта-->
+      <div class="card glass-panel" id="ai-mass-search-card">
+        <!-- Панель поиска -->
+        <h3>
+          <i class="fa-solid fa-robot icon-inline"></i>Массовый поиск целевых групп с помощью искусственного
+          интеллекта
+        </h3>
+        <p class="card-desc">
+          Массовый поиск групп и каналов на основе искусственного интеллекта. Используйте
+          искусственный интеллект (Groq Llama 3) для генерации поисковых запросов, а затем найдите активные группы
+          Telegram по вашей теме.
+        </p>
+
+        <div class="search-form">
+          <div class="input-action-group">
+            <input type="text" id="ai-search-querys" placeholder="e.g. Python Developer Jobs, Crypto Trades"
+                   class="glass-input">
+            <button id="btn-trigger-ai-searchs" class="btn-primary glow-effect">
+              <i class="fa-solid fa-circle-notch fa-spin hidden" id="search-spinners"></i>
+              <span>Найти группы</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Экспорт карты базы данных -->
       <div class="card glass-panel">
         <div class="card-header">

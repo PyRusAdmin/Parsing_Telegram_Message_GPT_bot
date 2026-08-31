@@ -210,6 +210,10 @@ async def search_groups_in_telegram(client, group_names):
     Асинхронно ищет публичные группы и каналы в Telegram по списку названий.
     При заморозке аккаунта сразу прекращает весь поиск.
     Проверяет дату последнего сообщения и обновляет поле availability в БД.
+
+    :param client: Объект клиента Telethon.
+    :param group_names: Список названий групп.
+    :return: Список найденных групп.
     """
     found_groups = []
     account_frozen = False
@@ -233,7 +237,7 @@ async def search_groups_in_telegram(client, group_names):
                 break
 
         try:
-            search_results = await client(functions.contacts.SearchRequest(q=name, limit=10))
+            search_results = await client(functions.contacts.SearchRequest(q=name, limit=20))
 
             for chat in search_results.chats:
                 if not hasattr(chat, 'title') or not chat.title:

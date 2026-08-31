@@ -129,31 +129,31 @@ def ai_llama(group_data: dict, lang: str = 'ru') -> dict:
         }
 
 
-async def get_groups_without_language() -> list[dict]:
-    """Получить ВСЕ группы, но отфильтровать те, где язык не определён"""
-
-    def _get_groups():
-        if db.is_closed():
-            db.connect(reuse_if_open=True)
-
-        # Берём ВСЕ записи
-        groups = TelegramGroup.select()
-
-        # Фильтруем только те, где language пустой
-        return [{
-            "group_hash": group.group_hash,
-            "name": group.name,
-            "username": group.username,
-            "description": group.description,
-        } for group in groups if not group.language or group.language.strip() == '']
-
-    try:
-        groups_data = await sync_to_async(_get_groups)()
-        logger.info(f"📊 Найдено {len(groups_data)} групп без языка")
-        return groups_data
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения групп: {e}")
-        return []
+# async def get_groups_without_language() -> list[dict]:
+#     """Получить ВСЕ группы, но отфильтровать те, где язык не определён"""
+#
+#     def _get_groups():
+#         if db.is_closed():
+#             db.connect(reuse_if_open=True)
+#
+#         # Берём ВСЕ записи
+#         groups = TelegramGroup.select()
+#
+#         # Фильтруем только те, где language пустой
+#         return [{
+#             "group_hash": group.group_hash,
+#             "name": group.name,
+#             "username": group.username,
+#             "description": group.description,
+#         } for group in groups if not group.language or group.language.strip() == '']
+#
+#     try:
+#         groups_data = await sync_to_async(_get_groups)()
+#         logger.info(f"📊 Найдено {len(groups_data)} групп без языка")
+#         return groups_data
+#     except Exception as e:
+#         logger.error(f"❌ Ошибка получения групп: {e}")
+#         return []
 
 
 async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
