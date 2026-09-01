@@ -4,7 +4,7 @@ import os
 import random
 from pathlib import Path
 
-from aiogram.types import Message
+# from aiogram.types import Message
 from loguru import logger
 from telethon import TelegramClient
 from telethon.errors import (
@@ -47,14 +47,14 @@ async def get_account_info(client: TelegramClient) -> dict:
 
 class CheckingAccountsValidity:
 
-    def __init__(self, message: Message, path: str | None = None):
+    def __init__(self, path: str | None = None):
         """
         :param message: Сообщение для отправки уведомлений (опционально)
         :param path: Путь к папке с .session файлами (опционально)
         """
-        self.message = message
+        # self.message = message
         self.path = Path(path) if path else None
-        self.user_id = message.from_user.id
+        # self.user_id = message.from_user.id
 
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """

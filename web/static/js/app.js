@@ -641,11 +641,12 @@ function setupEventListeners() {
       spinner.classList.remove("hidden");
 
       showNotification(
-        "AI Group Finder is running search in Telegram. Please wait...",
+        "AI Group Finder выполняет поиск в Telegram. Пожалуйста, подождите...",
         "success",
       );
 
       try {
+        // D:\Yandex.Disk\Флешка\19_04_2026_AutoParseAlertBot\web\server.py
         const res = await apiRequest("/api/search/ai", {
           method: "POST",
           body: fd,
@@ -687,7 +688,7 @@ function setupEventListeners() {
           } else {
             resultsCard.classList.add("hidden");
             showNotification(
-              "No matching active groups found on Telegram.",
+              "В Telegram не найдено ни одной подходящей активной группы.",
               "warning",
             );
           }
@@ -751,6 +752,135 @@ function setupEventListeners() {
       }
     });
   }
+}
+
+// Запустить поиск AI (массовый поиск групп в Telegram по запросу пользователя)
+document
+  .getElementById("btn-trigger-ai-searchs")
+  .addEventListener("click", async () => {
+    const input = document.getElementById("ai-search-querys");
+    const query = input.value.trim();
+    if (!query) return;
+
+    const fd = new FormData();
+    fd.append("query", query);
+
+    const btn = document.getElementById("btn-trigger-ai-searchs");
+    const spinner = document.getElementById("search-spinners");
+
+    btn.disabled = true;
+    spinner.classList.remove("hidden");
+
+    showNotification(
+      "AI Group Finder выполняет поиск в Telegram. Пожалуйста, подождите...",
+      "success",
+    );
+
+    try {
+      // D:\Yandex.Disk\Флешка\19_04_2026_AutoParseAlertBot\web\server.py
+      const res = await apiRequest("/api/searchs/ai", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        currentSearchResults = data.groups || [];
+
+        // Отобразить таблицу результатов
+        const resultsCard = document.getElementById("search-results-card");
+        const list = document.getElementById("search-results-list");
+
+        list.innerHTML = "";
+        document.getElementById("results-count").innerText = data.groups.length;
+
+        if (data.groups.length > 0) {
+          resultsCard.classList.remove("hidden");
+          data.groups.forEach((g) => {
+            const tr = document.createElement("tr");
+            const statusClass =
+              g.availability === "active"
+                ? "status-active"
+                : g.availability === "inactive"
+                  ? "status-inactive"
+                  : "status-unknown";
+
+            tr.innerHTML = `
+                            <td><strong>${g.name}</strong></td>
+                            <td><a href="${g.link || "#"}" target="_blank">${g.username || "Private"}</a></td>
+                            <td>${g.group_type}</td>
+                            <td>${g.participants.toLocaleString()}</td>
+                            <td><span class="label-status ${statusClass}">${g.availability}</span></td>
+                        `;
+            list.appendChild(tr);
+          });
+          resultsCard.scrollIntoView({ behavior: "smooth" });
+        } else {
+          resultsCard.classList.add("hidden");
+          showNotification(
+            "В Telegram не найдено ни одной подходящей активной группы.",
+            "warning",
+          );
+        }
+      } else {
+        const err = await res.json();
+        showNotification(err.detail || "Search failed.", "danger");
+      }
+    } catch (e) {
+      showNotification("Search failed.", "danger");
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add("hidden");
+    }
+  });
+
+const btnExportSearch = document.getElementById("btn-export-search-results");
+if (btnExportSearch) {
+  btnExportSearch.addEventListener("click", async () => {
+    if (!currentSearchResults || currentSearchResults.length === 0) {
+      showNotification("Нет результатов поиска для экспорта", "warning");
+      return;
+    }
+    const ids = currentSearchResults
+      .map((g) => g.telegram_id || g.id)
+      .filter(Boolean);
+    if (ids.length === 0) {
+      showNotification("Не найдено ID результатов для экспорта", "warning");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("telegram_ids", ids.join(","));
+
+    showNotification("Формирование Excel файла...", "success");
+
+    try {
+      const res = await apiRequest("/api/search/export_excel", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        downloadBlob(blob, res, "search_results.xlsx");
+
+        if (window.Telegram?.WebApp) {
+          showNotification(
+            "Файл отправлен в ваш чат с ботом и скачивается!",
+            "success",
+          );
+        } else {
+          showNotification("Скачивание началось!", "success");
+        }
+      } else {
+        const err = await res.json();
+        showNotification(err.detail || "Не удалось скачать Excel", "danger");
+      }
+    } catch (e) {
+      console.error("Export search excel error:", e);
+      showNotification("Ошибка при скачивании файла", "danger");
+    }
+  });
 }
 
 // Перетащите вспомогательные привязки

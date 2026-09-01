@@ -13,7 +13,7 @@ from typing import Optional
 
 from aiogram.client import bot
 from aiogram.types import BufferedInputFile, LabeledPrice
-# from aiogram.types import LabeledPrice
+
 from asgiref.sync import sync_to_async
 from fastapi import (
     BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
@@ -49,7 +49,8 @@ from database.database import (
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
 from handlers.user.pars_ai import (
-    can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db
+    can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db, parse_search_input,
+    format_summary_message
 )
 from locales.locales import t
 from system.dispatcher import bot
@@ -619,6 +620,183 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/searchs/ai")
+async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    """
+    Массовый поиск групп в Telegram по запросу пользователя с помощью AI
+    :param query: Запрос пользователя для поиска групп / каналов в Telegram
+    :param user_data: Данные пользователя
+    :return: Список найденных групп
+    """
+    logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
+
+    user = User.get_or_none(User.user_id == user_data["id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
+
+        # Парсим ввод в список запросов (query - запросс пользователя)
+        search_terms = parse_search_input(user_input=query)
+        if not search_terms:
+            # await message.answer(
+            #     t("global_search_no_terms", lang=user_lang),
+            #     reply_markup=back_keyboard(lang=user_lang)
+            # )
+            # await state.clear()
+            return
+
+        all_saved_groups = []
+        successful_queries = 0
+        try:
+            # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
+            for idx, term in enumerate(search_terms, 1):
+                logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
+
+                # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+                checker = CheckingAccountsValidity()  # path=None по умолчанию
+                # client = None
+
+                try:
+                    client = await checker.start_random_client()
+                except Exception as e:
+                    logger.exception(f"❌ Ошибка запуска клиента для '{term}': {e}")
+                    continue
+
+                if not client:
+                    logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
+                    # await message.answer(t("global_search_skipped", lang=user_lang, term=term))
+                    continue
+
+                try:
+                    # Получаем варианты названий от AI
+                    answer = await get_groq_response(term)
+                    # logger.info(f"Ответ от Groq для '{term}': {answer}")
+                    # Чистим и фильтруем названия
+                    group_names = parse_ai_group_names(answer)
+
+                    if not group_names:
+                        logger.info(f"⚪ Нет названий для '{term}' после очистки")
+                        continue
+
+                    logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
+
+                    # Ищем группы в Telegram
+                    results = await search_groups_in_telegram(
+                        client=client,
+                        group_names=group_names
+                    )
+                    logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
+
+                    # Сохраняем в БД
+                    for group_data in results:
+                        saved_group = save_group_to_db(group_data)
+                        if saved_group:
+                            all_saved_groups.append(saved_group)
+
+                    successful_queries += 1
+
+                    # 📊 Обновляем статус в Telegram (опционально)
+                    if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
+                        # await processing_msg.edit_text(
+                        #     t("global_search_progress", lang=user_lang, current=idx, total=len(search_terms),
+                        #       successful=successful_queries)
+                        # )
+                        logger.info(f"{idx} {search_terms}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
+                    continue  # Продолжаем со следующим запросом
+
+                finally:
+                    # 🔌 Обязательно отключаем клиент после каждого запроса
+                    if client:
+                        await client.disconnect()
+                        logger.info(f"🔌 Клиент для '{term}' отключён")
+
+                    # Пауза между запросами (защита от лимитов API и Telegram)
+                    if idx < len(search_terms):
+                        await asyncio.sleep(2)
+            # await processing_msg.delete()
+
+            # 📤 Отправляем результаты
+            if all_saved_groups:
+                excel_bytes = create_excel_file(all_saved_groups, lang="ru")
+                filename = t('excel_filename_telegram_groups', lang="ru",
+                             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
+                excel_file = BufferedInputFile(excel_bytes, filename=filename)
+
+                summary = format_summary_message(len(all_saved_groups), lang="ru")
+                # await message.answer(summary, parse_mode="HTML")
+
+                # await message.answer_document(
+                #     document=excel_file,
+                #     caption=t("global_search_results_caption", lang=user_lang, total=len(all_saved_groups),
+                #               successful=successful_queries, total_queries=len(search_terms)),
+                #     parse_mode="HTML"
+                # )
+                logger.info(
+                    f"✅ Отправлено {len(all_saved_groups)} групп пользователю {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}")
+            else:
+                # await message.answer(
+                #     t("global_search_no_results", lang=user_lang),
+                #     reply_markup=back_keyboard(lang=user_lang)
+                # )
+                logger.info(t("global_search_no_results", lang="ru"))
+        except Exception as e:
+            logger.error(f"❌ Критическая ошибка: {e}")
+            # await processing_msg.delete()
+            # await message.answer(
+            #     t("search_error", lang=user_lang),
+            #     reply_markup=back_keyboard(lang=user_lang)
+            # )
+        # finally:
+        #     await state.clear()
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
+        # continue  # Продолжаем со следующим запросом
+    #     answer = await get_groq_response(query)
+    #
+    #     group_names = parse_ai_group_names(answer)
+    #
+    #     if not group_names:
+    #         return {"status": "no_names_generated", "groups": []}
+    #
+    #     checker = CheckingAccountsValidity(message=mock_msg)
+    #     client = await checker.start_random_client()
+    #
+    #     if not client:
+    #         raise HTTPException(status_code=400, detail="No active Telegram accounts available for search")
+    #
+    #     saved_groups = []
+    #     try:
+    #         for name in group_names:
+    #             results = await search_groups_in_telegram(client=client, group_names=[name])
+    #             logger.info(f"Результаты поиска: {results}")
+    #             for group_data in results:
+    #                 saved = save_group_to_db(group_data)
+    #                 if saved:
+    #                     saved_groups.append({
+    #                         "id": saved.id,
+    #                         "telegram_id": saved.telegram_id or saved.id,
+    #                         "name": saved.name,
+    #                         "username": saved.username,
+    #                         "participants": saved.participants,
+    #                         "group_type": saved.group_type,
+    #                         "availability": saved.availability,
+    #                         "link": saved.link
+    #                     })
+    #     finally:
+    #         await client.disconnect()
+    #
+    #     return {"status": "ok", "groups": saved_groups}
+    # except HTTPException:
+    #     raise
+    # except Exception as e:
+    #     logger.exception(f"AI search failed: {e}")
+    #     raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/search/ai")
 async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """
@@ -629,15 +807,9 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     """
     logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
 
-    # user_id = user_data["id"]
-    # user_last_name = user_data["last_name"]
-    # user_first_name = user_data["first_name"]
-
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    # user_lang = user.language if user.language != "unset" else "ru"
 
     try:
         mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
