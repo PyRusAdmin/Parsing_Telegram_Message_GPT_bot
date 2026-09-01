@@ -648,7 +648,7 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
             return
 
         all_saved_groups = []
-        successful_queries = 0
+        # successful_queries = 0
         try:
             # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
             for idx, term in enumerate(search_terms, 1):
@@ -660,50 +660,43 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
 
                 try:
                     client = await checker.start_random_client()
-                except Exception as e:
-                    logger.exception(f"❌ Ошибка запуска клиента для '{term}': {e}")
-                    continue
 
-                if not client:
-                    logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
-                    # await message.answer(t("global_search_skipped", lang=user_lang, term=term))
-                    continue
-
-                try:
+                    if not client:
+                        logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
+                        # await message.answer(t("global_search_skipped", lang=user_lang, term=term))
+                        continue
+                    # except Exception as e:
+                    #     logger.exception(f"❌ Ошибка запуска клиента для '{term}': {e}")
+                    #     continue
+                    # try:
                     # Получаем варианты названий от AI
                     answer = await get_groq_response(term)
                     # logger.info(f"Ответ от Groq для '{term}': {answer}")
                     # Чистим и фильтруем названия
                     group_names = parse_ai_group_names(answer)
-
-                    if not group_names:
-                        logger.info(f"⚪ Нет названий для '{term}' после очистки")
-                        continue
-
+                    # if not group_names:
+                    #     logger.info(f"⚪ Нет названий для '{term}' после очистки")
+                    #     continue
                     logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
-
                     # Ищем группы в Telegram
                     results = await search_groups_in_telegram(
                         client=client,
                         group_names=group_names
                     )
                     logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
-
                     # Сохраняем в БД
                     for group_data in results:
                         saved_group = save_group_to_db(group_data)
                         if saved_group:
                             all_saved_groups.append(saved_group)
-
-                    successful_queries += 1
-
+                    # successful_queries += 1
                     # 📊 Обновляем статус в Telegram (опционально)
-                    if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
-                        # await processing_msg.edit_text(
-                        #     t("global_search_progress", lang=user_lang, current=idx, total=len(search_terms),
-                        #       successful=successful_queries)
-                        # )
-                        logger.info(f"{idx} {search_terms}")
+                    # if idx % 3 == 0 or idx == len(search_terms):  # каждые 3 запроса или в конце
+                    # await processing_msg.edit_text(
+                    #     t("global_search_progress", lang=user_lang, current=idx, total=len(search_terms),
+                    #       successful=successful_queries)
+                    # )
+                    # logger.info(f"{idx} {search_terms}")
                 except Exception as e:
                     logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
                     continue  # Продолжаем со следующим запросом
