@@ -629,14 +629,11 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     :return: Список найденных групп
     """
     logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
-
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
     try:
         mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-
         # Парсим ввод в список запросов (query - запросс пользователя)
         search_terms = parse_search_input(user_input=query)
         if not search_terms:
@@ -646,18 +643,15 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
             # )
             # await state.clear()
             return
-
         all_saved_groups = []
         # successful_queries = 0
         try:
             # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
             for idx, term in enumerate(search_terms, 1):
                 logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
-
                 # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
                 checker = CheckingAccountsValidity()  # path=None по умолчанию
                 # client = None
-
                 try:
                     client = await checker.start_random_client()
 
@@ -697,39 +691,35 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
                     #       successful=successful_queries)
                     # )
                     # logger.info(f"{idx} {search_terms}")
-                except Exception as e:
-                    logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
-                    continue  # Продолжаем со следующим запросом
-
-                finally:
                     # 🔌 Обязательно отключаем клиент после каждого запроса
                     if client:
                         await client.disconnect()
                         logger.info(f"🔌 Клиент для '{term}' отключён")
-
                     # Пауза между запросами (защита от лимитов API и Telegram)
                     if idx < len(search_terms):
                         await asyncio.sleep(2)
+                except Exception as e:
+                    logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
+                    continue  # Продолжаем со следующим запросом
+                # finally:
             # await processing_msg.delete()
-
             # 📤 Отправляем результаты
-            if all_saved_groups:
-                excel_bytes = create_excel_file(all_saved_groups, lang="ru")
-                filename = t('excel_filename_telegram_groups', lang="ru",
-                             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
-                excel_file = BufferedInputFile(excel_bytes, filename=filename)
+            # if all_saved_groups:
+            #     excel_bytes = create_excel_file(all_saved_groups, lang="ru")
+            #     filename = t('excel_filename_telegram_groups', lang="ru",
+            #                  timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'))
+            #     excel_file = BufferedInputFile(excel_bytes, filename=filename)
+            #     summary = format_summary_message(len(all_saved_groups), lang="ru")
+            # await message.answer(summary, parse_mode="HTML")
 
-                summary = format_summary_message(len(all_saved_groups), lang="ru")
-                # await message.answer(summary, parse_mode="HTML")
-
-                # await message.answer_document(
-                #     document=excel_file,
-                #     caption=t("global_search_results_caption", lang=user_lang, total=len(all_saved_groups),
-                #               successful=successful_queries, total_queries=len(search_terms)),
-                #     parse_mode="HTML"
-                # )
-                logger.info(
-                    f"✅ Отправлено {len(all_saved_groups)} групп пользователю {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}")
+            # await message.answer_document(
+            #     document=excel_file,
+            #     caption=t("global_search_results_caption", lang=user_lang, total=len(all_saved_groups),
+            #               successful=successful_queries, total_queries=len(search_terms)),
+            #     parse_mode="HTML"
+            # )
+            # logger.info(
+            #     f"✅ Отправлено {len(all_saved_groups)} групп пользователю {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}")
             else:
                 # await message.answer(
                 #     t("global_search_no_results", lang=user_lang),
@@ -748,6 +738,8 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     except Exception as e:
         logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
         # continue  # Продолжаем со следующим запросом
+
+    return {"status": "ok", "groups": saved_groups}
     #     answer = await get_groq_response(query)
     #
     #     group_names = parse_ai_group_names(answer)
@@ -817,7 +809,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
         client = await checker.start_random_client()
 
         if not client:
-            raise HTTPException(status_code=400, detail="No active Telegram accounts available for search")
+            raise HTTPException(status_code=400, detail="В поиске нет активных аккаунтов Telegram.")
 
         saved_groups = []
         try:
