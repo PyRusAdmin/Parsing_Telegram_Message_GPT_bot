@@ -160,8 +160,7 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
     if token.startswith("mock_"):
         try:
             mock_id = int(token.split("_")[1])
-            # is_admin = mock_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-            #                                                       (list, set, tuple)) else mock_id in ADMIN_USER_ID
+
             return {
                 "id": mock_id,
                 "first_name": "Test",
@@ -221,14 +220,14 @@ init_web_directories()
 @app.get("/api/status")
 async def get_status(user_data: dict = Depends(get_current_tg_user)):
     try:
-        user_id = user_data["id"]
+        # user_id = user_data["id"]
 
         # Получить пользователя
-        user = User.get_or_none(User.user_id == user_id)
+        user = User.get_or_none(User.user_id == user_data["id"])
         if not user:
             # Зарегистрировать пользователя в базе данных
             user = User.create(
-                user_id=user_id,
+                user_id=user_data["id"],
                 username=user_data.get("username"),
                 first_name=user_data.get("first_name"),
                 last_name=user_data.get("last_name"),
@@ -237,30 +236,31 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
 
         # Получите статистику
         groups_count = getting_number_records_database()
-        session_count = get_session_count(user_id=user_id)
-        group_count = get_target_group_count(user_id=user_id)
-        tracked_channels = get_tracked_channels_count(user_id=user_id)
-        keywords_count = get_keywords_count(user_id=user_id)
+        session_count = get_session_count(user_id=user_data["id"])
+        group_count = get_target_group_count(user_id=user_data["id"])
+        tracked_channels = get_tracked_channels_count(user_id=user_data["id"])
+        keywords_count = get_keywords_count(user_id=user_data["id"])
 
         # Получите текущее имя целевой группы пользователя
-        GroupModel = create_group_model(user_id)
+        GroupModel = create_group_model(user_data["id"])
         target_group = None
         if GroupModel.table_exists():
             groups = list(GroupModel.select())
             if groups:
                 target_group = groups[0].user_group
 
-        tracking_active = str(user_id) in active_clients
+        tracking_active = str(user_data["id"]) in active_clients
 
         logger.info(
-            f"ID пользователя: {user_id}. Тип входящих данных user_id: {type(user_id)}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
+            f"ID пользователя: {user_data["id"]}. Тип входящих данных user_id: {type(user_data["id"])}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
 
-        is_admin = user_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-                                                              (list, set, tuple)) else user_id in ADMIN_USER_ID
+        is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
+                                                                      (list, set, tuple)) else user_data[
+                                                                                                   "id"] in ADMIN_USER_ID
         logger.info(f"Это администратор: {is_admin}")
 
         return {
-            "user_id": user_id,
+            "user_id": user_data["id"],
             "username": user.username,
             "first_name": user.first_name,
             "language": user.language,
@@ -286,8 +286,8 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
     if lang not in ["ru", "en"]:
         raise HTTPException(status_code=400, detail="Invalid language code")
 
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -298,33 +298,33 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/tracking/start")
 async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if str(user_id) in active_clients:
+    if str(user_data["id"]) in active_clients:
         return {"status": "already_running"}
 
     # Начинайте асинхронное отслеживание
-    mock_msg = MockMessage(user_id=user_id, username=user.username)
-    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_id, user=user)
+    mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
+    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"], user=user)
 
     return {"status": "starting"}
 
 
 @app.post("/api/tracking/stop")
 async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if str(user_id) not in stop_flags:
+    if str(user_data["id"]) not in stop_flags:
         return {"status": "not_active"}
 
-    mock_msg = MockMessage(user_id=user_id, username=user.username)
-    await stop_tracking(user_id=user_id, message=mock_msg)
+    mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
+    await stop_tracking(user_id=user_data["id"], message=mock_msg)
 
     return {"status": "stopping"}
 
@@ -332,8 +332,8 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
 @app.get("/api/keywords")
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
     # Управление ключевыми словами
-    user_id = user_data["id"]
-    KeywordsModel = create_keywords_model(user_id)
+    # user_id = user_data["id"]
+    KeywordsModel = create_keywords_model(user_data["id"])
 
     if not KeywordsModel.table_exists():
         KeywordsModel.create_table()
@@ -344,12 +344,12 @@ async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/keywords")
 async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
+    # user_id = user_data["id"]
     keyword = keyword.strip()
     if not keyword:
         raise HTTPException(status_code=400, detail="Keyword cannot be empty")
 
-    KeywordsModel = create_keywords_model(user_id)
+    KeywordsModel = create_keywords_model(user_data["id"])
     if not KeywordsModel.table_exists():
         KeywordsModel.create_table()
 
@@ -364,8 +364,8 @@ async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_cu
 
 @app.delete("/api/keywords/{kw_id}")
 async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    KeywordsModel = create_keywords_model(user_id)
+    # user_id = user_data["id"]
+    KeywordsModel = create_keywords_model(user_data["id"])
 
     if not KeywordsModel.table_exists():
         raise HTTPException(status_code=404, detail="Keyword table not found")
@@ -379,15 +379,15 @@ async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_us
 @app.get("/api/channels")
 async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     # Управление отслеживаемыми каналами
-    user_id = user_data["id"]
-    records = list(Groups.select().where(Groups.user_id == user_id).order_by(Groups.date_added.desc()))
+    # user_id = user_data["id"]
+    records = list(Groups.select().where(Groups.user_id == user_data["id"]).order_by(Groups.date_added.desc()))
     return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
             records]
 
 
 @app.post("/api/channels")
 async def add_channel(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
+    # user_id = user_data["id"]
     username = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
@@ -396,7 +396,7 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
         username = f"@{username}"
 
     try:
-        Groups.create(user_id=user_id, username=username)
+        Groups.create(user_id=user_data["id"], username=username)
         return {"status": "ok", "username": username}
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -406,8 +406,8 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
 
 @app.delete("/api/channels/{ch_id}")
 async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    deleted = Groups.delete().where(Groups.user_id == user_id, Groups.id == ch_id).execute()
+    # user_id = user_data["id"]
+    deleted = Groups.delete().where(Groups.user_id == user_data["id"], Groups.id == ch_id).execute()
     if deleted:
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="Channel not found")
@@ -415,7 +415,7 @@ async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/channels/upload")
 async def upload_channels_file(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
+    # user_id = user_data["id"]
     if not file.filename.endswith(".txt"):
         raise HTTPException(status_code=400, detail="Only .txt files are supported")
 
@@ -431,7 +431,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
         if not username.startswith("@"):
             username = f"@{username}"
         try:
-            Groups.create(user_id=user_id, username=username)
+            Groups.create(user_id=user_data["id"], username=username)
             added_count += 1
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):
@@ -450,8 +450,8 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
 @app.get("/api/target-group")
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
     # Конфигурация целевой группы
-    user_id = user_data["id"]
-    GroupModel = create_group_model(user_id)
+    # user_id = user_data["id"]
+    GroupModel = create_group_model(user_data["id"])
     if not GroupModel.table_exists():
         return {"username": None}
 
@@ -463,7 +463,7 @@ async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/target-group")
 async def set_target_group(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
+    # user_id = user_data["id"]
     username = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
@@ -471,7 +471,7 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
     if not username.startswith("@"):
         username = f"@{username}"
 
-    GroupModel = create_group_model(user_id)
+    GroupModel = create_group_model(user_data["id"])
     if not GroupModel.table_exists():
         GroupModel.create_table()
 
@@ -488,22 +488,22 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
 @app.get("/api/accounts")
 async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
     # Управление аккаунтами Telegram
-    user_id = user_data["id"]
-    accounts = get_user_accounts(user_id)
+    # user_id = user_data["id"]
+    # accounts = get_user_accounts(user_data["id"])
     # Возвращать сериализируемый дикт (исключая полную сессионную строку)
     return [
         {
             "phone_number": acc["phone_number"],
             "created_at": acc["created_at"].strftime("%Y-%m-%d %H:%M:%S")
         }
-        for acc in accounts
+        for acc in get_user_accounts(user_data["id"])
     ]
 
 
 @app.post("/api/accounts/upload")
 async def upload_account_session(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -516,7 +516,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 
     # Дезинфицируйте и записывайте сессионный файл
     safe_name = "".join(c for c in file.filename if c.isalnum() or c in "._-")
-    temp_path = sessions_dir / f"temp_{user_id}_{safe_name}"
+    temp_path = sessions_dir / f"temp_{user_data["id"]}_{safe_name}"
 
     try:
         with open(temp_path, "wb") as f:
@@ -524,7 +524,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
             f.write(content)
 
         session_path_without_ext = str(temp_path.with_suffix(""))
-        mock_msg = MockMessage(user_id=user_id, username=user.username)
+        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
         checker = CheckingAccountsValidity(message=mock_msg, path=session_path_without_ext)
         client = await checker.connect_client()
 
@@ -536,7 +536,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
             # Сохранить аккаунт в пользовательскую таблицу
 
             write_account_to_user_table(
-                user_id=user_id,
+                user_id=user_data["id"],
                 session_string=session_string,
                 phone_number=phone
             )
@@ -545,8 +545,14 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 
             # Отправьте уведомление через бота
             user_lang = user.language if user.language != "unset" else "ru"
-            await mock_msg.answer(t("session_connected_success", lang=user_lang, filename=safe_name, phone=phone,
-                                    name=account_info["first_name"]))
+            await mock_msg.answer(
+                text=t("session_connected_success",
+                       lang=user_lang,
+                       filename=safe_name,
+                       phone=phone,
+                       name=account_info["first_name"]
+                       )
+            )
 
             return {"status": "ok", "phone": phone, "name": account_info["first_name"]}
         else:
@@ -597,8 +603,8 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
 @app.post("/api/payment/stars-topup")
 async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):
     # Ссылка на счет пополнения Stars
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user_lang = user.language if user.language != "unset" else "ru"
@@ -627,12 +633,15 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     :param user_data: Данные пользователя
     :return: Список найденных групп
     """
-    logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
+    logger.info(
+        f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]} {user_data["username"]}: {query}")
+
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     try:
-        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
+        # mock_msg = MockMessage(user_id=user_data["id"], username=user_data["username"])
         # Парсим ввод в список запросов (query - запросс пользователя)
         search_terms = parse_search_input(user_input=query)
         if not search_terms:
@@ -761,8 +770,8 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
 
 @app.post("/api/search/export_excel")
 async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -790,10 +799,10 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
 
         doc = BufferedInputFile(excel_bytes, filename=filename)
         caption_text = "📊 Результаты поиска групп в Excel" if user_lang == "ru" else "📊 Group search results in Excel"
-        await bot.send_document(chat_id=user_id, document=doc, caption=caption_text)
-        logger.info(f"Excel-файл с результатами поиска отправлен в чат Telegram {user_id}")
+        await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)
+        logger.info(f"Excel-файл с результатами поиска отправлен в чат Telegram {user_data["id"]}")
     except Exception as e:
-        logger.warning(f"Не удалось отправить Excel-файл с результатами поиска в чат {user_id}: {e}")
+        logger.warning(f"Не удалось отправить Excel-файл с результатами поиска в чат {user_data["id"]}: {e}")
 
     return Response(
         content=excel_bytes,
@@ -805,8 +814,8 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
 @app.get("/api/export/check")
 async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
     # Получить базу данных / Экспортировать XLSX Endpoint
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -824,8 +833,8 @@ async def download_database(
         category: Optional[str] = Form(None),  # e.g. "investments"
         user_data: dict = Depends(get_current_tg_user)
 ):
-    user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_id)
+    # user_id = user_data["id"]
+    user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -842,7 +851,7 @@ async def download_database(
         # Deduct
         user.stars -= 5
         user.save()
-        logger.info(f"Deducted 5 Stars from {user_id}. New balance: {user.stars}")
+        logger.info(f"Deducted 5 Stars from {user_data["id"]}. New balance: {user.stars}")
     else:
         # Record free download timestamp
         user.last_free_download_at = datetime.now()
@@ -871,10 +880,10 @@ async def download_database(
 
         doc = BufferedInputFile(excel_bytes, filename=filename)
         caption_text = "📊 Экспорт базы данных в Excel" if user_lang == "ru" else "📊 Database export in Excel"
-        await bot.send_document(chat_id=user_id, document=doc, caption=caption_text)
-        logger.info(f"Excel-файл базы данных отправлен в чат Telegram {user_id}")
+        await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)
+        logger.info(f"Excel-файл базы данных отправлен в чат Telegram {user_data["id"]}")
     except Exception as e:
-        logger.warning(f"Не удалось отправить Excel-файл базы данных в чат {user_id}: {e}")
+        logger.warning(f"Не удалось отправить Excel-файл базы данных в чат {user_data["id"]}: {e}")
 
     return Response(
         content=excel_bytes,
@@ -891,12 +900,13 @@ def io_bytes_stream(data: bytes):
 # ==================== КОНЕЧНЫЕ ТОЧКИ API ПАНЕЛИ АДМИНИСТРАТОРА ====================
 
 def require_admin(user_data: dict = Depends(get_current_tg_user)):
-    user_id = user_data["id"]
-    is_admin = user_id == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-                                                          (list, set, tuple)) else user_id in ADMIN_USER_ID
+    # user_id = user_data["id"]
+    is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
+                                                                  (list, set, tuple)) else user_data[
+                                                                                               "id"] in ADMIN_USER_ID
     if not is_admin:
         raise HTTPException(status_code=403, detail="Access denied: Admin only")
-    return user_id
+    return user_data["id"]
 
 
 @app.get("/api/admin/status")
@@ -1123,7 +1133,6 @@ async def bg_categorize_db(method: str):
 
         # 1. Настройка клиента на основе метода
         if method == "fast":
-
             client = Client()
             model = await get_best_g4f_model(client)
         elif method == "openrouter":
