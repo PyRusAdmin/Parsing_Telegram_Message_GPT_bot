@@ -10,7 +10,7 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
+import re
 from aiogram.client import bot
 from aiogram.types import BufferedInputFile, LabeledPrice
 
@@ -635,77 +635,83 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     """
     logger.info(
         f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]} {user_data["username"]}: {query}")
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    # if not user:
+    #     raise HTTPException(status_code=404, detail="User not found")
+    all_saved_groups = []
 
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    words = re.findall(r'\w+', query)
 
-    try:
-        # mock_msg = MockMessage(user_id=user_data["id"], username=user_data["username"])
-        # Парсим ввод в список запросов (query - запросс пользователя)
-        search_terms = parse_search_input(user_input=query)
-        if not search_terms:
-            return
-        all_saved_groups = []
+    for word in words:
+        logger.info(f"Поиск группы: {word}")
+
         try:
-            # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
-            for idx, term in enumerate(search_terms, 1):
-                logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
-                # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
-                checker = CheckingAccountsValidity()  # path=None по умолчанию
-                try:
-                    client = await checker.start_random_client()
-                    if not client:
-                        logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
-                        continue
-                    # Получаем варианты названий от AI
-                    answer = await get_groq_response(term)
-                    # Чистим и фильтруем названия
-                    group_names = parse_ai_group_names(answer)
-                    logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
-                    # Ищем группы в Telegram
-                    results = await search_groups_in_telegram(
-                        client=client,
-                        group_names=group_names
-                    )
-                    logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
-                    # Сохраняем в БД
-                    for group_data in results:
-                        saved_group = save_group_to_db(group_data)
-                        if saved_group:
-                            all_saved_groups.append(saved_group)
-                    # 🔌 Обязательно отключаем клиент после каждого запроса
-                    if client:
-                        await client.disconnect()
-                        logger.info(f"🔌 Клиент для '{term}' отключён")
-                    # Пауза между запросами (защита от лимитов API и Telegram)
-                    if idx < len(search_terms):
-                        await asyncio.sleep(2)
-                except Exception as e:
-                    logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
-                    continue  # Продолжаем со следующим запросом
-            # ✅ Проверяем, были ли найдены и сохранены группы
-            if all_saved_groups:
-                # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
-                try:
-                    user_lang = user.language if user.language != "unset" else "ru"
-                    excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
-                    filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                    excel_file = BufferedInputFile(excel_bytes, filename=filename)
-                    caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"
+            # mock_msg = MockMessage(user_id=user_data["id"], username=user_data["username"])
+            # Парсим ввод в список запросов (query - запросс пользователя)
+            search_terms = parse_search_input(user_input=word)
+            if not search_terms:
+                return
 
-                    # Отправка итогового файла через бота
-                    await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)
-                    logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")
-                except Exception as send_err:
-                    logger.warning(f"⚠️ Не удалось отправить Excel-файл пользователю {user_data['id']}: {send_err}")
-            else:
-                # ❌ Сообщение выводится только если группы действительно НЕ были найдены
-                logger.info(t("global_search_no_results", lang="ru"))
+            try:
+                # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
+                for idx, term in enumerate(search_terms, 1):
+                    logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
+                    # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
+                    checker = CheckingAccountsValidity()  # path=None по умолчанию
+                    try:
+                        client = await checker.start_random_client()
+                        if not client:
+                            logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
+                            continue
+                        # Получаем варианты названий от AI
+                        answer = await get_groq_response(term)
+                        # Чистим и фильтруем названия
+                        group_names = parse_ai_group_names(answer)
+                        logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
+                        # Ищем группы в Telegram
+                        results = await search_groups_in_telegram(
+                            client=client,
+                            group_names=group_names
+                        )
+                        logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
+                        # Сохраняем в БД
+                        for group_data in results:
+                            saved_group = save_group_to_db(group_data)
+                            if saved_group:
+                                all_saved_groups.append(saved_group)
+                        # 🔌 Обязательно отключаем клиент после каждого запроса
+                        if client:
+                            await client.disconnect()
+                            logger.info(f"🔌 Клиент для '{term}' отключён")
+                        # Пауза между запросами (защита от лимитов API и Telegram)
+                        if idx < len(search_terms):
+                            await asyncio.sleep(2)
+                    except Exception as e:
+                        logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
+                        continue  # Продолжаем со следующим запросом
+                # ✅ Проверяем, были ли найдены и сохранены группы
+                if all_saved_groups:
+                    # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
+                    try:
+                        user = User.get_or_none(User.user_id == user_data["id"])
+                        user_lang = user.language if user.language != "unset" else "ru"
+                        excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
+                        filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                        excel_file = BufferedInputFile(excel_bytes, filename=filename)
+                        caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"
+
+                        # Отправка итогового файла через бота
+                        await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)
+                        logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")
+                    except Exception as send_err:
+                        logger.warning(f"⚠️ Не удалось отправить Excel-файл пользователю {user_data['id']}: {send_err}")
+                else:
+                    # ❌ Сообщение выводится только если группы действительно НЕ были найдены
+                    logger.info(t("global_search_no_results", lang="ru"))
+            except Exception as e:
+                logger.error(f"❌ Критическая ошибка: {e}")
         except Exception as e:
-            logger.error(f"❌ Критическая ошибка: {e}")
-    except Exception as e:
-        logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
+            logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
 
     return {"status": "ok", "groups": all_saved_groups}
 
