@@ -1,3 +1,5 @@
+import json
+import random
 import re
 from typing import Optional
 
@@ -50,6 +52,20 @@ def normalize_telegram_link(input_link: str) -> Optional[str]:
         return f"https://t.me/{match_url.group(1)}"
 
     return None
+
+
+def read_json(file_name):
+    """Читаем json файл"""
+    with open(file_name, "r") as f:
+        return json.load(f)
+
+
+def choosing_random_ai_model():
+    """Выбираем рандомную модель AI"""
+    data = read_json(file_name="data/model.json")
+    models = data["model"]
+    model = random.choice(models)
+    return model
 
 # def preliminary_verification_of_the_link(input_link: str) -> bool:
 #     normalized = normalize_telegram_link(input_link)

@@ -1,6 +1,7 @@
 import asyncio
+import re
 from datetime import datetime
-import json
+
 import groq
 from groq import AsyncGroq
 from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
@@ -8,6 +9,7 @@ from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMeth
 from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
+from account_manager.utilit import choosing_random_ai_model
 from core.config import GROQ_API_KEY, ADMIN_USER_ID
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
@@ -145,15 +147,6 @@ async def category_assignment(group_data: dict, client, model) -> dict:
         }
 
 
-import random
-
-
-def read_json(file_name):
-    """Читаем json файл"""
-    with open(file_name, "r") as f:
-        return json.load(f)
-
-
 async def get_groq_response(user_input):
     """
     Асинхронно отправляет запрос к модели Llama 4 Scout через Groq API для генерации вариантов названий групп.
@@ -171,10 +164,9 @@ async def get_groq_response(user_input):
     setup_proxy()  # Установка прокси
     client_groq = AsyncGroq(api_key=GROQ_API_KEY)
     try:
-        data = read_json(file_name="data/model.json")
-        models = data["model"]
-        model = random.choice(models)
-        logger.debug(f"Выбранная модель: {model}")
+        model = choosing_random_ai_model()
+        logger.debug(
+            f"Выбранная модель: {model} для дальнейшего формирования ответа названий групп и каналов для последующего поиска в Telegram.")
 
         chat_completion = await client_groq.chat.completions.create(
             model=model,
@@ -186,7 +178,11 @@ async def get_groq_response(user_input):
             ],
         )
         logger.debug(f"Полный ответ от Groq: {chat_completion}")
-        return chat_completion.choices[0].message.content
+        raw_ans = chat_completion.choices[0].message.content or ""
+        # Очищаем ответ от блока рассуждений <think>...</think>, если модель вернула мыслительный процесс
+        cleaned_ans = re.sub(r'<think>.*?</think>', '', raw_ans, flags=re.DOTALL).strip()
+        cleaned_ans = re.sub(r'</?think>', '', cleaned_ans).strip()
+        return cleaned_ans
     except groq.AuthenticationError:
         if GROQ_API_KEY:
             logger.error("Ошибка аутентификации с ключом Groq API.")

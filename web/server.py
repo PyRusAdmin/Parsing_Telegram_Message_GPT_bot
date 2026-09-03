@@ -689,29 +689,31 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
                     except Exception as e:
                         logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
                         continue  # Продолжаем со следующим запросом
-                # ✅ Проверяем, были ли найдены и сохранены группы
-                if all_saved_groups:
-                    # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
-                    try:
-                        user = User.get_or_none(User.user_id == user_data["id"])
-                        user_lang = user.language if user.language != "unset" else "ru"
-                        excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
-                        filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                        excel_file = BufferedInputFile(excel_bytes, filename=filename)
-                        caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"
 
-                        # Отправка итогового файла через бота
-                        await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)
-                        logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")
-                    except Exception as send_err:
-                        logger.warning(f"⚠️ Не удалось отправить Excel-файл пользователю {user_data['id']}: {send_err}")
-                else:
-                    # ❌ Сообщение выводится только если группы действительно НЕ были найдены
-                    logger.info(t("global_search_no_results", lang="ru"))
             except Exception as e:
                 logger.error(f"❌ Критическая ошибка: {e}")
         except Exception as e:
             logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
+
+    # ✅ Проверяем, были ли найдены и сохранены группы
+    if all_saved_groups:
+        # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
+        try:
+            user = User.get_or_none(User.user_id == user_data["id"])
+            user_lang = user.language if user.language != "unset" else "ru"
+            excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
+            filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            excel_file = BufferedInputFile(excel_bytes, filename=filename)
+            caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"
+
+            # Отправка итогового файла через бота
+            await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)
+            logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")
+        except Exception as send_err:
+            logger.warning(f"⚠️ Не удалось отправить Excel-файл пользователю {user_data['id']}: {send_err}")
+    else:
+        # ❌ Сообщение выводится только если группы действительно НЕ были найдены
+        logger.info(t("global_search_no_results", lang="ru"))
 
     return {"status": "ok", "groups": all_saved_groups}
 
