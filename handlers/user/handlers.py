@@ -20,7 +20,7 @@ from keyboards.user.keyboards import (
     connect_keyboard_account, get_stars_topup_inline_keyboard
 )
 from locales.locales import t
-from aiogram.types import CallbackQuery, LabeledPrice, Message
+from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
 from states.states import MyStates
 
 ADMIN_USER_ID = {ADMIN_USER_ID}
@@ -67,7 +67,8 @@ async def handle_start_command(message, state: FSMContext) -> None:
             await message.answer(
                 text=generate_welcome_message(user_language=user.language, user_tg_id=message.from_user.id),
                 reply_markup=reply_markup,
-                parse_mode="HTML"
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
 
     except TelegramForbiddenError:
@@ -112,7 +113,12 @@ async def handle_back_to_main_menu(message, state: FSMContext):
             # Выбираем клавиатуру в зависимости от роли
             reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(
                 lang=user.language)
-            await message.answer(text=text, reply_markup=reply_markup, parse_mode="HTML")
+            await message.answer(
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True)
+            )
     except Exception as e:
         logger.exception(e)
 

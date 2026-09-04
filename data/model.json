@@ -1,5 +1,8 @@
 {
   "model": [
-    "qwen/qwen3.6-27b"
+    "qwen/qwen3.6-27b",
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "meta-llama/llama-prompt-guard-2-22m"
   ]
 }

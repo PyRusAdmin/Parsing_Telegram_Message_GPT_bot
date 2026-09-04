@@ -2,10 +2,12 @@
 welcome_ask_language =
     🌍 Hi! Please choose your interface language:
 welcome_message_template =
-    🤖 Welcome to the Telegram bot for tracking 🔍 keywords in groups and channels, as well as searching for groups and channels with AI!
+    🤖 Welcome to the Telegram bot for tracking 🔍 keywords in groups and channels, as well as AI community search!
 
     📋 <b>Version:</b> { $version }
-    📅 <b>Release date:</b> July 02, 2026
+    📅 <b>Release date:</b> September 04, 2026
+    👨‍💻 <b>Developer:</b> <a href="https://t.me/PyAdminRU">@PyAdminRU</a>
+    📢 <b>Main channel:</b> <a href="https://t.me/master_tg_d">@master_tg_d</a>
 
     📊 <b>Groups/channels found by users:</b> { $groups_count }
 
@@ -16,7 +18,7 @@ welcome_message_template =
 
     🎉 <b>Main bot features:</b>
 
-    • 🤖 <b>AI Search:</b> find groups and channels using artificial intelligence
+    • 🌐 <b>AI Search in Web Panel:</b> AI-driven search for groups & channels is now available in the Web App interface
     • 📥 <b>Get Database:</b> download the current database of found channels and groups
     • 📚 <b>Instructions:</b> detailed guide on using the bot
     • ⚙️ <b>Settings:</b> configure account connections, keywords, and filters
@@ -606,7 +608,7 @@ excel_filename_telegram_groups = telegram_groups_{ $timestamp }.xlsx
 # post_doc.py
 instruction_question_prompt = 🤖 <b>You can ask me any question about using the bot, and I will answer you!</b>
 # post_doc.py
-ai_support_assistant_system_prompt = You are a qualified support assistant for the AutoParseAlertBot Telegram bot. Your task is to answer user questions based STRICTLY on the provided knowledge base. If the answer is not in the knowledge base, politely inform the user that you do not have this information and advise them to contact support. Respond in the user's language. Use HTML markup for formatting the answer.
+ai_support_assistant_system_prompt = You are a qualified support assistant for the AutoParseAlertBot Telegram bot. Your task is to answer user questions based STRICTLY on the provided knowledge base. If the answer is not in the knowledge base, politely inform the user that you do not have this information and advise them to contact support. Respond in the user's language in plain readable text WITHOUT using any markup formatting (do NOT use Markdown characters ###, **, *, `, _ or HTML tags).
 
 # language_detection.py
 lang_detect_summary = ✅ Processing completed!

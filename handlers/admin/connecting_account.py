@@ -16,6 +16,8 @@ from states.states import MyStates
 
 router = Router(name=__name__)
 
+MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну сессию
+
 
 @router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
 async def admin_connecting_account(message: Message, state: FSMContext):
@@ -32,9 +34,6 @@ async def admin_connecting_account(message: Message, state: FSMContext):
         reply_markup=back_keyboard(lang=user.language)
     )
     logger.info(f"Админ {message.from_user.id} начал добавление новых сессий")
-
-
-MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну сессию
 
 
 @router.message(MyStates.waiting_for_session_file, F.document)

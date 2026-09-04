@@ -40,7 +40,7 @@ def menu_user_admin_keyboard(lang: str = 'ru'):
             KeyboardButton(text=t("check_group_for_keywords_button", lang=lang), style="primary")
         ],
         [
-            KeyboardButton(text=t("ai_search_button", lang=lang), style="primary"),
+            # KeyboardButton(text=t("ai_search_button", lang=lang), style="primary"),
             KeyboardButton(text=t("get_database_button", lang=lang), style="primary")
         ],
         [

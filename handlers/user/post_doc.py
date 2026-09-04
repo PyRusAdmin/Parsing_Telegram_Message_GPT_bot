@@ -1,15 +1,15 @@
 import os
 import re
 
+import groq
 from aiogram import F, Router
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from groq import AsyncGroq
 from loguru import logger
 
 from account_manager.utilit import choosing_random_ai_model
-from core.config import GROQ_API_KEY
+from core.config import GROQ_API_KEY, ADMIN_USER_ID
 from core.proxy import setup_proxy
 from database.database import User, add_question
 from handlers.user.handlers import handle_back_to_main_menu
@@ -22,14 +22,8 @@ router = Router(name=__name__)
 
 def clean_ai_response(text: str) -> str:
     """
-    Очищает ответ ИИ от блоков рассуждений <think>...</think> и незакрытых тегов <think>.
-    
-    Некоторые модели (например, DeepSeek-R1 или Qwen-Reasoning) возвращают мыслительный процесс
-    внутри тегов <think>, что приводит к ошибке 'Unsupported start tag "think"' при попытке
-    отправить сообщение в Telegram с parse_mode="HTML".
-
-    :param text: (str) Исходный текст ответа ИИ.
-    :return: (str) Очищенный текст для отправки пользователю.
+    Очищает ответ ИИ от блоков рассуждений <think>...</think>, Markdown-разметки (###, **, *, `, _)
+    и HTML-тегов, чтобы пользователь получал чистый простой текст без разметки.
     """
     if not text:
         return ""
@@ -38,18 +32,27 @@ def clean_ai_response(text: str) -> str:
     cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     # Удаляем незакрытый тег <think> до конца текста (в случае обрыва ответа)
     cleaned = re.sub(r'<think>.*$', '', cleaned, flags=re.DOTALL)
-    # Удаляем оставшиеся одиночные теги <think> и </think>
     cleaned = re.sub(r'</?think>', '', cleaned, flags=re.IGNORECASE)
-    # Удалит и <p>, и </p> (буква 'i' в ignorecase позволит ловить и <P>, и </P>)
-    cleaned = re.sub(r'</?p>', '', cleaned, flags=re.IGNORECASE)
-    # Удалит и <li>, и </li> (буква 'i' в ignorecase позволит ловить и <li>, и </li>)
-    cleaned = re.sub(r'</?li>', '', cleaned, flags=re.IGNORECASE)
-    # Удалит и <strong>, и </strong> (буква 'i' в ignorecase позволит ловить и <strong>, и </strong>)
-    cleaned = re.sub(r'</?strong>', '', cleaned, flags=re.IGNORECASE)
-    # Удалит и <ul>, и </ul> (буква 'i' в ignorecase позволит ловить и <ul>, и </ul>)
-    cleaned = re.sub(r'</?ul>', '', cleaned, flags=re.IGNORECASE)
-    # Удалит и <code>, и </code> (буква 'i' в ignorecase позволит ловить и <code>, и </code>)
-    cleaned = re.sub(r'</?code>', '', cleaned, flags=re.IGNORECASE)
+
+    # Удаляем заголовки Markdown (###, ##, #)
+    cleaned = re.sub(r'^#{1,6}\s*', '', cleaned, flags=re.MULTILINE)
+
+    # Удаляем жирный шрифт и курсив Markdown (**текст**, *текст*, __текст__, _текст_)
+    cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned)
+    cleaned = re.sub(r'\*(.*?)\*', r'\1', cleaned)
+    cleaned = re.sub(r'__(.*?)__', r'\1', cleaned)
+    cleaned = re.sub(r'_(.*?)_', r'\1', cleaned)
+
+    # Удаляем обратные кавычки и блоки кода (`текст` или ```текст```)
+    cleaned = re.sub(r'```[\s\S]*?```', '', cleaned)
+    cleaned = re.sub(r'`(.*?)`', r'\1', cleaned)
+
+    # Удаляем любые HTML-теги (<p>, <strong>, <code>, <ul>, <li> и т.д.)
+    cleaned = re.sub(r'<[^>]+>', '', cleaned)
+
+    # Нормализуем дублирующиеся переносы строк
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
     return cleaned.strip()
 
 
@@ -134,12 +137,17 @@ async def handle_instruction_question(message: Message, state: FSMContext):
         # Сохраняем вопрос пользователя и очищенный ответ в базу данных
         add_question(user_id=message.from_user.id, question=text_question, answer=answer)
 
-        # Отправляем ответ пользователю. Если возникнет ошибка парсинга HTML, отправляем без parse_mode
-        try:
-            await message.answer(text=answer, parse_mode="HTML", reply_markup=back_keyboard(lang=user_lang))
-        except TelegramBadRequest as parse_err:
-            logger.warning(f"Ошибка парсинга HTML от Telegram ({parse_err}). Отправляем ответ с parse_mode=None")
-            await message.answer(text=answer, parse_mode=None, reply_markup=back_keyboard(lang=user_lang))
+        # Отправляем очищенный простой текст пользователю без разметки
+        await message.answer(text=answer, parse_mode=None, reply_markup=back_keyboard(lang=user_lang))
+
+    except groq.RateLimitError as e:
+        logger.error(f"Ошибка ограничения скорости запросов к Groq AI: {e}")
+        # Отправляем сообщение администратору с ошибкой от Groq AI
+        await message.bot.send_message(
+            chat_id=ADMIN_USER_ID,
+            text=f"Модель {model} недоступна. Ошибка: {e}",
+            parse_mode="HTML"
+        )
 
     except Exception as e:
         logger.exception(e)
