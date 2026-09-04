@@ -133,7 +133,7 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     :param user_tg_id: Telegram ID пользователя для получения его данных.
     :return: Готовое текстовое сообщение для отправки.
     """
-    version = "0.0.9"
+    version = "0.1.0"
     groups_count = getting_number_records_database()  # Общее число найденных групп
     count = get_session_count(user_id=user_tg_id)  # Сессии пользователя
     group_count = get_target_group_count(user_id=user_tg_id)  # Группы для пересылки

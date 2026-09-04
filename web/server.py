@@ -55,7 +55,7 @@ from locales.locales import t
 from system.dispatcher import bot
 
 # Инициализировать FastAPI
-app = FastAPI(title="AutoParseAlertBot Web API", version="0.0.9")
+app = FastAPI(title="AutoParseAlertBot Web API", version="0.1.0")
 
 # Добавьте промежуточное ПО CORS
 app.add_middleware(
@@ -267,7 +267,7 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
             "stars": user.stars,
             "is_admin": is_admin,
             "stats": {
-                "version": "0.0.9",
+                "version": "0.1.0",
                 "db_total_groups": groups_count,
                 "connected_accounts": session_count,
                 "target_groups": group_count,

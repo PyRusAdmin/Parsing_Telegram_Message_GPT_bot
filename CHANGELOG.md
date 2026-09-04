@@ -61,12 +61,32 @@ You can test the latest features via the link: https://t.me/AutoParseAlertBot
 
 **English version**
 
-* Version: 0.0.6
-* Release date: January 11, 2026
-* Added database export modes by chat type: all groups/channels, channels only, supergroups only, basic groups only.
-* Improved function naming in pars_ai.py for better code readability and maintainability.
-* Updated locale strings in locales.py with current release date.
-* Added admin panel with database update functionality (refreshing group/channel IDs and types).
-* Implemented message forwarding feature for keyword-triggered messages to a designated technical group.
+* Version: 0.0.9
+* Release date: January 31, 2026
+* Added migration from CSV to XLSX format.
+* Added category selection for database exports.
+* Added database actualization feature in admin panel.
+* Improved project logging.
+
+04.09.2026
+
+**Русский язык**
+
+* Версия: 0.1.0
+* Дата выхода: 4 сентября 2026 года
+
+- Перенос AI поиска групп и каналов в Telegram Web App интерфейс
+- Разделение AI поиска на одиночный и массовый поиск по всему пулу подключенных аккаунтов
+- Интеграция выгрузки результатов поиска прямо в чат Telegram и веб-панель
+- Интеграция баланса Telegram Stars для монетизации и снятия ограничений на экспорт базы данных
+
+**English version**
+
+* Version: 0.1.0
+* Release date: September 04, 2026
+* Moved AI search for Telegram groups and channels exclusively to the Telegram Web App interface.
+* Introduced single and mass AI search modes powered by account session pools.
+* Direct Excel export delivered via Web UI and Telegram chat.
+* Integrated Telegram Stars payment for database export cooldown bypass.
 
 You can test the latest features via the link: https://t.me/AutoParseAlertBot

@@ -4,8 +4,8 @@
 [![Aiogram](https://img.shields.io/badge/Aiogram-3.x-orange.svg)](https://docs.aiogram.dev/)
 [![Telethon](https://img.shields.io/badge/Telethon-1.x-blueviolet.svg)](https://docs.telethon.dev/)
 
-- **Версия:** 0.0.9
-- **Дата обновления:** 02 июля 2026 года
+- **Версия:** 0.1.0
+- **Дата обновления:** 04 сентября 2026 года
 
 Бот анализирует новые сообщения в указанных Telegram-группах и каналах в реальном времени, уведомляя о совпадениях по ключевым словам. Также использует ИИ (Groq, OpenRouter) для интеллектуального поиска новых тематических площадок.
 

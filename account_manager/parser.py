@@ -7,8 +7,7 @@ from telethon import events, types
 from telethon.errors import (
     FloodWaitError, InviteRequestSentError, MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
 )
-from telethon.tl.functions.channels import GetFullChannelRequest
-from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
