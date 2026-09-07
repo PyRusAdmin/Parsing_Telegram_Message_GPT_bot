@@ -98,7 +98,7 @@ async def handle_instruction_question(message: Message, state: FSMContext):
     """
     Обрабатывает вопросы пользователя по инструкции с использованием Groq AI.
     """
-    text_question = message.text  # Получаем вопрос пользователя
+    # text_question = message.text  # Получаем вопрос пользователя
     user_db = User.get(User.user_id == message.from_user.id)
     user_lang = user_db.language if user_db.language != "unset" else "ru"
 
@@ -115,15 +115,16 @@ async def handle_instruction_question(message: Message, state: FSMContext):
         setup_proxy()
         client = AsyncGroq(api_key=GROQ_API_KEY)
 
-        system_prompt = t('ai_support_assistant_system_prompt', lang=user_lang)
+        # system_prompt = t('ai_support_assistant_system_prompt', lang=user_lang)
 
         model = choosing_random_ai_model()
-        logger.debug(f"Выбранная модель: {model} для дальнейшего консультативного ответа на вопрос: {text_question}")
+        logger.debug(f"Выбранная модель: {model} для дальнейшего консультативного ответа на вопрос: {message.text}")
 
         chat_completion = await client.chat.completions.create(
             messages=[
-                {"role": "system", "content": f"{system_prompt}\n\nБАЗА ЗНАНИЙ:\n{knowledge_base_content}"},
-                {"role": "user", "content": text_question},
+                {"role": "system",
+                 "content": f"{t('ai_support_assistant_system_prompt', lang=user_lang)}\n\nБАЗА ЗНАНИЙ:\n{knowledge_base_content}"},
+                {"role": "user", "content": message.text},
             ],
             model=model,
         )
@@ -135,13 +136,22 @@ async def handle_instruction_question(message: Message, state: FSMContext):
         answer = clean_ai_response(raw_answer)
 
         # Сохраняем вопрос пользователя и очищенный ответ в базу данных
-        add_question(user_id=message.from_user.id, question=text_question, answer=answer)
+        add_question(user_id=message.from_user.id, question=message.text, answer=answer)
 
         # Отправляем очищенный простой текст пользователю без разметки
         await message.answer(text=answer, parse_mode=None, reply_markup=back_keyboard(lang=user_lang))
 
     except groq.RateLimitError as e:
         logger.error(f"Ошибка ограничения скорости запросов к Groq AI: {e}")
+        # Отправляем сообщение администратору с ошибкой от Groq AI
+        await message.bot.send_message(
+            chat_id=ADMIN_USER_ID,
+            text=f"Модель {model} недоступна. Ошибка: {e}",
+            parse_mode="HTML"
+        )
+
+    except groq.BadRequestError as e:
+        logger.error(f"Ошибка запроса к Groq AI: {e}")
         # Отправляем сообщение администратору с ошибкой от Groq AI
         await message.bot.send_message(
             chat_id=ADMIN_USER_ID,
