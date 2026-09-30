@@ -169,7 +169,7 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
             raise HTTPException(status_code=401, detail="Invalid mock token")
 
     try:
-        params = dict(urllib.parse.parse_qsl(token))
+        params = dict(urllib.parse.parse_qsl(token, keep_blank_values=True))
         if 'hash' not in params:
             raise HTTPException(status_code=401, detail="Missing hash parameter")
 
@@ -182,6 +182,7 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
         if not hmac.compare_digest(calculated_hash, auth_hash):
+            logger.warning("Telegram auth failed: hash mismatch. BOT_TOKEN in .env does not match the Telegram bot used to open WebApp.")
             raise HTTPException(status_code=401, detail="Invalid Telegram signature")
 
         user_data = json.loads(params['user'])

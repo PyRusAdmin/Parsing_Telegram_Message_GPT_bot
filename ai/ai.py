@@ -1,16 +1,20 @@
 import asyncio
 import re
 from datetime import datetime
+import random
 
 import groq
+import openai
 from groq import AsyncGroq
+from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
 from telethon.sync import functions
-
+from openai import AsyncOpenAI
 from account_manager.parser import determine_telegram_chat_type
 from account_manager.utilit import choosing_random_ai_model
-from core.config import GROQ_API_KEY, ADMIN_USER_ID
+from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY
+from core.constants import ISO_639_1_CODES
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
 from system.dispatcher import bot
@@ -82,7 +86,7 @@ async def category_assignment(group_data: dict, client, model) -> dict:
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=20
+                max_tokens=200
             )
         # Синхронные клиенты (g4f, OpenAI) - вызываем через to_thread
         else:
@@ -91,25 +95,28 @@ async def category_assignment(group_data: dict, client, model) -> dict:
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=20
+                max_tokens=200
             )
 
-        category = (
-            completion.choices[0].message.content
-            .strip()
-            .strip('".')
-        )
+        raw_content = completion.choices[0].message.content if (
+                completion and completion.choices and completion.choices[0].message) else None
+        if not raw_content:
+            logger.debug(f"⚪ AI ({model}) вернул пустой ответ для: {group_data.get('name')}")
+            return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
 
-        # 🧹 Дополнительная очистка от мусора (реклама, приветствия и т.д.)
-        # Если ответ содержит пробелы и не похож на категорию — берём первую строку
+        # 🧹 Очищаем от блоков рассуждений <think>...</think> (для reasoning-моделей)
+        raw_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
+        raw_content = re.sub(r'</?think>', '', raw_content).strip()
+
+        logger.debug(f"🤖 Ответ AI ({model}) для '{group_data.get('name')}': '{raw_content}'")
+
+        category = raw_content.strip().strip('".\'').lower()
+
+        # Если ответ содержит переносы строк — берём последнюю непустую строку (где обычно и находится итоговый ответ)
         if '\n' in category:
-            category = category.split('\n')[0].strip()
-
-        # Если ответ слишком длинный или содержит подозрительные слова — отклоняем
-        suspicious_phrases = ['hello', 'hi ', 'i am', 'thank', 'proxy', 'http', 'www', 'click', 'buy']
-        if any(phrase in category.lower() for phrase in suspicious_phrases):
-            logger.debug(f"⚠️ Подозрительный ответ AI: {category}")
-            category = "не определена"
+            lines = [l.strip() for l in category.split('\n') if l.strip()]
+            if lines:
+                category = lines[-1]
 
         # ✅ Валидация результата — сверяем со списком допустимых категорий
         valid_categories = [
@@ -122,13 +129,17 @@ async def category_assignment(group_data: dict, client, model) -> dict:
             "не определена"
         ]
 
-        if not category or category.lower() not in valid_categories:
-            logger.debug(f"⚪ AI вернул некорректную категорию '{category}' для: {group_data.get('name')}")
+        matched_category = None
+        for cat in valid_categories:
+            if cat in category:
+                matched_category = cat
+                break
+
+        if not matched_category:
+            logger.debug(f"⚪ AI вернул некорректную категорию '{raw_content}' для: {group_data.get('name')}")
             return {"telegram_id": group_data["telegram_id"], "category": None, "success": False}
 
-        # Нормализуем категорию (нижний регистр)
-        category = category.lower()
-
+        category = matched_category
         logger.debug(f"✅ AI определил: '{group_data.get('name')}' → {category}")
         return {
             "telegram_id": group_data["telegram_id"],
@@ -136,9 +147,13 @@ async def category_assignment(group_data: dict, client, model) -> dict:
             "success": True
         }
     except groq.RateLimitError as e:
-        logger.error(f"Ошибка: {e}")
+        logger.error(f"⚠️ Groq Rate Limit для {group_data.get('name')}: {e}")
+        return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False, "error": str(e)}
+    except openai.NotFoundError as e:
+        logger.error(f"⚠️ Модель AI недоступна {model} для {group_data.get('name')}: {e}")
+        return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False, "error": str(e)}
     except Exception as e:
-        logger.exception(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
+        logger.error(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
         return {
             "telegram_id": group_data.get("telegram_id"),
             "category": None,
@@ -183,6 +198,11 @@ async def get_groq_response(user_input):
         cleaned_ans = re.sub(r'<think>.*?</think>', '', raw_ans, flags=re.DOTALL).strip()
         cleaned_ans = re.sub(r'</?think>', '', cleaned_ans).strip()
         return cleaned_ans
+
+    except groq.RateLimitError:
+        logger.error(f"Привышены лимиты запросов к Groq API на модель {model}")
+        # TODO добавить отправку сообщения администратору бота
+
     except groq.AuthenticationError:
         if GROQ_API_KEY:
             logger.error("Ошибка аутентификации с ключом Groq API.")
@@ -239,16 +259,89 @@ async def search_groups_in_telegram(client, group_names):
                 if not hasattr(chat, 'title') or not chat.title:
                     continue
 
-                telegram_id = chat.id
-                group_hash = getattr(chat, 'access_hash', None)
-                title = chat.title
-                username = f"@{chat.username}" if getattr(chat, 'username', None) else None
-                link = f"https://t.me/{chat.username}" if username else None
-                participants = getattr(chat, 'participants_count', 0)
-                group_type = determine_telegram_chat_type(entity=chat)
+                # Получем данные группы / канала найденного в поиске Telegram
+                telegram_id = chat.id  # ID группы / канала
+                group_hash = getattr(chat, 'access_hash', None)  # Хеш группы / канала
+                title = chat.title  # Название группы / канала
+                username = f"@{chat.username}" if getattr(chat, 'username', None) else None  # Имя группы / канала
+                link = f"https://t.me/{chat.username}" if username else None  # Ссылка на группу / канал
+                participants = getattr(chat, 'participants_count', 0)  # Количество участников группы / канала
+                group_type = determine_telegram_chat_type(entity=chat)  # Тип группы / канала
+
+                """
+                Определение языка групп / каналов и запись в базу данных
+                """
+                logger.info(f"Найдена группа {title} {username}, определяем язык")
+                detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
+                text = title
+                result = detector.detect_language_of(text)
+
+                if result is not None:
+                    lang_code = result.iso_code_639_1.name.lower()  # например, 'RU' → 'ru'
+                    if lang_code in ISO_639_1_CODES:
+                        logger.info(f"Определён язык для группы {title} {username}: {lang_code}")
+
+                        logger.info(f"✅ {title} → {lang_code}")
+                    else:
+                        logger.warning(f"Язык {lang_code} не найден в списке ISO_639_1")
+                else:
+                    logger.warning(f"Язык для группы {title} {username} не определён")
+
+                """
+                Определение категории группы / канала
+                """
+
+                # if group['category'] == '': # Проверка наличия категории у группы (если пустая строка, то пропускаем).
+                logger.info(f"Найдена группа {title} {username}, определяем категорию")
+
+                # client_ia = AsyncGroq(api_key=GROQ_API_KEY)
+                try:
+                    # if GROQ_API_KEY:
+                    #     client_ia = AsyncGroq(api_key=GROQ_API_KEY)
+                    #     models = ["openai/gpt-oss-20b"]
+                    # else:
+                    client_ia = AsyncOpenAI(
+                        base_url="https://openrouter.ai/api/v1",
+                        api_key=OPENROUTER_API_KEY,
+                    )
+                    models = ["deepseek/deepseek-v4-flash"]
+
+                    model = random.choice(models)
+
+                    group_data = {
+                        "name": title,
+                        "description": getattr(chat, 'description', ''),
+                        "username": username,
+                        "group_type": group_type,
+                        "telegram_id": telegram_id,
+                    }
+
+                    result = await category_assignment(
+                        group_data=group_data,
+                        client=client_ia,
+                        model=model
+                    )
+
+                except openai.BadRequestError as e:
+                    logger.error(f"Не подходящая модель AI: {e}")
+
+                category_lower = ''
+                if result.get("success") and result.get("category"):
+                    # ✅ Сразу пишем в БД (в нижнем регистре)
+                    category_lower = result["category"].lower()
+                    # await sync_to_async(lambda: TelegramGroup.update(category=category_lower)
+                    #                     .where(TelegramGroup.telegram_id == result["telegram_id"])
+                    #                     .execute(), thread_sensitive=True)()
+                    logger.info(f"✅ {title} {username} → {category_lower}")
+                else:
+                    logger.warning(f"❌ {title} {username} — AI не определил")
+
+                # Пауза только для g4f (чтобы не блокировали)
+                if type(client).__name__ == 'Client':  # g4f клиент
+                    await asyncio.sleep(0.5)
 
                 # ========== Проверка даты последнего сообщения ==========
-                last_message_date = None
+                # last_message_date = None # ToDo проверить необходимость данной переменной
                 # availability = 'unknown'
 
                 try:
@@ -300,9 +393,9 @@ async def search_groups_in_telegram(client, group_names):
                             username=username,
                             description='',
                             participants=participants,
-                            category='',
+                            category=category_lower,
                             group_type=group_type,
-                            language='',
+                            language=lang_code,
                             link=link,
                             availability=availability
                         )
@@ -318,9 +411,9 @@ async def search_groups_in_telegram(client, group_names):
                     'username': username,
                     'description': '',
                     'participants': participants,
-                    'category': '',
+                    'category': category_lower,
                     'group_type': group_type,
-                    'language': '',
+                    'language': lang_code,
                     'link': link,
                     'availability': availability,
                     'last_message_date': last_message_date.isoformat() if last_message_date else None

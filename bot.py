@@ -100,6 +100,8 @@ async def main() -> None:
         config = uvicorn.Config(app, host="0.0.0.0", port=port, loop="asyncio")
         server = uvicorn.Server(config)
 
+        await bot.delete_webhook(drop_pending_updates=True)
+
         await asyncio.gather(
             dp.start_polling(bot),
             server.serve()

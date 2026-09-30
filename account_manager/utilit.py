@@ -57,7 +57,7 @@ def read_json(file_name):
 
 
 def choosing_random_ai_model():
-    """Выбираем рандомную модель AI"""
+    """Выбираем рандомную модель AI из файла model.json"""
     data = read_json(file_name="data/model.json")
     models = data["model"]
     model = random.choice(models)

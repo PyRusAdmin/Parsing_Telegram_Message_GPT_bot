@@ -243,7 +243,7 @@ def determine_telegram_chat_type(entity):
         return 'Обычный чат (группа старого типа)'
 
 
-async def get_grup_accaunt(client):
+async def sync_account_channels(client):
     """
     Собирает и обновляет данные о группах и каналах из аккаунта пользователя.
 
@@ -406,14 +406,12 @@ async def ensure_group_category(group_data: dict) -> str | None:
     return None
 
 
-_language_detector = None
-
-
-def get_language_detector():
-    global _language_detector
-    if _language_detector is None:
-        _language_detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-    return _language_detector
+# _language_detector = None
+# def get_language_detector():
+#     global _language_detector
+#     if _language_detector is None:
+#         _language_detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
+#     return _language_detector
 
 
 def ensure_group_language(telegram_id: int = None, name: str = None, description: str = None,
@@ -753,7 +751,7 @@ async def filter_messages(message, user_id, user):
         client = await checker.client_connect_string_session(accounts[0]['session_string'])
         active_clients[str(user_id)] = client
 
-        already_subscribed = await get_grup_accaunt(client)  # Получаем список каналов, где аккаунт уже состоит
+        already_subscribed = await sync_account_channels(client)  # Получаем список каналов, где аккаунт уже состоит
 
         # === 1️⃣ Читаем каналы из БД — быстро, без запросов к Telegram ===
         channels = await get_user_channels_or_notify(user_id=int(user_id), user=user, message=message, client=client)
