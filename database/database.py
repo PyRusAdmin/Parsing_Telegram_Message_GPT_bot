@@ -7,7 +7,7 @@ from peewee import (
 
 db = SqliteDatabase(
     'data/bot.db', timeout=30,
-    pragmas={'journal_mode': 'wal', 'cache_size': 4096, 'synchronous': 'NORMAL'},
+    pragmas={'cache_size': 4096, 'synchronous': 'NORMAL'},
     autocommit=True  # ✅ Важно!
 )
 
@@ -20,6 +20,10 @@ class BaseModel(Model):
 def init_database():
     """Инициализация БД и создание таблиц"""
     db.connect(reuse_if_open=True)
+    try:
+        db.execute_sql('PRAGMA journal_mode = WAL;')
+    except Exception as e:
+        logger.warning(f"Failed to set WAL journal mode: {e}")
     db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
     db.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя

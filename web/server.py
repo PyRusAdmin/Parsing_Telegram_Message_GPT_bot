@@ -6,14 +6,14 @@ import io
 import json
 import os
 import random
+import re
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import re
+
 from aiogram.client import bot
 from aiogram.types import BufferedInputFile, LabeledPrice
-
 from asgiref.sync import sync_to_async
 from fastapi import (
     BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
@@ -138,11 +138,7 @@ async def db_session_middleware(request, call_next):
     # Промежуточное программное обеспечение для подключения к базе данных
     if db.is_closed():
         db.connect(reuse_if_open=True)
-    try:
-        response = await call_next(request)
-    finally:
-        if not db.is_closed():
-            db.close()
+    response = await call_next(request)
     return response
 
 
@@ -1036,6 +1032,7 @@ async def bg_actualize_db():
                 if type(client).__name__ == 'Client':  # g4f клиент
                     await asyncio.sleep(0.5)
 
+            # TODO убрать дублирование кода
             """
             Определение языка групп / каналов и запись в базу данных
             """
