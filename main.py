@@ -23,7 +23,8 @@ commands = [
         tuna_cmd,
         "http",
         "3000",
-        "--subdomain=parsingbot",
+        # "--subdomain=parsingbot",
+        "--subdomain=support-manager-bot"
     ],  # запускает туннель tuna на порту 3000 с поддоменом parsingbot
 ]
 

@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from aiogram import Router, F
-# from aiogram import F
+
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile
 from loguru import logger
