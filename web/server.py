@@ -525,7 +525,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 
         session_path_without_ext = str(temp_path.with_suffix(""))
         mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-        checker = CheckingAccountsValidity(message=mock_msg, path=session_path_without_ext)
+        checker = CheckingAccountsValidity(path=session_path_without_ext)
         client = await checker.connect_client()
 
         if client:
@@ -741,7 +741,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
         if not group_names:
             return {"status": "no_names_generated", "groups": []}
 
-        checker = CheckingAccountsValidity(message=mock_msg)
+        checker = CheckingAccountsValidity()
         client = await checker.start_random_client()
 
         if not client:
@@ -955,7 +955,7 @@ async def bg_check_accounts():
         admin_task_status["total"] = total
 
         mock_msg = MockMessage(user_id=ADMIN_USER_ID)
-        checker = CheckingAccountsValidity(message=mock_msg)
+        checker = CheckingAccountsValidity()
 
         for idx, session in enumerate(available_sessions, 1):
             admin_task_status["progress"] = idx
@@ -1073,7 +1073,7 @@ async def bg_actualize_db():
                 logger.info(f"Найдена группа {group['username']} без типа, определяем тип")
 
                 mock_msg = MockMessage(user_id=ADMIN_USER_ID)
-                checker = CheckingAccountsValidity(message=mock_msg)  # path=None по умолчанию
+                checker = CheckingAccountsValidity()  # path=None по умолчанию
                 client = await checker.start_random_client()
 
                 if not client:

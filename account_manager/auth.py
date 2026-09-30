@@ -12,16 +12,8 @@ from telethon.errors import (
 )
 from telethon.sessions import StringSession
 
-from core.config import API_ID, API_HASH
+from core.config import API_ID, API_HASH, mobile_device
 from database.database import delete_account_from_db, getting_account
-
-mobile_device = {
-    "device_model": "Pixel 5",
-    "system_version": "11",
-    "app_version": "8.4.1",
-    "lang_code": "en",
-    "system_lang_code": "en-US",
-}
 
 
 async def get_account_info(client: TelegramClient) -> dict:

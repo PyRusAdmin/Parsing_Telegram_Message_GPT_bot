@@ -11,19 +11,13 @@ from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelReq
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
+from core.config import forwarded_messages, active_clients, stop_flags
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
     User
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import t
-
-# 🧠 Простейший трекер сообщений (в памяти)
-forwarded_messages = set()
-
-# 🛑 Словарь активных клиентов и флагов остановки
-active_clients = {}  # {user_id: client}
-stop_flags = {}  # {user_id: asyncio.Event}
 
 
 async def get_full_info_group(client, entity):

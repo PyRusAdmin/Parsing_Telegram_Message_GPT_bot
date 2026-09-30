@@ -3,6 +3,8 @@ import random
 import re
 from typing import Optional
 
+from core.config import len_pattern
+
 
 def normalize_telegram_link(input_link: str) -> Optional[str]:
     """
