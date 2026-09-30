@@ -4,7 +4,6 @@ import os
 import random
 from pathlib import Path
 
-# from aiogram.types import Message
 from loguru import logger
 from telethon import TelegramClient
 from telethon.errors import (

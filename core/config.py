@@ -17,3 +17,9 @@ PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
 
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID"))  # ID администратора Telegram
+
+MIN_USERNAME_LENGTH = 5  # Минимальная длина username
+MAX_USERNAME_LENGTH = 64  # Максимальная длина username
+
+# Формируем часть шаблона с длиной один раз, чтобы не дублировать
+len_pattern = f"{{{MIN_USERNAME_LENGTH},{MAX_USERNAME_LENGTH}}}"

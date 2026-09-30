@@ -3,12 +3,6 @@ import random
 import re
 from typing import Optional
 
-MIN_USERNAME_LENGTH = 5
-MAX_USERNAME_LENGTH = 64
-
-# Формируем часть шаблона с длиной один раз, чтобы не дублировать
-len_pattern = f"{{{MIN_USERNAME_LENGTH},{MAX_USERNAME_LENGTH}}}"
-
 
 def normalize_telegram_link(input_link: str) -> Optional[str]:
     """
