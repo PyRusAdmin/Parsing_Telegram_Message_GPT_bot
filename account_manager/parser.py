@@ -13,8 +13,8 @@ from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelReq
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
-from core.config import forwarded_messages, active_clients, stop_flags
-from core.constants import ISO_639_1_CODES
+from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
+
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
     User

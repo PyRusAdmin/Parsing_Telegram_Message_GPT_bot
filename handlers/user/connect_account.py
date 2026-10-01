@@ -142,7 +142,8 @@ async def handle_account_file(message: Message, state: FSMContext):
         await message.answer(t("session_file_received", lang=user_lang, filename=safe_file_name))
 
         session_path_without_ext = str(local_file_path.with_suffix(""))
-        checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
+
+        checker = CheckingAccountsValidity(path=session_path_without_ext)
         client = await checker.connect_client()
 
         if client:

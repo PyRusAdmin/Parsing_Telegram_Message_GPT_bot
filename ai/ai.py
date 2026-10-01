@@ -13,8 +13,7 @@ from telethon.sync import functions
 from openai import AsyncOpenAI
 from account_manager.parser import determine_telegram_chat_type
 from account_manager.utilit import choosing_random_ai_model
-from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY
-from core.constants import ISO_639_1_CODES
+from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY, ISO_639_1_CODES
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
 from system.dispatcher import bot
