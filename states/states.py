@@ -2,13 +2,14 @@ from aiogram.fsm.state import StatesGroup, State
 
 
 class MyStates(StatesGroup):
-    waiting_for_instruction_question = State()
     """
     Группа состояний машины состояний (FSM) для бота AutoParseAlertBot.
 
     Содержит все пользовательские состояния, используемые при взаимодействии с ботом.
     Каждое состояние соответствует определённому этапу ввода данных.
     """
+    waiting_for_instruction_question = State()
+
     waiting_username_group = State()  # Ожидание ввода одного или нескольких @username групп для отслеживания
     entering_keyword = State()  # Ожидание ввода одного или нескольких ключевых слов для поиска
     entering_group = State()  # Ожидание ввода @username технической группы для пересылки сообщений

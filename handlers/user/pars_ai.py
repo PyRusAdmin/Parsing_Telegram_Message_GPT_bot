@@ -15,8 +15,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
-# from account_manager.auth import CheckingAccountsValidity
-# from ai.ai import get_groq_response, search_groups_in_telegram
 from database.database import User, TelegramGroup
 from keyboards.user.keyboards import search_group_ai, get_categories_keyboard
 from locales.locales import t

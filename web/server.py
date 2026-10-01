@@ -37,9 +37,9 @@ from account_manager.parser import (
 )
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
 from core.config import (
-    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
+    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
-from core.constants import ISO_639_1_CODES
+
 from database.database import (
     Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model, create_keywords_model, db,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
@@ -182,7 +182,8 @@ def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
         if not hmac.compare_digest(calculated_hash, auth_hash):
-            logger.warning("Telegram auth failed: hash mismatch. BOT_TOKEN in .env does not match the Telegram bot used to open WebApp.")
+            logger.warning(
+                "Telegram auth failed: hash mismatch. BOT_TOKEN in .env does not match the Telegram bot used to open WebApp.")
             raise HTTPException(status_code=401, detail="Invalid Telegram signature")
 
         user_data = json.loads(params['user'])

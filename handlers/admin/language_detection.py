@@ -5,8 +5,8 @@ from asgiref.sync import sync_to_async
 from loguru import logger
 from openai import OpenAI
 
-from core.config import OPENROUTER_API_KEY
-from core.constants import ISO_639_1_CODES
+from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES
+
 from database.database import TelegramGroup, db
 from locales.locales import t
 
@@ -16,7 +16,6 @@ router = Router(name=__name__)
 def ai_llama_fri(group_data: dict, lang: str = 'ru'):
     """Определение языка (ТОЛЬКО AI-запрос через OpenRouter Free, БЕЗ записи в БД)"""
     try:
-        # from openai import OpenAI
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=OPENROUTER_API_KEY,

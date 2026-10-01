@@ -23,8 +23,6 @@ from locales.locales import t
 from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
 from states.states import MyStates
 
-ADMIN_USER_ID = {ADMIN_USER_ID}
-
 router = Router(name=__name__)
 
 
