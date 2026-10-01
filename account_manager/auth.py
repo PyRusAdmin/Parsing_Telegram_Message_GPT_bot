@@ -174,12 +174,20 @@ class CheckingAccountsValidity:
 
             if not await client.is_user_authorized():
                 logger.warning(f"⚠️ Сессия {self.path} не авторизована")
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
                 return None
             account_info = await get_account_info(client)
             logger.success(f"✅ Сессия активна: {account_info['phone'] or account_info['id']}")
             return client
         except Exception as e:
             logger.exception(f"Ошибка подключения к {self.path}: {e}")
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
             return None
 
     async def start_random_client(self):

@@ -178,6 +178,9 @@ async def handle_account_file(message: Message, state: FSMContext):
     finally:
         # ✅ Удаляем временный файл в любом случае
         if local_file_path and local_file_path.exists():
-            local_file_path.unlink()
+            try:
+                local_file_path.unlink()
+            except Exception as e:
+                logger.warning(f"Could not delete session file {local_file_path}: {e}")
         # ✅ Сбрасываем состояние только в конце
         await state.clear()

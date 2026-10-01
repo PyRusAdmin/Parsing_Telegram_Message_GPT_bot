@@ -515,6 +515,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
     safe_name = "".join(c for c in file.filename if c.isalnum() or c in "._-")
     temp_path = sessions_dir / f"temp_{user_data["id"]}_{safe_name}"
 
+    client = None
     try:
         with open(temp_path, "wb") as f:
             content = await file.read()
@@ -526,40 +527,49 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
         client = await checker.connect_client()
 
         if client:
-            account_info = await get_account_info(client)
-            phone = account_info["phone"] or "unknown"
-            session_string = StringSession.save(client.session)
+            try:
+                account_info = await get_account_info(client)
+                phone = account_info["phone"] or "unknown"
+                session_string = StringSession.save(client.session)
 
-            # Сохранить аккаунт в пользовательскую таблицу
+                # Сохранить аккаунт в пользовательскую таблицу
 
-            write_account_to_user_table(
-                user_id=user_data["id"],
-                session_string=session_string,
-                phone_number=phone
-            )
+                write_account_to_user_table(
+                    user_id=user_data["id"],
+                    session_string=session_string,
+                    phone_number=phone
+                )
 
-            await client.disconnect()
+                await client.disconnect()
 
-            # Отправьте уведомление через бота
-            user_lang = user.language if user.language != "unset" else "ru"
-            await mock_msg.answer(
-                text=t("session_connected_success",
-                       lang=user_lang,
-                       filename=safe_name,
-                       phone=phone,
-                       name=account_info["first_name"]
-                       )
-            )
+                # Отправьте уведомление через бота
+                user_lang = user.language if user.language != "unset" else "ru"
+                await mock_msg.answer(
+                    text=t("session_connected_success",
+                           lang=user_lang,
+                           filename=safe_name,
+                           phone=phone,
+                           name=account_info["first_name"]
+                           )
+                )
 
-            return {"status": "ok", "phone": phone, "name": account_info["first_name"]}
+                return {"status": "ok", "phone": phone, "name": account_info["first_name"]}
+            finally:
+                if client and client.is_connected():
+                    await client.disconnect()
         else:
             raise HTTPException(status_code=400, detail="Session file is invalid or not authorized")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Error processing session file upload: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if temp_path.exists():
-            temp_path.unlink()
+            try:
+                temp_path.unlink()
+            except Exception as pe:
+                logger.warning(f"Could not delete temporary session file {temp_path}: {pe}")
 
 
 @app.delete("/api/accounts/{phone}")

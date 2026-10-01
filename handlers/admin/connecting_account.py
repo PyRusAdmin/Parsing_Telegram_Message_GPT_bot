@@ -8,6 +8,7 @@ from loguru import logger
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
+from core.config import MAX_SESSIONS_PER_BATCH
 from database.database import write_account_to_db, User
 from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
 from keyboards.user.keyboards import back_keyboard
@@ -15,8 +16,6 @@ from locales.locales import t
 from states.states import MyStates
 
 router = Router(name=__name__)
-
-MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну сессию
 
 
 @router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
@@ -99,7 +98,10 @@ async def receive_session_file(message: Message, state: FSMContext):
             await client.disconnect()
             # ✅ Удаляем временный .session файл
             if local_file_path.exists():
-                local_file_path.unlink()
+                try:
+                    local_file_path.unlink()
+                except Exception as e:
+                    logger.warning(f"Could not delete session file {local_file_path}: {e}")
             # ✅ Обновляем статистику
             success_count += 1
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
@@ -111,7 +113,10 @@ async def receive_session_file(message: Message, state: FSMContext):
         else:
             # ❌ Файл не валиден — удаляем
             if local_file_path.exists():
-                local_file_path.unlink()
+                try:
+                    local_file_path.unlink()
+                except Exception as e:
+                    logger.warning(f"Could not delete session file {local_file_path}: {e}")
             fail_count += 1
             logger.warning(f"❌ Сессия не валидна: {safe_file_name}")
             await message.answer(t("connect_account_failed", lang=user.language, filename=safe_file_name),
@@ -121,7 +126,10 @@ async def receive_session_file(message: Message, state: FSMContext):
         logger.exception(f"Ошибка при обработке {document.file_name}: {e}")
         fail_count += 1
         if local_file_path.exists():
-            local_file_path.unlink()
+            try:
+                local_file_path.unlink()
+            except Exception as pe:
+                logger.warning(f"Could not delete session file {local_file_path}: {pe}")
         await message.answer(t("connect_account_error", lang=user.language, filename=safe_file_name), parse_mode="HTML")
 
     finally:

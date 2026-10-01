@@ -30,20 +30,21 @@ from system.dispatcher import bot
 
 
 class CategoryAssignment:
-    """Определение категории через AI g4f.client.Client AsyncGroq  OpenAI"""
+    """Определение категории через AI g4f.client.Client AsyncGroq OpenAI"""
 
     def __init__(self):
         self.client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=OPENROUTER_API_KEY,
         )  # g4f.client.Client | AsyncGroq | OpenAI
-        self.model = ["deepseek/deepseek-v4-flash"]  # название модели. Например: ""deepseek/deepseek-v4-flash""
+        self.model = ["deepseek/deepseek-v4-flash"]  # название модели. Например: "deepseek/deepseek-v4-flash"
 
     async def get_random_ai_model(self) -> str:
-        return random.choice(self.model)
+        if isinstance(self.model, (list, tuple)):
+            return random.choice(self.model)
+        return str(self.model)
 
-    async def build_group_context(self, group_data):
-
+    def build_group_context(self, group_data: dict) -> str:
         # 🧩 Формируем контекст
         data_parts = []
         if group_data.get('name'):
@@ -57,15 +58,24 @@ class CategoryAssignment:
 
         return "\n".join(data_parts) if data_parts else "Нет данных"
 
-    async def category_assignment(self, group_data: dict) -> dict:
+    async def category_assignment(self, group_data: dict, client=None, model=None) -> dict:
         """
         Универсальная функция для определения категории через любой AI клиент.
         Работает с g4f (синхронный), Groq, OpenAI (асинхронные).
 
         :param group_data: dict с полями name, description, username, group_type, telegram_id
+        :param client: g4f.client.Client | AsyncGroq | OpenAI (опционально)
+        :param model: название модели (опционально)
         :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
         """
         setup_proxy()
+
+        target_client = client if client is not None else self.client
+        target_model = model if model is not None else self.model
+
+        if isinstance(target_model, (list, tuple)):
+            target_model = random.choice(target_model)
+
         user_input = self.build_group_context(group_data)
         try:
             prompt = (
@@ -91,12 +101,12 @@ class CategoryAssignment:
             )
 
             # 🤖 Определяем тип клиента и делаем запрос
-            client_type = type(self.client).__name__
+            client_type = type(target_client).__name__
 
             # Асинхронные клиенты (Groq, OpenAI)
             if client_type in ['AsyncGroq', 'AsyncOpenAI']:
-                completion = await self.client.chat.completions.create(
-                    model=self.model,
+                completion = await target_client.chat.completions.create(
+                    model=target_model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3,
                     max_tokens=200
@@ -104,8 +114,8 @@ class CategoryAssignment:
             # Синхронные клиенты (g4f, OpenAI) - вызываем через to_thread
             else:
                 completion = await asyncio.to_thread(
-                    self.client.chat.completions.create,
-                    model=self.model,
+                    target_client.chat.completions.create,
+                    model=target_model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3,
                     max_tokens=200
@@ -114,14 +124,14 @@ class CategoryAssignment:
             raw_content = completion.choices[0].message.content if (
                     completion and completion.choices and completion.choices[0].message) else None
             if not raw_content:
-                logger.debug(f"⚪ AI ({self.model}) вернул пустой ответ для: {group_data.get('name')}")
+                logger.debug(f"⚪ AI ({target_model}) вернул пустой ответ для: {group_data.get('name')}")
                 return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False}
 
             # 🧹 Очищаем от блоков рассуждений <think>...</think> (для reasoning-моделей)
             raw_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
             raw_content = re.sub(r'</?think>', '', raw_content).strip()
 
-            logger.debug(f"🤖 Ответ AI ({self.model}) для '{group_data.get('name')}': '{raw_content}'")
+            logger.debug(f"🤖 Ответ AI ({target_model}) для '{group_data.get('name')}': '{raw_content}'")
 
             category = raw_content.strip().strip('".\'').lower()
 
@@ -163,7 +173,7 @@ class CategoryAssignment:
             logger.error(f"⚠️ Groq Rate Limit для {group_data.get('name')}: {e}")
             return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False, "error": str(e)}
         except openai.NotFoundError as e:
-            logger.error(f"⚠️ Модель AI недоступна {self.model} для {group_data.get('name')}: {e}")
+            logger.error(f"⚠️ Модель AI недоступна {target_model} для {group_data.get('name')}: {e}")
             return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False, "error": str(e)}
         except Exception as e:
             logger.error(f"⚠️ Ошибка AI для {group_data.get('name')}: {type(e).__name__}: {e}")
@@ -173,6 +183,20 @@ class CategoryAssignment:
                 "success": False,
                 "error": str(e)
             }
+
+
+async def category_assignment(group_data: dict, client=None, model=None) -> dict:
+    """
+    Универсальная функция для определения категории через любой AI клиент.
+    Работает с g4f (синхронный), Groq, OpenAI (асинхронные).
+
+    :param group_data: dict с полями name, description, username, group_type, telegram_id
+    :param client: g4f.client.Client | AsyncGroq | OpenAI (опционально)
+    :param model: название модели (опционально)
+    :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
+    """
+    ca = CategoryAssignment()
+    return await ca.category_assignment(group_data, client=client, model=model)
 
 
 async def get_groq_response(user_input):

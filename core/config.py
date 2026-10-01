@@ -38,3 +38,5 @@ forwarded_messages = set()
 # 🛑 Словарь активных клиентов и флагов остановки
 active_clients = {}  # {user_id: client}
 stop_flags = {}  # {user_id: asyncio.Event}
+
+MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну сессию
