@@ -8,6 +8,7 @@ import os
 import random
 import re
 import urllib.parse
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -16,11 +17,10 @@ from aiogram.client import bot
 from aiogram.types import BufferedInputFile, LabeledPrice
 from asgiref.sync import sync_to_async
 from fastapi import (
-    BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+    APIRouter, BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from g4f.client import Client
 from groq import AsyncGroq
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
@@ -39,7 +39,6 @@ from ai.ai import category_assignment, get_groq_response, search_groups_in_teleg
 from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
-
 from database.database import (
     Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model, create_keywords_model, db,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
@@ -142,6 +141,62 @@ async def db_session_middleware(request, call_next):
     return response
 
 
+def get_client_ip(request: Request) -> str:
+    """Извлекает реальный IP пользователя с учетом прокси (X-Forwarded-For, X-Real-IP, CF-Connecting-IP)"""
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    x_real_ip = request.headers.get("x-real-ip")
+    if x_real_ip:
+        return x_real_ip.strip()
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip.strip()
+    if request.client:
+        return request.client.host
+    return "127.0.0.1"
+
+
+async def get_country_by_ip(ip: str) -> Optional[str]:
+    """Определяет двухбуквенный код страны (RU, US и т.д.) по IP через ip-api.com"""
+    if ip.startswith(("127.", "192.168.", "10.", "172.16.", "localhost")):
+        return None
+    try:
+        def _fetch():
+            url = f"http://ip-api.com/json/{ip}?fields=countryCode,status"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get("status") == "success":
+                    return data.get("countryCode")
+            return None
+
+        return await asyncio.to_thread(_fetch)
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка определения страны по IP {ip}: {e}")
+        return None
+
+
+async def detect_language_by_ip(ip: str, accept_language_header: Optional[str] = None) -> str:
+    """
+    Определяет предпочтительный язык ('ru' или 'en') на основе IP пользователя и заголовка Accept-Language.
+    """
+    country_code = await get_country_by_ip(ip)
+    if country_code:
+        ru_countries = {"RU", "BY", "KZ", "KG", "AM", "AZ", "TJ", "TM", "UZ", "MD", "GE"}
+        if country_code.upper() in ru_countries:
+            return "ru"
+        else:
+            return "en"
+
+    if accept_language_header:
+        lang_lower = accept_language_header.lower()
+        if any(code in lang_lower for code in ["ru", "be", "uk", "kk"]):
+            return "ru"
+
+    return "ru"
+
+
 def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
     # Зависимость для проверки аутентификации из initData
     if not authorization:
@@ -202,6 +257,9 @@ admin_task_status = {
     "message": ""
 }
 
+# Множество подсоединённых сессий для устранения дублирующего спама в логах при регулярном поллинге каждые 5 сек
+logged_user_sessions = set()
+
 
 def init_web_directories():
     # Убедитесь, что каталоги существуют
@@ -216,21 +274,26 @@ init_web_directories()
 # ==================== ПУБЛИЧНЫЕ API-ЭНДПОИНТЫ ====================
 
 @app.get("/api/status")
-async def get_status(user_data: dict = Depends(get_current_tg_user)):
+async def get_status(request: Request, user_data: dict = Depends(get_current_tg_user)):
     try:
-        # user_id = user_data["id"]
+        client_ip = get_client_ip(request)
 
         # Получить пользователя
         user = User.get_or_none(User.user_id == user_data["id"])
         if not user:
+            detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
             # Зарегистрировать пользователя в базе данных
             user = User.create(
                 user_id=user_data["id"],
                 username=user_data.get("username"),
                 first_name=user_data.get("first_name"),
                 last_name=user_data.get("last_name"),
-                language="unset"
+                language=detected_lang
             )
+        elif user.language == "unset":
+            detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
+            user.language = detected_lang
+            user.save()
 
         # Получите статистику
         groups_count = getting_number_records_database()
@@ -249,13 +312,14 @@ async def get_status(user_data: dict = Depends(get_current_tg_user)):
 
         tracking_active = str(user_data["id"]) in active_clients
 
-        logger.info(
-            f"ID пользователя: {user_data["id"]}. Тип входящих данных user_id: {type(user_data["id"])}. ID админа : {ADMIN_USER_ID}. Тип входящих данных ADMIN_USER_ID: {type(ADMIN_USER_ID)}. Выполняю проверку на администратора...")
-
         is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
                                                                       (list, set, tuple)) else user_data[
                                                                                                    "id"] in ADMIN_USER_ID
-        logger.info(f"Это администратор: {is_admin}")
+        session_key = (user_data["id"], client_ip)
+        if session_key not in logged_user_sessions:
+            logged_user_sessions.add(session_key)
+            logger.info(
+                f"👤 Пользователь {user_data.get('first_name', '')} {user_data.get('last_name', '')} (@{user_data.get('username', 'без username')}, ID: {user_data['id']}) | IP: {client_ip} | Язык: {user.language}. Администратор: {is_admin}")
 
         return {
             "user_id": user_data["id"],
@@ -1312,5 +1376,72 @@ async def admin_download_logs():
     return FileResponse(log_path, media_type="text/plain", filename="bot_log.txt")
 
 
-# Монтировать статические файлы
-app.mount("/", StaticFiles(directory="web/static", html=True), name="static")
+# Роутер для статичных файлов и веб-интерфейса
+static_router = APIRouter()
+
+
+@static_router.get("/")
+async def serve_index(request: Request):
+    user_str = "Анонимный пользователь"
+
+    auth_header = request.headers.get("Authorization")
+    query_params = dict(request.query_params)
+    token = auth_header or query_params.get("tgWebAppData") or query_params.get("initData") or query_params.get("init_data") or query_params.get("token")
+
+    user_data = None
+    if token:
+        if token.startswith("Bearer "):
+            token = token[7:]
+        if token.startswith("mock_"):
+            try:
+                mock_id = int(token.split("_")[1])
+                user_data = {"id": mock_id, "username": f"test_user_{mock_id}", "first_name": "Test"}
+            except Exception:
+                pass
+        else:
+            try:
+                params = dict(urllib.parse.parse_qsl(token, keep_blank_values=True))
+                if 'user' in params:
+                    user_data = json.loads(params['user'])
+            except Exception:
+                pass
+
+    if not user_data and ("user_id" in query_params or "id" in query_params):
+        uid = query_params.get("user_id") or query_params.get("id")
+        user_data = {
+            "id": uid,
+            "username": query_params.get("username"),
+            "first_name": query_params.get("first_name", "")
+        }
+
+    client_ip = get_client_ip(request)
+    detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
+
+    if user_data:
+        uid = user_data.get("id", "неизвестен")
+        username = user_data.get("username")
+        username_str = f"@{username}" if username else "без username"
+        first_name = user_data.get("first_name", "")
+        user_str = f"{first_name} ({username_str}, ID: {uid})"
+    else:
+        user_str = "Гость"
+
+    session_key = (user_str, client_ip)
+    if session_key not in logged_user_sessions:
+        logged_user_sessions.add(session_key)
+        logger.info(f"🌐 Пользователь {user_str} [IP: {client_ip}, Язык по IP: {detected_lang}] перешел на начальную страницу")
+    return FileResponse("web/static/index.html")
+
+
+@static_router.get("/{file_path:path}")
+async def serve_static(file_path: str):
+    target_path = os.path.join("web/static", file_path)
+    if os.path.isfile(target_path):
+        return FileResponse(target_path)
+    index_path = os.path.join("web/static", "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
+    raise HTTPException(status_code=404, detail="File not found")
+
+
+app.include_router(static_router)

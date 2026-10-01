@@ -187,27 +187,26 @@
             </div>
         </section>
 
-        <!-- ВКЛАДКА 4: СЧЕТА -->
+        <!-- ВКЛАДКА 4: Подключенные аккаунты -->
         <section id="tab-accounts" class="tab-content">
             <div class="card glass-panel">
                 <h3><i class="fa-solid fa-user-plus icon-inline"></i> Подключить аккаунт Telegram</h3>
-                <p class="card-desc">Загрузить действительное <strong>.session</strong> (Телемарафон) файл сессии для
-                    подключения аккаунта для мониторинга или поиска.</p>
+                <p class="card-desc">Загрузите файл сессии <strong>.session</strong> (Telethon / Pyrogram) рабочего аккаунта Telegram для автопоиска и мониторинга.</p>
 
                 <div class="drag-drop-area" id="session-drop-zone">
                     <i class="fa-solid fa-key drag-icon"></i>
-                    <p>Drag & Drop <strong>.session</strong> файл или <span class="browse-link">browse</span></p>
+                    <p>Перетащите <strong>.session</strong> файл сюда или <span class="browse-link">выберите на устройстве</span></p>
                     <input type="file" id="session-file-input" accept=".session" class="hidden">
                 </div>
             </div>
 
             <div class="card glass-panel list-card">
                 <div class="card-header">
-                    <h3><i class="fa-solid fa-circle-user icon-inline"></i> Активные занятия</h3>
+                    <h3><i class="fa-solid fa-circle-user icon-inline"></i> Активные сессии</h3>
                     <span id="accounts-count" class="badge">0</span>
                 </div>
                 <div class="list-container scrollable" id="accounts-list">
-                    <div class="empty-state">Аккаунты не связаны.</div>
+                    <div class="empty-state">Нет подключенных аккаунтов.</div>
                 </div>
             </div>
         </section>
@@ -422,7 +421,7 @@
         </button>
         <button class="nav-item" onclick="switchTab('accounts')">
             <i class="fa-solid fa-user-shield"></i>
-            <span>Счета</span>
+            <span>Подключенные аккаунты</span>
         </button>
         <button class="nav-item" onclick="switchTab('search')">
             <i class="fa-solid fa-robot"></i>
