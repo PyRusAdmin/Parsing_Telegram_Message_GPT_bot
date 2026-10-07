@@ -2,68 +2,96 @@ import asyncio
 
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.errors import (
-    UserAlreadyParticipantError, FloodWaitError, InviteRequestSentError, AuthKeyUnregisteredError, ChannelPrivateError
+    UserAlreadyParticipantError, FloodWaitError, InviteRequestSentError,
+    AuthKeyUnregisteredError, ChannelPrivateError, ChannelInvalidError,
+    UsernameNotOccupiedError, UsernameInvalidError
 )
 from telethon.tl.functions.channels import JoinChannelRequest
 
 from account_manager.utilit import normalize_telegram_link
 
 
-async def subscription_telegram(client, target_username):
+async def subscription_telegram(client, target_username) -> bool:
     """
-    Подписка на группы каналы Telegram
+    Подписка на группу или канал Telegram.
+
     :param client: Telethon Client
-    :param target_username: Имя канала Telegram
+    :param target_username: Имя пользователя или ссылка на канал/группу Telegram
+    :return: True если успешно подписались или уже являемся участником, False если канал не найден или произошла ошибка
     """
     if client is None:
         logger.error(f"❌ client is None при попытке подписаться на {target_username}")
-        return None
+        return False
 
-    logger.warning(f"🔗 Подписка на {target_username}")
+    if not target_username:
+        return False
+
     # Нормализуем ссылку в единый вид (https://t.me/username) с помощью регулярных выражений
     normalized = normalize_telegram_link(input_link=target_username)
-    try:
-        await client.get_entity(normalized)
-        logger.info(f"✅ Уже подписаны на группу {normalized}")
-        return
-    except FloodWaitError as e:
-        logger.error(f"⚠️ FloodWait {e.seconds} сек.")
-    except Exception as e:
-        logger.exception(e)
-        pass  # Не подписаны, продолжаем подписку
+    if not normalized:
+        logger.warning(f"⚠️ Не удалось распознать ссылку или юзернейм: {target_username}")
+        return False
 
+    # 1. Получаем сущность канала/группы через get_entity
+    try:
+        entity = await client.get_entity(normalized)
+    except (UsernameNotOccupiedError, UsernameInvalidError):
+        logger.warning(f"⚠️ Канал/группа не существует: {normalized}")
+        return False
+    except ValueError as e:
+        logger.warning(f"⚠️ Не удалось найти канал/группу {normalized}: {e}")
+        return False
+    except ChannelPrivateError:
+        logger.warning(f"⚠️ Канал {normalized} приватный или доступ ограничен")
+        return False
+    except FloodWaitError as e:
+        logger.warning(f"⚠️ FloodWait {e.seconds} сек. при получении информации о {normalized}")
+        return False
+    except AuthKeyUnregisteredError:
+        logger.error("❌ Невалидная сессия Telegram. Разорвано соединение")
+        return False
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка при получении информации о {normalized}: {e}")
+        return False
+
+    # 2. Проверяем, не являемся ли мы уже участником канала/группы
+    if getattr(entity, 'left', None) is False:
+        logger.info(f"ℹ️ Вы уже являетесь членом целевой группы {normalized}")
+        return True
+
+    # 3. Присоединяемся к каналу/группе
     try:
         logger.info(f"🔗 Попытка присоединиться к целевой группе {normalized}...")
-        # ToDo сделать общую функцию для подписки на канал / группу
-        await client(JoinChannelRequest(normalized))
-
+        await client(JoinChannelRequest(entity))
         logger.success(f"✅ Успешно присоединился к целевой группе {normalized}")
+        return True
     except UserAlreadyParticipantError:
         logger.info(f"ℹ️ Вы уже являетесь членом целевой группы {normalized}")
-        entity = await client.get_entity(normalized)
-        return entity.telegram_id
+        return True
+    except InviteRequestSentError:
+        logger.info(f"📩 Запрос на приглашение отправлен для {normalized}, ожидание одобрения")
+        return True
     except FloodWaitError as e:
         logger.warning(f"⚠️ Ошибка FloodWait. Ожидание {e.seconds} секунд...")
         await asyncio.sleep(e.seconds)
         try:
-            # ToDo сделать общую функцию для подписки на канал / группу
-            await client(JoinChannelRequest(normalized))
-            entity = await client.get_entity(normalized)
-            return entity.telegram_id
+            await client(JoinChannelRequest(entity))
+            logger.success(f"✅ Успешно присоединился к целевой группе {normalized} после ожидания")
+            return True
+        except UserAlreadyParticipantError:
+            return True
         except Exception as retry_error:
-            logger.error(f"❌ Не удалось присоединиться к целевой группе после повторной попытки: {retry_error}")
-            return None
+            logger.error(f"❌ Не удалось присоединиться к {normalized} после ожидания: {retry_error}")
+            return False
+    except (ChannelPrivateError, ChannelInvalidError):
+        logger.warning(f"⚠️ Канал {normalized} приватный или недействителен")
+        return False
+    except (UsernameNotOccupiedError, UsernameInvalidError, ValueError):
+        logger.warning(f"❌ Неверное имя пользователя целевой группы: {normalized}")
+        return False
     except AuthKeyUnregisteredError:
-        logger.error(f"Не валидная сеесия Telegram. Разорвано соединение")
-        return None
-    except ValueError:
-        logger.error(f"❌ Неверное имя пользователя целевой группы: {normalized}")
-        return None
-    except InviteRequestSentError:
-        logger.error(f"❌ Запрос на приглашение отправлен для {normalized}, ожидание одобрения")
-        return None
-    except ChannelPrivateError:
-        logger.error(f"⚠️ Канал {normalized} приватный")
+        logger.error("❌ Невалидная сессия Telegram. Разорвано соединение")
+        return False
     except Exception as e:
-        logger.exception(e)
-        return None
+        logger.error(f"❌ Не удалось присоединиться к {normalized}: {e}")
+        return False

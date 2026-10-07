@@ -5,6 +5,8 @@ from peewee import (
     SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField, Model, CharField, DoesNotExist, fn
 )
 
+from core.config import ADMIN_USER_ID
+
 db = SqliteDatabase(
     'data/bot.db', timeout=30,
     pragmas={'cache_size': 4096, 'synchronous': 'NORMAL'},
@@ -265,16 +267,36 @@ class AccountFree(Model):
         table_name = 'account_free'
 
 
-def write_account_to_db(session_string, phone_number):
+def write_account_to_db(session_string, phone_number, user_id):
     """
-    Запись аккаунта в базу данных
+    Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
+    если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
     :param phone_number: Номер телефона аккаунта
     :param session_string: Строка сессии
+    :param user_id: ID пользователя Telegram (определяем админ или нет)
     """
-    try:
-        Account.insert(session_string=session_string, phone_number=phone_number).on_conflict(action='IGNORE').execute()
-    except Exception as e:
-        logger.exception(e)
+
+    # Если пользователь является администратором, то записываем в таблицу с общими аккаунтами
+    if user_id in ADMIN_USER_ID:
+        logger.warning(f"Аккаунт {phone_number} подключается администратором")
+        AccountFree.insert(
+            session_string=session_string,  # Строка сессии аккаунта Telegram
+            phone_number=phone_number  # Номер телефона аккаунта Telegram
+        ).on_conflict(action='IGNORE').execute()
+
+    # Иначе записываем в таблицу (user_accounts_table) пользователя с аккаунтами для личного использования
+    else:
+        logger.info(f"Аккаунт {phone_number} подключается обычным пользователем {user_id} для личного использования")
+        try:
+            UserAccountsTable.insert(
+                user_id=user_id,  # ID пользователя Telegram,
+                session_string=session_string,  # Строка сессии аккаунта Telegram
+                phone_number=phone_number  # Номер телефона аккаунта Telegram
+            ).on_conflict(action='IGNORE').execute()
+        except Exception as e:
+            logger.exception(e)
+
+    logger.info(f"Аккаунт {phone_number} успешно записан в базу данных")
 
 
 def getting_free_account():

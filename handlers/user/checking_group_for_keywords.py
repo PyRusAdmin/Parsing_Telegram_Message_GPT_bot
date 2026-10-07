@@ -87,8 +87,14 @@ async def parse_group_for_keywords(url, keyword, message: Message):
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
         client = await checker.start_random_client()
+        if not client:
+            await message.answer("⚠️ Нет доступных рабочих сессий для проверки.")
+            return
 
-        await subscription_telegram(client, url)
+        subscribed = await subscription_telegram(client, url)
+        if not subscribed:
+            await message.answer("❌ Не удалось найти или подписаться на указанную группу/канал.")
+            return
 
         try:
             # Определяем параметры для парсинга

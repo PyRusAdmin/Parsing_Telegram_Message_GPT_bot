@@ -1386,7 +1386,8 @@ async def serve_index(request: Request):
 
     auth_header = request.headers.get("Authorization")
     query_params = dict(request.query_params)
-    token = auth_header or query_params.get("tgWebAppData") or query_params.get("initData") or query_params.get("init_data") or query_params.get("token")
+    token = auth_header or query_params.get("tgWebAppData") or query_params.get("initData") or query_params.get(
+        "init_data") or query_params.get("token")
 
     user_data = None
     if token:
@@ -1429,7 +1430,8 @@ async def serve_index(request: Request):
     session_key = (user_str, client_ip)
     if session_key not in logged_user_sessions:
         logged_user_sessions.add(session_key)
-        logger.info(f"🌐 Пользователь {user_str} [IP: {client_ip}, Язык по IP: {detected_lang}] перешел на начальную страницу")
+        logger.info(
+            f"🌐 Пользователь {user_str} [IP: {client_ip}, Язык по IP: {detected_lang}] перешел на начальную страницу")
     return FileResponse("web/static/index.html")
 
 

@@ -9,19 +9,20 @@ from aiogram.types import (
 )
 from loguru import logger
 from peewee import AutoField, BigIntegerField, CharField, DateTimeField, IntegerField, Model, TextField, fn
+from telethon import TelegramClient
+from telethon.errors import (
+    FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
+    PhoneNumberInvalidError, SessionPasswordNeededError, UsernameNotOccupiedError,
+    UsernameInvalidError, ChannelPrivateError
+)
+from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.messages import CreateChatRequest, ExportChatInviteRequest
 
 from account_manager.auth import CheckingAccountsValidity
-from core.config import API_ID, API_HASH, mobile_device
+from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import db, write_account_to_db
 from system.dispatcher import bot
-from telethon import TelegramClient
-from telethon.errors import (
-    FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
-    PhoneNumberInvalidError, SessionPasswordNeededError
-)
-from telethon.sessions import StringSession
 
 router = Router(name="personal_tracking")
 
@@ -151,13 +152,27 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         await client.disconnect()
         return True, "Успешно", invite_link, chat_id
 
+    except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
+        logger.warning(f"⚠️ Целевая группа/канал не существует или неверный юзернейм ({target_input}): {e}")
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+        return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None
+    except ChannelPrivateError:
+        logger.warning(f"⚠️ Целевая группа/канал {target_input} приватная или доступ ограничен")
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+        return False, "Указанная группа является приватной или к ней нет доступа.", None, None
     except Exception as e:
         logger.exception(f"❌ Ошибка Telethon при подключении группы {target_input}: {e}")
         try:
             await client.disconnect()
         except Exception:
             pass
-        return False, f"Ошибка подключении к целевой группе: {e}", None, None
+        return False, f"Ошибка подключения к целевой группе: {e}", None, None
 
 
 # ==================== КЛАВИАТУРЫ ====================
@@ -206,7 +221,10 @@ def personal_tracking_menu_kb(user_id: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📱 Подключить свой аккаунт (по телефону)", callback_data="pt_auth_phone")])
     buttons.append([InlineKeyboardButton(text="⭐ Докупить +1 слот (2 Stars)", callback_data="pt_buy_slot")])
     buttons.append([InlineKeyboardButton(text="📋 Мои отслеживаемые группы", callback_data="pt_list_tracking")])
-    buttons.append([InlineKeyboardButton(text="📊 Статистика", callback_data="pt_stats")])
+
+    # Добавляем кнопку статистики только для админов
+    if user_id in ADMIN_USER_ID:
+        buttons.append([InlineKeyboardButton(text="📊 Статистика", callback_data="pt_stats")])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -560,7 +578,7 @@ async def process_phone_number_input(message: Message, state: FSMContext):
             parse_mode="HTML")
         return
 
-    status_msg = await message.answer("🔄 <i>Запрашиваем код подтверждения у Telegram...</i>", parse_mode="HTML")
+    status_msg = await message.answer("🔄 <i>Запрашиваем код подтверждения у Telegram... Пожалуйста, подождите до прихода кода. Если код не пришел, попробуйте позже.</i>", parse_mode="HTML")
 
     client = TelegramClient(
         StringSession(),
@@ -676,7 +694,11 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         await client.disconnect()
 
         # Сохраняем авторизованную сессию в БД
-        write_account_to_db(session_string=final_session, phone_number=me.phone or phone)
+        write_account_to_db(
+            session_string=final_session,
+            user_id=callback.from_user.id,
+            phone_number=me.phone or phone
+        )
 
         await state.clear()
         await callback.message.edit_text(
@@ -715,11 +737,19 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         await state.update_data(session_str=updated_session)
         await state.set_state(PersonalTrackingState.waiting_for_2fa_password)
 
-        await callback.message.edit_text(
-            "🔐 <b>На Вашем аккаунте включена двухэтапная аутентификация (2FA)!</b>\n\n"
-            "Пожалуйста, введите Ваш облачный пароль текстом в ответном сообщении:",
-            parse_mode="HTML"
-        )
+        try:
+            await callback.answer()
+        except Exception:
+            pass
+
+        try:
+            await callback.message.edit_text(
+                "🔐 <b>На Вашем аккаунте включена двухэтапная аутентификация (2FA)!</b>\n\n"
+                "Пожалуйста, введите Ваш облачный пароль текстом в ответном сообщении:",
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
     except Exception as e:
         logger.exception(f"❌ Ошибка входа Telethon по коду: {e}")
         await callback.answer(f"❌ Ошибка входа: {e}", show_alert=True)
@@ -758,7 +788,11 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         await client.disconnect()
 
         # Сохраняем аккаунт в БД
-        write_account_to_db(session_string=final_session, phone_number=me.phone or phone)
+        write_account_to_db(
+            session_string=final_session,
+            user_id=message.from_user.id,
+            phone_number=me.phone or phone
+        )
 
         await state.clear()
         await status_msg.edit_text(

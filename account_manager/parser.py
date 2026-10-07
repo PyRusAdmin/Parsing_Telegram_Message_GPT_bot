@@ -7,7 +7,8 @@ from lingua import LanguageDetectorBuilder  # Библиотека для авт
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
 from telethon.errors import (
-    FloodWaitError, InviteRequestSentError, MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
+    FloodWaitError, InviteRequestSentError, MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError,
+    UsernameNotOccupiedError, UsernameInvalidError
 )
 from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
 
@@ -17,7 +18,7 @@ from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_
 
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
-    User, delete_account_from_user_table, delete_account_from_db
+    User, delete_account_from_user_table, delete_account_from_db, dell_group
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import t
@@ -107,6 +108,9 @@ async def join_target_group(client, user_id, message):
             await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
         except InviteRequestSentError:
             logger.error(f"✉️ Приглашение уже отправлено: {f'https://t.me/{target_username.lstrip("@")}'}")
+    except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
+        logger.warning(f"❌ Целевая группа не найдена или неверный юзернейм ({target_username}): {e}")
+        return None
     except Exception as e:
         logger.exception(f"❌ Не удалось присоединиться к целевой группе {target_username}: {e}")
         return None
@@ -637,18 +641,22 @@ async def join_required_channels(client, user_id, message, already_subscribed):
             ]
         )
         try:
-            logger.warning(f"🔗 Подписка на {channel}")
-            # ToDo сделать общую функцию для подписки на канал / группу
-            # await client(JoinChannelRequest(channel))  # Подписываемся на канал / группу
+            logger.info(f"🔗 Попытка подписки на канал {channel}")
+            is_subscribed = await subscription_telegram(client=client, target_username=channel)
 
-            await subscription_telegram(client=client, target_username=channel)
-
-            await message.answer(
-                t("channel_subscribed", lang=user.language, channel=channel, delay=random_delay)
-            )
-            await asyncio.sleep(random_delay)
+            if is_subscribed:
+                await message.answer(
+                    t("channel_subscribed", lang=user.language, channel=channel, delay=random_delay)
+                )
+                await asyncio.sleep(random_delay)
+            else:
+                logger.warning(f"⚠️ Не удалось подписаться на {channel}. Удаляем невалидный канал из базы...")
+                try:
+                    dell_group(user_id=int(user_id), username=channel)
+                except Exception as del_err:
+                    logger.debug(f"Не удалось удалить невалидный канал {channel}: {del_err}")
         except Exception as e:
-            logger.exception(e)
+            logger.exception(f"❌ Ошибка в цикле подписки на {channel}: {e}")
         # except ChannelPrivateError:
         #     logger.error(f"⚠️ Канал {channel} приватный")
         # except UserAlreadyParticipantError:
