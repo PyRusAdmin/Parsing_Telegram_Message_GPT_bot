@@ -37,6 +37,9 @@ def menu_user_admin_keyboard(lang: str = 'ru'):
             KeyboardButton(text=t("launch_tracking_button", lang=lang), style="success")
         ],
         [
+            KeyboardButton(text="🎯 Персональное отслеживание", style="primary")
+        ],
+        [
             KeyboardButton(text=t("check_group_for_keywords_button", lang=lang), style="primary")
         ],
         [

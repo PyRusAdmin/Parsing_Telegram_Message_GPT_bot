@@ -23,6 +23,8 @@ ENV/
 
 # Сессии и логи
 sessions.txt
+file.csv
+База_чатов.txt
 *.log
 .logs/
 

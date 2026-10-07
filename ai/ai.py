@@ -3,9 +3,8 @@ import re
 from datetime import datetime
 import random
 
-import groq
 import openai
-from groq import AsyncGroq
+from groq import AsyncGroq, RateLimitError, AuthenticationError, NotFoundError
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
@@ -168,7 +167,7 @@ class CategoryAssignment:
                 "category": category,
                 "success": True
             }
-        except groq.RateLimitError as e:
+        except RateLimitError as e:
             logger.error(f"⚠️ Groq Rate Limit для {group_data.get('name')}: {e}")
             return {"telegram_id": group_data.get("telegram_id"), "category": None, "success": False, "error": str(e)}
         except openai.NotFoundError as e:
@@ -235,17 +234,17 @@ async def get_groq_response(user_input):
         cleaned_ans = re.sub(r'</?think>', '', cleaned_ans).strip()
         return cleaned_ans
 
-    except groq.RateLimitError:
+    except RateLimitError:
         logger.error(f"Привышены лимиты запросов к Groq API на модель {model}")
         # TODO добавить отправку сообщения администратору бота
 
-    except groq.AuthenticationError:
+    except AuthenticationError:
         if GROQ_API_KEY:
             logger.error("Ошибка аутентификации с ключом Groq API.")
         else:
             logger.error("API ключ Groq API не установлен.")
         return ""
-    except groq.NotFoundError as e:
+    except NotFoundError as e:
         logger.error(e)  # Ошибка аутентификации с ключом Groq API, Возможно нужно сменить модель ИИ
         await bot.send_message(
             chat_id=int(ADMIN_USER_ID),  # ID Администратора бота

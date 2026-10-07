@@ -228,6 +228,20 @@ def get_user_accounts(user_id: int):
         return []
 
 
+def delete_account_from_user_table(user_id: int, session_string: str) -> None:
+    """
+    Удаляет аккаунт из таблицы 'user_accounts_table' по user_id и session_string.
+    """
+    try:
+        query = UserAccountsTable.delete().where(
+            (UserAccountsTable.user_id == user_id) & (UserAccountsTable.session_string == session_string)
+        )
+        deleted_count = query.execute()
+        logger.info(f"🗑️ Удалено {deleted_count} невалидных записей из UserAccountsTable для user_id={user_id}")
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при удалении аккаунта из UserAccountsTable: {e}")
+
+
 """Работа с аккаунтами"""
 
 

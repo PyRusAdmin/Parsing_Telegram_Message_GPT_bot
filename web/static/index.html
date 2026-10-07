@@ -11,8 +11,8 @@
           rel="stylesheet">
     <!-- FontAwesome для иконок -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Основной стиль -->
-    <link rel="stylesheet" href="css/style.css">
+    <!-- Основной стиль (Material 3 Glassmorphism Theme) -->
+    <link rel="stylesheet" href="css/style.css?v=m3_glass_v4">
     <!-- SDK веб-приложения Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -32,6 +32,9 @@
                 <i class="fa-solid fa-star star-glow"></i>
                 <span id="stars-count">0</span>
             </div>
+            <button id="theme-toggle-btn" class="icon-btn-round" title="Переключить тему">
+                <i id="theme-toggle-icon" class="fa-solid fa-moon"></i>
+            </button>
             <button id="lang-toggle-btn" class="icon-btn-round" title="Switch Language">
                 <i class="fa-solid fa-globe"></i>
             </button>
@@ -502,6 +505,6 @@
 </div>
 
 <!-- Логика JavaScript приложения -->
-<script src="js/app.js?v=2"></script>
+<script src="js/app.js?v=m3_glass_v4"></script>
 </body>
 </html>

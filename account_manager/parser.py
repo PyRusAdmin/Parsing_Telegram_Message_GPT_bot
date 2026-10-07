@@ -17,7 +17,7 @@ from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_
 
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
-    User
+    User, delete_account_from_user_table, delete_account_from_db
 )
 from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import t

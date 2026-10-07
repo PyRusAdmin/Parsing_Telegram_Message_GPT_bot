@@ -15,6 +15,10 @@ async def subscription_telegram(client, target_username):
     :param client: Telethon Client
     :param target_username: Имя канала Telegram
     """
+    if client is None:
+        logger.error(f"❌ client is None при попытке подписаться на {target_username}")
+        return None
+
     logger.warning(f"🔗 Подписка на {target_username}")
     # Нормализуем ссылку в единый вид (https://t.me/username) с помощью регулярных выражений
     normalized = normalize_telegram_link(input_link=target_username)

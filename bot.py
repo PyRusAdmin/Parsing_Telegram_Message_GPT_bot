@@ -23,6 +23,7 @@ from handlers.user.get_dada import router as get_dada
 from handlers.user.handlers import router as handlers
 from handlers.user.pars_ai import router as pars_ai
 from handlers.user.post_doc import router as post_doc
+from handlers.user.personal_tracking import router as personal_tracking
 from handlers.user.stop_tracking import router as stop_tracking
 from handlers.user.transfer_rights import router as transfer_settings
 from system.dispatcher import dp, bot
@@ -71,6 +72,7 @@ async def main() -> None:
         dp.include_router(checking_group_for_keywords)
         dp.include_router(delete_group_from_database)
         dp.include_router(transfer_settings)
+        dp.include_router(personal_tracking)
 
         """
         Панель администратора Telegram бота

@@ -156,6 +156,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         lang === "ru" || lang === "be" || lang === "uk" ? "ru" : "en";
     }
 
+    // Инициализировать тему (Светлая / Тёмная)
+    initTheme();
+
     // Проверьте локальное хранилище на предмет языковых предпочтений.
     const savedLang = localStorage.getItem("lang_pref");
     if (savedLang) {
@@ -412,8 +415,35 @@ function setTrackingStatusUI(isActive) {
   }
 }
 
+function initTheme() {
+  const savedTheme = localStorage.getItem("theme_pref") || "light";
+  setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+  document.body.setAttribute("data-theme", theme);
+  localStorage.setItem("theme_pref", theme);
+  const icon = document.getElementById("theme-toggle-icon");
+  if (icon) {
+    if (theme === "dark") {
+      icon.className = "fa-solid fa-sun";
+    } else {
+      icon.className = "fa-solid fa-moon";
+    }
+  }
+}
+
 // Кнопки настройки и события ввода
 function setupEventListeners() {
+  // Кнопка переключения темы
+  const themeBtn = document.getElementById("theme-toggle-btn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", () => {
+      const currentTheme = document.body.getAttribute("data-theme") || "light";
+      const nextTheme = currentTheme === "light" ? "dark" : "light";
+      setTheme(nextTheme);
+    });
+  }
   // Кнопка переключения языка
   document
     .getElementById("lang-toggle-btn")
