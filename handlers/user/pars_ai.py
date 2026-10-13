@@ -1,4 +1,3 @@
-# import asyncio
 import io
 import re
 from datetime import datetime
@@ -16,11 +15,9 @@ from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
 from database.database import User, TelegramGroup
-from keyboards.user.keyboards import search_group_ai, get_categories_keyboard
+from keyboards.user.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP
 from locales.locales import t
 from states.states import ExportStates
-
-# from peewee import fn
 
 router = Router(name=__name__)
 
@@ -274,22 +271,23 @@ def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardM
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None):
+async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None, user_id: int = None):
+    effective_user_id = user_id if user_id is not None else message.from_user.id
     logger.info(
-        f"Checking download limits for user={message.from_user.id}, download_type={download_type}, category={category}")
-    user = User.get(User.user_id == message.from_user.id)
+        f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
+    user = User.get(User.user_id == effective_user_id)
     user_lang = user.language if user.language != "unset" else "ru"
 
     can_dl, remaining_sec = can_user_download_free(user)
     if can_dl:
-        logger.info(f"User {message.from_user.id} is allowed to download for free.")
+        logger.info(f"User {effective_user_id} is allowed to download for free.")
         user.last_free_download_at = datetime.now()
         user.save()
         await message.answer(t("download_free_success", lang=user_lang))
-        await perform_download(message, message.from_user.id, download_type, category)
+        await perform_download(message, effective_user_id, download_type, category)
         await state.clear()
     else:
-        logger.info(f"User {message.from_user.id} download limit reached. Cooldown: {remaining_sec}s")
+        logger.info(f"User {effective_user_id} download limit reached. Cooldown: {remaining_sec}s")
         hours = remaining_sec // 3600
         minutes = (remaining_sec % 3600) // 60
         time_str = f"{hours}ч {minutes}м" if user_lang == "ru" else f"{hours}h {minutes}m"
@@ -492,6 +490,13 @@ async def export_all_groups(message: Message, state: FSMContext):
     await check_and_start_download(message, state, download_type="all")
 
 
+@router.callback_query(F.data == "db_export_all")
+async def cb_export_all(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    await check_and_start_download(callback.message, state, download_type="all", user_id=callback.from_user.id)
+
+
 @router.message((F.text == t('channels_database_button', 'ru')) | (F.text == t('channels_database_button', 'en')))
 async def export_channels(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
@@ -499,11 +504,25 @@ async def export_channels(message: Message, state: FSMContext):
     await check_and_start_download(message, state, download_type="channels")
 
 
+@router.callback_query(F.data == "db_export_channels")
+async def cb_export_channels(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    await check_and_start_download(callback.message, state, download_type="channels", user_id=callback.from_user.id)
+
+
 @router.message((F.text == t('groups_database_button', 'ru')) | (F.text == t('groups_database_button', 'en')))
 async def export_supergroups(message: Message, state: FSMContext):
     """Выдаёт CSV-файл со всей базой данных групп и каналов."""
     await state.clear()
     await check_and_start_download(message, state, download_type="groups")
+
+
+@router.callback_query(F.data == "db_export_groups")
+async def cb_export_groups(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    await check_and_start_download(callback.message, state, download_type="groups", user_id=callback.from_user.id)
 
 
 @router.message((F.text == t('get_database_button', 'ru')) | (F.text == t('get_database_button', 'en')))
@@ -522,6 +541,28 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     )
 
 
+@router.callback_query(F.data == "menu_get_database")
+async def handle_get_database_menu_cb(callback: CallbackQuery, state: FSMContext):
+    """Обработчик инлайн-кнопки Получить базу"""
+    await state.clear()
+    user = User.get(User.user_id == callback.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+
+    try:
+        await callback.message.edit_text(
+            text=t("get_database_menu", lang=user_lang),
+            reply_markup=search_group_ai(lang=user_lang),
+            parse_mode="HTML"
+        )
+    except Exception:
+        await callback.message.answer(
+            text=t("get_database_menu", lang=user_lang),
+            reply_markup=search_group_ai(lang=user_lang),
+            parse_mode="HTML"
+        )
+    await callback.answer()
+
+
 @router.message((F.text == t('select_category_button', 'ru')) | (F.text == t('select_category_button', 'en')))
 async def start_category_export(message: Message, state: FSMContext):
     """
@@ -536,29 +577,80 @@ async def start_category_export(message: Message, state: FSMContext):
     await state.set_state(ExportStates.waiting_for_category)
 
 
+@router.callback_query(F.data == "db_export_category_menu")
+async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
+    """Запускает выбор категории через инлайн-кнопку"""
+    user = User.get(User.user_id == callback.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+    try:
+        await callback.message.edit_text(
+            t("select_category_prompt", lang=user_lang),
+            reply_markup=get_categories_keyboard(lang=user_lang)
+        )
+    except Exception:
+        await callback.message.answer(
+            t("select_category_prompt", lang=user_lang),
+            reply_markup=get_categories_keyboard(lang=user_lang)
+        )
+    await state.set_state(ExportStates.waiting_for_category)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cat_sel:"))
+async def handle_category_callback(callback: CallbackQuery, state: FSMContext):
+    """Обработчик нажатия на инлайн-кнопку категории"""
+    user = User.get(User.user_id == callback.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+    cat_code = callback.data.split(":", 1)[1]
+
+    if cat_code == "back":
+        await state.clear()
+        try:
+            await callback.message.edit_text(
+                text=t("get_database_menu", lang=user_lang),
+                reply_markup=search_group_ai(lang=user_lang),
+                parse_mode="HTML"
+            )
+        except Exception:
+            await callback.message.answer(
+                text=t("get_database_menu", lang=user_lang),
+                reply_markup=search_group_ai(lang=user_lang),
+                parse_mode="HTML"
+            )
+        await callback.answer()
+        return
+
+    selected_category = CATEGORY_MAP.get(cat_code)
+    if not selected_category:
+        await callback.answer("Категория не найдена", show_alert=True)
+        return
+
+    await callback.answer()
+    await check_and_start_download(
+        callback.message,
+        state,
+        download_type="category",
+        category=selected_category,
+        user_id=callback.from_user.id
+    )
+
+
 @router.message(ExportStates.waiting_for_category)
 async def handle_category_selection(message: Message, state: FSMContext):
     """
-    Обрабатывает выбор категории и запускает проверку лимита/скачивание.
+    Обрабатывает выбор категории и запускает проверку лимита/скачивание (текст).
     """
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
     selected_category = message.text.strip()
 
     if selected_category == t('back_button', lang=user_lang):
-        await message.answer(t("action_cancelled", lang=user_lang), reply_markup=ReplyKeyboardRemove())
+        await message.answer(t("action_cancelled", lang=user_lang), reply_markup=search_group_ai(lang=user_lang))
         await state.clear()
         return
 
     selected_category_lower = selected_category.lower()
-    valid_categories = {
-        "инвестиции", "финансы и личный бюджет", "криптовалюты и блокчейн",
-        "бизнес и предпринимательство", "маркетинг и продвижение", "технологии и it",
-        "образование и саморазвитие", "работа и карьера", "недвижимость",
-        "здоровье и медицина", "путешествия", "авто и транспорт", "шоппинг и скидки",
-        "развлечения и досуг", "политика и общество", "наука и исследования",
-        "спорт и фитнес", "кулинария и еда", "мода и красота", "хобби и творчество"
-    }
+    valid_categories = set(CATEGORY_MAP.values())
 
     if selected_category_lower not in valid_categories:
         await message.answer(

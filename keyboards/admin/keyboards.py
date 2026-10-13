@@ -1,129 +1,94 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from locales.locales import t
-
-'''
-🔴 danger — красная кнопка (идеально для «Удалить», «Отмена», «Бан»).
-🟢 success — зелёная кнопка («Подтвердить», «Оплатить», «Принять»).
-🔵 primary — синяя кнопка (для основных целевых действий).
-⚪️ Стандартный — привычный прозрачно-серый цвет.
-'''
 
 
 def menu_user_admin_keyboard(lang: str = 'ru'):
     """
-    Создаёт клавиатуру главного меню бота.
+    Создаёт кнопки главного меню бота в виде инлайн-кнопок.
 
-    Предоставляет пользователю доступ к основным функциям:
-        - Запуск и остановка отслеживания
-        - Просмотр и управление ключевыми словами и ссылками
-        - Поиск новых групп через ИИ
-        - Настройки
-        - Инструкция по использованию
-
-    - Клавиатура подстраивается по размеру и остаётся видимой после использования.
-
-    Layout:
-        [Запуск отслеживания]
-        [🔍 Список ключевых слов] [🌐 Ссылки для отслеживания]
-        [Получить базу]
-        [Инструкция по использованию]
-        [Настройки]
-
-    :return: (ReplyKeyboardMarkup) Объект клавиатуры с основными командами.
+    :return: list[list[InlineKeyboardButton]] Список строк с кнопками.
     """
     return [
         [
-            KeyboardButton(text=t("launch_tracking_button", lang=lang), style="success")
+            InlineKeyboardButton(text=t("launch_tracking_button", lang=lang), callback_data="menu_launch_tracking")
         ],
         [
-            KeyboardButton(text="🎯 Персональное отслеживание", style="primary")
+            InlineKeyboardButton(text="🎯 Персональное отслеживание", callback_data="menu_personal_tracking")
         ],
         [
-            KeyboardButton(text=t("check_group_for_keywords_button", lang=lang), style="primary")
+            InlineKeyboardButton(text=t("check_group_for_keywords_button", lang=lang), callback_data="menu_check_group")
         ],
         [
-            # KeyboardButton(text=t("ai_search_button", lang=lang), style="primary"),
-            KeyboardButton(text=t("get_database_button", lang=lang), style="primary")
+            InlineKeyboardButton(text=t("get_database_button", lang=lang), callback_data="menu_get_database")
         ],
         [
-            KeyboardButton(text=t("instruction_button", lang=lang), style="primary")
+            InlineKeyboardButton(text=t("instruction_button", lang=lang), callback_data="menu_instruction")
         ],
         [
-            KeyboardButton(text=t("settings_button", lang=lang), style="primary")
+            InlineKeyboardButton(text=t("settings_button", lang=lang), callback_data="menu_settings")
         ],
-        # [
-        #     KeyboardButton(text="Веб панель", web_app=WebAppInfo(url="https://parsingbot.ru.tuna.am/"))
-        # ]
     ]
 
 
-def main_admin_keyboard(lang: str = 'ru'):
+def main_admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура администратора
-    :return: ReplyKeyboardMarkup
+    Инлайн-клавиатура администратора (главное меню)
+    :return: InlineKeyboardMarkup
     """
-    return ReplyKeyboardMarkup(
-        keyboard=[
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             *menu_user_admin_keyboard(lang),
             [
-                KeyboardButton(text=t("admin_panel_button", lang=lang), style='success')
+                InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")
             ]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False  # Отправлять сообщение только один раз
+        ]
     )
 
 
-def admin_keyboard(lang: str = 'ru'):
+def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура панели администратора
-    :return: (ReplyKeyboardMarkup) Объект клавиатуры с кнопками и эмодзи.
+    Инлайн-клавиатура панели администратора
+    :return: InlineKeyboardMarkup
     """
-    return ReplyKeyboardMarkup(
-        keyboard=[
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(text=t("get_log_file_button", lang=lang), style='primary'),
+                InlineKeyboardButton(text=t("get_log_file_button", lang=lang), callback_data="admin_get_log"),
             ],
             [
-                KeyboardButton(text=t("export_questions_button", lang=lang), style='primary'),
-                KeyboardButton(text=t("assign_category_button", lang=lang), style='primary'
-                               ),
-                KeyboardButton(text=t("check_accounts_button", lang=lang), style='success')
+                InlineKeyboardButton(text=t("export_questions_button", lang=lang), callback_data="admin_export_questions"),
+                InlineKeyboardButton(text=t("assign_category_button", lang=lang), callback_data="admin_assign_category"),
+                InlineKeyboardButton(text=t("check_accounts_button", lang=lang), callback_data="admin_check_accounts")
             ],
             [
-                # KeyboardButton(text=t("assign_language_button", lang=lang), style='primary'),
-                KeyboardButton(text=t("connect_account_button", lang=lang), style='primary')
+                InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="admin_connect_account")
             ],
             [
-                KeyboardButton(text=t("back_button", lang=lang), style='danger')
+                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
             ]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False  # Отправлять сообщение только один раз
+        ]
     )
 
 
-def category_method_keyboard(lang: str = 'ru'):
+def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура для выбора метода присвоения категорий
-    :return: (ReplyKeyboardMarkup) Объект клавиатуры с выбором метода
+    Инлайн-клавиатура для выбора метода присвоения категорий
+    :return: InlineKeyboardMarkup
     """
-    return ReplyKeyboardMarkup(
-        keyboard=[
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(text=t("fast_method_button", lang=lang), style='primary')
+                InlineKeyboardButton(text=t("fast_method_button", lang=lang), callback_data="cat_method_fast")
             ],
             [
-                KeyboardButton(text=t("powerful_method_openrouter_button", lang=lang), style='success')
+                InlineKeyboardButton(text=t("powerful_method_openrouter_button", lang=lang), callback_data="cat_method_openrouter")
             ],
             [
-                KeyboardButton(text=t("powerful_method_groq_button", lang=lang), style='success')
+                InlineKeyboardButton(text=t("powerful_method_groq_button", lang=lang), callback_data="cat_method_groq")
             ],
             [
-                KeyboardButton(text=t("back_button", lang=lang), style='danger')
+                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_admin_panel")
             ]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True
+        ]
     )
