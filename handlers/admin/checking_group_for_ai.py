@@ -3,7 +3,7 @@ import asyncio
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from asgiref.sync import sync_to_async
 from g4f.client import Client
 import g4f.errors
@@ -21,19 +21,34 @@ from states.states import CategoryMethod
 router = Router(name=__name__)
 
 
+async def show_category_method_menu(message: Message, user_id: int, state: FSMContext, edit: bool = False):
+    await state.set_state(CategoryMethod.waiting_for_method)
+    user = User.get(User.user_id == user_id)
+    user_lang = user.language if user.language != "unset" else "ru"
+    text = t("ai_category_select_method", lang=user_lang)
+    kb = category_method_keyboard(lang=user_lang)
+
+    if edit:
+        try:
+            await message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+            return
+        except Exception:
+            pass
+
+    await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+
 @router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
 async def checking_group_for_ai_db(message: Message, state: FSMContext):
-    """Предлагает выбор метода присвоения категорий"""
-    await state.set_state(CategoryMethod.waiting_for_method)
+    """Предлагает выбор метода присвоения категорий (текст)"""
+    await show_category_method_menu(message, message.from_user.id, state, edit=False)
 
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
 
-    await message.answer(
-        t("ai_category_select_method", lang=user_lang),
-        reply_markup=category_method_keyboard(lang=user_lang),
-        parse_mode="HTML"
-    )
+@router.callback_query(F.data == "admin_assign_category")
+async def checking_group_for_ai_db_cb(callback: CallbackQuery, state: FSMContext):
+    """Предлагает выбор метода присвоения категорий (инлайн)"""
+    await show_category_method_menu(callback.message, callback.from_user.id, state, edit=True)
+    await callback.answer()
 
 
 async def get_best_g4f_model(client: Client) -> str:

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from loguru import logger
 from telethon.sessions import StringSession
 
@@ -17,63 +17,64 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message((F.text == t('connect_free_account_button', 'ru')) | (F.text == t('connect_free_account_button', 'en')))
-async def handle_connect_account_free(message: Message, state: FSMContext):
-    """
-    Обработчик команды "🔐 Подключить свободный аккаунт".
+async def connect_account_free_internal(message: Message, user_tg, state: FSMContext):
+    await state.clear()
 
-    Очищает текущее состояние FSM, регистрирует пользователя в базе данных (если его ещё нет)
-    с языком по умолчанию "unset", и отправляет пользователю сообщение с приглашением
-    🔐 Подключить свободный аккаунт через автоматическое подключение свободного аккаунта.
-
-    :param message: (Message) Объект входящего сообщения от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
-    """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-
-    # Создаём пользователя с language = "unset", если его нет
     user, created = User.get_or_create(
-        user_id=message.from_user.id,
+        user_id=user_tg.id,
         defaults={
-            "username": message.from_user.username,
-            "first_name": message.from_user.first_name,
-            "last_name": message.from_user.last_name,
-            "language": "unset"  # ← ключевое: "unset" = язык не выбран
+            "username": user_tg.username,
+            "first_name": user_tg.first_name,
+            "last_name": user_tg.last_name,
+            "language": "unset"
         }
     )
     user_lang = user.language if user.language != "unset" else "ru"
 
-    # Подключение свободного аккаунта
     free_accounts = list(AccountFree.select())
     if not free_accounts:
         logger.warning(f"Нет доступных свободных аккаунтов для пользователя {user.user_id}")
         await message.answer(
             text=t("no_free_accounts", lang=user_lang),
-            reply_markup=back_keyboard(lang=user_lang)
+            reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
         )
         return
 
-    # Выбираем случайный свободный аккаунт
     selected_account = random.choice(free_accounts)
     session_string = selected_account.session_string
     phone_number = selected_account.phone_number
 
     logger.info(f"Подключаем свободный аккаунт {phone_number} пользователю {user.user_id}")
 
-    # Записываем в персональную таблицу аккаунтов пользователя
     write_account_to_user_table(
         user_id=user.user_id,
         session_string=session_string,
         phone_number=phone_number
     )
 
-    # Удаляем аккаунт из свободных аккаунтов, чтобы другие не могли его использовать
     selected_account.delete_instance()
 
     await message.answer(
         text=t("account_connected_free", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang)
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )
+
+
+@router.message((F.text == t('connect_free_account_button', 'ru')) | (F.text == t('connect_free_account_button', 'en')))
+async def handle_connect_account_free(message: Message, state: FSMContext):
+    """
+    Обработчик команды "🔐 Подключить свободный аккаунт" (текст).
+    """
+    await connect_account_free_internal(message, message.from_user, state)
+
+
+@router.callback_query(F.data == "account_connect_free")
+async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик инлайн-кнопки "🔐 Подключить свободный аккаунт".
+    """
+    await callback.answer()
+    await connect_account_free_internal(callback.message, callback.from_user, state)
 
 
 def creates_temporary_folder_for_accounts():
@@ -96,24 +97,34 @@ def sanitization_file_name(document, sessions_dir):
     return local_file_path, safe_file_name
 
 
-@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
-async def handle_connect_account(message: Message, state: FSMContext):
+async def connect_account_internal(message: Message, user_tg, state: FSMContext):
     await state.clear()
     user, created = User.get_or_create(
-        user_id=message.from_user.id,
+        user_id=user_tg.id,
         defaults={
-            "username": message.from_user.username,
-            "first_name": message.from_user.first_name,
-            "last_name": message.from_user.last_name,
+            "username": user_tg.username,
+            "first_name": user_tg.first_name,
+            "last_name": user_tg.last_name,
             "language": "unset"
         }
     )
     user_lang = user.language if user.language != "unset" else "ru"
     await message.answer(
         text=t("connect_account", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang)
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )
     await state.set_state(MyStates.waiting_for_session_file_user)
+
+
+@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
+async def handle_connect_account(message: Message, state: FSMContext):
+    await connect_account_internal(message, message.from_user, state)
+
+
+@router.callback_query(F.data.in_({"settings_connect_account", "account_connect"}))
+async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await connect_account_internal(callback.message, callback.from_user, state)
 
 
 # ✅ Фильтр: только документы И только в нужном состоянии

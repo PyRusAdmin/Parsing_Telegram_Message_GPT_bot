@@ -3,7 +3,7 @@ from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from loguru import logger
 from telethon.sessions import StringSession
 
@@ -18,11 +18,9 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
-async def admin_connecting_account(message: Message, state: FSMContext):
-    """Админ нажимает кнопку → бот просит .session файл(ы)"""
+async def admin_connecting_account_internal(message: Message, user_id: int, state: FSMContext):
     await state.clear()
-    user = User.get(User.user_id == message.from_user.id)
+    user = User.get(User.user_id == user_id)
 
     # ✅ Инициализируем очередь файлов в состоянии
     await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
@@ -30,9 +28,22 @@ async def admin_connecting_account(message: Message, state: FSMContext):
     await state.set_state(MyStates.waiting_for_session_file)
     await message.answer(
         t("connect_account_ask_session", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language)
+        reply_markup=back_keyboard(lang=user.language, callback_data="menu_admin_panel")
     )
-    logger.info(f"Админ {message.from_user.id} начал добавление новых сессий")
+    logger.info(f"Админ {user_id} начал добавление новых сессий")
+
+
+@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
+async def admin_connecting_account(message: Message, state: FSMContext):
+    """Админ нажимает кнопку → бот просит .session файл(ы) (текст)"""
+    await admin_connecting_account_internal(message, message.from_user.id, state)
+
+
+@router.callback_query(F.data == "admin_connect_account")
+async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext):
+    """Админ нажимает кнопку → бот просит .session файл(ы) (инлайн)"""
+    await callback.answer()
+    await admin_connecting_account_internal(callback.message, callback.from_user.id, state)
 
 
 @router.message(MyStates.waiting_for_session_file, F.document)

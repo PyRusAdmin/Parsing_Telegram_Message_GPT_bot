@@ -4,7 +4,7 @@ from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message, FSInputFile, CallbackQuery
 from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
@@ -16,13 +16,9 @@ from states.states import CategoryMethod
 router = Router(name=__name__)
 
 
-@router.message((F.text == t('export_questions_button', 'ru')) | (F.text == t('export_questions_button', 'en')))
-async def export_questions(message: Message):
-    """
-    Экспортирует вопросы и ответы из базы данных в CSV файл.
-    """
+async def export_questions_internal(message: Message, user_id: int):
     try:
-        user = User.get(User.user_id == message.from_user.id)
+        user = User.get(User.user_id == user_id)
         user_lang = user.language if user.language != "unset" else "ru"
     except Exception:
         user_lang = "ru"
@@ -33,7 +29,6 @@ async def export_questions(message: Message):
             await message.answer(t("no_questions_in_db", lang=user_lang))
             return
 
-        # Создаем директорию exports, если она не существует
         if not os.path.exists("exports"):
             os.makedirs("exports")
 
@@ -48,8 +43,6 @@ async def export_questions(message: Message):
                 writer.writerow(question_data)
 
         await message.answer_document(FSInputFile(file_path), caption=t("questions_export_caption", lang=user_lang))
-
-        # Удаляем файл после отправки
         os.remove(file_path)
 
     except Exception as e:
@@ -57,49 +50,59 @@ async def export_questions(message: Message):
         await message.answer(t("export_error", lang=user_lang, error=str(e)))
 
 
-@router.message((F.text == t('admin_panel_button', 'ru')) | (F.text == t('admin_panel_button', 'en')))
-async def admin_panel(message: Message, state: FSMContext):
+@router.message((F.text == t('export_questions_button', 'ru')) | (F.text == t('export_questions_button', 'en')))
+async def export_questions(message: Message):
     """
-    Обработчик команды «Панель администратора».
-
-    При вызове:
-    - сбрасывает текущее состояние FSM;
-    - отправляет приветственное сообщение администратору;
-    - отображает клавиатуру с административными кнопками.
-
-    Используется для:
-    - предоставления доступа к административному интерфейсу;
-    - запуска административных операций через клавиатурные кнопки.
-
-    Особенности реализации:
-    - Доступ к команде имеют только администраторы;
-    - обработка исключений реализована в блоке try/except.
-
-    :param message: (Message) Входящее сообщение с командой «Панель администратора».
-    :param state: (FSMContext) Контекст машины состояний. Сбрасывается в начале выполнения.
-    :return: None
-    :raises:
-        Exception: Может возникнуть при ошибках формирования клавиатуры (admin_keyboard()) или отправке сообщения через Telegram Bot API.
-        Исключения перехватываются и логируются.
+    Экспортирует вопросы и ответы из базы данных в CSV файл (текст).
     """
+    await export_questions_internal(message, message.from_user.id)
+
+
+@router.callback_query(F.data == "admin_export_questions")
+async def export_questions_cb(callback: CallbackQuery):
+    """
+    Экспортирует вопросы и ответы из базы данных в CSV файл (инлайн).
+    """
+    await callback.answer()
+    await export_questions_internal(callback.message, callback.from_user.id)
+
+
+async def show_admin_panel(message: Message, user_id: int, state: FSMContext, edit: bool = False):
     try:
-        await state.clear()  # Сбрасываем текущее состояние FSM
-
-        # Получаем язык пользователя
+        await state.clear()
         try:
-            user = User.get(User.user_id == message.from_user.id)
+            user = User.get(User.user_id == user_id)
             user_lang = user.language if user.language != "unset" else "ru"
         except Exception as e:
             logger.exception(e)
             user_lang = "ru"
 
-        await message.answer(
-            text=t("admin_panel_message", lang=user_lang),
-            parse_mode="HTML",
-            reply_markup=admin_keyboard(lang=user_lang),
-        )
+        text = t("admin_panel_message", lang=user_lang)
+        kb = admin_keyboard(lang=user_lang)
+
+        if edit:
+            try:
+                await message.edit_text(text=text, parse_mode="HTML", reply_markup=kb)
+                return
+            except Exception:
+                pass
+
+        await message.answer(text=text, parse_mode="HTML", reply_markup=kb)
     except Exception as e:
         logger.exception(e)
+
+
+@router.message((F.text == t('admin_panel_button', 'ru')) | (F.text == t('admin_panel_button', 'en')))
+async def admin_panel(message: Message, state: FSMContext):
+    """Обработчик команды Панель администратора (текст)"""
+    await show_admin_panel(message, message.from_user.id, state, edit=False)
+
+
+@router.callback_query(F.data == "menu_admin_panel")
+async def admin_panel_cb(callback: CallbackQuery, state: FSMContext):
+    """Обработчик команды Панель администратора (инлайн)"""
+    await show_admin_panel(callback.message, callback.from_user.id, state, edit=True)
+    await callback.answer()
 
 
 # @router.message(F.text == "🔄 Актуализация базы данных")
