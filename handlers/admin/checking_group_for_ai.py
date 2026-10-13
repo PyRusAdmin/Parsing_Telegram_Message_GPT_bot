@@ -151,6 +151,56 @@ async def process_category_method_choice(message: Message, state: FSMContext):
         )
 
 
+@router.callback_query(F.data.startswith("cat_method_"))
+async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает выбор метода присвоения категорий (инлайн)"""
+    method = callback.data.split("_", 2)[2]
+    user = User.get(User.user_id == callback.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+    await callback.answer()
+
+    if method == "back":
+        await state.clear()
+        try:
+            await callback.message.edit_text(
+                t("admin_panel_message", lang=user_lang),
+                parse_mode="HTML",
+                reply_markup=admin_keyboard(lang=user_lang)
+            )
+        except Exception:
+            await callback.message.answer(
+                t("admin_panel_message", lang=user_lang),
+                parse_mode="HTML",
+                reply_markup=admin_keyboard(lang=user_lang)
+            )
+        return
+
+    if method == "fast":
+        await state.clear()
+        client = Client()
+        status_msg = await callback.message.answer(t("ai_category_checking_models", lang=user_lang))
+        model = await get_best_g4f_model(client)
+        await status_msg.edit_text(t("ai_category_model_selected", lang=user_lang, model=model))
+        await asyncio.sleep(1)
+        await status_msg.delete()
+        await assign_categories(callback.message, client, model)
+
+    elif method == "openrouter":
+        await state.clear()
+        client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=OPENROUTER_API_KEY,
+        )
+        model = "deepseek/deepseek-v4-flash"
+        await assign_categories(callback.message, client, model=model)
+
+    elif method == "groq":
+        await state.clear()
+        client = AsyncGroq(api_key=GROQ_API_KEY)
+        model = "llama-3.1-8b-instant"
+        await assign_categories(callback.message, client, model)
+
+
 async def assign_categories(message: Message, client, model):
     """Универсальная функция присвоения категорий (любой AI клиент)"""
     user = User.get(User.user_id == message.from_user.id)
