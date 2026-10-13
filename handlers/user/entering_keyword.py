@@ -1,13 +1,12 @@
-from aiogram import F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
 from database.database import User, create_keywords_model
 from keyboards.user.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
-from aiogram import Router
 
 router = Router(name=__name__)
 
@@ -15,16 +14,7 @@ router = Router(name=__name__)
 @router.message((F.text == t('enter_keyword_button', 'ru')) | (F.text == t('enter_keyword_button', 'en')))
 async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
-    Обработчик команды "🔍 Ввод ключевого слова".
-
-    Очищает текущее состояние FSM, получает данные пользователя из базы,
-    логирует переход в меню и отправляет приглашение ввести ключевые слова.
-    Поддерживает ввод нескольких слов, разделённых переносами строк.
-
-    Переводит пользователя в состояние ожидания ввода (MyStates.entering_keyword).
-
-    :param message: (Message) Объект входящего сообщения от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, используется для сброса и установки состояния.
+    Обработчик команды "🔍 Ввод ключевого слова" (текст).
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     telegram_user = message.from_user
@@ -36,9 +26,30 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
 
     await message.answer(
         t("enter_keyword", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language)  # клавиатура назад
+        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
     )
     await state.set_state(MyStates.entering_keyword)
+
+
+@router.callback_query(F.data == "settings_enter_keyword")
+async def handle_enter_keyword_menu_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик инлайн-кнопки "🔍 Ввод ключевого слова".
+    """
+    await state.clear()
+    telegram_user = callback.from_user
+    user = User.get(User.user_id == telegram_user.id)
+
+    logger.info(
+        f"Пользователь {telegram_user.id} перешел в меню 🔍 Ввод ключевого слова через инлайн-кнопку"
+    )
+
+    await callback.message.answer(
+        t("enter_keyword", lang=user.language),
+        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
+    )
+    await state.set_state(MyStates.entering_keyword)
+    await callback.answer()
 
 
 @router.message(MyStates.entering_keyword)

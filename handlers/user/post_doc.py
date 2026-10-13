@@ -4,7 +4,7 @@ import re
 import groq
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from groq import AsyncGroq
 from loguru import logger
 
@@ -69,7 +69,7 @@ def load_knowledge_base():
 @router.message((F.text == t('instruction_button', 'ru')) | (F.text == t('instruction_button', 'en')))
 async def send_instruction(message: Message, state: FSMContext):
     """
-    Обработчик команды "Инструкция по использованию".
+    Обработчик команды "Инструкция по использованию" (текст).
     Отправляет файл инструкции и переводит пользователя в состояние ожидания вопроса к ИИ.
     """
     await state.clear()
@@ -91,6 +91,30 @@ async def send_instruction(message: Message, state: FSMContext):
     except Exception as e:
         logger.exception(e)
         await message.answer(t("instruction_send_error", lang=user_lang))
+
+
+@router.callback_query(F.data == "menu_instruction")
+async def send_instruction_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик инлайн-кнопки "Инструкция по использованию".
+    """
+    await state.clear()
+    user = User.get(User.user_id == callback.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+
+    try:
+        await callback.message.answer(
+            text=t("instruction_question_prompt", lang=user_lang),
+            parse_mode="html",
+            reply_markup=back_keyboard(lang=user_lang)
+        )
+        await state.set_state(MyStates.waiting_for_instruction_question)
+    except FileNotFoundError:
+        await callback.message.answer(t("instruction_file_not_found", lang=user_lang))
+    except Exception as e:
+        logger.exception(e)
+        await callback.message.answer(t("instruction_send_error", lang=user_lang))
+    await callback.answer()
 
 
 @router.message(MyStates.waiting_for_instruction_question)

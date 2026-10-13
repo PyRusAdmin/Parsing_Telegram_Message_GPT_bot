@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
@@ -19,12 +19,7 @@ router = Router(name=__name__)
     (F.text == t('check_group_for_keywords_button', 'ru')) | (F.text == t('check_group_for_keywords_button', 'en')))
 async def checking_group_for_keywords(message: Message, state: FSMContext):
     """
-    Обработчик команды "Проверка группы на наличие ключевых слов".
-
-    Принимает данные от пользователи и начинает процесс проверки группы на наличие ключевых слов.
-
-    :param message: (Message) Объект входящего сообщения от пользователя.
-    :param state: (FSMContext) Контекст машины состояний, используется для сброса текущего состояния.
+    Обработчик команды "Проверка группы на наличие ключевых слов" (текст).
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     user = User.get(User.user_id == message.from_user.id)
@@ -34,6 +29,22 @@ async def checking_group_for_keywords(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
     await state.set_state(MyStatesParsing.get_url)
+
+
+@router.callback_query(F.data == "menu_check_group")
+async def checking_group_for_keywords_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик инлайн-кнопки "Проверка группы на наличие ключевых слов".
+    """
+    await state.clear()
+    user = User.get(User.user_id == callback.from_user.id)
+    await callback.message.answer(
+        text=t("check_group_ask_url", lang=user.language),
+        reply_markup=back_keyboard(lang=user.language),
+        parse_mode="HTML"
+    )
+    await state.set_state(MyStatesParsing.get_url)
+    await callback.answer()
 
 
 @router.message(MyStatesParsing.get_url)

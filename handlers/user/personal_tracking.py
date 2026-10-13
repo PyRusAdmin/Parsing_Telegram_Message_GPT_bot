@@ -226,6 +226,8 @@ def personal_tracking_menu_kb(user_id: int) -> InlineKeyboardMarkup:
     if user_id in ADMIN_USER_ID:
         buttons.append([InlineKeyboardButton(text="📊 Статистика", callback_data="pt_stats")])
 
+    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="menu_main")])
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -251,6 +253,36 @@ async def cmd_personal_tracking_main(message: Message, state: FSMContext):
         reply_markup=personal_tracking_menu_kb(user_id),
         parse_mode="HTML"
     )
+
+
+@router.callback_query(F.data == "menu_personal_tracking")
+async def cb_personal_tracking_menu(callback: CallbackQuery, state: FSMContext):
+    """Инлайн-вход в главное меню Персонального отслеживания"""
+    await state.clear()
+    user_id = callback.from_user.id
+    allowed = get_user_allowed_slots(user_id)
+    used = get_user_used_slots(user_id)
+
+    text = (
+        "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
+        "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
+        f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
+        "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
+    )
+
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=personal_tracking_menu_kb(user_id),
+            parse_mode="HTML"
+        )
+    except Exception:
+        await callback.message.answer(
+            text,
+            reply_markup=personal_tracking_menu_kb(user_id),
+            parse_mode="HTML"
+        )
+    await callback.answer()
 
 
 @router.callback_query(F.data == "pt_add_tracking")

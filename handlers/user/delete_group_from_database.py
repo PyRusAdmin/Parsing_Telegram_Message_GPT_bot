@@ -1,6 +1,6 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
@@ -17,16 +17,32 @@ router = Router(name=__name__)
     (F.text == t('delete_group_from_tracking_button', 'ru')) | (F.text == t('delete_group_from_tracking_button', 'en')))
 async def delete_group_from_database(message: Message, state: FSMContext):
     """
-    Удаление группы из базы данных
+    Удаление группы из базы данных (текст)
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
 
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         t("delete_group_prompt", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language)
+        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
     )
     await state.set_state(MyStates.del_username_groups)
+
+
+@router.callback_query(F.data == "settings_delete_group")
+async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Удаление группы из базы данных (инлайн)
+    """
+    await state.clear()
+
+    user = User.get(User.user_id == callback.from_user.id)
+    await callback.message.answer(
+        t("delete_group_prompt", lang=user.language),
+        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
+    )
+    await state.set_state(MyStates.del_username_groups)
+    await callback.answer()
 
 
 @router.message(MyStates.del_username_groups)

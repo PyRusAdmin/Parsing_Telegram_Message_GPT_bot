@@ -3,7 +3,7 @@ from datetime import datetime
 from aiogram import Router, F
 
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message, FSInputFile, CallbackQuery
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
@@ -87,61 +87,35 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
     return filepath
 
 
-@router.message((F.text == t('keywords_list_button', 'ru')) | (F.text == t('keywords_list_button', 'en')))
-async def get_keywords_list(message: Message, state: FSMContext):
-    """
-    Обработчик команды "🔍 Список ключевых слов" для экспорта ключевых слов в Excel.
-
-    Извлекает все сохранённые ключевые слова пользователя из его персональной таблицы в базе данных,
-    формирует Excel-файл с помощью `create_excel_file`, отправляет его пользователю через Telegram
-    в виде документа и удаляет файл с сервера после отправки. В случае отсутствия данных или ошибки
-    отправляет соответствующее текстовое уведомление.
-
-    - Имя файла генерируется с временной меткой для уникальности.
-    - Данные логируются для аудита.
-    - Используется динамическая модель `create_keywords_model`.
-
-    :param message: (Message) Входящее сообщение от пользователя, инициировавшего экспорт.
-    :param state: (FSMContext) Контекст машины состояний, сбрасывается в начале обработки.
-    :return: None
-    :raise Exception: Перехватывается локально при ошибках создания или отправки файла.
-                      Логируется и преобразуется в пользовательское сообщение об ошибке.
-    """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
+async def export_keywords_internal(message: Message, user_id: int, state: FSMContext):
+    await state.clear()
+    user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"
 
-    logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ключевых слов")
+    logger.info(f"Пользователь {user_id} запросил экспорт ключевых слов")
 
-    # Получаем модель таблицы ключевых слов для данного пользователя
-    keywords_model = create_keywords_model(user_id=telegram_user.id)
+    keywords_model = create_keywords_model(user_id=user_id)
 
-    # Проверяем, существует ли таблица
     if not keywords_model.table_exists():
         keywords_model.create_table()
         await message.answer(t("no_keywords_found", lang=user_lang))
         return
 
-    # Извлекаем все ключевые слова
     keywords = list(keywords_model.select())
 
     if not keywords:
         await message.answer(t("no_keywords_found", lang=user_lang))
         return
 
-    # Формируем список данных для записи в Excel
     data = []
     for idx, keyword in enumerate(keywords, start=1):
-        data.append((idx, keyword.user_keyword))  # Номер и текст ключевого слова
+        data.append((idx, keyword.user_keyword))
 
-    # Формируем имя файла
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"keywords_{telegram_user.id}_{timestamp}.xlsx"
+    filename = f"keywords_{user_id}_{timestamp}.xlsx"
     headers = [t('excel_header_number', lang=user_lang), t('excel_header_keyword', lang=user_lang)]
 
     try:
-        # Создаём Excel-файл
         filepath = create_excel_file(
             data=data,
             headers=headers,
@@ -149,14 +123,12 @@ async def get_keywords_list(message: Message, state: FSMContext):
             sheet_name="Keywords"
         )
 
-        # Отправляем файл пользователю в Telegram
         document = FSInputFile(filepath)
         await message.answer_document(
             document=document,
             caption=t("keywords_export_caption", lang=user_lang, count=len(data))
         )
 
-        # Удаляем файл после отправки
         os.remove(filepath)
         logger.info(f"Файл ключевых слов отправлен и удалён: {filepath}")
 
@@ -165,44 +137,45 @@ async def get_keywords_list(message: Message, state: FSMContext):
         await message.answer(t("export_error", lang=user_lang))
 
 
-@router.message((F.text == t('tracking_links_button', 'ru')) | (F.text == t('tracking_links_button', 'en')))
-async def get_tracking_links_list(message: Message, state: FSMContext):
+@router.message((F.text == t('keywords_list_button', 'ru')) | (F.text == t('keywords_list_button', 'en')))
+async def get_keywords_list(message: Message, state: FSMContext):
     """
-    Обработчик команды "🌐 Ссылки для отслеживания" для экспорта списка отслеживаемых чатов.
-
-    Извлекает все сохранённые ссылки (username) на группы и каналы из персональной таблицы пользователя,
-    создает Excel-файл с данными, отправляет его пользователю через Telegram и удаляет файл с сервера.
-    Если данных нет или произошла ошибка, отправляет соответствующее текстовое уведомление.
-
-    :param message: (Message) Входящее сообщение от пользователя, инициировавшего экспорт.
-    :param state: (FSMContext) Контекст машины состояний, сбрасывается в начале обработки.
+    Обработчик команды "🔍 Список ключевых слов" (текст).
     """
+    await export_keywords_internal(message, message.from_user.id, state)
+
+
+@router.callback_query(F.data == "settings_keywords_list")
+async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик инлайн-кнопки "🔍 Список ключевых слов".
+    """
+    await callback.answer()
+    await export_keywords_internal(callback.message, callback.from_user.id, state)
+
+
+async def export_tracking_links_internal(message: Message, user_id: int, state: FSMContext):
     await state.clear()
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
+    user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"
 
-    logger.info(f"Пользователь {telegram_user.id} {telegram_user.username} запросил экспорт ссылок для отслеживания")
+    logger.info(f"Пользователь {user_id} запросил экспорт ссылок для отслеживания")
 
-    # Получаем список username и количество
-    usernames_list, total_count = get_user_channel_usernames(telegram_user.id)
+    usernames_list, total_count = get_user_channel_usernames(user_id)
 
     if not usernames_list:
         await message.answer(t("no_tracking_links_found", lang=user_lang))
         return
 
-    # Формируем список данных для Excel
     data = []
     for idx, username in enumerate(usernames_list, start=1):
         data.append((idx, username))
 
-    # Формируем имя файла
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"tracking_links_{telegram_user.id}_{timestamp}.xlsx"
+    filename = f"tracking_links_{user_id}_{timestamp}.xlsx"
     headers = [t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)]
 
     try:
-        # Создаём Excel-файл
         filepath = create_excel_file(
             data=data,
             headers=headers,
@@ -210,17 +183,32 @@ async def get_tracking_links_list(message: Message, state: FSMContext):
             sheet_name="Tracking Links"
         )
 
-        # Отправляем файл пользователю
         document = FSInputFile(filepath)
         await message.answer_document(
             document=document,
             caption=t("tracking_links_export_caption", lang=user_lang, count=total_count)
         )
 
-        # Удаляем файл после отправки
         os.remove(filepath)
         logger.info(f"Файл ссылок отправлен и удалён: {filepath}")
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла со ссылками: {e}")
         await message.answer(t("export_error", lang=user_lang))
+
+
+@router.message((F.text == t('tracking_links_button', 'ru')) | (F.text == t('tracking_links_button', 'en')))
+async def get_tracking_links_list(message: Message, state: FSMContext):
+    """
+    Обработчик команды "🌐 Ссылки для отслеживания" (текст).
+    """
+    await export_tracking_links_internal(message, message.from_user.id, state)
+
+
+@router.callback_query(F.data == "settings_tracking_links")
+async def get_tracking_links_list_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик инлайн-кнопки "🌐 Ссылки для отслеживания".
+    """
+    await callback.answer()
+    await export_tracking_links_internal(callback.message, callback.from_user.id, state)
