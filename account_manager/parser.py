@@ -378,6 +378,7 @@ async def ensure_group_category(group_data: dict) -> str | None:
             # 4. Сохранение категории в БД (в нижнем регистре)
             if tg_group:
                 def _update_tg_group():
+                    """Обновляет категорию группы в базе данных"""
                     tg_group.category = category_lower
                     tg_group.save()
 
@@ -708,6 +709,7 @@ async def ensure_joined_target_group(client, message, user_id: int):
 
 
 async def get_user_channels_or_notify(user_id: int, user, message, client):
+    """Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии"""
     channels = [group.username for group in Groups.select().where(Groups.user_id == user_id)]
 
     if not channels:
@@ -772,6 +774,7 @@ async def filter_messages(message, user_id, user):
 
         # === Функция прослушивания — стартует сразу ===
         async def listen():
+            """Слушает новые входящие сообщения из отслеживаемых каналов"""
             # Получаем target_group_id из БД (без Telegram запроса) для регистрации хендлера
             GroupModel = create_group_model(user_id=user_id)
             if not GroupModel.table_exists():
@@ -806,6 +809,7 @@ async def filter_messages(message, user_id, user):
 
             @client.on(events.NewMessage(chats=already_subscribed))
             async def handle_new_message(event: events.NewMessage.Event):
+                """Обрабатывает новое входящее сообщение из отслеживаемого чата"""
                 try:
                     await process_message(
                         client=client,
@@ -831,6 +835,7 @@ async def filter_messages(message, user_id, user):
 
         # === Функция подписки — работает параллельно в фоне ===
         async def subscribe():
+            """Выполняет подписку на целевую группу и отслеживаемые каналы в фоне"""
             await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
             await join_required_channels(
                 client=client,

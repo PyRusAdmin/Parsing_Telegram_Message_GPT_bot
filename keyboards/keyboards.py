@@ -301,6 +301,7 @@ def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineK
 
 
 def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Генерирует инлайн-клавиатуру для выбора количества звезд при пополнении баланса"""
     buttons = [
         [
             InlineKeyboardButton(text="⭐ 5 Stars", callback_data="buy_stars_5"),

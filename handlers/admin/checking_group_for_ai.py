@@ -22,6 +22,7 @@ router = Router(name=__name__)
 
 
 async def show_category_method_menu(message: Message, user_id: int, state: FSMContext, edit: bool = False):
+    """Отображает меню выбора метода присвоения категорий"""
     await state.set_state(CategoryMethod.waiting_for_method)
     user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"
@@ -261,6 +262,7 @@ async def get_groups_without_category_message(message: Message):
     user_lang = user.language if user.language != "unset" else "ru"
 
     def _count():
+        """Подсчитывает количество групп без присвоенной категории в БД"""
         if db.is_closed():
             db.connect(reuse_if_open=True)
         return TelegramGroup.select().where(

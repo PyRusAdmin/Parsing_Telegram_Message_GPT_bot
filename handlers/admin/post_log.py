@@ -10,6 +10,7 @@ router = Router(name=__name__)
 
 
 async def log_internal(message: Message, user_id: int, state: FSMContext):
+    """Отправляет файл логов администратору"""
     await state.clear()
     user = User.get(User.user_id == user_id)
     document = FSInputFile("logs/log.log")

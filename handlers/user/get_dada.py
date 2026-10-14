@@ -88,6 +88,7 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
 
 
 async def export_keywords_internal(message: Message, user_id: int, state: FSMContext):
+    """Экспортирует список ключевых слов пользователя в Excel-файл"""
     await state.clear()
     user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"
@@ -155,6 +156,7 @@ async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
 
 
 async def export_tracking_links_internal(message: Message, user_id: int, state: FSMContext):
+    """Экспортирует список отслеживаемых ссылок пользователя в Excel-файл"""
     await state.clear()
     user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"

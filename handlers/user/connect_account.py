@@ -18,6 +18,7 @@ router = Router(name=__name__)
 
 
 async def connect_account_free_internal(message: Message, user_tg, state: FSMContext):
+    """Подключает случайный свободный аккаунт пользователю"""
     await state.clear()
 
     user, created = User.get_or_create(
@@ -98,6 +99,7 @@ def sanitization_file_name(document, sessions_dir):
 
 
 async def connect_account_internal(message: Message, user_tg, state: FSMContext):
+    """Запрашивает у пользователя файл сессии для подключения аккаунта"""
     await state.clear()
     user, created = User.get_or_create(
         user_id=user_tg.id,
@@ -118,11 +120,13 @@ async def connect_account_internal(message: Message, user_tg, state: FSMContext)
 
 @router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
 async def handle_connect_account(message: Message, state: FSMContext):
+    """Обрабатывает команду подключения аккаунта (текст)"""
     await connect_account_internal(message, message.from_user, state)
 
 
 @router.callback_query(F.data.in_({"settings_connect_account", "account_connect"}))
 async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает команду подключения аккаунта (инлайн)"""
     await callback.answer()
     await connect_account_internal(callback.message, callback.from_user, state)
 

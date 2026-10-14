@@ -19,6 +19,7 @@ router = Router(name=__name__)
 
 
 async def admin_connecting_account_internal(message: Message, user_id: int, state: FSMContext):
+    """Инициирует процесс добавления сессий администратором"""
     await state.clear()
     user = User.get(User.user_id == user_id)
 

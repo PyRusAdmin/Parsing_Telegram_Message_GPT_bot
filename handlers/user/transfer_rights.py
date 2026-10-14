@@ -30,6 +30,7 @@ router = Router(name=__name__)
 
 @router.message(F.text == "🔄 Передать настройки пользователю")
 async def transfer_settings(message: Message, state: FSMContext) -> None:
+    """Запрашивает ID пользователя для передачи настроек (текст)"""
     await state.clear()  # Завершаем текущее состояние машины состояния
     await message.answer(
         "Введите ID пользователя для передачи настроек:\n\nПример ввода - 1234567890",
@@ -40,6 +41,7 @@ async def transfer_settings(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "settings_transfer_rights")
 async def transfer_settings_cb(callback: CallbackQuery, state: FSMContext) -> None:
+    """Запрашивает ID пользователя для передачи настроек (инлайн)"""
     await state.clear()
     await callback.message.answer(
         "Введите ID пользователя для передачи настроек:\n\nПример ввода - 1234567890",

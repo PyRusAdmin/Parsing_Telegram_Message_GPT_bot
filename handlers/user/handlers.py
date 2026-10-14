@@ -432,6 +432,7 @@ async def handle_stars_balance_cb(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("buy_stars_"))
 async def handle_buy_stars_callback(callback: CallbackQuery):
+    """Обрабатывает выбор количества звезд для покупки через Telegram Stars"""
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 

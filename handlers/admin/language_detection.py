@@ -159,6 +159,7 @@ async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
     """Массовое обновление языков в БД (в основном потоке)"""
 
     def _batch_update():
+        """Выполняет пакетное обновление языков групп в транзакции базы данных"""
         if db.is_closed():
             db.connect(reuse_if_open=True)
 

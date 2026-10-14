@@ -17,6 +17,7 @@ router = Router(name=__name__)
 
 
 async def export_questions_internal(message: Message, user_id: int):
+    """Экспортирует вопросы и ответы из базы данных в CSV-файл"""
     try:
         user = User.get(User.user_id == user_id)
         user_lang = user.language if user.language != "unset" else "ru"
@@ -68,6 +69,7 @@ async def export_questions_cb(callback: CallbackQuery):
 
 
 async def show_admin_panel(message: Message, user_id: int, state: FSMContext, edit: bool = False):
+    """Отображает главное меню панели администратора"""
     try:
         await state.clear()
         try:

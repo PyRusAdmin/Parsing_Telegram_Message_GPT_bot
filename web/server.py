@@ -72,6 +72,7 @@ app.add_middleware(
 class MockMessage:
     # Mock Message для совместимости с обработчиками ботов
     def __init__(self, user_id: int, username: Optional[str] = "web_user"):
+        """Инициализирует объект MockMessage для имитации Telegram-сообщения"""
         self.from_user = type('User', (), {
             'id': user_id,
             'username': username or 'web_user',
@@ -85,6 +86,7 @@ class MockMessage:
         self.bot = bot
 
     async def answer(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
+        """Имитирует отправку текстового ответа пользователю через Telegram-бота"""
         from system.dispatcher import bot
         try:
             return await bot.send_message(
@@ -98,9 +100,11 @@ class MockMessage:
             logger.exception(f"Failed to send mock answer to {self.from_user.id}: {e}")
 
     async def reply(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
+        """Имитирует ответ на сообщение пользователю через Telegram-бота"""
         return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
 
     async def answer_document(self, document, caption=None, parse_mode=None, reply_markup=None, **kwargs):
+        """Имитирует отправку документа пользователю через Telegram-бота"""
         from system.dispatcher import bot
         try:
             return await bot.send_document(
@@ -115,6 +119,7 @@ class MockMessage:
             logger.exception(f"Failed to send mock document to {self.from_user.id}: {e}")
 
     async def answer_photo(self, photo, caption=None, parse_mode=None, reply_markup=None, **kwargs):
+        """Имитирует отправку фотографии пользователю через Telegram-бота"""
         from system.dispatcher import bot
         try:
             return await bot.send_photo(
@@ -129,11 +134,13 @@ class MockMessage:
             logger.exception(f"Failed to send mock photo to {self.from_user.id}: {e}")
 
     async def edit_text(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
+        """Имитирует редактирование текста сообщения через Telegram-бота"""
         return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
 
 
 @app.middleware("http")
 async def db_session_middleware(request, call_next):
+    """Обеспечивает активное подключение к базе данных для каждого HTTP-запроса"""
     # Промежуточное программное обеспечение для подключения к базе данных
     if db.is_closed():
         db.connect(reuse_if_open=True)
@@ -163,6 +170,7 @@ async def get_country_by_ip(ip: str) -> Optional[str]:
         return None
     try:
         def _fetch():
+            """Выполняет запрос к внешнему сервису гео-IP для определения кода страны"""
             url = f"http://ip-api.com/json/{ip}?fields=countryCode,status"
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=3) as resp:
@@ -198,6 +206,7 @@ async def detect_language_by_ip(ip: str, accept_language_header: Optional[str] =
 
 
 def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
+    """Проверяет авторизацию пользователя Telegram по токену initData"""
     # Зависимость для проверки аутентификации из initData
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
@@ -262,6 +271,7 @@ logged_user_sessions = set()
 
 
 def init_web_directories():
+    """Создает необходимые директории для статических файлов веб-сервера"""
     # Убедитесь, что каталоги существуют
     os.makedirs("web/static", exist_ok=True)
     os.makedirs("web/static/css", exist_ok=True)
@@ -275,6 +285,7 @@ init_web_directories()
 
 @app.get("/api/status")
 async def get_status(request: Request, user_data: dict = Depends(get_current_tg_user)):
+    """Возвращает статус пользователя, настройки языка и статистику системы"""
     try:
         client_ip = get_client_ip(request)
 
@@ -345,6 +356,7 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
 
 @app.post("/api/settings/language")
 async def update_language(lang: str, user_data: dict = Depends(get_current_tg_user)):
+    """Обновляет языковые настройки текущего пользователя"""
     if lang not in ["ru", "en"]:
         raise HTTPException(status_code=400, detail="Invalid language code")
 
@@ -360,6 +372,7 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/tracking/start")
 async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):
+    """Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
@@ -377,6 +390,7 @@ async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict
 
 @app.post("/api/tracking/stop")
 async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
+    """Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
@@ -393,6 +407,7 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
 
 @app.get("/api/keywords")
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
+    """Возвращает список ключевых слов текущего пользователя"""
     # Управление ключевыми словами
     # user_id = user_data["id"]
     KeywordsModel = create_keywords_model(user_data["id"])
@@ -406,6 +421,7 @@ async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/keywords")
 async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    """Добавляет новое ключевое слово для отслеживания"""
     # user_id = user_data["id"]
     keyword = keyword.strip()
     if not keyword:
@@ -426,6 +442,7 @@ async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_cu
 
 @app.delete("/api/keywords/{kw_id}")
 async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):
+    """Удаляет ключевое слово пользователя по его идентификатору"""
     # user_id = user_data["id"]
     KeywordsModel = create_keywords_model(user_data["id"])
 
@@ -440,6 +457,7 @@ async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_us
 
 @app.get("/api/channels")
 async def list_channels(user_data: dict = Depends(get_current_tg_user)):
+    """Возвращает список отслеживаемых каналов пользователя"""
     # Управление отслеживаемыми каналами
     # user_id = user_data["id"]
     records = list(Groups.select().where(Groups.user_id == user_data["id"]).order_by(Groups.date_added.desc()))
@@ -449,6 +467,7 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/channels")
 async def add_channel(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    """Добавляет новый канал в список отслеживаемых"""
     # user_id = user_data["id"]
     username = username.strip()
     if not username:
@@ -468,6 +487,7 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
 
 @app.delete("/api/channels/{ch_id}")
 async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):
+    """Удаляет канал из списка отслеживаемых по идентификатору"""
     # user_id = user_data["id"]
     deleted = Groups.delete().where(Groups.user_id == user_data["id"], Groups.id == ch_id).execute()
     if deleted:
@@ -477,6 +497,7 @@ async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/channels/upload")
 async def upload_channels_file(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
+    """Загружает список каналов из текстового файла"""
     # user_id = user_data["id"]
     if not file.filename.endswith(".txt"):
         raise HTTPException(status_code=400, detail="Only .txt files are supported")
@@ -511,6 +532,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
 
 @app.get("/api/target-group")
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
+    """Возвращает текущую целевую группу пользователя для пересылки сообщений"""
     # Конфигурация целевой группы
     # user_id = user_data["id"]
     GroupModel = create_group_model(user_data["id"])
@@ -525,6 +547,7 @@ async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/target-group")
 async def set_target_group(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    """Устанавливает целевую группу пользователя для пересылки сообщений"""
     # user_id = user_data["id"]
     username = username.strip()
     if not username:
@@ -549,6 +572,7 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
 
 @app.get("/api/accounts")
 async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
+    """Возвращает список подключенных Telegram-аккаунтов пользователя"""
     # Управление аккаунтами Telegram
     # user_id = user_data["id"]
     # accounts = get_user_accounts(user_data["id"])
@@ -564,6 +588,7 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/accounts/upload")
 async def upload_account_session(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
+    """Загружает и подключает новый файл сессии Telegram-аккаунта"""
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
@@ -639,6 +664,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 
 @app.delete("/api/accounts/{phone}")
 async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_user)):
+    """Удаляет подключенный аккаунт пользователя по номеру телефона"""
     user_id = user_data["id"]
 
     # Получите список пользовательских аккаунтов, чтобы найти сессионную строку, соответствующую этому телефону
@@ -674,6 +700,7 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/payment/stars-topup")
 async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):
+    """Создает инвойс-ссылку на пополнение баланса звездами Telegram Stars"""
     # Ссылка на счет пополнения Stars
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
@@ -850,6 +877,7 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
 
 @app.post("/api/search/export_excel")
 async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
+    """Экспортирует результаты поиска групп в файл Excel"""
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
@@ -893,6 +921,7 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
 
 @app.get("/api/export/check")
 async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
+    """Проверяет возможность бесплатной выгрузки базы данных и баланс звезд"""
     # Получить базу данных / Экспортировать XLSX Endpoint
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
@@ -913,6 +942,7 @@ async def download_database(
         category: Optional[str] = Form(None),  # e.g. "investments"
         user_data: dict = Depends(get_current_tg_user)
 ):
+    """Выполняет выгрузку базы данных Telegram-групп в файл Excel"""
     # user_id = user_data["id"]
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
@@ -973,6 +1003,7 @@ async def download_database(
 
 
 def io_bytes_stream(data: bytes):
+    """Генерирует поток байтов из буфера в памяти для передачи файла"""
     stream = io.BytesIO(data)
     yield from stream
 
@@ -980,6 +1011,7 @@ def io_bytes_stream(data: bytes):
 # ==================== КОНЕЧНЫЕ ТОЧКИ API ПАНЕЛИ АДМИНИСТРАТОРА ====================
 
 def require_admin(user_data: dict = Depends(get_current_tg_user)):
+    """Проверяет наличие прав администратора у текущего пользователя"""
     # user_id = user_data["id"]
     is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
                                                                   (list, set, tuple)) else user_data[
@@ -991,6 +1023,7 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
 
 @app.get("/api/admin/status")
 async def get_admin_status():
+    """Возвращает статус фоновых административных задач и системную статистику"""
     # Рассчитать группы без категории
     uncategorized_count = TelegramGroup.select().where(
         (TelegramGroup.username.is_null(False)) &
@@ -1204,6 +1237,7 @@ async def bg_actualize_db():
 
 
 async def bg_categorize_db(method: str):
+    """Выполняет фоновую классификацию групп по категориям с помощью нейросетей"""
     global admin_task_status
     admin_task_status["action"] = "categorize"
     admin_task_status["status"] = "running"
@@ -1264,6 +1298,7 @@ async def bg_categorize_db(method: str):
 
 
 async def bg_detect_language():
+    """Выполняет фоновое определение языка групп с помощью нейросетей"""
     global admin_task_status
     admin_task_status["action"] = "lang_detect"
     admin_task_status["status"] = "running"
@@ -1317,6 +1352,7 @@ async def bg_detect_language():
 
 @app.post("/api/admin/check-accounts")
 async def admin_check_accounts(background_tasks: BackgroundTasks):
+    """Запускает административную задачу проверки валидности всех аккаунтов"""
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_check_accounts)
@@ -1325,6 +1361,7 @@ async def admin_check_accounts(background_tasks: BackgroundTasks):
 
 @app.post("/api/admin/actualize")
 async def admin_actualize_db(background_tasks: BackgroundTasks):
+    """Запускает административную задачу актуализации базы групп через Telegram"""
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_actualize_db)
@@ -1333,6 +1370,7 @@ async def admin_actualize_db(background_tasks: BackgroundTasks):
 
 @app.post("/api/admin/categorize")
 async def admin_categorize_db(method: str = Query("fast"), background_tasks: BackgroundTasks = None):
+    """Запускает административную задачу категоризации групп с помощью AI"""
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_categorize_db, method=method)
@@ -1341,6 +1379,7 @@ async def admin_categorize_db(method: str = Query("fast"), background_tasks: Bac
 
 @app.post("/api/admin/detect-language")
 async def admin_detect_language(background_tasks: BackgroundTasks):
+    """Запускает административную задачу определения языков групп через AI"""
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_detect_language)
@@ -1349,6 +1388,7 @@ async def admin_detect_language(background_tasks: BackgroundTasks):
 
 @app.get("/api/admin/export-questions")
 async def admin_export_questions():
+    """Экспортирует вопросы пользователей из базы данных в CSV-файл"""
     questions = get_all_questions()
     if not questions:
         raise HTTPException(status_code=404, detail="No questions found in database")
@@ -1370,6 +1410,7 @@ async def admin_export_questions():
 
 @app.get("/api/admin/logs")
 async def admin_download_logs():
+    """Отдает файл логов бота администратору"""
     log_path = "logs/log.log"
     if not os.path.exists(log_path):
         raise HTTPException(status_code=404, detail="Log file not found")
@@ -1382,6 +1423,7 @@ static_router = APIRouter()
 
 @static_router.get("/")
 async def serve_index(request: Request):
+    """Отдает главную HTML-страницу веб-интерфейса Mini App"""
     user_str = "Анонимный пользователь"
 
     auth_header = request.headers.get("Authorization")
@@ -1437,6 +1479,7 @@ async def serve_index(request: Request):
 
 @static_router.get("/{file_path:path}")
 async def serve_static(file_path: str):
+    """Отдает статические файлы веб-интерфейса Mini App"""
     target_path = os.path.join("web/static", file_path)
     if os.path.isfile(target_path):
         return FileResponse(target_path)

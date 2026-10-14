@@ -11,6 +11,7 @@ router = Router(name=__name__)
 
 
 async def checking_accounts_internal(message: Message, user_id: int, state: FSMContext):
+    """Запускает процесс проверки всех аккаунтов на валидность"""
     try:
         await state.clear()
         user = User.get(User.user_id == user_id)

@@ -12,6 +12,7 @@ router = Router(name=__name__)
 
 
 async def stop_tracking_internal(message: Message, user_id: int, state: FSMContext):
+    """Выполняет остановку процесса отслеживания сообщений для пользователя"""
     await state.clear()
     user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"

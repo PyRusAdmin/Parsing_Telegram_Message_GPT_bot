@@ -528,6 +528,7 @@ async def get_groups_without_category() -> list[dict]:
     """Получает группы без категории (в отдельном потоке для БД)"""
 
     def _fetch():
+        """Извлекает из базы данных список групп без присвоенной категории"""
         if db.is_closed():
             db.connect(reuse_if_open=True)
 

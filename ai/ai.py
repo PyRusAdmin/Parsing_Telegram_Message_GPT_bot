@@ -31,6 +31,7 @@ class CategoryAssignment:
     """Определение категории через AI g4f.client.Client AsyncGroq OpenAI"""
 
     def __init__(self):
+        """Инициализирует клиент и модель для присвоения категорий через нейросеть"""
         self.client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=OPENROUTER_API_KEY,
@@ -38,11 +39,13 @@ class CategoryAssignment:
         self.model = ["deepseek/deepseek-v4-flash"]  # название модели. Например: "deepseek/deepseek-v4-flash"
 
     async def get_random_ai_model(self) -> str:
+        """Возвращает случайную или установленную модель AI"""
         if isinstance(self.model, (list, tuple)):
             return random.choice(self.model)
         return str(self.model)
 
     def build_group_context(self, group_data: dict) -> str:
+        """Формирует текстовый контекст группы для передачи в запрос нейросети"""
         # 🧩 Формируем контекст
         data_parts = []
         if group_data.get('name'):

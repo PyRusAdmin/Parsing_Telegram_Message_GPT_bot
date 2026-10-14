@@ -240,6 +240,7 @@ async def cb_personal_tracking_menu(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "pt_add_tracking")
 async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает добавление новой группы для персонального отслеживания"""
     user_id = callback.from_user.id
     allowed = get_user_allowed_slots(user_id)
     used = get_user_used_slots(user_id)
@@ -259,6 +260,7 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
 
 @router.message(PersonalTrackingState.waiting_for_target_link)
 async def process_target_link_input(message: Message, state: FSMContext):
+    """Обрабатывает ввод ссылки или юзернейма группы для персонального отслеживания"""
     target_input = message.text.strip()
     if not target_input.startswith("http") and not target_input.startswith("@"):
         await message.answer("⚠️ Пожалуйста, введите корректную ссылку (https://t.me/...) или @username группы/канала.")
@@ -293,6 +295,7 @@ async def process_target_link_input(message: Message, state: FSMContext):
 
 @router.message(PersonalTrackingState.waiting_for_keywords)
 async def process_keywords_input(message: Message, state: FSMContext):
+    """Обрабатывает ввод ключевых слов и сохраняет персональное отслеживание"""
     keywords_text = message.text.strip()
     data = await state.get_data()
 
@@ -334,6 +337,7 @@ async def process_keywords_input(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "pt_buy_slot")
 async def cb_buy_slot(callback: CallbackQuery):
+    """Отправляет инвойс для покупки дополнительного слота отслеживания за Telegram Stars"""
     user_id = callback.from_user.id
     prices = [LabeledPrice(label="Дополнительный слот отслеживания", amount=2)]
 
@@ -350,11 +354,13 @@ async def cb_buy_slot(callback: CallbackQuery):
 
 @router.pre_checkout_query(F.invoice_payload.startswith("personal_tracking_slot_"))
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
+    """Подтверждает предварительный платеж за покупку слота персонального отслеживания"""
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
+    """Обрабатывает успешную оплату слота персонального отслеживания"""
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 
@@ -382,6 +388,7 @@ async def process_successful_payment(message: Message):
 
 @router.callback_query(F.data == "pt_list_tracking")
 async def cb_list_tracking(callback: CallbackQuery):
+    """Отображает список групп персонального отслеживания пользователя"""
     user_id = callback.from_user.id
     records = list(
         PersonalTracking.select().where(PersonalTracking.user_id == user_id)
@@ -424,6 +431,7 @@ async def cb_list_tracking(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("pt_edit_"))
 async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает выбор группы персонального отслеживания для редактирования"""
     rec_id = int(callback.data.split("_")[2])
     rec = PersonalTracking.get_or_none(PersonalTracking.id == rec_id)
 
@@ -451,6 +459,7 @@ async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
 
 @router.message(PersonalTrackingState.editing_slot_link)
 async def process_edit_link(message: Message, state: FSMContext):
+    """Обрабатывает изменение ссылки целевой группы персонального отслеживания"""
     new_target = message.text.strip()
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
@@ -481,6 +490,7 @@ async def process_edit_link(message: Message, state: FSMContext):
 
 @router.message(PersonalTrackingState.editing_slot_keywords)
 async def process_edit_keywords(message: Message, state: FSMContext):
+    """Обрабатывает изменение ключевых слов персонального отслеживания"""
     new_keywords = message.text.strip()
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
@@ -504,6 +514,7 @@ async def process_edit_keywords(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "pt_stats")
 async def cb_stats(callback: CallbackQuery):
+    """Отображает административную статистику персонального отслеживания"""
     total_tracking_users = PersonalTracking.select(PersonalTracking.user_id).distinct().count()
     total_paid_users = PersonalTrackingStats.select(PersonalTrackingStats.user_id).where(
         PersonalTrackingStats.event_type == "slot_purchased"

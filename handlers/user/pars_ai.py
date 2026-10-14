@@ -248,6 +248,7 @@ def can_user_download_free(user: User) -> tuple[bool, int]:
 
 async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None,
                                    user_id: int = None):
+    """Проверяет лимиты бесплатной выгрузки базы и запускает скачивание или запрос оплаты"""
     effective_user_id = user_id if user_id is not None else message.from_user.id
     logger.info(
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
@@ -282,6 +283,7 @@ async def check_and_start_download(message: Message, state: FSMContext, download
 
 
 async def perform_download(message: Message, user_id: int, download_type: str, category: str = None):
+    """Формирует и отправляет пользователю файл выгрузки базы данных"""
     logger.info(f"📥 Начало perform_download для user_id={user_id}, download_type={download_type}, category={category}")
     user = User.get(User.user_id == user_id)
     user_lang = user.language if user.language != "unset" else "ru"
@@ -472,6 +474,7 @@ async def export_all_groups(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "db_export_all")
 async def cb_export_all(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает запрос на скачивание всей базы данных (инлайн)"""
     await callback.answer()
     await state.clear()
     await check_and_start_download(callback.message, state, download_type="all", user_id=callback.from_user.id)
@@ -486,6 +489,7 @@ async def export_channels(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "db_export_channels")
 async def cb_export_channels(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает запрос на скачивание базы каналов (инлайн)"""
     await callback.answer()
     await state.clear()
     await check_and_start_download(callback.message, state, download_type="channels", user_id=callback.from_user.id)
@@ -500,6 +504,7 @@ async def export_supergroups(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "db_export_groups")
 async def cb_export_groups(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает запрос на скачивание базы групп (инлайн)"""
     await callback.answer()
     await state.clear()
     await check_and_start_download(callback.message, state, download_type="groups", user_id=callback.from_user.id)
@@ -646,6 +651,7 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "pay_db_balance", ExportStates.waiting_for_payment_choice)
 async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает списание звезд с баланса для оплаты выгрузки базы"""
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
@@ -672,6 +678,7 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "pay_db_direct", ExportStates.waiting_for_payment_choice)
 async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
+    """Формирует инвойс на прямую оплату выгрузки базы звездами Telegram Stars"""
     logger.info(f"⭐ Пользователь {callback.from_user.id} выбрал прямую оплату 5 звезд")
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
@@ -689,6 +696,7 @@ async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "pay_db_cancel", ExportStates.waiting_for_payment_choice)
 async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
+    """Отменяет выбор оплаты выгрузки базы данных"""
     logger.info(f"❌ Пользователь {callback.from_user.id} отменил оплату")
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
@@ -700,6 +708,7 @@ async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
+    """Подтверждает предварительный запрос на проведение платежа Telegram Stars"""
     logger.info(f"💰 PreCheckoutQuery от {pre_checkout_query.from_user.id}, ID={pre_checkout_query.id}")
     await pre_checkout_query.answer(ok=True)
     logger.info(f"✅ PreCheckoutQuery одобрен")
@@ -707,6 +716,7 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
 
 @router.message(F.successful_payment, StateFilter("*"))
 async def process_successful_payment(message: Message, state: FSMContext):
+    """Обрабатывает успешный платеж за выгрузку базы данных или покупку звезд"""
     logger.info(f"⭐ Получен successful_payment от {message.from_user.id}")
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
