@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, Message, CallbackQuery
 
 from database.database import User
-from keyboards.user.keyboards import back_keyboard
+from keyboards.keyboards import back_keyboard
 from locales.locales import t
 
 router = Router(name=__name__)

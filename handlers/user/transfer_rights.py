@@ -2,7 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from keyboards.user.keyboards import back_keyboard
+from keyboards.keyboards import back_keyboard
 from states.states import MyStates
 
 # from loguru import logger

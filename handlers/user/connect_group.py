@@ -4,7 +4,7 @@ from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
 from database.database import User, create_group_model
-from keyboards.user.keyboards import back_keyboard
+from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
 

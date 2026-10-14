@@ -9,7 +9,7 @@ from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import getting_account, User, get_all_questions
-from keyboards.admin.keyboards import admin_keyboard, category_method_keyboard
+from keyboards.keyboards import admin_keyboard, category_method_keyboard
 from locales.locales import t
 from states.states import CategoryMethod
 

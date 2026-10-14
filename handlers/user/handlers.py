@@ -1,6 +1,5 @@
 import os
 
-import aiogram
 from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
@@ -14,10 +13,9 @@ from database.database import (
     User, getting_number_records_database, get_session_count, get_target_group_count, get_keywords_count,
     get_tracked_channels_count, Groups
 )
-from keyboards.admin.keyboards import main_admin_keyboard
-from keyboards.user.keyboards import (
+from keyboards.keyboards import (
     get_lang_keyboard, main_menu_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
-    connect_keyboard_account, get_stars_topup_inline_keyboard
+    connect_keyboard_account, get_stars_topup_inline_keyboard, main_admin_keyboard
 )
 from locales.locales import t
 from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions

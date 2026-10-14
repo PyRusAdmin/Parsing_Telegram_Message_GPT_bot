@@ -15,7 +15,7 @@ from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
 from database.database import User, TelegramGroup
-from keyboards.user.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP
+from keyboards.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP
 from locales.locales import t
 from states.states import ExportStates
 

@@ -71,6 +71,19 @@
 | ⚪ `unknown` | Не удалось получить дату (ограничения приватности) |
 
 ---
+
+## Создание виртуальнго окружения
+
+Windows:
+
+В командной строке (cmd):
+
+venv\Scripts\activate.bat
+
+В PowerShell:
+
+venv\Scripts\Activate.ps1
+
 ## 🧑‍💻 Разработка
 
 - **Framework:** `aiogram 3.x` (Bot API), `Telethon` (User API)

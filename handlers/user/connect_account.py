@@ -10,7 +10,7 @@ from telethon.sessions import StringSession
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from database.database import User, AccountFree
 from database.database import write_account_to_user_table
-from keyboards.user.keyboards import back_keyboard
+from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
 

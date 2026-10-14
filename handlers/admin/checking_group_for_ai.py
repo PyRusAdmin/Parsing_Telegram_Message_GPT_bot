@@ -14,7 +14,7 @@ from openai import AsyncOpenAI
 from ai.ai import category_assignment
 from core.config import GROQ_API_KEY, OPENROUTER_API_KEY
 from database.database import TelegramGroup, db, get_groups_without_category, User
-from keyboards.admin.keyboards import category_method_keyboard, admin_keyboard
+from keyboards.keyboards import category_method_keyboard, admin_keyboard
 from locales.locales import t
 from states.states import CategoryMethod
 

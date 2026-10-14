@@ -6,7 +6,7 @@ from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
 from database.database import get_user_accounts, delete_account_from_user_table, delete_account_from_db
-from keyboards.user.keyboards import menu_launch_tracking_keyboard
+from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
 
 

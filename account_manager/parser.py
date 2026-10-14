@@ -3,7 +3,6 @@ import random
 
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
-from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
 from telethon.errors import (
@@ -18,9 +17,9 @@ from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_
 
 from database.database import (
     create_keywords_model, create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups,
-    User, delete_account_from_user_table, delete_account_from_db, dell_group
+    User, dell_group
 )
-from keyboards.user.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
+from keyboards.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import t
 
 

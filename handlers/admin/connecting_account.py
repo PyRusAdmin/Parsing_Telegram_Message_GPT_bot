@@ -11,7 +11,7 @@ from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH
 from database.database import write_account_to_db, User
 from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
-from keyboards.user.keyboards import back_keyboard
+from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
 

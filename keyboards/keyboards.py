@@ -1,6 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from keyboards.admin.keyboards import menu_user_admin_keyboard
 from locales.locales import t
 
 # Словарь сопоставления ключей категорий с каноническими названиями в БД
@@ -42,7 +41,8 @@ def search_group_ai(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("groups_database_button", lang=lang), callback_data="db_export_groups")
             ],
             [
-                InlineKeyboardButton(text=t("select_category_button", lang=lang), callback_data="db_export_category_menu")
+                InlineKeyboardButton(text=t("select_category_button", lang=lang),
+                                     callback_data="db_export_category_menu")
             ],
             [
                 InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
@@ -61,20 +61,24 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("investments_button", lang=lang), callback_data="cat_sel:investments")
             ],
             [
-                InlineKeyboardButton(text=t("finance_and_personal_budget_button", lang=lang), callback_data="cat_sel:finance")
+                InlineKeyboardButton(text=t("finance_and_personal_budget_button", lang=lang),
+                                     callback_data="cat_sel:finance")
             ],
             [
                 InlineKeyboardButton(text=t("crypto_and_blockchain_button", lang=lang), callback_data="cat_sel:crypto"),
-                InlineKeyboardButton(text=t("business_and_entrepreneurship_button", lang=lang), callback_data="cat_sel:business")
+                InlineKeyboardButton(text=t("business_and_entrepreneurship_button", lang=lang),
+                                     callback_data="cat_sel:business")
             ],
             [
-                InlineKeyboardButton(text=t("marketing_and_promotion_button", lang=lang), callback_data="cat_sel:marketing")
+                InlineKeyboardButton(text=t("marketing_and_promotion_button", lang=lang),
+                                     callback_data="cat_sel:marketing")
             ],
             [
                 InlineKeyboardButton(text=t("tech_and_it_button", lang=lang), callback_data="cat_sel:tech")
             ],
             [
-                InlineKeyboardButton(text=t("education_and_self_development_button", lang=lang), callback_data="cat_sel:education")
+                InlineKeyboardButton(text=t("education_and_self_development_button", lang=lang),
+                                     callback_data="cat_sel:education")
             ],
             [
                 InlineKeyboardButton(text=t("work_and_career_button", lang=lang), callback_data="cat_sel:work")
@@ -92,10 +96,12 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("auto_and_transport_button", lang=lang), callback_data="cat_sel:auto")
             ],
             [
-                InlineKeyboardButton(text=t("shopping_and_discounts_button", lang=lang), callback_data="cat_sel:shopping")
+                InlineKeyboardButton(text=t("shopping_and_discounts_button", lang=lang),
+                                     callback_data="cat_sel:shopping")
             ],
             [
-                InlineKeyboardButton(text=t("entertainment_and_leisure_button", lang=lang), callback_data="cat_sel:entertainment")
+                InlineKeyboardButton(text=t("entertainment_and_leisure_button", lang=lang),
+                                     callback_data="cat_sel:entertainment")
             ],
             [
                 InlineKeyboardButton(text=t("politics_and_society_button", lang=lang), callback_data="cat_sel:politics")
@@ -113,7 +119,8 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("fashion_and_beauty_button", lang=lang), callback_data="cat_sel:fashion")
             ],
             [
-                InlineKeyboardButton(text=t("hobbies_and_creativity_button", lang=lang), callback_data="cat_sel:hobbies")
+                InlineKeyboardButton(text=t("hobbies_and_creativity_button", lang=lang),
+                                     callback_data="cat_sel:hobbies")
             ],
             [
                 InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="cat_sel:back")
@@ -190,18 +197,23 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("enter_keyword_button", lang=lang), callback_data="settings_enter_keyword")
             ],
             [
-                InlineKeyboardButton(text=t("delete_group_from_tracking_button", lang=lang), callback_data="settings_delete_group")
+                InlineKeyboardButton(text=t("delete_group_from_tracking_button", lang=lang),
+                                     callback_data="settings_delete_group")
             ],
             [
                 InlineKeyboardButton(text=t("keywords_list_button", lang=lang), callback_data="settings_keywords_list"),
-                InlineKeyboardButton(text=t("tracking_links_button", lang=lang), callback_data="settings_tracking_links")
+                InlineKeyboardButton(text=t("tracking_links_button", lang=lang),
+                                     callback_data="settings_tracking_links")
             ],
             [
-                InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="settings_connect_account"),
-                InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang), callback_data="settings_connect_group")
+                InlineKeyboardButton(text=t("connect_account_button", lang=lang),
+                                     callback_data="settings_connect_account"),
+                InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
+                                     callback_data="settings_connect_group")
             ],
             [
-                InlineKeyboardButton(text=t("change_language_button", lang=lang), callback_data="settings_change_language"),
+                InlineKeyboardButton(text=t("change_language_button", lang=lang),
+                                     callback_data="settings_change_language"),
                 InlineKeyboardButton(text=t("topup_stars_button", lang=lang), callback_data="settings_topup_stars")
             ],
             [
@@ -222,7 +234,8 @@ def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="account_connect")
             ],
             [
-                InlineKeyboardButton(text=t("connect_free_account_button", lang=lang), callback_data="account_connect_free")
+                InlineKeyboardButton(text=t("connect_free_account_button", lang=lang),
+                                     callback_data="account_connect_free")
             ],
             [
                 InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
@@ -238,7 +251,8 @@ def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang), callback_data="group_connect")
+                InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
+                                     callback_data="group_connect")
             ],
             [
                 InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
@@ -275,3 +289,100 @@ def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+"""Клавиатура Администратора"""
+
+
+def menu_user_admin_keyboard(lang: str = 'ru'):
+    """
+    Создаёт кнопки главного меню бота в виде инлайн-кнопок.
+
+    :return: list[list[InlineKeyboardButton]] Список строк с кнопками.
+    """
+    return [
+        [
+            InlineKeyboardButton(text=t("launch_tracking_button", lang=lang), callback_data="menu_launch_tracking")
+        ],
+        [
+            InlineKeyboardButton(text="🎯 Персональное отслеживание", callback_data="menu_personal_tracking")
+        ],
+        [
+            InlineKeyboardButton(text=t("check_group_for_keywords_button", lang=lang), callback_data="menu_check_group")
+        ],
+        [
+            InlineKeyboardButton(text=t("get_database_button", lang=lang), callback_data="menu_get_database")
+        ],
+        [
+            InlineKeyboardButton(text=t("instruction_button", lang=lang), callback_data="menu_instruction")
+        ],
+        [
+            InlineKeyboardButton(text=t("settings_button", lang=lang), callback_data="menu_settings")
+        ],
+    ]
+
+
+def main_admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура администратора (главное меню)
+    :return: InlineKeyboardMarkup
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            *menu_user_admin_keyboard(lang),
+            [
+                InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")
+            ]
+        ]
+    )
+
+
+def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура панели администратора
+    :return: InlineKeyboardMarkup
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=t("get_log_file_button", lang=lang), callback_data="admin_get_log"),
+            ],
+            [
+                InlineKeyboardButton(text=t("export_questions_button", lang=lang),
+                                     callback_data="admin_export_questions"),
+                InlineKeyboardButton(text=t("assign_category_button", lang=lang),
+                                     callback_data="admin_assign_category"),
+                InlineKeyboardButton(text=t("check_accounts_button", lang=lang), callback_data="admin_check_accounts")
+            ],
+            [
+                InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="admin_connect_account")
+            ],
+            [
+                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+            ]
+        ]
+    )
+
+
+def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура для выбора метода присвоения категорий
+    :return: InlineKeyboardMarkup
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=t("fast_method_button", lang=lang), callback_data="cat_method_fast")
+            ],
+            [
+                InlineKeyboardButton(text=t("powerful_method_openrouter_button", lang=lang),
+                                     callback_data="cat_method_openrouter")
+            ],
+            [
+                InlineKeyboardButton(text=t("powerful_method_groq_button", lang=lang), callback_data="cat_method_groq")
+            ],
+            [
+                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_admin_panel")
+            ]
+        ]
+    )

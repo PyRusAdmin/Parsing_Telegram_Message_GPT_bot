@@ -4,7 +4,7 @@ from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
 from database.database import User
-from keyboards.user.keyboards import menu_launch_tracking_keyboard
+from keyboards.keyboards import menu_launch_tracking_keyboard
 from account_manager.parser import stop_tracking
 from locales.locales import t
 

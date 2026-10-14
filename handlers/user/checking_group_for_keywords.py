@@ -8,7 +8,7 @@ from loguru import logger
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from database.database import User
-from keyboards.user.keyboards import back_keyboard
+from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStatesParsing
 
