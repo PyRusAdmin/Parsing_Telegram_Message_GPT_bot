@@ -22,7 +22,8 @@ from telethon.tl.functions.messages import CreateChatRequest, ExportChatInviteRe
 from account_manager.auth import CheckingAccountsValidity
 from core.config import API_ID, API_HASH, mobile_device
 from database.database import db, write_account_to_db, User
-from keyboards.keyboards import personal_tracking_menu_kb, emoji_code_keypad_kb, tracking_list_keyboard
+from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
+# from keyboards.keyboards import personal_tracking_menu_kb, emoji_code_keypad_kb, tracking_list_keyboard
 from system.dispatcher import bot
 
 router = Router(name="personal_tracking")

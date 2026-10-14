@@ -288,17 +288,17 @@ def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-# def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineKeyboardMarkup:
-#     """
-#     Создаёт простую инлайн-клавиатуру с одной кнопкой Назад.
-#     """
-#     return InlineKeyboardMarkup(
-#         inline_keyboard=[
-#             [
-#                 InlineKeyboardButton(text=t("back_button", lang=lang), callback_data=callback_data)
-#             ]
-#         ]
-#     )
+def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineKeyboardMarkup:
+    """
+    Создаёт простую инлайн-клавиатуру с одной кнопкой Назад.
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data=callback_data)
+            ]
+        ]
+    )
 
 
 def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
