@@ -27,6 +27,7 @@ class MyStates(StatesGroup):
 
 
 class MyStatesParsing(StatesGroup):
+    """Группа состояний FSM для парсинга и ввода ссылок"""
     get_url = State()  # Ожидание ввода URL для парсинга
     get_keyword = State()  # Ожидание ввода ключевого слова для поиска
 

@@ -37,6 +37,7 @@ async def get_account_info(client: TelegramClient) -> dict:
 
 
 class CheckingAccountsValidity:
+    """Класс для проверки валидности и подключения аккаунтов Telegram"""
 
     def __init__(self, path: str | None = None):
         """

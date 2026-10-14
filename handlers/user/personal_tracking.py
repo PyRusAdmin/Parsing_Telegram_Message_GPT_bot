@@ -32,6 +32,7 @@ router = Router(name="personal_tracking")
 # ==================== МОДЕЛИ БАЗЫ ДАННЫХ ====================
 
 class PersonalTracking(Model):
+    """Модель базы данных для хранения настроек персонального отслеживания"""
     id = AutoField()
     user_id = BigIntegerField(index=True)
     target_link = CharField()
@@ -42,11 +43,13 @@ class PersonalTracking(Model):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Метаданные таблицы персонального отслеживания"""
         database = db
         table_name = "personal_tracking"
 
 
 class PersonalTrackingStats(Model):
+    """Модель базы данных для хранения статистики персонального отслеживания"""
     id = AutoField()
     user_id = BigIntegerField(index=True)
     event_type = CharField()  # 'group_connected', 'slot_purchased', 'changed_target'
@@ -54,6 +57,7 @@ class PersonalTrackingStats(Model):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Метаданные таблицы статистики персонального отслеживания"""
         database = db
         table_name = "personal_tracking_stats"
 
@@ -72,6 +76,7 @@ init_personal_tracking_db()
 # ==================== МАШИНА СОСТОЯНИЙ ====================
 
 class PersonalTrackingState(StatesGroup):
+    """Группа состояний FSM для настройки персонального отслеживания"""
     waiting_for_target_link = State()
     waiting_for_keywords = State()
     editing_slot_link = State()

@@ -15,7 +15,9 @@ db = SqliteDatabase(
 
 
 class BaseModel(Model):
+    """Базовая модель базы данных SQLite"""
     class Meta:
+        """Метаданные базовой модели базы данных"""
         database = db
 
 
@@ -54,6 +56,7 @@ def init_database():
 
 
 class Question(BaseModel):
+    """Модель для хранения вопросов пользователей и ответов базы знаний"""
     id = AutoField()  # автоинкремент
     user_id = IntegerField()  # ID пользователя Telegram
     question = TextField()  # Вопрос пользователя
@@ -102,12 +105,14 @@ def get_all_questions():
 
 
 class Groups(BaseModel):
+    """Модель для хранения отслеживаемых пользователем групп и каналов"""
     id = AutoField()  # автоинкремент
     user_id = IntegerField()  # ID пользователя Telegram
     username = CharField(null=True)  # Username пользователя Telegram
     date_added = DateTimeField(default=datetime.now)  # Дата добавления группы
 
     class Meta:
+        """Метаданные таблицы отслеживаемых групп пользователей"""
         table_name = f"users_groups"  # Имя таблицы
         indexes = (
             (("user_id", "username"), True),  # один пользователь не добавит один канал дважды
@@ -175,6 +180,7 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
 
 
 class UserAccountsTable(BaseModel):
+    """Модель для хранения сессий подключенных Telegram-аккаунтов пользователей"""
     id = AutoField()  # ✅ Первичный ключ (обязательно!)
     user_id = IntegerField(index=True)  # ID пользователя Telegram
     session_string = CharField(unique=True, max_length=500, index=True)
@@ -182,6 +188,7 @@ class UserAccountsTable(BaseModel):
     created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
 
     class Meta:
+        """Метаданные таблицы аккаунтов пользователей"""
         database = db
         table_name = f"user_accounts_table"  # Динамическое имя таблицы
 
@@ -253,6 +260,7 @@ class Account(Model):
     phone_number = CharField()  # номер телефона аккаунта
 
     class Meta:
+        """Метаданные таблицы рабочих аккаунтов"""
         database = db
         table_name = 'account'
 
@@ -263,6 +271,7 @@ class AccountFree(Model):
     phone_number = CharField()  # Номер телефона аккаунта
 
     class Meta:
+        """Метаданные таблицы свободных аккаунтов"""
         database = db
         table_name = 'account_free'
 
@@ -390,10 +399,12 @@ def create_keywords_model(user_id):
     """
 
     class Keywords(BaseModel):
+        """Динамическая модель для хранения ключевых слов пользователя"""
         id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
         user_keyword = CharField(unique=True)  # Поле для хранения ключевого слова
 
         class Meta:
+            """Метаданные персональной таблицы ключевых слов"""
             table_name = f"{user_id}_keywords"  # Имя таблицы
 
     return Keywords  # Возвращаем класс модели
@@ -418,10 +429,12 @@ def create_group_model(user_id):
     """
 
     class Group(BaseModel):
+        """Динамическая модель для хранения технической группы пользователя"""
         id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
         user_group = CharField(unique=True)  # Поле для хранения технической группы
 
         class Meta:
+            """Метаданные персональной таблицы целевой группы"""
             table_name = f"{user_id}_group"  # Имя таблицы
 
     return Group  # Возвращаем класс модели
@@ -471,6 +484,7 @@ class TelegramGroup(BaseModel):
     date_added = DateTimeField(default=datetime.now)  # Дата добавления
 
     class Meta:
+        """Метаданные таблицы Telegram-групп и каналов"""
         table_name = 'telegram_groups'
 
 

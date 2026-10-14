@@ -70,6 +70,7 @@ app.add_middleware(
 
 
 class MockMessage:
+    """Имитация объекта сообщения aiogram для обработки запросов из веб-интерфейса"""
     # Mock Message для совместимости с обработчиками ботов
     def __init__(self, user_id: int, username: Optional[str] = "web_user"):
         """Инициализирует объект MockMessage для имитации Telegram-сообщения"""
