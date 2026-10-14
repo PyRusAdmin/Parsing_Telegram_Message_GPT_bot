@@ -1,5 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from core.config import ADMIN_USER_ID
+from handlers.user.personal_tracking import get_user_used_slots, get_user_allowed_slots
 from locales.locales import t
 
 # Словарь сопоставления ключей категорий с каноническими названиями в БД
@@ -286,17 +288,17 @@ def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineKeyboardMarkup:
-    """
-    Создаёт простую инлайн-клавиатуру с одной кнопкой Назад.
-    """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data=callback_data)
-            ]
-        ]
-    )
+# def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineKeyboardMarkup:
+#     """
+#     Создаёт простую инлайн-клавиатуру с одной кнопкой Назад.
+#     """
+#     return InlineKeyboardMarkup(
+#         inline_keyboard=[
+#             [
+#                 InlineKeyboardButton(text=t("back_button", lang=lang), callback_data=callback_data)
+#             ]
+#         ]
+#     )
 
 
 def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
@@ -411,3 +413,140 @@ def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
+    """
+    Клавиатура меню 🎯 Персональное отслеживание ключевых слов
+    :param user_id:
+    :return:
+    """
+    # allowed = get_user_allowed_slots(user_id)
+    # used = get_user_used_slots(user_id)
+
+    buttons = []
+    if get_user_used_slots(user_id) < get_user_allowed_slots(user_id):
+        buttons.append(
+            [
+                InlineKeyboardButton(text="➕ Добавить отслеживание группы", callback_data="pt_add_tracking")
+            ]
+        )
+
+    buttons.append(
+        [
+            InlineKeyboardButton(text="📱 Подключить свой аккаунт (по телефону)", callback_data="pt_auth_phone")
+        ]
+    )
+    buttons.append(
+        [
+            InlineKeyboardButton(text="⭐ Докупить +1 слот (2 Stars)", callback_data="pt_buy_slot")
+        ]
+    )
+    buttons.append(
+        [
+            InlineKeyboardButton(text="📋 Мои отслеживаемые группы", callback_data="pt_list_tracking")
+        ]
+    )
+
+    # Добавляем кнопку статистики только для админов
+    if user_id in ADMIN_USER_ID:
+        buttons.append([InlineKeyboardButton(text="📊 Статистика", callback_data="pt_stats")])
+
+    buttons.append(
+        [
+            back_button(lang)  # Кнопка ⬅️ Назад
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+# ==================== КЛАВИАТУРЫ ====================
+
+def emoji_code_keypad_kb() -> InlineKeyboardMarkup:
+    """
+    Клавиатура с цифрами-эмодзи для безопасного выбора цифр кода авторизации (предотвращает спам-блокировку от Telegram).
+    """
+    keyboard = [
+        [
+            InlineKeyboardButton(text="1️⃣", callback_data="pt_digit_1"),
+            InlineKeyboardButton(text="2️⃣", callback_data="pt_digit_2"),
+            InlineKeyboardButton(text="3️⃣", callback_data="pt_digit_3"),
+        ],
+        [
+            InlineKeyboardButton(text="4️⃣", callback_data="pt_digit_4"),
+            InlineKeyboardButton(text="5️⃣", callback_data="pt_digit_5"),
+            InlineKeyboardButton(text="6️⃣", callback_data="pt_digit_6"),
+        ],
+        [
+            InlineKeyboardButton(text="7️⃣", callback_data="pt_digit_7"),
+            InlineKeyboardButton(text="8️⃣", callback_data="pt_digit_8"),
+            InlineKeyboardButton(text="9️⃣", callback_data="pt_digit_9"),
+        ],
+        [
+            InlineKeyboardButton(text="❌ Стереть", callback_data="pt_digit_clear"),
+            InlineKeyboardButton(text="0️⃣", callback_data="pt_digit_0"),
+            InlineKeyboardButton(text="✅ Отправить", callback_data="pt_digit_submit"),
+        ],
+        [
+            InlineKeyboardButton(text="🚫 Отмена", callback_data="pt_cancel_auth"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+"""Клавиатура статистики"""
+
+
+def tracking_list_keyboard(records):
+    """Клавиатура для списка персональных отслеживаний"""
+
+    buttons = []
+
+    for idx, record in enumerate(records, start=1):
+        title = str(record.target_link or "Без ссылки")
+
+        # Обрезаем длинное название для кнопки
+        if len(title) > 15:
+            title = title[:15] + "..."
+
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"⚙️ Изменить #{idx} ({title})",
+                    callback_data=f"pt_edit_{record.id}"
+                )
+            ]
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """
+    Клавиатура покупки звезд
+    :param stars:
+    :param lang:
+    :return:
+    """
+    buttons = []
+    if stars >= 5:
+        buttons.append([
+            InlineKeyboardButton(
+                text=t("pay_from_balance_btn", lang=lang),
+                callback_data="pay_db_balance"
+            )
+        ])
+    buttons.append([
+        InlineKeyboardButton(
+            text=t("pay_direct_btn", lang=lang),
+            callback_data="pay_db_direct"
+        )
+    ])
+    buttons.append([
+        InlineKeyboardButton(
+            text=t("cancel_btn", lang=lang),
+            callback_data="pay_db_cancel"
+        )
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

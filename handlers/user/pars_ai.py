@@ -6,8 +6,7 @@ from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
-    BufferedInputFile, ReplyKeyboardRemove, Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery,
-    LabeledPrice, PreCheckoutQuery
+    BufferedInputFile, ReplyKeyboardRemove, Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
 )
 from loguru import logger
 from openpyxl import Workbook
@@ -15,7 +14,7 @@ from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
 from database.database import User, TelegramGroup
-from keyboards.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP
+from keyboards.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP, get_payment_inline_keyboard
 from locales.locales import t
 from states.states import ExportStates
 
@@ -247,31 +246,8 @@ def can_user_download_free(user: User) -> tuple[bool, int]:
     return False, remaining
 
 
-def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardMarkup:
-    buttons = []
-    if stars >= 5:
-        buttons.append([
-            InlineKeyboardButton(
-                text=t("pay_from_balance_btn", lang=lang),
-                callback_data="pay_db_balance"
-            )
-        ])
-    buttons.append([
-        InlineKeyboardButton(
-            text=t("pay_direct_btn", lang=lang),
-            callback_data="pay_db_direct"
-        )
-    ])
-    buttons.append([
-        InlineKeyboardButton(
-            text=t("cancel_btn", lang=lang),
-            callback_data="pay_db_cancel"
-        )
-    ])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
-async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None, user_id: int = None):
+async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None,
+                                   user_id: int = None):
     effective_user_id = user_id if user_id is not None else message.from_user.id
     logger.info(
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
@@ -295,10 +271,14 @@ async def check_and_start_download(message: Message, state: FSMContext, download
         await state.set_state(ExportStates.waiting_for_payment_choice)
         await state.update_data(download_type=download_type, category=category)
 
-        keyboard = get_payment_inline_keyboard(user.stars, user_lang)
-        msg_text = t("download_cooldown_message", lang=user_lang, time=time_str, stars=user.stars)
+        # keyboard = get_payment_inline_keyboard(user.stars, user_lang)
+        # msg_text = t("download_cooldown_message", lang=user_lang, time=time_str, stars=user.stars)
 
-        await message.answer(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
+        await message.answer(
+            text=t("download_cooldown_message", lang=user_lang, time=time_str, stars=user.stars),
+            reply_markup=get_payment_inline_keyboard(user.stars, user_lang),
+            parse_mode="HTML"
+        )
 
 
 async def perform_download(message: Message, user_id: int, download_type: str, category: str = None):

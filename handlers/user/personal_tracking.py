@@ -1,27 +1,28 @@
 from datetime import datetime
+from html import escape
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
-    CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, Message,
-    PreCheckoutQuery
+    CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 )
 from loguru import logger
 from peewee import AutoField, BigIntegerField, CharField, DateTimeField, IntegerField, Model, TextField, fn
 from telethon import TelegramClient
 from telethon.errors import (
     FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
-    PhoneNumberInvalidError, SessionPasswordNeededError, UsernameNotOccupiedError,
-    UsernameInvalidError, ChannelPrivateError
+    PhoneNumberInvalidError, SessionPasswordNeededError, UsernameNotOccupiedError, UsernameInvalidError,
+    ChannelPrivateError
 )
 from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.messages import CreateChatRequest, ExportChatInviteRequest
 
 from account_manager.auth import CheckingAccountsValidity
-from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
-from database.database import db, write_account_to_db
+from core.config import API_ID, API_HASH, mobile_device
+from database.database import db, write_account_to_db, User
+from keyboards.keyboards import personal_tracking_menu_kb, emoji_code_keypad_kb, tracking_list_keyboard
 from system.dispatcher import bot
 
 router = Router(name="personal_tracking")
@@ -175,67 +176,14 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         return False, f"Ошибка подключения к целевой группе: {e}", None, None
 
 
-# ==================== КЛАВИАТУРЫ ====================
-
-def emoji_code_keypad_kb() -> InlineKeyboardMarkup:
-    """
-    Клавиатура с цифрами-эмодзи для безопасного выбора цифр кода авторизации (предотвращает спам-блокировку от Telegram).
-    """
-    keyboard = [
-        [
-            InlineKeyboardButton(text="1️⃣", callback_data="pt_digit_1"),
-            InlineKeyboardButton(text="2️⃣", callback_data="pt_digit_2"),
-            InlineKeyboardButton(text="3️⃣", callback_data="pt_digit_3"),
-        ],
-        [
-            InlineKeyboardButton(text="4️⃣", callback_data="pt_digit_4"),
-            InlineKeyboardButton(text="5️⃣", callback_data="pt_digit_5"),
-            InlineKeyboardButton(text="6️⃣", callback_data="pt_digit_6"),
-        ],
-        [
-            InlineKeyboardButton(text="7️⃣", callback_data="pt_digit_7"),
-            InlineKeyboardButton(text="8️⃣", callback_data="pt_digit_8"),
-            InlineKeyboardButton(text="9️⃣", callback_data="pt_digit_9"),
-        ],
-        [
-            InlineKeyboardButton(text="❌ Стереть", callback_data="pt_digit_clear"),
-            InlineKeyboardButton(text="0️⃣", callback_data="pt_digit_0"),
-            InlineKeyboardButton(text="✅ Отправить", callback_data="pt_digit_submit"),
-        ],
-        [
-            InlineKeyboardButton(text="🚫 Отмена", callback_data="pt_cancel_auth"),
-        ]
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-
-def personal_tracking_menu_kb(user_id: int) -> InlineKeyboardMarkup:
-    allowed = get_user_allowed_slots(user_id)
-    used = get_user_used_slots(user_id)
-
-    buttons = []
-    if used < allowed:
-        buttons.append([InlineKeyboardButton(text="➕ Добавить отслеживание группы", callback_data="pt_add_tracking")])
-
-    buttons.append(
-        [InlineKeyboardButton(text="📱 Подключить свой аккаунт (по телефону)", callback_data="pt_auth_phone")])
-    buttons.append([InlineKeyboardButton(text="⭐ Докупить +1 слот (2 Stars)", callback_data="pt_buy_slot")])
-    buttons.append([InlineKeyboardButton(text="📋 Мои отслеживаемые группы", callback_data="pt_list_tracking")])
-
-    # Добавляем кнопку статистики только для админов
-    if user_id in ADMIN_USER_ID:
-        buttons.append([InlineKeyboardButton(text="📊 Статистика", callback_data="pt_stats")])
-
-    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="menu_main")])
-
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
 
 @router.message(F.text.in_({"🎯 Персональное отслеживание", "Персональное отслеживание", "/personal_tracking"}))
 async def cmd_personal_tracking_main(message: Message, state: FSMContext):
     """Главный экран Персонального отслеживания"""
+    user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+
     await state.clear()
     user_id = message.from_user.id
     allowed = get_user_allowed_slots(user_id)
@@ -250,7 +198,7 @@ async def cmd_personal_tracking_main(message: Message, state: FSMContext):
 
     await message.answer(
         text,
-        reply_markup=personal_tracking_menu_kb(user_id),
+        reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
         parse_mode="HTML"
     )
 
@@ -258,6 +206,9 @@ async def cmd_personal_tracking_main(message: Message, state: FSMContext):
 @router.callback_query(F.data == "menu_personal_tracking")
 async def cb_personal_tracking_menu(callback: CallbackQuery, state: FSMContext):
     """Инлайн-вход в главное меню Персонального отслеживания"""
+    user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+
     await state.clear()
     user_id = callback.from_user.id
     allowed = get_user_allowed_slots(user_id)
@@ -273,13 +224,13 @@ async def cb_personal_tracking_menu(callback: CallbackQuery, state: FSMContext):
     try:
         await callback.message.edit_text(
             text,
-            reply_markup=personal_tracking_menu_kb(user_id),
+            reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
             parse_mode="HTML"
         )
     except Exception:
         await callback.message.answer(
             text,
-            reply_markup=personal_tracking_menu_kb(user_id),
+            reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
             parse_mode="HTML"
         )
     await callback.answer()
@@ -343,14 +294,14 @@ async def process_keywords_input(message: Message, state: FSMContext):
     keywords_text = message.text.strip()
     data = await state.get_data()
 
-    user_id = message.from_user.id
+    # user_id = message.from_user.id
     target_link = data.get("target_link")
     invite_link = data.get("invite_link")
     created_group_id = data.get("created_group_id")
 
     # Сохраняем запись в таблицу personal_tracking
     rec = PersonalTracking.create(
-        user_id=user_id,
+        user_id=message.from_user.id,
         target_link=target_link,
         created_group_link=invite_link,
         created_group_id=created_group_id,
@@ -360,7 +311,7 @@ async def process_keywords_input(message: Message, state: FSMContext):
 
     # Фиксируем статистику подключения группы
     PersonalTrackingStats.create(
-        user_id=user_id,
+        user_id=message.from_user.id,
         event_type="group_connected",
         stars_amount=0
     )
@@ -402,6 +353,9 @@ async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
+    user = User.get(User.user_id == message.from_user.id)
+    user_lang = user.language if user.language != "unset" else "ru"
+
     payload = message.successful_payment.invoice_payload
     if payload.startswith("personal_tracking_slot_"):
         user_id = message.from_user.id
@@ -417,7 +371,7 @@ async def process_successful_payment(message: Message):
         await message.answer(
             f"🎉 <b>Оплата 2 Telegram Stars прошла успешно!</b>\n\n"
             f"Вам добавлен +1 слот отслеживания. Теперь доступно слотов: <b>{allowed}</b>.",
-            reply_markup=personal_tracking_menu_kb(user_id),
+            reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
             parse_mode="HTML"
         )
 
@@ -427,7 +381,9 @@ async def process_successful_payment(message: Message):
 @router.callback_query(F.data == "pt_list_tracking")
 async def cb_list_tracking(callback: CallbackQuery):
     user_id = callback.from_user.id
-    records = list(PersonalTracking.select().where(PersonalTracking.user_id == user_id))
+    records = list(
+        PersonalTracking.select().where(PersonalTracking.user_id == user_id)
+    )
 
     if not records:
         await callback.message.answer("ℹ️ У Вас пока нет активных персональных отслеживаний.")
@@ -435,20 +391,32 @@ async def cb_list_tracking(callback: CallbackQuery):
         return
 
     text = "📋 <b>Ваши персональные отслеживания:</b>\n\n"
-    buttons = []
-    for idx, r in enumerate(records, 1):
+
+    for idx, r in enumerate(records, start=1):
         can_change, hours_left = can_user_change_tracking(r)
-        status_limit = "✅ Доступно изменение" if can_change else f"⏳ Изменение через {hours_left} ч."
+
+        status_limit = (
+            "✅ Доступно изменение"
+            if can_change
+            else f"⏳ Изменение через {hours_left} ч."
+        )
+
+        keywords = escape(str(r.keywords or ""))
+        target_link = escape(str(r.target_link or ""))
+        group_link = str(r.created_group_link or "")
+
         text += (
-            f"<b>{idx}. {r.target_link}</b>\n"
-            f"🔑 Ключевые слова: <code>{r.keywords}</code>\n"
-            f"🔗 Группа: <a href='{r.created_group_link}'>Ссылка</a>\n"
+            f"<b>{idx}. {target_link}</b>\n"
+            f"🔑 Ключевые слова: <code>{keywords}</code>\n"
+            f"🔗 Группа: <a href='{group_link}'>Ссылка</a>\n"
             f"Статус: {status_limit}\n\n"
         )
-        buttons.append(
-            [InlineKeyboardButton(text=f"⚙️ Изменить #{idx} ({r.target_link[:15]})", callback_data=f"pt_edit_{r.id}")])
 
-    await callback.message.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode="HTML")
+    await callback.message.answer(
+        text,
+        reply_markup=tracking_list_keyboard(records),
+        parse_mode="HTML"
+    )
     await callback.answer()
 
 
@@ -610,7 +578,9 @@ async def process_phone_number_input(message: Message, state: FSMContext):
             parse_mode="HTML")
         return
 
-    status_msg = await message.answer("🔄 <i>Запрашиваем код подтверждения у Telegram... Пожалуйста, подождите до прихода кода. Если код не пришел, попробуйте позже.</i>", parse_mode="HTML")
+    status_msg = await message.answer(
+        "🔄 <i>Запрашиваем код подтверждения у Telegram... Пожалуйста, подождите до прихода кода. Если код не пришел, попробуйте позже.</i>",
+        parse_mode="HTML")
 
     client = TelegramClient(
         StringSession(),
