@@ -207,7 +207,8 @@ async def cmd_personal_tracking_main(message: Message, state: FSMContext):
 @router.callback_query(F.data == "menu_personal_tracking")
 async def cb_personal_tracking_menu(callback: CallbackQuery, state: FSMContext):
     """Инлайн-вход в главное меню Персонального отслеживания"""
-    user = User.get(User.user_id == message.from_user.id)
+
+    user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 
     await state.clear()

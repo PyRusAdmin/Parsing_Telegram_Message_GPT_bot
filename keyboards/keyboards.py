@@ -1,7 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from core.config import ADMIN_USER_ID
-from handlers.user.personal_tracking import get_user_used_slots, get_user_allowed_slots
 from locales.locales import t
 
 # Словарь сопоставления ключей категорий с каноническими названиями в БД
@@ -421,6 +420,8 @@ def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
     :param user_id:
     :return:
     """
+    from handlers.user.personal_tracking import get_user_used_slots, get_user_allowed_slots
+
     # allowed = get_user_allowed_slots(user_id)
     # used = get_user_used_slots(user_id)
 
