@@ -16,6 +16,7 @@ db = SqliteDatabase(
 
 class BaseModel(Model):
     """Базовая модель базы данных SQLite"""
+
     class Meta:
         """Метаданные базовой модели базы данных"""
         database = db

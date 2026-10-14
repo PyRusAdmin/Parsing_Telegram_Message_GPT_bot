@@ -77,12 +77,12 @@ async def send_instruction(message: Message, state: FSMContext):
     user_lang = user.language if user.language != "unset" else "ru"
 
     try:
-        # Отправляем файл инструкции
-        await message.answer(
+        await message.edit_text(
             text=t("instruction_question_prompt", lang=user_lang),
             parse_mode="html",
             reply_markup=back_keyboard(lang=user_lang)
         )
+
         # Устанавливаем состояние для ожидания вопроса
         await state.set_state(MyStates.waiting_for_instruction_question)
 

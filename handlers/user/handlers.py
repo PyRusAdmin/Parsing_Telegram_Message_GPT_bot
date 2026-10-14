@@ -203,27 +203,29 @@ async def handle_language_selection(message: Message, state: FSMContext):
         logger.exception(e)
 
 
-async def show_settings_menu(message: Message, user_tg, state: FSMContext, edit: bool = False):
+async def show_settings_menu(message: Message, user_tg, state: FSMContext):
     """Отображение меню настроек"""
     await state.clear()
     user = User.get(User.user_id == user_tg.id)
-    text = t("settings_message", lang=user.language)
-    kb = settings_keyboard(lang=user.language)
-
-    if edit:
-        try:
-            await message.edit_text(text, reply_markup=kb)
-            return
-        except Exception:
-            pass
-    await message.answer(text, reply_markup=kb)
+    # text = t("settings_message", lang=user.language)
+    # kb = settings_keyboard(lang=user.language)
+    # if edit:
+    #     try:
+    #         await message.edit_text(text, reply_markup=kb)
+    #         return
+    #     except Exception:
+    #         pass
+    await message.edit_text(
+        text=t("settings_message", lang=user.language),  # Текст меню настройки
+        reply_markup=settings_keyboard(lang=user.language)
+    )
 
 
 @router.message((F.text == t('settings_button', 'ru')) | (F.text == t('settings_button', 'en')))
 async def handle_settings_menu(message: Message, state: FSMContext):
     """Обработчик команды Настройки (текст)"""
     try:
-        await show_settings_menu(message, message.from_user, state, edit=False)
+        await show_settings_menu(message, message.from_user, state)
     except Exception as e:
         logger.exception(e)
 
@@ -232,7 +234,7 @@ async def handle_settings_menu(message: Message, state: FSMContext):
 async def handle_settings_menu_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик инлайн-кнопки Настройки"""
     try:
-        await show_settings_menu(callback.message, callback.from_user, state, edit=True)
+        await show_settings_menu(callback.message, callback.from_user, state)
         await callback.answer()
     except Exception as e:
         logger.exception(e)

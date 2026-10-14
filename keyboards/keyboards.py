@@ -294,7 +294,11 @@ def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineK
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data=callback_data)
+                InlineKeyboardButton(
+                    text=t("back_button", lang=lang),
+                    callback_data=callback_data,
+                    style="danger"
+                )
             ]
         ]
     )
