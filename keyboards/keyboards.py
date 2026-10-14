@@ -27,6 +27,20 @@ CATEGORY_MAP = {
 }
 
 
+def back_button(lang):
+    """
+    Кнопка ⬅️ Назад
+
+    :param lang: Язык пользователя
+    :return InlineKeyboardButton: Кнопка возврата
+    """
+    return InlineKeyboardButton(
+        text=t("back_button", lang=lang),  # ⬅️ Назад
+        callback_data="menu_main",
+        style="danger"
+    )
+
+
 def search_group_ai(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
     Генерирует инлайн-клавиатуру для меню «Получить базу».
@@ -34,18 +48,29 @@ def search_group_ai(lang: str = 'ru') -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("all_database_button", lang=lang), callback_data="db_export_all")
+                InlineKeyboardButton(
+                    text=t("all_database_button", lang=lang),  # 📥 Вся база
+                    callback_data="db_export_all"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("channels_database_button", lang=lang), callback_data="db_export_channels"),
-                InlineKeyboardButton(text=t("groups_database_button", lang=lang), callback_data="db_export_groups")
+                InlineKeyboardButton(
+                    text=t("channels_database_button", lang=lang),  # 📥 База каналов
+                    callback_data="db_export_channels"
+                ),
+                InlineKeyboardButton(
+                    text=t("groups_database_button", lang=lang),  # 📥 База групп
+                    callback_data="db_export_groups"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("select_category_button", lang=lang),
-                                     callback_data="db_export_category_menu")
+                InlineKeyboardButton(
+                    text=t("select_category_button", lang=lang),  # 📂 Выбрать категорию
+                    callback_data="db_export_category_menu"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
     )
@@ -123,7 +148,7 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                                      callback_data="cat_sel:hobbies")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="cat_sel:back")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
     )
@@ -164,7 +189,7 @@ def ai_search_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("global_ai_search_button", lang=lang), callback_data="ai_search_global")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
     )
@@ -180,7 +205,7 @@ def menu_launch_tracking_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("stop_tracking_button", lang=lang), callback_data="tracking_stop")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
     )
@@ -220,7 +245,7 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🔄 Передать настройки пользователю", callback_data="settings_transfer_rights")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
     )
@@ -238,7 +263,7 @@ def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
                                      callback_data="account_connect_free")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ]
         ]
     )
@@ -255,7 +280,7 @@ def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
                                      callback_data="group_connect")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ]
         ]
     )
@@ -285,7 +310,7 @@ def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="⭐ 100 Stars", callback_data="buy_stars_100")
         ],
         [
-            InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="buy_stars_cancel")
+            back_button(lang)  # Кнопка ⬅️ Назад
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -358,7 +383,7 @@ def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="admin_connect_account")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_main")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ]
         ]
     )
@@ -382,7 +407,7 @@ def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("powerful_method_groq_button", lang=lang), callback_data="cat_method_groq")
             ],
             [
-                InlineKeyboardButton(text=t("back_button", lang=lang), callback_data="menu_admin_panel")
+                back_button(lang)  # Кнопка ⬅️ Назад
             ]
         ]
     )
