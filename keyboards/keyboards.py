@@ -180,20 +180,20 @@ def main_menu_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-def ai_search_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
-    """
-    Инлайн-клавиатура для поиска новых групп / каналов с помощью AI.
-    """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text=t("global_ai_search_button", lang=lang), callback_data="ai_search_global")
-            ],
-            [
-                back_button(lang)  # Кнопка ⬅️ Назад
-            ],
-        ]
-    )
+# def ai_search_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+#     """
+#     Инлайн-клавиатура для поиска новых групп / каналов с помощью AI.
+#     """
+#     return InlineKeyboardMarkup(
+#         inline_keyboard=[
+#             [
+#                 InlineKeyboardButton(text=t("global_ai_search_button", lang=lang), callback_data="ai_search_global")
+#             ],
+#             [
+#                 back_button(lang)  # Кнопка ⬅️ Назад
+#             ],
+#         ]
+#     )
 
 
 def menu_launch_tracking_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
@@ -375,21 +375,6 @@ def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
 
     # return buttons
     return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
-# def main_admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
-#     """
-#     Инлайн-клавиатура администратора (главное меню)
-#     :return: InlineKeyboardMarkup
-#     """
-#     return InlineKeyboardMarkup(
-#         inline_keyboard=[
-#             *menu_user_admin_keyboard(lang),
-#             [
-#                 InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")
-#             ]
-#         ]
-#     )
 
 
 def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
