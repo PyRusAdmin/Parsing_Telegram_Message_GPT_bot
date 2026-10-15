@@ -38,7 +38,7 @@ def back_button(lang):
     return InlineKeyboardButton(
         text=t("back_button", lang=lang),  # ⬅️ Назад
         callback_data="menu_main",
-        style="danger"
+        style="danger"  # Стиль кнопки
     )
 
 
@@ -87,8 +87,10 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("investments_button", lang=lang), callback_data="cat_sel:investments")
             ],
             [
-                InlineKeyboardButton(text=t("finance_and_personal_budget_button", lang=lang),
-                                     callback_data="cat_sel:finance")
+                InlineKeyboardButton(
+                    text=t("finance_and_personal_budget_button", lang=lang), #
+                    callback_data="cat_sel:finance"
+                )
             ],
             [
                 InlineKeyboardButton(text=t("crypto_and_blockchain_button", lang=lang), callback_data="cat_sel:crypto"),
@@ -145,13 +147,14 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("fashion_and_beauty_button", lang=lang), callback_data="cat_sel:fashion")
             ],
             [
-                InlineKeyboardButton(text=t("hobbies_and_creativity_button", lang=lang),
+                InlineKeyboardButton(text=t("hobbies_and_creativity_button", lang=lang),  # хобби и творчество
                                      callback_data="cat_sel:hobbies")
             ],
             [
                 back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
+
     )
 
 
