@@ -217,28 +217,19 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
 def determines_user_language(message_or_callback):
     """Определяет язык пользователя"""
-    # logger.debug(message_or_callback)
-    # if message_or_callback = callback:
-    #     message_or_callback = callback
-    # else message_or_callback = message:
-    #     message_or_callback = message
     user = User.get(User.user_id == message_or_callback)
-    user_lang = user.language if user.language != "unset" else "ru"
-    return user_lang  # Возвращаем язык пользователя
+    return user.language if user.language != "unset" else "ru"  # Возвращаем язык пользователя
 
 
 @router.callback_query(F.data == "menu_personal_tracking")
 async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext):
     """Главный экран 🎯 Персональное отслеживание"""
     try:
+        logger.info(
+            f"Пользователь {callback.from_user.last_name} {callback.from_user.first_name} {callback.from_user.username} {callback.from_user.id} перешел в меню 🎯 Персональное отслеживание")
         # Определяем язык пользователя, который пользователь выбрал при старте бота
-        # user = User.get(User.user_id == message.from_user.id)
-        # user_lang = user.language if user.language != "unset" else "ru"
-
         user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-
         await state.clear()  # Сбрасываем состояние, если осталось у пользователя от других действий
-        # user_id = callback.from_user.id  # Определяем ID пользователя Telegram
         allowed = get_user_allowed_slots(
             callback.from_user.id
         )  # Возвращает количество доступных слотов пользователя (1 бесплатный + купленные)
@@ -258,31 +249,6 @@ async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext)
         await callback.answer()  # обязательно: убирает «часики» загрузки у кнопки
     except Exception as e:
         logger.exception(e)
-
-
-# @router.message(F.text.in_({"🎯 Персональное отслеживание", "Персональное отслеживание", "/personal_tracking"}))
-# async def cmd_personal_tracking_main(message: Message, state: FSMContext):
-#     """Главный экран 🎯 Персональное отслеживание"""
-#     user = User.get(User.user_id == message.from_user.id)
-#     user_lang = user.language if user.language != "unset" else "ru"
-#
-#     await state.clear()
-#     user_id = message.from_user.id
-#     allowed = get_user_allowed_slots(user_id)
-#     used = get_user_used_slots(user_id)
-#
-#     text = (
-#         "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
-#         "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
-#         f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
-#         "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
-#     )
-#
-#     await message.answer(
-#         text,
-#         reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
-#         parse_mode="HTML"
-#     )
 
 
 @router.callback_query(F.data == "menu_personal_tracking")
