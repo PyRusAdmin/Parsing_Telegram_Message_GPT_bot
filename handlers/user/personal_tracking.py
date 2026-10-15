@@ -589,7 +589,9 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
 
 @router.callback_query(F.data == "pt_auth_phone")
 async def cb_start_phone_auth(callback: CallbackQuery, state: FSMContext):
-    """Начало шага ввода номера телефона"""
+    """
+    Начало шага ввода номера телефона. Если аккаунт подключает Администратор, то данные будут записываться в общую папку с аккаунтами
+    """
     await state.set_state(PersonalTrackingState.waiting_for_phone_number)
     await callback.message.answer(
         "📱 <b>Подключение Telegram-аккаунта по номеру телефона</b>\n\n"
@@ -730,7 +732,11 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         final_session = client.session.save()
         await client.disconnect()
 
-        # Сохраняем авторизованную сессию в БД
+        """
+        Сохраняем авторизованную сессию в БД (Если это администратор, то данные будем записывать для всех пользователей, 
+        что бы пользовались бесплатно или расширяли свой пакет)
+        """
+
         write_account_to_db(
             session_string=final_session,
             user_id=callback.from_user.id,
