@@ -16,8 +16,10 @@ from telethon.errors import (
     ChannelPrivateError
 )
 from telethon.sessions import StringSession
-from telethon.tl.functions.channels import JoinChannelRequest
-from telethon.tl.functions.messages import CreateChatRequest, ExportChatInviteRequest
+from telethon.tl.functions.channels import JoinChannelRequest, CreateChannelRequest, EditAdminRequest
+from telethon.tl.functions.messages import ExportChatInviteRequest
+from telethon.tl.types import ChatAdminRights
+import telethon.utils as utils
 
 from account_manager.auth import CheckingAccountsValidity
 from core.config import API_ID, API_HASH, mobile_device
@@ -27,6 +29,8 @@ from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboar
 from system.dispatcher import bot
 
 router = Router(name="personal_tracking")
+
+username_bot = "@Botzzzz_admin_bot"
 
 
 # ==================== МОДЕЛИ БАЗЫ ДАННЫХ ====================
@@ -124,8 +128,8 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
     2. Проверяет подписку на целевую группу/канал (подписывается при необходимости).
     3. Создает приватную группу для сообщений и выгружает ссылку-приглашение.
     """
-    checker = CheckingAccountsValidity()
-    client = await checker.start_random_client()
+    # checker = CheckingAccountsValidity()
+    client = await CheckingAccountsValidity().start_random_client()
     if not client:
         return False, "⚠️ Нет доступных рабочих сессий для поиска. Попробуйте позже.", None, None
 
@@ -141,19 +145,43 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         except Exception as join_err:
             logger.debug(f"Уведомление при подписке на {clean_target}: {join_err}")
 
-        # Создаем приватную группу для отправки найденных сообщений
+        # Создаем приватную супергруппу для отправки найденных сообщений
         target_title = getattr(entity, 'title', clean_target)[:20]
         group_title = f"Отслеживание: {target_title}"
 
-        created_chat = await client(CreateChatRequest(
-            users=[client.get_me()],
-            title=group_title
+        created_channel = await client(CreateChannelRequest(
+            title=group_title,
+            about="Группа персонального отслеживания",
+            megagroup=True
         ))
 
-        chat_id = created_chat.chats[0].id
+        new_chat = created_channel.chats[0]
+        chat_id = utils.get_peer_id(new_chat)
+
+        # Добавляем бота в группу администратором
+        try:
+            admin_rights = ChatAdminRights(
+                change_info=True,
+                post_messages=True,
+                edit_messages=True,
+                delete_messages=True,
+                ban_users=True,
+                invite_users=True,
+                pin_messages=True,
+                manage_topics=True
+            )
+            await client(EditAdminRequest(
+                channel=new_chat,
+                user_id=username_bot,
+                admin_rights=admin_rights,
+                rank="AlertBot"
+            ))
+            logger.info(f"✅ Бот {username_bot} успешно добавлен администратором в группу {chat_id}")
+        except Exception as admin_err:
+            logger.error(f"❌ Ошибка добавления бота {username_bot} в администраторы: {admin_err}")
 
         # Экспортируем ссылку-приглашение в созданную группу
-        invite_export = await client(ExportChatInviteRequest(peer=chat_id))
+        invite_export = await client(ExportChatInviteRequest(peer=new_chat))
         invite_link = invite_export.link
 
         await client.disconnect()
@@ -163,22 +191,22 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         logger.warning(f"⚠️ Целевая группа/канал не существует или неверный юзернейм ({target_input}): {e}")
         try:
             await client.disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception(e)
         return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None
     except ChannelPrivateError:
         logger.warning(f"⚠️ Целевая группа/канал {target_input} приватная или доступ ограничен")
         try:
             await client.disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception(e)
         return False, "Указанная группа является приватной или к ней нет доступа.", None, None
     except Exception as e:
         logger.exception(f"❌ Ошибка Telethon при подключении группы {target_input}: {e}")
         try:
             await client.disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception(e)
         return False, f"Ошибка подключения к целевой группе: {e}", None, None
 
 
@@ -290,7 +318,7 @@ async def process_target_link_input(message: Message, state: FSMContext):
     await status_msg.edit_text(
         f"✅ <b>Группа создана!</b>\n\n"
         f"1. Перейдите по ссылке и вступите в созданную группу: <a href='{invite_link}'>{invite_link}</a>\n"
-        f"2. Добавьте нашего бота в администраторы этой группы.\n\n"
+        f"<i>(Бот {username_bot} уже назначен администратором группы)</i>\n\n"
         f"<b>Шаг 2:</b> Введите ключевые слова для отслеживания в этой группе (через запятую):\n"
         f"<i>Пример: python, вакансия, удаленка</i>",
         parse_mode="HTML",
