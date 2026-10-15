@@ -263,9 +263,9 @@ async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
         text = t("welcome_ask_language", lang="ru")
         kb = get_lang_keyboard()
         try:
-            await callback.message.edit_text(text, reply_markup=kb)
+            await callback.message.edit_text(text=text, reply_markup=kb)
         except Exception:
-            await callback.message.answer(text, reply_markup=kb)
+            await callback.message.answer(text=text, reply_markup=kb)
         await callback.answer()
     except Exception as e:
         logger.exception(e)

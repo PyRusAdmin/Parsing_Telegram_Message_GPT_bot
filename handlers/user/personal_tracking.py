@@ -30,7 +30,7 @@ from system.dispatcher import bot
 
 router = Router(name="personal_tracking")
 
-username_bot = "@Botzzzz_admin_bot"
+username_bot = "@Botzzzz_admin_bot"  # Бот администратор, который будет пересылать сообщения по ключевому слову.
 
 
 # ==================== МОДЕЛИ БАЗЫ ДАННЫХ ====================
@@ -212,29 +212,77 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
 
-@router.message(F.text.in_({"🎯 Персональное отслеживание", "Персональное отслеживание", "/personal_tracking"}))
-async def cmd_personal_tracking_main(message: Message, state: FSMContext):
-    """Главный экран Персонального отслеживания"""
-    user = User.get(User.user_id == message.from_user.id)
+"""Меню персонального отслеживания группы / канала на основе ключевых слов пользователя"""
+
+
+def determines_user_language(message_or_callback):
+    """Определяет язык пользователя"""
+    # logger.debug(message_or_callback)
+    # if message_or_callback = callback:
+    #     message_or_callback = callback
+    # else message_or_callback = message:
+    #     message_or_callback = message
+    user = User.get(User.user_id == message_or_callback)
     user_lang = user.language if user.language != "unset" else "ru"
+    return user_lang  # Возвращаем язык пользователя
 
-    await state.clear()
-    user_id = message.from_user.id
-    allowed = get_user_allowed_slots(user_id)
-    used = get_user_used_slots(user_id)
 
-    text = (
-        "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
-        "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
-        f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
-        "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
-    )
+@router.callback_query(F.data == "menu_personal_tracking")
+async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext):
+    """Главный экран 🎯 Персональное отслеживание"""
+    try:
+        # Определяем язык пользователя, который пользователь выбрал при старте бота
+        # user = User.get(User.user_id == message.from_user.id)
+        # user_lang = user.language if user.language != "unset" else "ru"
 
-    await message.answer(
-        text,
-        reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
-        parse_mode="HTML"
-    )
+        user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+
+        await state.clear()  # Сбрасываем состояние, если осталось у пользователя от других действий
+        # user_id = callback.from_user.id  # Определяем ID пользователя Telegram
+        allowed = get_user_allowed_slots(
+            callback.from_user.id
+        )  # Возвращает количество доступных слотов пользователя (1 бесплатный + купленные)
+        used = get_user_used_slots(callback.from_user.id)  # Возвращает количество задействованных слотов пользователя
+        # Текст для пользователя в меню 🎯 Персональное отслеживание
+        text = (
+            "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
+            "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
+            f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
+            "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
+        )
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=personal_tracking_menu_kb(user_id=callback.from_user.id, lang=user_lang),
+            parse_mode="HTML"
+        )
+        await callback.answer()  # обязательно: убирает «часики» загрузки у кнопки
+    except Exception as e:
+        logger.exception(e)
+
+
+# @router.message(F.text.in_({"🎯 Персональное отслеживание", "Персональное отслеживание", "/personal_tracking"}))
+# async def cmd_personal_tracking_main(message: Message, state: FSMContext):
+#     """Главный экран 🎯 Персональное отслеживание"""
+#     user = User.get(User.user_id == message.from_user.id)
+#     user_lang = user.language if user.language != "unset" else "ru"
+#
+#     await state.clear()
+#     user_id = message.from_user.id
+#     allowed = get_user_allowed_slots(user_id)
+#     used = get_user_used_slots(user_id)
+#
+#     text = (
+#         "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
+#         "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
+#         f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
+#         "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
+#     )
+#
+#     await message.answer(
+#         text,
+#         reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
+#         parse_mode="HTML"
+#     )
 
 
 @router.callback_query(F.data == "menu_personal_tracking")
