@@ -32,24 +32,124 @@ router = Router(name="personal_tracking")
 
 username_bot = "@Botzzzz_admin_bot"  # Бот администратор, который будет пересылать сообщения по ключевому слову.
 
+"""
+Модуль персонального отслеживания ключевых слов (Personal Tracking).
+=====================================================================
+
+Назначение
+----------
+Раздел меню для подключения аккаунта Telegram (личного или общего) и
+настройки автоматического мониторинга целевых групп/каналов по
+ключевым словам с уведомлением в персональную техническую группу.
+
+
+Архитектура
+-----------
+┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Пользователь │────▶│  Бот (aiogram)   │────▶│  Telegram API   │
+└──────────────┘     └────────┬─────────┘     └─────────────────┘
+                              │
+                    ┌─────────▼──────────┐
+                    │  Telethon-клиент   │  ← рабочая сессия
+                    │  (StringSession)   │     аккаунта
+                    └─────────┬──────────┘
+                              │
+              ┌───────────────┼────────────────┐
+              ▼               ▼                ▼
+     ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐
+     │ Целевая      │ │ Персональная │ │ @Botzzzz_admin   │
+     │ группа/канал │ │ тех. группа  │ │ _bot (админ)     │
+     │ (мониторинг) │ │ (уведомления)│ │ (формирование    │
+     │              │ │              │ │  сообщений)      │
+     └──────────────┘ └──────────────┘ └──────────────────┘
+
+
+Модели БД
+---------
+PersonalTracking      — настройки отслеживания (user_id, target_link,
+                        created_group_link/id, keywords)
+PersonalTrackingStats — учёт событий (подключение группы, покупка слота)
+User                  — профиль пользователя (язык, баланс Stars)
+UserAccountsTable     — персональные сессии пользователей
+Account / AccountFree — общие сессии от администратора
+
+
+Слоты (Slots)
+-------------
+• Бесплатно: 1 слот (1 группа/канал для отслеживания)
+• Платно:  +1 слот за 2 Telegram Stars
+• Лимит:   get_user_allowed_slots() = 1 + купленные_слоты
+• Проверка: get_user_used_slots() <= get_user_allowed_slots()
+
+
+Механизм работы
+---------------
+1. ПОДКЛЮЧЕНИЕ АККАУНТА
+   а) Пользователь нажимает «Подключить свой аккаунт»
+   б) Вводит номер телефона → Telethon запрашивает код
+   в) Вводит 5-значный код (эмодзи-клавиатура) или 2FA-пароль
+   г) Сессия (StringSession) сохраняется в БД:
+      - Обычный пользователь → UserAccountsTable
+      - Администратор         → AccountFree (общая таблица)
+
+2. СОЗДАНИЕ ОТСЛЕЖИВАНИЯ
+   а) Пользователь выбирает «➕ Добавить отслеживание»
+   б) Отправляет ссылку/username целевой группы
+   в) Система подключает рабочую сессию (личную или случайную из общих):
+      CheckingAccountsValidity.start_random_client()
+   г) Проверяет подписку на целевую группу (подписывается автоматически)
+   д) Создаёт приватную супергруппу «Отслеживание: {название}»
+   е) Назначает @Botzzzz_admin_bot администратором новой группы
+   ж) Экспортирует ссылку-приглашение
+   з) Пользователь вводит ключевые слова
+   и) Запись сохраняется в PersonalTracking
+
+
+Проверка изменения (Cooldown)
+-----------------------------
+• Смена группы/ключевых слов: не чаще 1 раза в 24 часа
+• can_user_change_tracking() → (allowed, hours_left)
+
+
+Уведомления (Alerts)
+--------------------
+• send_personal_tracking_alert() — вызывается при нахождении
+  сообщения с ключевым словом
+• Формирует сообщение с текстом, словом-совпадением и ссылкой
+• Отправляет в созданную персональную группу (created_group_id)
+
+
+Потоки состояний (FSM)
+-----------------------
+waiting_for_target_link   → ввод ссылки целевой группы
+waiting_for_keywords      → ввод ключевых слов
+editing_slot_link         → редактирование ссылки
+editing_slot_keywords     → редактирование ключевых слов
+waiting_for_phone_number  → ввод номера телефона
+waiting_for_auth_code     → ввод 5-значного кода
+waiting_for_2fa_password  → ввод 2FA-пароля
+"""
+
 
 # ==================== МОДЕЛИ БАЗЫ ДАННЫХ ====================
 
 class PersonalTracking(Model):
     """Модель базы данных для хранения настроек персонального отслеживания"""
-    id = AutoField()
-    user_id = BigIntegerField(index=True)
-    target_link = CharField()
-    created_group_link = CharField(null=True)
-    created_group_id = BigIntegerField(null=True)
+    id = AutoField() # ID записи
+    user_id = BigIntegerField(index=True) # Телеграм-ID пользователя
+    target_link = CharField() #  Отслеживаемая ссылка Telegram
+    created_group_link = CharField(null=True) # Группа в которую будут отправляться сообщения
+    created_group_id = BigIntegerField(null=True) # Telegram-id группы которую сознал аккаунт для пересылки сообщений
     keywords = TextField()  # Ключевые слова через запятую
-    last_changed_at = DateTimeField(default=datetime.now)
-    created_at = DateTimeField(default=datetime.now)
+    last_changed_at = DateTimeField(default=datetime.now) # Время последнего изменения
+    created_at = DateTimeField(default=datetime.now) # Дата создания 
+    # Добавить персональный аккаунт для отслеживания
+    # Добавить аккаунт общий, который выдал администратор
 
     class Meta:
         """Метаданные таблицы персонального отслеживания"""
-        database = db
-        table_name = "personal_tracking"
+        database = db # БД
+        table_name = "personal_tracking" # Название таблицы 
 
 
 class PersonalTrackingStats(Model):
@@ -127,8 +227,13 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
     1. Подключает рабочую сессию Telethon.
     2. Проверяет подписку на целевую группу/канал (подписывается при необходимости).
     3. Создает приватную группу для сообщений и выгружает ссылку-приглашение.
+
+    :param target_input: Текстовое представление ссылки или идентификатора канала
+    :param user_id: Айди юзера, для подключения персонального аккаунта или для подключения бесплатного аккаунта от администратора
     """
-    # checker = CheckingAccountsValidity()
+
+
+    # Проверяем, есть ли у пользователя подключенный персональный аккаунт, если аккаунта нет, то используем один из общедоступных
     client = await CheckingAccountsValidity().start_random_client()
     if not client:
         return False, "⚠️ Нет доступных рабочих сессий для поиска. Попробуйте позже.", None, None
@@ -262,12 +367,14 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
     """
     Обрабатывает добавление новой группы для персонального отслеживания (Кнопка (InlineKey): ➕ Добавить отслеживание группы)
     """
-    allowed = get_user_allowed_slots(callback.from_user.id)  #
-    used = get_user_used_slots(callback.from_user.id)  #
+    allowed = get_user_allowed_slots(callback.from_user.id)  #  
+    used = get_user_used_slots(callback.from_user.id)  # 
 
+    # Если все слоты уже использовались, то предлагаем пользователю купить дополнительные слоты для групп
     if used >= allowed:
         await callback.answer("⚠️ Все слоты задействованы! Докупите дополнительный слот.", show_alert=True)
         return
+    
     # Сначала устанавливаем состояние
     await state.set_state(PersonalTrackingState.waiting_for_target_link)
     # Потом отправляем инструкцию
@@ -284,12 +391,15 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
 async def process_target_link_input(message: Message, state: FSMContext):
     """Обрабатывает ввод ссылки или юзернейма группы для персонального отслеживания"""
     target_input = message.text.strip()
+    # Проверяем формат ввода (ссылки либо начинается на http(s))
     if not target_input.startswith("http") and not target_input.startswith("@"):
         await message.answer("⚠️ Пожалуйста, введите корректную ссылку (https://t.me/...) или @username группы/канала.")
         return
 
-    status_msg = await message.answer("🔄 <i>Подключаем рабочую сессию и создаем персональную группу...</i>",
-                                      parse_mode="HTML")
+    status_msg = await message.answer(
+        text="🔄 <i>Подключаем рабочую сессию и создаем персональную группу...</i>",
+                                      parse_mode="HTML"
+                                      )
 
     success, err_msg, invite_link, chat_id = await connect_target_and_create_group(target_input, message.from_user.id)
     if not success:
@@ -321,7 +431,6 @@ async def process_keywords_input(message: Message, state: FSMContext):
     keywords_text = message.text.strip()
     data = await state.get_data()
 
-    # user_id = message.from_user.id
     target_link = data.get("target_link")
     invite_link = data.get("invite_link")
     created_group_id = data.get("created_group_id")
