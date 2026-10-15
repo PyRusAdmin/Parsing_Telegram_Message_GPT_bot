@@ -4,21 +4,20 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
 from loguru import logger
 
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
-from core.config import ADMIN_USER_ID
 from database.database import (
     User, getting_number_records_database, get_session_count, get_target_group_count, get_keywords_count,
     get_tracked_channels_count, Groups
 )
 from keyboards.keyboards import (
-    get_lang_keyboard, main_menu_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
+    get_lang_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
     connect_keyboard_account, get_stars_topup_inline_keyboard, menu_user_admin_keyboard
 )
 from locales.locales import t
-from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
 from states.states import MyStates
 
 router = Router(name=__name__)
@@ -155,8 +154,8 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
         user.language = selected_lang
         user.save()
 
-        is_admin = callback.from_user.id in ADMIN_USER_ID
-        reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
+        # is_admin = callback.from_user.id in ADMIN_USER_ID
+        # reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
         welcome_text = generate_welcome_message(user_language=user.language, user_tg_id=callback.from_user.id)
         confirmation_text = t("lang_selected", lang=user.language)
 
@@ -164,14 +163,14 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
         try:
             await callback.message.edit_text(
                 text=full_text,
-                reply_markup=reply_markup,
+                reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=callback.from_user.id),
                 parse_mode="HTML",
                 link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
         except Exception:
             await callback.message.answer(
                 text=full_text,
-                reply_markup=reply_markup,
+                reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=callback.from_user.id),
                 parse_mode="HTML",
                 link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
@@ -196,9 +195,12 @@ async def handle_language_selection(message: Message, state: FSMContext):
             confirmation_text = t("lang_selected", lang="en")
         user.save()
 
-        is_admin = message.from_user.id in ADMIN_USER_ID
-        reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
-        await message.answer(confirmation_text, reply_markup=reply_markup)
+        # is_admin = message.from_user.id in ADMIN_USER_ID
+        # reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
+        await message.answer(
+            confirmation_text,
+            reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=message.from_user.id)
+        )
     except Exception as e:
         logger.exception(e)
 
@@ -421,14 +423,20 @@ async def handle_stars_balance_cb(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     user = User.get(User.user_id == callback.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
-
-    keyboard = get_stars_topup_inline_keyboard(user_lang)
-    msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
-
+    # keyboard = get_stars_topup_inline_keyboard(user_lang)
+    # msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
     try:
-        await callback.message.edit_text(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
+        await callback.message.edit_text(
+            text=t("stars_balance_msg", lang=user_lang, stars=user.stars),
+            reply_markup=get_stars_topup_inline_keyboard(user_lang),
+            parse_mode="HTML"
+        )
     except Exception:
-        await callback.message.answer(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
+        await callback.message.answer(
+            text=t("stars_balance_msg", lang=user_lang, stars=user.stars),
+            reply_markup=get_stars_topup_inline_keyboard(user_lang),
+            parse_mode="HTML"
+        )
     await callback.answer()
 
 
