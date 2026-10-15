@@ -449,11 +449,6 @@ def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
     :param user_id:
     :return InlineKeyboardMarkup:
     """
-    # from handlers.user.personal_tracking import get_user_used_slots, get_user_allowed_slots
-
-    # allowed = get_user_allowed_slots(user_id)
-    # used = get_user_used_slots(user_id)
-
     buttons = [
         [
             InlineKeyboardButton(text="➕ Добавить отслеживание группы", callback_data="pt_add_tracking")
@@ -468,20 +463,6 @@ def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📋 Мои отслеживаемые группы", callback_data="pt_list_tracking")
         ]
     ]
-    # if get_user_used_slots(user_id) < get_user_allowed_slots(user_id):
-    #     buttons.append(
-    #
-    #     )
-
-    # buttons.append(
-    #
-    # )
-    # buttons.append(
-    #
-    # )
-    # buttons.append(
-    #
-    # )
 
     # Добавляем кнопку статистики только для админов
     if user_id in ADMIN_USER_ID:
@@ -492,7 +473,6 @@ def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
             back_button(lang)  # Кнопка ⬅️ Назад
         ]
     )
-
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
