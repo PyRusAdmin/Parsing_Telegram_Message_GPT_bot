@@ -25,7 +25,7 @@ from account_manager.auth import CheckingAccountsValidity
 from core.config import API_ID, API_HASH, mobile_device
 from database.database import db, write_account_to_db, User
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
-# from keyboards.keyboards import personal_tracking_menu_kb, emoji_code_keypad_kb, tracking_list_keyboard
+
 from system.dispatcher import bot
 
 router = Router(name="personal_tracking")
@@ -216,7 +216,9 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
 
 def determines_user_language(message_or_callback):
-    """Определяет язык пользователя"""
+    """
+    Определяет язык пользователя, который выбрал в первый раз, при запуске бота. Данные берем из базы данных data/bot.db
+    """
     user = User.get(User.user_id == message_or_callback)
     return user.language if user.language != "unset" else "ru"  # Возвращаем язык пользователя
 
@@ -255,8 +257,8 @@ async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext)
 async def cb_personal_tracking_menu(callback: CallbackQuery, state: FSMContext):
     """Инлайн-вход в главное меню Персонального отслеживания"""
 
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     await state.clear()
     user_id = callback.from_user.id
@@ -408,8 +410,10 @@ async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
     """Обрабатывает успешную оплату слота персонального отслеживания"""
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # user = User.get(User.user_id == message.from_user.id)
+    # user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     payload = message.successful_payment.invoice_payload
     if payload.startswith("personal_tracking_slot_"):

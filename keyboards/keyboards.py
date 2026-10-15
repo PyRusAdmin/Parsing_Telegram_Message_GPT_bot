@@ -447,36 +447,41 @@ def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
     """
     Клавиатура меню 🎯 Персональное отслеживание ключевых слов
     :param user_id:
-    :return:
+    :return InlineKeyboardMarkup:
     """
-    from handlers.user.personal_tracking import get_user_used_slots, get_user_allowed_slots
+    # from handlers.user.personal_tracking import get_user_used_slots, get_user_allowed_slots
 
     # allowed = get_user_allowed_slots(user_id)
     # used = get_user_used_slots(user_id)
 
-    buttons = []
-    if get_user_used_slots(user_id) < get_user_allowed_slots(user_id):
-        buttons.append(
-            [
-                InlineKeyboardButton(text="➕ Добавить отслеживание группы", callback_data="pt_add_tracking")
-            ]
-        )
-
-    buttons.append(
+    buttons = [
+        [
+            InlineKeyboardButton(text="➕ Добавить отслеживание группы", callback_data="pt_add_tracking")
+        ],
         [
             InlineKeyboardButton(text="📱 Подключить свой аккаунт (по телефону)", callback_data="pt_auth_phone")
-        ]
-    )
-    buttons.append(
+        ],
         [
             InlineKeyboardButton(text="⭐ Докупить +1 слот (2 Stars)", callback_data="pt_buy_slot")
-        ]
-    )
-    buttons.append(
+        ],
         [
             InlineKeyboardButton(text="📋 Мои отслеживаемые группы", callback_data="pt_list_tracking")
         ]
-    )
+    ]
+    # if get_user_used_slots(user_id) < get_user_allowed_slots(user_id):
+    #     buttons.append(
+    #
+    #     )
+
+    # buttons.append(
+    #
+    # )
+    # buttons.append(
+    #
+    # )
+    # buttons.append(
+    #
+    # )
 
     # Добавляем кнопку статистики только для админов
     if user_id in ADMIN_USER_ID:
@@ -497,32 +502,33 @@ def emoji_code_keypad_kb() -> InlineKeyboardMarkup:
     """
     Клавиатура с цифрами-эмодзи для безопасного выбора цифр кода авторизации (предотвращает спам-блокировку от Telegram).
     """
-    keyboard = [
-        [
-            InlineKeyboardButton(text="1️⃣", callback_data="pt_digit_1"),
-            InlineKeyboardButton(text="2️⃣", callback_data="pt_digit_2"),
-            InlineKeyboardButton(text="3️⃣", callback_data="pt_digit_3"),
-        ],
-        [
-            InlineKeyboardButton(text="4️⃣", callback_data="pt_digit_4"),
-            InlineKeyboardButton(text="5️⃣", callback_data="pt_digit_5"),
-            InlineKeyboardButton(text="6️⃣", callback_data="pt_digit_6"),
-        ],
-        [
-            InlineKeyboardButton(text="7️⃣", callback_data="pt_digit_7"),
-            InlineKeyboardButton(text="8️⃣", callback_data="pt_digit_8"),
-            InlineKeyboardButton(text="9️⃣", callback_data="pt_digit_9"),
-        ],
-        [
-            InlineKeyboardButton(text="❌ Стереть", callback_data="pt_digit_clear"),
-            InlineKeyboardButton(text="0️⃣", callback_data="pt_digit_0"),
-            InlineKeyboardButton(text="✅ Отправить", callback_data="pt_digit_submit"),
-        ],
-        [
-            InlineKeyboardButton(text="🚫 Отмена", callback_data="pt_cancel_auth"),
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="1️⃣", callback_data="pt_digit_1"),
+                InlineKeyboardButton(text="2️⃣", callback_data="pt_digit_2"),
+                InlineKeyboardButton(text="3️⃣", callback_data="pt_digit_3"),
+            ],
+            [
+                InlineKeyboardButton(text="4️⃣", callback_data="pt_digit_4"),
+                InlineKeyboardButton(text="5️⃣", callback_data="pt_digit_5"),
+                InlineKeyboardButton(text="6️⃣", callback_data="pt_digit_6"),
+            ],
+            [
+                InlineKeyboardButton(text="7️⃣", callback_data="pt_digit_7"),
+                InlineKeyboardButton(text="8️⃣", callback_data="pt_digit_8"),
+                InlineKeyboardButton(text="9️⃣", callback_data="pt_digit_9"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Стереть", callback_data="pt_digit_clear"),
+                InlineKeyboardButton(text="0️⃣", callback_data="pt_digit_0"),
+                InlineKeyboardButton(text="✅ Отправить", callback_data="pt_digit_submit"),
+            ],
+            [
+                InlineKeyboardButton(text="🚫 Отмена", callback_data="pt_cancel_auth"),
+            ]
         ]
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+    )
 
 
 """Клавиатура статистики"""
