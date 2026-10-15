@@ -15,7 +15,7 @@ from database.database import (
 )
 from keyboards.keyboards import (
     get_lang_keyboard, main_menu_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
-    connect_keyboard_account, get_stars_topup_inline_keyboard, main_admin_keyboard
+    connect_keyboard_account, get_stars_topup_inline_keyboard, menu_user_admin_keyboard
 )
 from locales.locales import t
 from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
@@ -78,20 +78,20 @@ async def show_main_menu(message: Message, user_tg, state: FSMContext, edit: boo
     """
     await state.clear()
     user = get_or_create_user(user_tg)
-    is_admin = user_tg.id in ADMIN_USER_ID
+    # is_admin = user_tg.id in ADMIN_USER_ID
 
     if user.language == "unset":
         text = "👋 Привет! Пожалуйста, выберите язык / Please choose your language:"
-        reply_markup = get_lang_keyboard()
+        # reply_markup = get_lang_keyboard()
     else:
         text = generate_welcome_message(user_language=user.language, user_tg_id=user_tg.id)
-        reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
+        # reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
 
     if edit:
         try:
             await message.edit_text(
                 text=text,
-                reply_markup=reply_markup,
+                reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=user_tg.id),
                 parse_mode="HTML",
                 link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
@@ -101,7 +101,7 @@ async def show_main_menu(message: Message, user_tg, state: FSMContext, edit: boo
 
     await message.answer(
         text=text,
-        reply_markup=reply_markup,
+        reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=user_tg.id),
         parse_mode="HTML",
         link_preview_options=LinkPreviewOptions(is_disabled=True)
     )

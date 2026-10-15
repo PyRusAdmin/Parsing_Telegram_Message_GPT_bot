@@ -325,47 +325,71 @@ def get_stars_topup_inline_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
 """Клавиатура Администратора"""
 
 
-def menu_user_admin_keyboard(lang: str = 'ru'):
+def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
     """
     Создаёт кнопки главного меню бота в виде инлайн-кнопок.
 
     :return: list[list[InlineKeyboardButton]] Список строк с кнопками.
     """
-    return [
+    buttons = [
         [
-            InlineKeyboardButton(text=t("launch_tracking_button", lang=lang), callback_data="menu_launch_tracking")
+            InlineKeyboardButton(
+                text=t("launch_tracking_button", lang=lang),  # 🚀 Запуск отслеживания
+                callback_data="menu_launch_tracking"
+            )
         ],
         [
-            InlineKeyboardButton(text="🎯 Персональное отслеживание", callback_data="menu_personal_tracking")
+            InlineKeyboardButton(
+                text="🎯 Персональное отслеживание",  # 🎯 Персональное отслеживание
+                callback_data="menu_personal_tracking"
+            )
         ],
         [
-            InlineKeyboardButton(text=t("check_group_for_keywords_button", lang=lang), callback_data="menu_check_group")
+            InlineKeyboardButton(
+                text=t("check_group_for_keywords_button", lang=lang),  # 🔍 Проверка группы на наличие ключевых слов
+                callback_data="menu_check_group"
+            )
         ],
         [
-            InlineKeyboardButton(text=t("get_database_button", lang=lang), callback_data="menu_get_database")
+            InlineKeyboardButton(
+                text=t("get_database_button", lang=lang),  # 📥 Получить базу
+                callback_data="menu_get_database"
+            ),
+            InlineKeyboardButton(
+                text=t("settings_button", lang=lang),  # ⚙️ Настройки
+                callback_data="menu_settings"
+            )
         ],
         [
-            InlineKeyboardButton(text=t("instruction_button", lang=lang), callback_data="menu_instruction")
-        ],
-        [
-            InlineKeyboardButton(text=t("settings_button", lang=lang), callback_data="menu_settings")
+            InlineKeyboardButton(
+                text=t("instruction_button", lang=lang),  # 📖 Инструкция по использованию
+                callback_data="menu_instruction"
+            )
         ],
     ]
 
+    # Добавляем кнопку статистики только для админов
+    if user_id in ADMIN_USER_ID:
+        buttons.append(
+            [InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")])
 
-def main_admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
-    """
-    Инлайн-клавиатура администратора (главное меню)
-    :return: InlineKeyboardMarkup
-    """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            *menu_user_admin_keyboard(lang),
-            [
-                InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")
-            ]
-        ]
-    )
+    # return buttons
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+# def main_admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+#     """
+#     Инлайн-клавиатура администратора (главное меню)
+#     :return: InlineKeyboardMarkup
+#     """
+#     return InlineKeyboardMarkup(
+#         inline_keyboard=[
+#             *menu_user_admin_keyboard(lang),
+#             [
+#                 InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")
+#             ]
+#         ]
+#     )
 
 
 def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
