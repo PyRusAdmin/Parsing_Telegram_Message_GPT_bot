@@ -217,7 +217,11 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
 def determines_user_language(message_or_callback):
     """
-    Определяет язык пользователя, который выбрал в первый раз, при запуске бота. Данные берем из базы данных data/bot.db
+    Определяет язык пользователя, выбранное при первом запуске бота.
+    Данные загружаются из таблицы User в базе данных.
+
+    :param message_or_callback: ID пользователя (int) из message или callback
+    :return: код языка пользователя ("ru" по умолчанию)
     """
     user = User.get(User.user_id == message_or_callback)
     return user.language if user.language != "unset" else "ru"  # Возвращаем язык пользователя
