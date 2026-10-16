@@ -6,6 +6,7 @@ from peewee import (
 )
 
 from core.config import ADMIN_USER_ID
+from handlers.user.personal_tracking import PersonalTracking, PersonalTrackingStats
 
 db = SqliteDatabase(
     'data/bot.db', timeout=30,
@@ -25,10 +26,12 @@ class BaseModel(Model):
 def init_database():
     """Инициализация БД и создание таблиц"""
     db.connect(reuse_if_open=True)
+    
     try:
         db.execute_sql('PRAGMA journal_mode = WAL;')
     except Exception as e:
         logger.warning(f"Failed to set WAL journal mode: {e}")
+    
     db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
     db.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
@@ -36,6 +39,9 @@ def init_database():
     db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
     db.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
     db.create_tables([User], safe=True)  # Создание таблицы пользователей
+    
+    db.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
+    logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
 
     # Проверка наличия колонок stars и last_free_download_at в таблице user (SQLite-миграция)
     cursor = db.cursor()

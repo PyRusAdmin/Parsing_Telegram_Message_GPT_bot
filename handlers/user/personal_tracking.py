@@ -134,8 +134,9 @@ waiting_for_2fa_password  → ввод 2FA-пароля
 # ==================== МОДЕЛИ БАЗЫ ДАННЫХ ====================
 
 class PersonalTracking(Model):
-    """Модель базы данных для хранения настроек персонального отслеживания"""
-    id = AutoField() # ID записи
+    """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
+    
+    id = AutoField() # ID записи в базе данных
     user_id = BigIntegerField(index=True) # Телеграм-ID пользователя
     target_link = CharField() #  Отслеживаемая ссылка Telegram
     created_group_link = CharField(null=True) # Группа в которую будут отправляться сообщения
@@ -143,8 +144,8 @@ class PersonalTracking(Model):
     keywords = TextField()  # Ключевые слова через запятую
     last_changed_at = DateTimeField(default=datetime.now) # Время последнего изменения
     created_at = DateTimeField(default=datetime.now) # Дата создания 
-    # Добавить персональный аккаунт для отслеживания
-    # Добавить аккаунт общий, который выдал администратор
+    personal_account = CharField() # Добавить персональный аккаунт для отслеживания
+    shared_account=CharField() # Добавить аккаунт общий, который выдал администратор
 
     class Meta:
         """Метаданные таблицы персонального отслеживания"""
@@ -154,6 +155,7 @@ class PersonalTracking(Model):
 
 class PersonalTrackingStats(Model):
     """Модель базы данных для хранения статистики персонального отслеживания"""
+
     id = AutoField()
     user_id = BigIntegerField(index=True)
     event_type = CharField()  # 'group_connected', 'slot_purchased', 'changed_target'
@@ -166,28 +168,34 @@ class PersonalTrackingStats(Model):
         table_name = "personal_tracking_stats"
 
 
-def init_personal_tracking_db():
-    """Инициализация таблиц для персонального отслеживания"""
-    if db.is_closed():
-        db.connect(reuse_if_open=True)
-    db.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
-    logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
+#TODO Перенести в общее создание таблиц с перечислением, какие таблицы были созданы, для общего понимания процеса 
 
+# def init_personal_tracking_db():
+# """Инициализация таблиц для персонального отслеживания"""
 
-init_personal_tracking_db()
+# if db.is_closed():
+# db.connect(reuse_if_open=True)
+# db.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
+# logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
+
+# init_personal_tracking_db()
 
 
 # ==================== МАШИНА СОСТОЯНИЙ ====================
 
 class PersonalTrackingState(StatesGroup):
-    """Группа состояний FSM для настройки персонального отслеживания"""
-    waiting_for_target_link = State()
-    waiting_for_keywords = State()
-    editing_slot_link = State()
-    editing_slot_keywords = State()
-    waiting_for_phone_number = State()
-    waiting_for_auth_code = State()
-    waiting_for_2fa_password = State()
+    """Группа состояний FSM для настройки персонального отслеживания и авторизации аккаунта"""
+
+    # --- Поток создания/редактирования отслеживания ---
+    waiting_for_target_link = State()       # Ожидание ссылки или username целевой группы/канала от пользователя
+    waiting_for_keywords = State()          # Ожидание ввода ключевых слов для фильтрации сообщений
+    editing_slot_link = State()             # Редактирование существующей ссылки отслеживаемой группы
+    editing_slot_keywords = State()         # Редактирование существующих ключевых слов
+
+    # --- Поток авторизации Telegram-аккаунта по номеру телефона ---
+    waiting_for_phone_number = State()      # Ожидание ввода номера телефона в международном формате
+    waiting_for_auth_code = State()         # Ожидание ввода 5-значного кода из SMS/пуш-уведомления Telegram
+    waiting_for_2fa_password = State()      # Ожидание ввода облачного пароля (если включена 2FA)
 
 
 # ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
@@ -196,6 +204,7 @@ def get_user_allowed_slots(user_id: int) -> int:
     """
     Возвращает количество доступных слотов пользователя (1 бесплатный + купленные)
     :param user_id: ID пользователя в Telegram
+    :return: Количество разрешённых слот
     """
     purchased_slots = PersonalTrackingStats.select().where(
         (PersonalTrackingStats.user_id == user_id) &
@@ -210,7 +219,11 @@ def get_user_used_slots(user_id: int) -> int:
 
 
 def can_user_change_tracking(tracking_record: PersonalTracking) -> tuple[bool, float]:
-    """Проверяет ограничение на смену группы/ключевых слов (не чаще 1 раза в 24ч)"""
+    """
+    Проверяет ограничение на смену группы/ключевых слов (не чаще 1 раза в 24ч)
+    :param tracking_record: Регистрация трекинга
+    :return: Tuple(bool, Часы до следующей возможности изменения), где bool
+    """
     if not tracking_record or not tracking_record.last_changed_at:
         return True, 0.0
 
