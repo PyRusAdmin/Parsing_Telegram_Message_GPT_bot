@@ -2,11 +2,11 @@ from datetime import datetime
 from asgiref.sync import sync_to_async
 from loguru import logger
 from peewee import (
-    SqliteDatabase, IntegerField, AutoField, TextField, DateTimeField, Model, CharField, DoesNotExist, fn
+    SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, Model, CharField, DoesNotExist,
+    fn
 )
 
 from core.config import ADMIN_USER_ID
-from handlers.user.personal_tracking import PersonalTracking, PersonalTrackingStats
 
 db = SqliteDatabase(
     'data/bot.db', timeout=30,
@@ -23,15 +23,48 @@ class BaseModel(Model):
         database = db
 
 
+class PersonalTracking(BaseModel):
+    """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
+
+    id = AutoField()  # ID записи в базе данных
+    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
+    target_link = CharField()  # Отслеживаемая ссылка Telegram
+    created_group_link = CharField(null=True)  # Группа в которую будут отправляться сообщения
+    created_group_id = BigIntegerField(null=True)  # Telegram-id группы которую сознал аккаунт для пересылки сообщений
+    keywords = TextField()  # Ключевые слова через запятую
+    last_changed_at = DateTimeField(default=datetime.now)  # Время последнего изменения
+    created_at = DateTimeField(default=datetime.now)  # Дата создания
+    personal_account = CharField(default="", null=True)  # Добавить персональный аккаунт для отслеживания
+    shared_account = CharField(default="", null=True)  # Добавить аккаунт общий, который выдал администратор
+
+    class Meta:
+        """Метаданные таблицы персонального отслеживания"""
+        table_name = "personal_tracking"  # Название таблицы
+
+
+class PersonalTrackingStats(BaseModel):
+    """Модель базы данных для хранения статистики персонального отслеживания"""
+
+    id = AutoField()
+    user_id = BigIntegerField(index=True)
+    event_type = CharField()  # 'group_connected', 'slot_purchased', 'changed_target'
+    stars_amount = IntegerField(default=0)
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        """Метаданные таблицы статистики персонального отслеживания"""
+        table_name = "personal_tracking_stats"
+
+
 def init_database():
     """Инициализация БД и создание таблиц"""
     db.connect(reuse_if_open=True)
-    
+
     try:
         db.execute_sql('PRAGMA journal_mode = WAL;')
     except Exception as e:
         logger.warning(f"Failed to set WAL journal mode: {e}")
-    
+
     db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
     db.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
     db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
@@ -39,7 +72,7 @@ def init_database():
     db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
     db.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
     db.create_tables([User], safe=True)  # Создание таблицы пользователей
-    
+
     db.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
     logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
 
@@ -388,35 +421,6 @@ class User(BaseModel):
     last_free_download_at = DateTimeField(null=True)
 
 
-def create_keywords_model(user_id):
-    """
-    Динамически создаёт модель Peewee для хранения ключевых слов конкретного пользователя.
-
-    Модель используется для отслеживания слов или фраз, по которым пользователь хочет фильтровать сообщения в группах.
-    Создаётся отдельная таблица для каждого пользователя по шаблону 'keywords_<user_id>'.
-
-    :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-    :return peewee.Model: Класс модели Peewee с полями `id` и `user_keyword`.
-
-    Model Fields:
-        id (AutoField):
-            Автоинкрементный первичный ключ.
-        user_keyword (CharField):
-            Уникальное ключевое слово для поиска в сообщениях.
-    """
-
-    class Keywords(BaseModel):
-        """Динамическая модель для хранения ключевых слов пользователя"""
-        id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
-        user_keyword = CharField(unique=True)  # Поле для хранения ключевого слова
-
-        class Meta:
-            """Метаданные персональной таблицы ключевых слов"""
-            table_name = f"{user_id}_keywords"  # Имя таблицы
-
-    return Keywords  # Возвращаем класс модели
-
-
 def create_group_model(user_id):
     """
     Динамически создаёт модель Peewee для хранения технической группы пользователя.
@@ -642,6 +646,9 @@ def get_session_count(user_id: int) -> int:
         return 0
 
 
+"""Таблица с ключевыми словами пользователей для поиска ключевых слов в группах и каналах"""
+
+
 def get_keywords_count(user_id: int):
     """
     Получение количества ключевых слов для отслеживания
@@ -656,3 +663,14 @@ def get_keywords_count(user_id: int):
         return 0
 
     return Keywords.select().count()
+
+
+class Keywords(BaseModel):
+    """Модель для хранения ключевых слов пользователя, для последующего поиска ключевых слов в группах и каналах Telegraam"""
+    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
+    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
+    user_keyword = CharField(unique=True)  # Поле для хранения ключевого слова
+
+    class Meta:
+        """Метаданные персональной таблицы ключевых слов"""
+        table_name = "keywords"  # Имя таблицы

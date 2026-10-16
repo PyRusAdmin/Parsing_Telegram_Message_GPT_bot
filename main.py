@@ -8,8 +8,10 @@ from loguru import logger
 # Путь к корню проекта
 project_root = os.path.dirname(os.path.abspath(__file__))
 
-tuna_cmd = "tuna"
-if not shutil.which(tuna_cmd):
+local_root_tuna = os.path.join(project_root, "tuna.exe")
+if os.path.exists(local_root_tuna):
+    tuna_cmd = local_root_tuna
+elif not shutil.which(tuna_cmd):
     local_appdata = os.getenv("LOCALAPPDATA")
     if local_appdata:
         possible_path = os.path.join(local_appdata, "Microsoft", "WindowsApps", "tuna.exe")

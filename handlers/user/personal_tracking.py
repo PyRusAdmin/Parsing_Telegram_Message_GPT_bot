@@ -1,6 +1,8 @@
+import random
 from datetime import datetime
 from html import escape
 
+import telethon.utils as utils
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -8,24 +10,25 @@ from aiogram.types import (
     CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 )
 from loguru import logger
-from peewee import AutoField, BigIntegerField, CharField, DateTimeField, IntegerField, Model, TextField, fn
+from peewee import fn
 from telethon import TelegramClient
 from telethon.errors import (
     FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
     PhoneNumberInvalidError, SessionPasswordNeededError, UsernameNotOccupiedError, UsernameInvalidError,
-    ChannelPrivateError
+    ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError
 )
 from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest, CreateChannelRequest, EditAdminRequest
 from telethon.tl.functions.messages import ExportChatInviteRequest
 from telethon.tl.types import ChatAdminRights
-import telethon.utils as utils
 
 from account_manager.auth import CheckingAccountsValidity
 from core.config import API_ID, API_HASH, mobile_device
-from database.database import db, write_account_to_db, User
+from database.database import (
+    write_account_to_db, PersonalTracking, PersonalTrackingStats, get_user_accounts, getting_account
+)
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
-
 from system.dispatcher import bot
 
 router = Router(name="personal_tracking")
@@ -33,6 +36,9 @@ router = Router(name="personal_tracking")
 username_bot = "@Botzzzz_admin_bot"  # Бот администратор, который будет пересылать сообщения по ключевому слову.
 
 """
+
+Таблица с ключевыми словами от пользователей для дальнейшего поиска в сообщения Групп и Каналов keywords data/bot.db
+
 Модуль персонального отслеживания ключевых слов (Personal Tracking).
 =====================================================================
 
@@ -131,54 +137,7 @@ waiting_for_2fa_password  → ввод 2FA-пароля
 """
 
 
-# ==================== МОДЕЛИ БАЗЫ ДАННЫХ ====================
-
-class PersonalTracking(Model):
-    """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
-    
-    id = AutoField() # ID записи в базе данных
-    user_id = BigIntegerField(index=True) # Телеграм-ID пользователя
-    target_link = CharField() #  Отслеживаемая ссылка Telegram
-    created_group_link = CharField(null=True) # Группа в которую будут отправляться сообщения
-    created_group_id = BigIntegerField(null=True) # Telegram-id группы которую сознал аккаунт для пересылки сообщений
-    keywords = TextField()  # Ключевые слова через запятую
-    last_changed_at = DateTimeField(default=datetime.now) # Время последнего изменения
-    created_at = DateTimeField(default=datetime.now) # Дата создания 
-    personal_account = CharField() # Добавить персональный аккаунт для отслеживания
-    shared_account=CharField() # Добавить аккаунт общий, который выдал администратор
-
-    class Meta:
-        """Метаданные таблицы персонального отслеживания"""
-        database = db # БД
-        table_name = "personal_tracking" # Название таблицы 
-
-
-class PersonalTrackingStats(Model):
-    """Модель базы данных для хранения статистики персонального отслеживания"""
-
-    id = AutoField()
-    user_id = BigIntegerField(index=True)
-    event_type = CharField()  # 'group_connected', 'slot_purchased', 'changed_target'
-    stars_amount = IntegerField(default=0)
-    created_at = DateTimeField(default=datetime.now)
-
-    class Meta:
-        """Метаданные таблицы статистики персонального отслеживания"""
-        database = db
-        table_name = "personal_tracking_stats"
-
-
-#TODO Перенести в общее создание таблиц с перечислением, какие таблицы были созданы, для общего понимания процеса 
-
-# def init_personal_tracking_db():
-# """Инициализация таблиц для персонального отслеживания"""
-
-# if db.is_closed():
-# db.connect(reuse_if_open=True)
-# db.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
-# logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
-
-# init_personal_tracking_db()
+# Модели PersonalTracking и PersonalTrackingStats определены в database.database
 
 
 # ==================== МАШИНА СОСТОЯНИЙ ====================
@@ -187,15 +146,15 @@ class PersonalTrackingState(StatesGroup):
     """Группа состояний FSM для настройки персонального отслеживания и авторизации аккаунта"""
 
     # --- Поток создания/редактирования отслеживания ---
-    waiting_for_target_link = State()       # Ожидание ссылки или username целевой группы/канала от пользователя
-    waiting_for_keywords = State()          # Ожидание ввода ключевых слов для фильтрации сообщений
-    editing_slot_link = State()             # Редактирование существующей ссылки отслеживаемой группы
-    editing_slot_keywords = State()         # Редактирование существующих ключевых слов
+    waiting_for_target_link = State()  # Ожидание ссылки или username целевой группы/канала от пользователя
+    waiting_for_keywords = State()  # Ожидание ввода ключевых слов для фильтрации сообщений
+    editing_slot_link = State()  # Редактирование существующей ссылки отслеживаемой группы
+    editing_slot_keywords = State()  # Редактирование существующих ключевых слов
 
     # --- Поток авторизации Telegram-аккаунта по номеру телефона ---
-    waiting_for_phone_number = State()      # Ожидание ввода номера телефона в международном формате
-    waiting_for_auth_code = State()         # Ожидание ввода 5-значного кода из SMS/пуш-уведомления Telegram
-    waiting_for_2fa_password = State()      # Ожидание ввода облачного пароля (если включена 2FA)
+    waiting_for_phone_number = State()  # Ожидание ввода номера телефона в международном формате
+    waiting_for_auth_code = State()  # Ожидание ввода 5-значного кода из SMS/пуш-уведомления Telegram
+    waiting_for_2fa_password = State()  # Ожидание ввода облачного пароля (если включена 2FA)
 
 
 # ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
@@ -237,112 +196,148 @@ def can_user_change_tracking(tracking_record: PersonalTracking) -> tuple[bool, f
 
 async def connect_target_and_create_group(target_input: str, user_id: int):
     """
-    1. Подключает рабочую сессию Telethon.
+    1. Подключает рабочую сессию Telethon (личный аккаунт пользователя или из пула общих).
     2. Проверяет подписку на целевую группу/канал (подписывается при необходимости).
     3. Создает приватную группу для сообщений и выгружает ссылку-приглашение.
+    Если у выбранного аккаунта временные ограничения Telegram (спам-репорт/лимит на создание каналов),
+    автоматически пробует другие доступные аккаунты из пула.
 
     :param target_input: Текстовое представление ссылки или идентификатора канала
     :param user_id: Айди юзера, для подключения персонального аккаунта или для подключения бесплатного аккаунта от администратора
     """
+    clean_target = target_input.strip()
+    checker = CheckingAccountsValidity()
 
+    # 1. Личные подключенные аккаунты пользователя (приоритет)
+    user_accs = get_user_accounts(user_id)
+    candidate_sessions = []
+    for acc in user_accs:
+        if acc.get("session_string"):
+            candidate_sessions.append((acc["session_string"], "личный"))
 
-    # Проверяем, есть ли у пользователя подключенный персональный аккаунт, если аккаунта нет, то используем один из общедоступных
-    client = await CheckingAccountsValidity().start_random_client()
-    if not client:
+    # 2. Общие аккаунты из пула администратора (перемешиваем для распределения нагрузки)
+    shared_sessions = getting_account()
+    random.shuffle(shared_sessions)
+    for s in shared_sessions:
+        candidate_sessions.append((s, "общий"))
+
+    if not candidate_sessions:
         return False, "⚠️ Нет доступных рабочих сессий для поиска. Попробуйте позже.", None, None
 
-    try:
-        # Получаем сущность отслеживаемого объекта
-        clean_target = target_input.strip()
-        entity = await client.get_entity(clean_target)
+    max_attempts = min(5, len(candidate_sessions))
+    last_restriction_error = None
 
-        # Проверяем и подписываемся на целевую группу/канал
+    for attempt_idx in range(max_attempts):
+        session_str, acc_type = candidate_sessions[attempt_idx]
+        client = await checker.client_connect_string_session(session_str)
+        if not client:
+            continue
+
         try:
-            await client(JoinChannelRequest(channel=entity))
-            logger.info(f"✅ Сессия Telethon подписалась на целевой объект {clean_target}")
-        except Exception as join_err:
-            logger.debug(f"Уведомление при подписке на {clean_target}: {join_err}")
+            # Получаем сущность отслеживаемого объекта
+            entity = await client.get_entity(clean_target)
 
-        # Создаем приватную супергруппу для отправки найденных сообщений
-        target_title = getattr(entity, 'title', clean_target)[:20]
-        group_title = f"Отслеживание: {target_title}"
+            # Проверяем и подписываемся на целевую группу/канал
+            try:
+                await client(JoinChannelRequest(channel=entity))
+                logger.info(f"✅ Сессия Telethon ({acc_type}) подписалась на целевой объект {clean_target}")
+            except Exception as join_err:
+                logger.debug(f"Уведомление при подписке на {clean_target}: {join_err}")
 
-        created_channel = await client(CreateChannelRequest(
-            title=group_title,
-            about="Группа персонального отслеживания",
-            megagroup=True
-        ))
+            # Создаем приватную супергруппу для отправки найденных сообщений
+            target_title = getattr(entity, 'title', clean_target)[:20]
+            group_title = f"Отслеживание: {target_title}"
 
-        new_chat = created_channel.chats[0]
-        chat_id = utils.get_peer_id(new_chat)
-
-        # Добавляем бота в группу администратором
-        try:
-            admin_rights = ChatAdminRights(
-                change_info=True,
-                post_messages=True,
-                edit_messages=True,
-                delete_messages=True,
-                ban_users=True,
-                invite_users=True,
-                pin_messages=True,
-                manage_topics=True
-            )
-            await client(EditAdminRequest(
-                channel=new_chat,
-                user_id=username_bot,
-                admin_rights=admin_rights,
-                rank="AlertBot"
+            created_channel = await client(CreateChannelRequest(
+                title=group_title,
+                about="Группа персонального отслеживания",
+                megagroup=True
             ))
-            logger.info(f"✅ Бот {username_bot} успешно добавлен администратором в группу {chat_id}")
-        except Exception as admin_err:
-            logger.error(f"❌ Ошибка добавления бота {username_bot} в администраторы: {admin_err}")
 
-        # Экспортируем ссылку-приглашение в созданную группу
-        invite_export = await client(ExportChatInviteRequest(peer=new_chat))
-        invite_link = invite_export.link
+            new_chat = created_channel.chats[0]
+            chat_id = utils.get_peer_id(new_chat)
 
-        await client.disconnect()
-        return True, "Успешно", invite_link, chat_id
+            # Добавляем бота в группу администратором
+            try:
+                admin_rights = ChatAdminRights(
+                    change_info=True,
+                    post_messages=True,
+                    edit_messages=True,
+                    delete_messages=True,
+                    ban_users=True,
+                    invite_users=True,
+                    pin_messages=True,
+                    manage_topics=True
+                )
+                await client(EditAdminRequest(
+                    channel=new_chat,
+                    user_id=username_bot,
+                    admin_rights=admin_rights,
+                    rank="AlertBot"
+                ))
+                logger.info(f"✅ Бот {username_bot} успешно добавлен администратором в группу {chat_id}")
+            except Exception as admin_err:
+                logger.error(f"❌ Ошибка добавления бота {username_bot} в администраторы: {admin_err}")
 
-    except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
-        logger.warning(f"⚠️ Целевая группа/канал не существует или неверный юзернейм ({target_input}): {e}")
-        try:
+            # Экспортируем ссылку-приглашение в созданную группу
+            invite_export = await client(ExportChatInviteRequest(peer=new_chat))
+            invite_link = invite_export.link
+
             await client.disconnect()
+            return True, "Успешно", invite_link, chat_id
+
+        except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
+            logger.warning(f"⚠️ Целевая группа/канал не существует или неверный юзернейм ({target_input}): {e}")
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None
+
+        except ChannelPrivateError:
+            logger.warning(f"⚠️ Целевая группа/канал {target_input} приватная или доступ ограничен")
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            return False, "Указанная группа является приватной или к ней нет доступа.", None, None
+
+        except (UserRestrictedError, ChannelsTooMuchError, FloodWaitError) as re:
+            logger.warning(
+                f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) имеет ограничение Telegram: {re}. Пробуем следующий аккаунт..."
+            )
+            last_restriction_error = str(re)
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            continue
+
         except Exception as e:
-            logger.exception(e)
-        return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None
-    except ChannelPrivateError:
-        logger.warning(f"⚠️ Целевая группа/канал {target_input} приватная или доступ ограничен")
-        try:
-            await client.disconnect()
-        except Exception as e:
-            logger.exception(e)
-        return False, "Указанная группа является приватной или к ней нет доступа.", None, None
-    except Exception as e:
-        logger.exception(f"❌ Ошибка Telethon при подключении группы {target_input}: {e}")
-        try:
-            await client.disconnect()
-        except Exception as e:
-            logger.exception(e)
-        return False, f"Ошибка подключения к целевой группе: {e}", None, None
+            logger.warning(f"⚠️ Ошибка аккаунта ({acc_type}) при подключении группы {target_input}: {e}")
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            if attempt_idx < max_attempts - 1:
+                continue
+            return False, f"Ошибка подключения к целевой группе: {e}", None, None
+
+    if last_restriction_error:
+        return (
+            False,
+            "⚠️ Доступные рабочие аккаунты временно ограничены Telegram на создание каналов/групп (спам-репорт или лимит). "
+            "Пожалуйста, подключите свой личный аккаунт через меню «🎯 Персональное отслеживание» ➔ «Подключить свой аккаунт» или повторите попытку позже.",
+            None,
+            None
+        )
+
+    return False, "⚠️ Не удалось подключиться к группе через доступные аккаунты. Попробуйте позже.", None, None
 
 
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
 
 """Меню персонального отслеживания группы / канала на основе ключевых слов пользователя"""
-
-
-def determines_user_language(message_or_callback):
-    """
-    Определяет язык пользователя, выбранное при первом запуске бота.
-    Данные загружаются из таблицы User в базе данных.
-
-    :param message_or_callback: ID пользователя (int) из message или callback
-    :return: код языка пользователя ("ru" по умолчанию)
-    """
-    user = User.get(User.user_id == message_or_callback)
-    return user.language if user.language != "unset" else "ru"  # Возвращаем язык пользователя
 
 
 @router.callback_query(F.data == "menu_personal_tracking")
@@ -380,14 +375,14 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
     """
     Обрабатывает добавление новой группы для персонального отслеживания (Кнопка (InlineKey): ➕ Добавить отслеживание группы)
     """
-    allowed = get_user_allowed_slots(callback.from_user.id)  #  
+    allowed = get_user_allowed_slots(callback.from_user.id)  #
     used = get_user_used_slots(callback.from_user.id)  # 
 
     # Если все слоты уже использовались, то предлагаем пользователю купить дополнительные слоты для групп
     if used >= allowed:
         await callback.answer("⚠️ Все слоты задействованы! Докупите дополнительный слот.", show_alert=True)
         return
-    
+
     # Сначала устанавливаем состояние
     await state.set_state(PersonalTrackingState.waiting_for_target_link)
     # Потом отправляем инструкцию
@@ -411,8 +406,8 @@ async def process_target_link_input(message: Message, state: FSMContext):
 
     status_msg = await message.answer(
         text="🔄 <i>Подключаем рабочую сессию и создаем персональную группу...</i>",
-                                      parse_mode="HTML"
-                                      )
+        parse_mode="HTML"
+    )
 
     success, err_msg, invite_link, chat_id = await connect_target_and_create_group(target_input, message.from_user.id)
     if not success:
@@ -455,7 +450,9 @@ async def process_keywords_input(message: Message, state: FSMContext):
         created_group_link=invite_link,
         created_group_id=created_group_id,
         keywords=keywords_text,
-        last_changed_at=datetime.now()
+        last_changed_at=datetime.now(),
+        personal_account=data.get("personal_account", ""),
+        shared_account=data.get("shared_account", "")
     )
 
     # Фиксируем статистику подключения группы

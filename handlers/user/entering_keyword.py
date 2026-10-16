@@ -3,7 +3,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
-from database.database import User, create_keywords_model
+from database.database import User
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
@@ -17,16 +18,16 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     Обработчик команды "🔍 Ввод ключевого слова" (текст).
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
-    telegram_user = message.from_user
-    user = User.get(User.user_id == telegram_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     logger.info(
-        f"Пользователь {telegram_user.id} {telegram_user.username} {telegram_user.first_name} {telegram_user.last_name} перешел в меню 🔍 Ввод ключевого слова"
+        f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} перешел в меню 🔍 Ввод ключевого слова"
     )
 
     await message.answer(
-        t("enter_keyword", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
+        t("enter_keyword", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )
     await state.set_state(MyStates.entering_keyword)
 
