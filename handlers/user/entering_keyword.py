@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
-from database.database import Keywords, get_keywords_count
+from database.database import Keywords, get_keywords_count, add_user_keywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
@@ -48,10 +48,15 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний, используется для сброса состояния после обработки.
     :return: None
     """
-    raw_input = message.text.strip()
-
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    logger.info(f"Пользователь ввёл ключевое слово: {raw_input}")
+
+    # Защита на случай, если прислали не текст (фото, стикер и т.д.)
+    if not message.text:
+        await message.answer(text=t("no_keywords_entered", lang=user_lang))
+        return
+
+    raw_input = message.text.strip()
+    logger.info(f"Пользователь {message.from_user.id} ввёл ключевые слова: {raw_input}")
 
     keywords_list = [
         keyword.strip()
@@ -65,11 +70,8 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
         )
         await state.clear()
         return
-
-    # Добавляйте каждое ключевое слово по очереди
-    for keyword in keywords_list:
-        # Записываем ключевое слово пользователя в базу данных
-        Keywords.create(user_keyword=keyword, user_id=message.from_user.id)
+    # Безопасно добавляет список ключевых слов, пропуская дубликаты.
+    add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
     await message.answer(
         text=f"✅ Ключевые слова добавлены.\n\n📊 Всего ключевых слов: <b>{get_keywords_count(user_id=message.from_user.id)}</b>",

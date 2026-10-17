@@ -615,12 +615,16 @@ def get_session_count(user_id: int) -> int:
 """Таблица с ключевыми словами пользователей для поиска ключевых слов в группах и каналах"""
 
 
-def get_user_keywords(user_id: int):
+def add_user_keywords(user_id: int, keywords: list[str]) -> None:
+    """Безопасно добавляет список ключевых слов, пропуская дубликаты."""
+    for kw in keywords:
+        Keywords.get_or_create(user_id=user_id, user_keyword=kw)
+
+
+def get_user_keywords(user_id: int) -> list[str]:
     """Возвращает список ключевых слов (строк) для пользователя."""
-    return [
-        row.keyword
-        for row in Keywords.select().where(Keywords.user_id == user_id)
-    ]
+    query = Keywords.select(Keywords.user_keyword).where(Keywords.user_id == user_id)
+    return [row.user_keyword for row in query]
 
 
 def get_keywords_count(user_id: int):
@@ -639,13 +643,18 @@ class Keywords(database.Model):
 
     id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
     user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
-    user_keyword = CharField(unique=True)  # Поле для хранения ключевого слова
+    user_keyword = CharField()  # Поле для хранения ключевого слова для пользователя
     date_added = DateTimeField(default=datetime.now)  # Дата добавления
 
     class Meta:
         """Метаданные персональной таблицы ключевых слов"""
 
         table_name = "keywords"  # Имя таблицы с ключевыми словами
+        # Уникальная связка: один пользователь не может добавить одно слово дважды,
+        # но разные пользователи могут использовать одинаковые слова.
+        indexes = (
+            (("user_id", "user_keyword"), True),
+        )
 
 
 """Создает таблицы для базы данных, если ранее небыли созданы"""

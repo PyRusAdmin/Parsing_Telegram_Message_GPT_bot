@@ -88,71 +88,6 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
     return filepath
 
 
-# async def export_keywords_internal(message: Message, user_id: int, state: FSMContext):
-#     """Экспортирует список ключевых слов пользователя в Excel-файл"""
-#     await state.clear()
-#     # user = User.get(User.user_id == user_id)
-#     # user_lang = user.language if user.language != "unset" else "ru"
-#     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-#     logger.info(f"Пользователь {user_id} запросил экспорт ключевых слов")
-#
-#     # Получаем количество ключевых слов и если их равно 0, то выводим сообщение пользователю
-#     keywords_count = get_keywords_count(user_id=user_id)  # Ключевые слова
-#     if keywords_count == 0:
-#         await message.answer(t("no_keywords_found", lang=user_lang))
-#         return
-#
-#     # keywords_model = create_keywords_model(user_id=user_id)
-#
-#     # if not keywords_model.table_exists():
-#     #     keywords_model.create_table()
-#     #     await message.answer(t("no_keywords_found", lang=user_lang))
-#     #     return
-#     keywords = get_user_keywords(user_id=user_id)
-#     # keywords = list(keywords_model.select())
-#
-#     # if not keywords:
-#     #     await message.answer(t("no_keywords_found", lang=user_lang))
-#     #     return
-#
-#     data = []
-#     for idx, keyword in enumerate(keywords, start=1):
-#         data.append((idx, keyword.user_keyword))
-#
-#     # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#     # filename = f"keywords_{user_id}.xlsx"
-#     headers = [t('excel_header_number', lang=user_lang), t('excel_header_keyword', lang=user_lang)]
-#
-#     try:
-#         filepath = create_excel_file(
-#             data=data,
-#             headers=headers,
-#             filename=f"keywords_{user_id}.xlsx",
-#             sheet_name="Keywords"
-#         )
-#
-#         document = FSInputFile(filepath)
-#         await message.answer_document(
-#             document=document,
-#             caption=t("keywords_export_caption", lang=user_lang, count=len(data))
-#         )
-#
-#         os.remove(filepath)
-#         logger.info(f"Файл ключевых слов отправлен и удалён: {filepath}")
-#
-#     except Exception as e:
-#         logger.exception(f"Ошибка при создании Excel-файла с ключевыми словами: {e}")
-#         await message.answer(t("export_error", lang=user_lang))
-
-
-# @router.message((F.text == t('keywords_list_button', 'ru')) | (F.text == t('keywords_list_button', 'en')))
-# async def get_keywords_list(message: Message, state: FSMContext):
-#     """
-#     Обработчик команды "🔍 Список ключевых слов" (текст).
-#     """
-#     await export_keywords_internal(message, message.from_user.id, state)
-
-
 @router.callback_query(F.data == "settings_keywords_list")
 async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
     """
@@ -213,58 +148,6 @@ async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла с ключевыми словами: {e}")
         await message.answer(t("export_error", lang=user_lang))
-
-
-# async def export_tracking_links_internal(message: Message, user_id: int, state: FSMContext):
-#     """Экспортирует список отслеживаемых ссылок пользователя в Excel-файл"""
-#     await state.clear()
-#     user = User.get(User.user_id == user_id)
-#     user_lang = user.language if user.language != "unset" else "ru"
-#
-#     logger.info(f"Пользователь {user_id} запросил экспорт ссылок для отслеживания")
-#
-#     usernames_list, total_count = get_user_channel_usernames(user_id)
-#
-#     if not usernames_list:
-#         await message.answer(t("no_tracking_links_found", lang=user_lang))
-#         return
-#
-#     data = []
-#     for idx, username in enumerate(usernames_list, start=1):
-#         data.append((idx, username))
-#
-#     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#     filename = f"tracking_links_{user_id}_{timestamp}.xlsx"
-#     headers = [t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)]
-#
-#     try:
-#         filepath = create_excel_file(
-#             data=data,
-#             headers=headers,
-#             filename=filename,
-#             sheet_name="Tracking Links"
-#         )
-#
-#         document = FSInputFile(filepath)
-#         await message.answer_document(
-#             document=document,
-#             caption=t("tracking_links_export_caption", lang=user_lang, count=total_count)
-#         )
-#
-#         os.remove(filepath)
-#         logger.info(f"Файл ссылок отправлен и удалён: {filepath}")
-#
-#     except Exception as e:
-#         logger.exception(f"Ошибка при создании Excel-файла со ссылками: {e}")
-#         await message.answer(t("export_error", lang=user_lang))
-
-
-# @router.message((F.text == t('tracking_links_button', 'ru')) | (F.text == t('tracking_links_button', 'en')))
-# async def get_tracking_links_list(message: Message, state: FSMContext):
-#     """
-#     Обработчик команды "🌐 Ссылки для отслеживания" (текст).
-#     """
-#     await export_tracking_links_internal(message, message.from_user.id, state)
 
 
 @router.callback_query(F.data == "settings_tracking_links")
