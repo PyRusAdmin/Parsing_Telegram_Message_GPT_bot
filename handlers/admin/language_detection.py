@@ -7,7 +7,7 @@ from openai import OpenAI
 
 from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES
 
-from database.database import TelegramGroup
+from database.database import TelegramGroup, database
 from locales.locales import t
 
 router = Router(name=__name__)
@@ -160,14 +160,14 @@ async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
 
     def _batch_update():
         """Выполняет пакетное обновление языков групп в транзакции базы данных"""
-        if db.is_closed():
-            db.connect(reuse_if_open=True)
+        if database.is_closed():
+            database.connect(reuse_if_open=True)
 
         updated = 0
         failed = 0
 
         try:
-            with db.atomic():  # Одна транзакция для всех обновлений
+            with database.atomic():  # Одна транзакция для всех обновлений
                 for item in updates:
                     try:
                         rows = (

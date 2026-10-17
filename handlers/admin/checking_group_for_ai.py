@@ -13,7 +13,7 @@ from openai import AsyncOpenAI
 
 from ai.ai import category_assignment
 from core.config import GROQ_API_KEY, OPENROUTER_API_KEY
-from database.database import TelegramGroup, get_groups_without_category, User
+from database.database import TelegramGroup, get_groups_without_category, User, database
 from keyboards.keyboards import category_method_keyboard, admin_keyboard
 from locales.locales import t
 from states.states import CategoryMethod
@@ -264,8 +264,8 @@ async def get_groups_without_category_message(message: Message):
 
     def _count():
         """Подсчитывает количество групп без присвоенной категории в БД"""
-        if db.is_closed():
-            db.connect(reuse_if_open=True)
+        if database.is_closed():
+            database.connect(reuse_if_open=True)
         return TelegramGroup.select().where(
             (TelegramGroup.username.is_null(False)) &
             (TelegramGroup.category == '')

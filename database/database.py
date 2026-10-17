@@ -632,6 +632,7 @@ class Keywords(database.Model):
     id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
     user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
     user_keyword = CharField(unique=True)  # Поле для хранения ключевого слова
+    date_added = DateTimeField(default=datetime.now)  # Дата добавления
 
     class Meta:
         """Метаданные персональной таблицы ключевых слов"""

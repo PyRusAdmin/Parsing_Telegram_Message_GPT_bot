@@ -40,10 +40,10 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
 from database.database import (
-    Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model, db,
+    Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
     get_session_count, get_target_group_count, get_tracked_channels_count, get_user_accounts,
-    getting_account, getting_number_records_database, write_account_to_user_table
+    getting_account, getting_number_records_database, write_account_to_user_table, database
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
@@ -71,6 +71,7 @@ app.add_middleware(
 
 class MockMessage:
     """Имитация объекта сообщения aiogram для обработки запросов из веб-интерфейса"""
+
     # Mock Message для совместимости с обработчиками ботов
     def __init__(self, user_id: int, username: Optional[str] = "web_user"):
         """Инициализирует объект MockMessage для имитации Telegram-сообщения"""
@@ -143,8 +144,8 @@ class MockMessage:
 async def db_session_middleware(request, call_next):
     """Обеспечивает активное подключение к базе данных для каждого HTTP-запроса"""
     # Промежуточное программное обеспечение для подключения к базе данных
-    if db.is_closed():
-        db.connect(reuse_if_open=True)
+    if database.is_closed():
+        database.connect(reuse_if_open=True)
     response = await call_next(request)
     return response
 
