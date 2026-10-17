@@ -1,14 +1,12 @@
 import os
-from datetime import datetime
 
-from aiogram import Router, F
+from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import FSInputFile, CallbackQuery
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from database.database import User, get_user_channel_usernames, get_keywords_count, get_user_keywords
+from database.database import get_user_channel_usernames, get_keywords_count, get_user_keywords
 from handlers.user_language import determines_user_language
 from locales.locales import t
 
@@ -89,43 +87,27 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
 
 
 @router.callback_query(F.data == "settings_keywords_list")
-async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
+async def get_keywords_list_cb(callback: types.CallbackQuery, state: FSMContext):
     """
     Обработчик инлайн-кнопки "🔍 Список ключевых слов".
     """
     await callback.answer()
-    # await export_keywords_internal(callback.message, callback.from_user.id, state)
     await state.clear()
-    # user = User.get(User.user_id == user_id)
-    # user_lang = user.language if user.language != "unset" else "ru"
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     logger.info(f"Пользователь {callback.from_user.id} запросил экспорт ключевых слов")
 
     # Получаем количество ключевых слов и если их равно 0, то выводим сообщение пользователю
     keywords_count = get_keywords_count(user_id=callback.from_user.id)  # Ключевые слова
     if keywords_count == 0:
-        await message.answer(t("no_keywords_found", lang=user_lang))
+        await callback.answer(t("no_keywords_found", lang=user_lang))
         return
 
-    # keywords_model = create_keywords_model(user_id=user_id)
-
-    # if not keywords_model.table_exists():
-    #     keywords_model.create_table()
-    #     await message.answer(t("no_keywords_found", lang=user_lang))
-    #     return
     keywords = get_user_keywords(user_id=callback.from_user.id)
-    # keywords = list(keywords_model.select())
-
-    # if not keywords:
-    #     await message.answer(t("no_keywords_found", lang=user_lang))
-    #     return
 
     data = []
     for idx, keyword in enumerate(keywords, start=1):
-        data.append((idx, keyword.user_keyword))
+        data.append((idx, keyword))
 
-    # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # filename = f"keywords_{user_id}.xlsx"
     headers = [t('excel_header_number', lang=user_lang), t('excel_header_keyword', lang=user_lang)]
 
     try:
@@ -136,8 +118,8 @@ async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
             sheet_name="Keywords"
         )
 
-        document = FSInputFile(filepath)
-        await message.answer_document(
+        document = types.FSInputFile(filepath)
+        await callback.message.answer_document(
             document=document,
             caption=t("keywords_export_caption", lang=user_lang, count=len(data))
         )
@@ -147,34 +129,32 @@ async def get_keywords_list_cb(callback: CallbackQuery, state: FSMContext):
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла с ключевыми словами: {e}")
-        await message.answer(t("export_error", lang=user_lang))
+        await callback.answer(t("export_error", lang=user_lang))
 
 
 @router.callback_query(F.data == "settings_tracking_links")
-async def get_tracking_links_list_cb(callback: CallbackQuery, state: FSMContext):
+async def get_tracking_links_list_cb(callback: types.CallbackQuery, state: FSMContext):
     """
     Обработчик инлайн-кнопки "🌐 Ссылки для отслеживания".
     """
     await callback.answer()
-    # await export_tracking_links_internal(callback.message, callback.from_user.id, state)
+
     await state.clear()
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     logger.info(f"Пользователь {callback.from_user.id} запросил экспорт ссылок для отслеживания")
 
     usernames_list, total_count = get_user_channel_usernames(callback.from_user.id)
 
     if not usernames_list:
-        await message.answer(t("no_tracking_links_found", lang=user_lang))
+        await callback.answer(t("no_tracking_links_found", lang=user_lang))
         return
 
     data = []
     for idx, username in enumerate(usernames_list, start=1):
         data.append((idx, username))
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"tracking_links_{callback.from_user.id}_{timestamp}.xlsx"
+    filename = f"tracking_links_{callback.from_user.id}.xlsx"
     headers = [t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)]
 
     try:
@@ -185,8 +165,8 @@ async def get_tracking_links_list_cb(callback: CallbackQuery, state: FSMContext)
             sheet_name="Tracking Links"
         )
 
-        document = FSInputFile(filepath)
-        await message.answer_document(
+        document = types.FSInputFile(filepath)
+        await callback.message.answer_document(
             document=document,
             caption=t("tracking_links_export_caption", lang=user_lang, count=total_count)
         )
@@ -196,4 +176,4 @@ async def get_tracking_links_list_cb(callback: CallbackQuery, state: FSMContext)
 
     except Exception as e:
         logger.exception(f"Ошибка при создании Excel-файла со ссылками: {e}")
-        await message.answer(t("export_error", lang=user_lang))
+        await callback.answer(t("export_error", lang=user_lang))
