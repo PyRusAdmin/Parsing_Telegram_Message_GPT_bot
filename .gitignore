@@ -38,6 +38,8 @@ Thumbs.db
 .idea
 .vscode
 .antigravitycli
-/.vscode/
+.vscode/
 *.exe
 
+.gigacode_vsc/
+.qodo/

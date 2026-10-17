@@ -8,7 +8,7 @@ from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from database.database import User, create_keywords_model, get_user_channel_usernames
+from database.database import User, get_user_channel_usernames
 from locales.locales import t
 
 router = Router(name=__name__)

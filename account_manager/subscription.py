@@ -2,9 +2,8 @@ import asyncio
 
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.errors import (
-    UserAlreadyParticipantError, FloodWaitError, InviteRequestSentError,
-    AuthKeyUnregisteredError, ChannelPrivateError, ChannelInvalidError,
-    UsernameNotOccupiedError, UsernameInvalidError
+    UserAlreadyParticipantError, FloodWaitError, InviteRequestSentError, AuthKeyUnregisteredError, ChannelPrivateError,
+    ChannelInvalidError, UsernameNotOccupiedError, UsernameInvalidError
 )
 from telethon.tl.functions.channels import JoinChannelRequest
 
