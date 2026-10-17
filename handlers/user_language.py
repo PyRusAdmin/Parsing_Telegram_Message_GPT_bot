@@ -1,6 +1,4 @@
-from database.database import (
-    User
-)
+from database.database import User
 
 
 def determines_user_language(message_or_callback):

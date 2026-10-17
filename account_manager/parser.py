@@ -3,6 +3,7 @@ import random
 
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
+from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
 from telethon.errors import (
@@ -14,9 +15,9 @@ from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelReq
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
-
 from database.database import (
-    create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups, User, dell_group
+    create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups, User, dell_group,
+    get_user_keywords, get_keywords_count
 )
 from keyboards.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
 from locales.locales import t
@@ -143,20 +144,26 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     if msg_key in forwarded_messages:
         return
 
+    keywords_count = get_keywords_count(user_id=user_id)  # Ключевые слова
+    if keywords_count == 0:
+        logger.info(f"У пользователя {user_id} нет ключевых слов")
+        return
+
     # Получаем ключевые слова из базы данных для данного пользователя
-    keywords = create_keywords_model(user_id=user_id)
+    # keywords = create_keywords_model(user_id=user_id)
+    keywords = get_user_keywords(user_id=user_id)
 
     # Создаем таблицу, если она не существует
-    if not keywords.table_exists():
-        keywords.create_table()
-        logger.info(f"Создана таблица ключевых слов для пользователя {user_id}")
-        return  # Таблица только что создана, ключевых слов еще нет
+    # if not keywords.table_exists():
+    #     keywords.create_table()
+    #     logger.info(f"Создана таблица ключевых слов для пользователя {user_id}")
+    #     return  # Таблица только что создана, ключевых слов еще нет
 
-    keywords = [keyword.user_keyword for keyword in keywords.select() if keyword.user_keyword]
+    # keywords = [keyword.user_keyword for keyword in keywords.select() if keyword.user_keyword]
 
     # Если нет ключевых слов, выходим
-    if not keywords:
-        return
+    # if not keywords:
+    #     return
 
     # Приводим ключевые слова к нижнему регистру для поиска
     keywords_lower = [keyword.lower() for keyword in keywords]
@@ -467,7 +474,7 @@ def ensure_group_language(telegram_id: int = None, name: str = None, description
 
     # 4. Детекция языка через Lingua
     try:
-        detector = get_language_detector()
+        detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
         result = detector.detect_language_of(text_to_detect)
         if result is not None:
             lang_code = result.iso_code_639_1.name.lower()

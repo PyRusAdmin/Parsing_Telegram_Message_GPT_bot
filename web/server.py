@@ -43,7 +43,8 @@ from database.database import (
     Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
     get_session_count, get_target_group_count, get_tracked_channels_count, get_user_accounts,
-    getting_account, getting_number_records_database, write_account_to_user_table, database
+    getting_account, getting_number_records_database, write_account_to_user_table, database, get_user_keywords,
+    get_user_keywords_with_id, Keywords
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
@@ -410,15 +411,7 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
 @app.get("/api/keywords")
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает список ключевых слов текущего пользователя"""
-    # Управление ключевыми словами
-
-    KeywordsModel = create_keywords_model(user_data["id"])
-
-    if not KeywordsModel.table_exists():
-        KeywordsModel.create_table()
-
-    keywords = list(KeywordsModel.select())
-    return [{"id": kw.id, "keyword": kw.user_keyword} for kw in keywords]
+    return get_user_keywords_with_id(user_id=user_data["id"])
 
 
 @app.post("/api/keywords")
@@ -429,31 +422,28 @@ async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_cu
     if not keyword:
         raise HTTPException(status_code=400, detail="Keyword cannot be empty")
 
-    KeywordsModel = create_keywords_model(user_data["id"])
-    if not KeywordsModel.table_exists():
-        KeywordsModel.create_table()
-
-    try:
-        KeywordsModel.create(user_keyword=keyword)
-        return {"status": "ok", "keyword": keyword}
-    except Exception as e:
-        if "UNIQUE constraint failed" in str(e):
-            raise HTTPException(status_code=400, detail="Keyword already exists")
-        raise HTTPException(status_code=500, detail=str(e))
+    kw_obj, _ = Keywords.get_or_create(
+        user_id=user_data["id"],
+        user_keyword=keyword
+    )
+    return {"status": "ok", "id": kw_obj.id, "keyword": keyword}
 
 
 @app.delete("/api/keywords/{kw_id}")
 async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):
     """Удаляет ключевое слово пользователя по его идентификатору"""
-    # user_id = user_data["id"]
-    KeywordsModel = create_keywords_model(user_data["id"])
+    deleted = (
+        Keywords.delete()
+        .where(
+            (Keywords.id == kw_id) &
+            (Keywords.user_id == user_data["id"])
+        )
+        .execute()
+    )
 
-    if not KeywordsModel.table_exists():
-        raise HTTPException(status_code=404, detail="Keyword table not found")
-
-    deleted = KeywordsModel.delete().where(KeywordsModel.id == kw_id).execute()
     if deleted:
         return {"status": "ok"}
+
     raise HTTPException(status_code=404, detail="Keyword not found")
 
 

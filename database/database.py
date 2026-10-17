@@ -615,6 +615,16 @@ def get_session_count(user_id: int) -> int:
 """Таблица с ключевыми словами пользователей для поиска ключевых слов в группах и каналах"""
 
 
+def get_user_keywords_with_id(user_id: int) -> list[Keywords]:
+    """Возвращает список словарей [{'id': 1, 'keyword': 'слово'}, ...] для API. (Для ВЕБ АПП)"""
+    query = (
+        Keywords.select(Keywords.id, Keywords.user_keyword.alias("keyword"))
+        .where(Keywords.user_id == user_id)
+        .dicts()
+    )
+    return list(query)
+
+
 def add_user_keywords(user_id: int, keywords: list[str]) -> None:
     """Безопасно добавляет список ключевых слов, пропуская дубликаты."""
     for kw in keywords:
