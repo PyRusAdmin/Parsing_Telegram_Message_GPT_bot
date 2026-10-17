@@ -411,10 +411,14 @@ async def handle_stars_balance(message: Message, state: FSMContext):
     user = User.get(User.user_id == message.from_user.id)
     user_lang = user.language if user.language != "unset" else "ru"
 
-    keyboard = get_stars_topup_inline_keyboard(user_lang)
-    msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
+    # keyboard = get_stars_topup_inline_keyboard(user_lang)
+    # msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
 
-    await message.answer(text=msg_text, reply_markup=keyboard, parse_mode="HTML")
+    await message.answer(
+        text=t("stars_balance_msg", lang=user_lang, stars=user.stars),
+        reply_markup=get_stars_topup_inline_keyboard(user_lang),
+        parse_mode="HTML"
+    )
 
 
 @router.callback_query(F.data == "settings_topup_stars")

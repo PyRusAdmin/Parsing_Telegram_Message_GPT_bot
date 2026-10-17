@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
-from database.database import Keywords
+from database.database import Keywords, get_keywords_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
@@ -42,7 +42,7 @@ async def handle_enter_keyword_menu_cb(callback: CallbackQuery, state: FSMContex
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     logger.info(
-        f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} перешел в меню 🔍 Ввод ключевого слова"
+        f"Пользователь {callback.from_user.id} {callback.from_user.username} {callback.from_user.first_name} {callback.from_user.last_name} перешел в меню 🔍 Ввод ключевого слова"
     )
 
     await callback.message.answer(
@@ -102,9 +102,9 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     #     keywords_model.create_table()
     #     logger.info(f"Создана новая таблица для пользователя {message.from_user.id}")
 
-    added_keywords = []
-    skipped_keywords = []
-    error_keywords = []
+    # added_keywords = []
+    # skipped_keywords = []
+    # error_keywords = []
 
     # Добавляйте каждое ключевое слово по очереди
     for keyword in keywords_list:
@@ -120,48 +120,53 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
         #         logger.error(f"Error adding keyword {keyword}: {e}")
 
     # Форматирование ответного сообщения
-    response_parts = []
+    # response_parts = []
 
-    if added_keywords:
-        keywords_preview = added_keywords[:10]  # Show first 10
-        keywords_text = "\n\n".join(f"• {kw}" for kw in keywords_preview)
-        if len(added_keywords) > 10:
-            keywords_text += f"\n...\n{t('keywords_and_more', lang=user_lang, count=len(added_keywords) - 10)}\n"
-        response_parts.append(
-            f"✅ {t('keywords_added_count', lang=user_lang, count=len(added_keywords))}\n{keywords_text}\n"
-        )
+    # if added_keywords:
+    #     keywords_preview = added_keywords[:10]  # Show first 10
+    #     keywords_text = "\n\n".join(f"• {kw}" for kw in keywords_preview)
+    #     if len(added_keywords) > 10:
+    #         keywords_text += f"\n...\n{t('keywords_and_more', lang=user_lang, count=len(added_keywords) - 10)}\n"
+    #     response_parts.append(
+    #         f"✅ {t('keywords_added_count', lang=user_lang, count=len(added_keywords))}\n{keywords_text}\n"
+    #     )
 
-    if skipped_keywords:
-        skipped_preview = skipped_keywords[:5]  # Show first 5
-        skipped_text = "\n".join(f"• {kw}" for kw in skipped_preview)
-        if len(skipped_keywords) > 5:
-            skipped_text += f"\n...\n{t('keywords_and_more', lang=user_lang, count=len(skipped_keywords) - 5)}\n"
-        response_parts.append(
-            f"⚠️ {t('keywords_already_added', lang=user_lang, count=len(skipped_keywords))}:\n{skipped_text}\n"
-        )
+    # if skipped_keywords:
+    #     skipped_preview = skipped_keywords[:5]  # Show first 5
+    #     skipped_text = "\n".join(f"• {kw}" for kw in skipped_preview)
+    #     if len(skipped_keywords) > 5:
+    #         skipped_text += f"\n...\n{t('keywords_and_more', lang=user_lang, count=len(skipped_keywords) - 5)}\n"
+    #     response_parts.append(
+    #         f"⚠️ {t('keywords_already_added', lang=user_lang, count=len(skipped_keywords))}:\n{skipped_text}\n"
+    #     )
 
-    if error_keywords:
-        error_text = "\n".join(f"• {kw}: {err}" for kw, err in error_keywords[:3])
-        if len(error_keywords) > 3:
-            error_text += f"\n...\n{t('keywords_and_more_errors', lang=user_lang, count=len(error_keywords) - 3)}\n"
-        response_parts.append(f"❌ {t('keywords_add_errors', lang=user_lang)}:\n{error_text}\n")
-
+    # if error_keywords:
+    #     error_text = "\n".join(f"• {kw}: {err}" for kw, err in error_keywords[:3])
+    #     if len(error_keywords) > 3:
+    #         error_text += f"\n...\n{t('keywords_and_more_errors', lang=user_lang, count=len(error_keywords) - 3)}\n"
+    #     response_parts.append(f"❌ {t('keywords_add_errors', lang=user_lang)}:\n{error_text}\n")
+    #
     # Резюме
-    response_parts.append(
-        (
-            f"\n📊 {t('keywords_summary', lang=user_lang)}\n"
-            f"• {t('keywords_added', lang=user_lang)}: {len(added_keywords)}\n"
-            f"• {t('keywords_skipped', lang=user_lang)}: {len(skipped_keywords)}\n"
-            f"• {t('keywords_errors', lang=user_lang)}: {len(error_keywords)}"
-        )
-    )
+    # response_parts.append(
+    #     (
+    #         f"\n📊 {t('keywords_summary', lang=user_lang)}\n"
+    #         f"• {t('keywords_added', lang=user_lang)}: {len(added_keywords)}\n"
+    #         f"• {t('keywords_skipped', lang=user_lang)}: {len(skipped_keywords)}\n"
+    #         f"• {t('keywords_errors', lang=user_lang)}: {len(error_keywords)}"
+    #     )
+    # )
 
-    await message.answer("\n\n".join(response_parts))
+    await message.answer(
+        text=f"Ключевые слова добавлены. Всего ключевых слов {get_keywords_count(user_id=message.from_user.id)}",
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings"),
+        parse_mode="HTML"
+    )
 
     # Регистрация статистики
+    # logger.info(
+    #     f"Keywords import for user {message.from_user.id}: "
+    #     f"added={len(added_keywords)}, skipped={len(skipped_keywords)}, errors={len(error_keywords)}"
+    # )
     logger.info(
-        f"Keywords import for user {message.from_user.id}: "
-        f"added={len(added_keywords)}, skipped={len(skipped_keywords)}, errors={len(error_keywords)}"
-    )
-
+        f"Пользователь {message.from_user.id} добавил ключевые слова. Всего ключевых слов у пользователя {get_keywords_count(user_id=message.from_user.id)}")
     await state.clear()  # Завершаем текущее состояние машины состояния
