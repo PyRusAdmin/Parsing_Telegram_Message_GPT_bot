@@ -39,7 +39,7 @@ processes = []
 for cmd in commands:
     try:
         p = subprocess.Popen(cmd, env=env)
-        processes.append(p) #
+        processes.append(p)  #
     except Exception as e:
         logger.warning(f"⚠️ Не удалось запустить команду '{cmd[0]}': {e}")
 

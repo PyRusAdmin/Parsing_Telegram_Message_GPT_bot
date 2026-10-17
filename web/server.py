@@ -43,8 +43,8 @@ from database.database import (
     Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
     get_session_count, get_target_group_count, get_tracked_channels_count, get_user_accounts,
-    getting_account, getting_number_records_database, write_account_to_user_table, database, get_user_keywords,
-    get_user_keywords_with_id, Keywords
+    getting_account, getting_number_records_database, write_account_to_user_table, database, get_user_keywords_with_id,
+    Keywords
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri

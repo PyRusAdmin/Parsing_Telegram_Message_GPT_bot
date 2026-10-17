@@ -85,13 +85,13 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=t("investments_button", lang=lang), # инвестиции
+                    text=t("investments_button", lang=lang),  # инвестиции
                     callback_data="cat_sel:investments"
-                    )
+                )
             ],
             [
                 InlineKeyboardButton(
-                    text=t("finance_and_personal_budget_button", lang=lang), # финансы и личный бюджет
+                    text=t("finance_and_personal_budget_button", lang=lang),  # финансы и личный бюджет
                     callback_data="cat_sel:finance"
                 )
             ],
@@ -99,52 +99,53 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text=t("crypto_and_blockchain_button", lang=lang),  # криптовалюты и блокчейн
                     callback_data="cat_sel:crypto"
-                    ),
+                ),
                 InlineKeyboardButton(
-                    text=t("business_and_entrepreneurship_button", lang=lang), # бизнес и предпринимательство
-                                     callback_data="cat_sel:business"
-                                     )
+                    text=t("business_and_entrepreneurship_button", lang=lang),  # бизнес и предпринимательство
+                    callback_data="cat_sel:business"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("marketing_and_promotion_button", lang=lang), # маркетинг и продвижение
+                InlineKeyboardButton(text=t("marketing_and_promotion_button", lang=lang),  # маркетинг и продвижение
                                      callback_data="cat_sel:marketing")
             ],
             [
                 InlineKeyboardButton(
-                    text=t("tech_and_it_button", lang=lang), # технологии и it
-                                     callback_data="cat_sel:tech"
-                                     )
+                    text=t("tech_and_it_button", lang=lang),  # технологии и it
+                    callback_data="cat_sel:tech"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("education_and_self_development_button", lang=lang), # образование и саморазвитие
+                InlineKeyboardButton(text=t("education_and_self_development_button", lang=lang),
+                                     # образование и саморазвитие
                                      callback_data="cat_sel:education")
             ],
             [
-                InlineKeyboardButton(text=t("work_and_career_button", lang=lang), # работа и карьера
+                InlineKeyboardButton(text=t("work_and_career_button", lang=lang),  # работа и карьера
                                      callback_data="cat_sel:work")
             ],
             [
-                InlineKeyboardButton(text=t("real_estate_button", lang=lang), #  недвижимость
+                InlineKeyboardButton(text=t("real_estate_button", lang=lang),  # недвижимость
                                      callback_data="cat_sel:real_estate")
             ],
             [
-                InlineKeyboardButton(text=t("health_and_medicine_button", lang=lang), #  здоровье и медицина
+                InlineKeyboardButton(text=t("health_and_medicine_button", lang=lang),  # здоровье и медицина
                                      callback_data="cat_sel:health")
             ],
             [
-                InlineKeyboardButton(text=t("travel_button", lang=lang), #  путешествия
+                InlineKeyboardButton(text=t("travel_button", lang=lang),  # путешествия
                                      callback_data="cat_sel:travel")
             ],
             [
-                InlineKeyboardButton(text=t("auto_and_transport_button", lang=lang),  #  авто и транспорт
+                InlineKeyboardButton(text=t("auto_and_transport_button", lang=lang),  # авто и транспорт
                                      callback_data="cat_sel:auto")
             ],
             [
-                InlineKeyboardButton(text=t("shopping_and_discounts_button", lang=lang), # шоппинг и скидки
+                InlineKeyboardButton(text=t("shopping_and_discounts_button", lang=lang),  # шоппинг и скидки
                                      callback_data="cat_sel:shopping")
             ],
             [
-                InlineKeyboardButton(text=t("entertainment_and_leisure_button", lang=lang), # развлечения и досуг
+                InlineKeyboardButton(text=t("entertainment_and_leisure_button", lang=lang),  # развлечения и досуг
                                      callback_data="cat_sel:entertainment")
             ],
             [
@@ -160,11 +161,11 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                                      callback_data="cat_sel:sports")
             ],
             [
-                InlineKeyboardButton(text=t("cooking_and_food_button", lang=lang), # кулинария и еда
+                InlineKeyboardButton(text=t("cooking_and_food_button", lang=lang),  # кулинария и еда
                                      callback_data="cat_sel:cooking")
             ],
             [
-                InlineKeyboardButton(text=t("fashion_and_beauty_button", lang=lang), # мода и красота
+                InlineKeyboardButton(text=t("fashion_and_beauty_button", lang=lang),  # мода и красота
                                      callback_data="cat_sel:fashion")
             ],
             [
