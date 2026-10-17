@@ -615,6 +615,14 @@ def get_session_count(user_id: int) -> int:
 """Таблица с ключевыми словами пользователей для поиска ключевых слов в группах и каналах"""
 
 
+def get_user_keywords(user_id: int):
+    """Возвращает список ключевых слов (строк) для пользователя."""
+    return [
+        row.keyword
+        for row in Keywords.select().where(Keywords.user_id == user_id)
+    ]
+
+
 def get_keywords_count(user_id: int):
     """
     Получение количества ключевых слов для отслеживания
