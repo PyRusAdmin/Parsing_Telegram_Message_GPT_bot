@@ -7,7 +7,7 @@ from openai import OpenAI
 
 from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES
 
-from database.database import TelegramGroup, db
+from database.database import TelegramGroup
 from locales.locales import t
 
 router = Router(name=__name__)

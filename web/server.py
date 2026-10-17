@@ -40,7 +40,7 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
 from database.database import (
-    Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model, create_keywords_model, db,
+    Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model, db,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
     get_session_count, get_target_group_count, get_tracked_channels_count, get_user_accounts,
     getting_account, getting_number_records_database, write_account_to_user_table
@@ -410,7 +410,7 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает список ключевых слов текущего пользователя"""
     # Управление ключевыми словами
-    # user_id = user_data["id"]
+
     KeywordsModel = create_keywords_model(user_data["id"])
 
     if not KeywordsModel.table_exists():
@@ -423,7 +423,7 @@ async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
 @app.post("/api/keywords")
 async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """Добавляет новое ключевое слово для отслеживания"""
-    # user_id = user_data["id"]
+
     keyword = keyword.strip()
     if not keyword:
         raise HTTPException(status_code=400, detail="Keyword cannot be empty")

@@ -19,6 +19,7 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     # Определяем язык пользователя, который пользователь выбрал при старте бота
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     logger.info(

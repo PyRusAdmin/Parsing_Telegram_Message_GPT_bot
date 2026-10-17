@@ -18,6 +18,7 @@ async def handle_connect_message_group(message: Message, state: FSMContext):
     Обработчик команды "📤 Подключить группу для сообщений" (текст).
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user = User.get(User.user_id == message.from_user.id)
 
     logger.info(

@@ -30,6 +30,7 @@ async def connect_account_free_internal(message: Message, user_tg, state: FSMCon
             "language": "unset"
         }
     )
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user_lang = user.language if user.language != "unset" else "ru"
 
     free_accounts = list(AccountFree.select())

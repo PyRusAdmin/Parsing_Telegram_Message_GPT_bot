@@ -20,7 +20,7 @@ async def delete_group_from_database(message: Message, state: FSMContext):
     Удаление группы из базы данных (текст)
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
-
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
         t("delete_group_prompt", lang=user.language),
@@ -35,7 +35,7 @@ async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMConte
     Удаление группы из базы данных (инлайн)
     """
     await state.clear()
-
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user = User.get(User.user_id == callback.from_user.id)
     await callback.message.answer(
         t("delete_group_prompt", lang=user.language),

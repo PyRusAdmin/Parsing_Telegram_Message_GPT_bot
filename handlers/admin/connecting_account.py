@@ -21,6 +21,7 @@ router = Router(name=__name__)
 async def admin_connecting_account_internal(message: Message, user_id: int, state: FSMContext):
     """Инициирует процесс добавления сессий администратором"""
     await state.clear()
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user = User.get(User.user_id == user_id)
 
     # ✅ Инициализируем очередь файлов в состоянии
@@ -51,6 +52,7 @@ async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext
 async def receive_session_file(message: Message, state: FSMContext):
     """Получаем .session файл(ы) от админа и обрабатываем по очереди"""
     user_id = message.from_user.id  # получаем id пользователя
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user = User.get(User.user_id == user_id)
     document = message.document  # получаем файл сессии
     logger.info(f"User {user_id} отправил файл: {document.file_name}")

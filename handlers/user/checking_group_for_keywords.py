@@ -37,6 +37,7 @@ async def checking_group_for_keywords_cb(callback: CallbackQuery, state: FSMCont
     Обработчик инлайн-кнопки "Проверка группы на наличие ключевых слов".
     """
     await state.clear()
+    # TODO Сделать единое определение языка пользователя во всем проекте
     user = User.get(User.user_id == callback.from_user.id)
     await callback.message.answer(
         text=t("check_group_ask_url", lang=user.language),

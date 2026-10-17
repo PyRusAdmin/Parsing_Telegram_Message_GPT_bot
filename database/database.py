@@ -1,29 +1,29 @@
 from datetime import datetime
+
 from asgiref.sync import sync_to_async
 from loguru import logger
 from peewee import (
-    SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, Model, CharField, DoesNotExist,
-    fn
+    SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, CharField, DoesNotExist, fn
 )
 
 from core.config import ADMIN_USER_ID
 
-db = SqliteDatabase(
+database = SqliteDatabase(
     'data/bot.db', timeout=30,
     pragmas={'cache_size': 4096, 'synchronous': 'NORMAL'},
     autocommit=True  # ✅ Важно!
 )
 
 
-class BaseModel(Model):
-    """Базовая модель базы данных SQLite"""
+# class BaseModel(Model):
+#     """Базовая модель базы данных SQLite"""
+#
+#     class Meta:
+#         """Метаданные базовой модели базы данных"""
+#         database = db
 
-    class Meta:
-        """Метаданные базовой модели базы данных"""
-        database = db
 
-
-class PersonalTracking(BaseModel):
+class PersonalTracking(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
 
     id = AutoField()  # ID записи в базе данных
@@ -42,7 +42,7 @@ class PersonalTracking(BaseModel):
         table_name = "personal_tracking"  # Название таблицы
 
 
-class PersonalTrackingStats(BaseModel):
+class PersonalTrackingStats(database.Model):
     """Модель базы данных для хранения статистики персонального отслеживания"""
 
     id = AutoField()
@@ -56,46 +56,12 @@ class PersonalTrackingStats(BaseModel):
         table_name = "personal_tracking_stats"
 
 
-def init_database():
-    """Инициализация БД и создание таблиц"""
-    db.connect(reuse_if_open=True)
-
-    try:
-        db.execute_sql('PRAGMA journal_mode = WAL;')
-    except Exception as e:
-        logger.warning(f"Failed to set WAL journal mode: {e}")
-
-    db.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
-    db.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
-    db.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
-    db.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
-    db.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
-    db.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
-    db.create_tables([User], safe=True)  # Создание таблицы пользователей
-
-    db.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
-    logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
-
-    # Проверка наличия колонок stars и last_free_download_at в таблице user (SQLite-миграция)
-    cursor = db.cursor()
-    cursor.execute("PRAGMA table_info(user)")
-    columns = [row[1] for row in cursor.fetchall()]
-    if "stars" not in columns:
-        logger.info("Migrating database: adding 'stars' column to user table")
-        db.execute_sql('ALTER TABLE "user" ADD COLUMN "stars" INTEGER DEFAULT 0;')
-    if "last_free_download_at" not in columns:
-        logger.info("Migrating database: adding 'last_free_download_at' column to user table")
-        db.execute_sql('ALTER TABLE "user" ADD COLUMN "last_free_download_at" DATETIME;')
-
-    db.close()
-
-
 """
 Запись в базу данных вопросов пользователей, что бы расширить базу знаний
 """
 
 
-class Question(BaseModel):
+class Question(database.Model):
     """Модель для хранения вопросов пользователей и ответов базы знаний"""
     id = AutoField()  # автоинкремент
     user_id = IntegerField()  # ID пользователя Telegram
@@ -144,7 +110,7 @@ def get_all_questions():
 """
 
 
-class Groups(BaseModel):
+class Groups(database.Model):
     """Модель для хранения отслеживаемых пользователем групп и каналов"""
     id = AutoField()  # автоинкремент
     user_id = IntegerField()  # ID пользователя Telegram
@@ -219,7 +185,7 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
 """
 
 
-class UserAccountsTable(BaseModel):
+class UserAccountsTable(database.Model):
     """Модель для хранения сессий подключенных Telegram-аккаунтов пользователей"""
     id = AutoField()  # ✅ Первичный ключ (обязательно!)
     user_id = IntegerField(index=True)  # ID пользователя Telegram
@@ -229,7 +195,7 @@ class UserAccountsTable(BaseModel):
 
     class Meta:
         """Метаданные таблицы аккаунтов пользователей"""
-        database = db
+        # database = db
         table_name = f"user_accounts_table"  # Динамическое имя таблицы
 
 
@@ -294,25 +260,25 @@ def delete_account_from_user_table(user_id: int, session_string: str) -> None:
 """Работа с аккаунтами"""
 
 
-class Account(Model):
+class Account(database.Model):
     """Модель аккаунта"""
     session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
     phone_number = CharField()  # номер телефона аккаунта
 
     class Meta:
         """Метаданные таблицы рабочих аккаунтов"""
-        database = db
+        # database = db
         table_name = 'account'
 
 
-class AccountFree(Model):
+class AccountFree(database.Model):
     """Свободные аккаунты для подключения, которые подключает администратор бота"""
     session_string = CharField(unique=True)  # Уникальность для защиты от дубликатов
     phone_number = CharField()  # Номер телефона аккаунта
 
     class Meta:
         """Метаданные таблицы свободных аккаунтов"""
-        database = db
+        # database = db
         table_name = 'account_free'
 
 
@@ -395,7 +361,7 @@ async def delete_account_from_db(session_string: str) -> None:
         logger.info(f"Ошибка при удалении аккаунта: {e}")
 
 
-class User(BaseModel):
+class User(database.Model):
     """
     Модель для хранения основных данных пользователя Telegram.
 
@@ -439,7 +405,7 @@ def create_group_model(user_id):
             Уникальное имя технической группы (например, @my_alerts_channel).
     """
 
-    class Group(BaseModel):
+    class Group(database.Model):
         """Динамическая модель для хранения технической группы пользователя"""
         id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
         user_group = CharField(unique=True)  # Поле для хранения технической группы
@@ -456,7 +422,7 @@ def create_group_model(user_id):
 """
 
 
-class TelegramGroup(BaseModel):
+class TelegramGroup(database.Model):
     """
     Модель для хранения данных о найденных Telegram-группах и каналах.
 
@@ -554,8 +520,8 @@ async def get_groups_without_category() -> list[dict]:
 
     def _fetch():
         """Извлекает из базы данных список групп без присвоенной категории"""
-        if db.is_closed():
-            db.connect(reuse_if_open=True)
+        if database.is_closed():
+            database.connect(reuse_if_open=True)
 
         groups = TelegramGroup.select().where(
             (TelegramGroup.username.is_null(False)) &
@@ -585,8 +551,8 @@ def migrate_categories_to_lowercase():
     Миграция: приводит все существующие категории к нижнему регистру.
     Запускать один раз после обновления логики.
     """
-    if db.is_closed():
-        db.connect(reuse_if_open=True)
+    if database.is_closed():
+        database.connect(reuse_if_open=True)
 
     try:
         groups = TelegramGroup.select().where(
@@ -652,25 +618,63 @@ def get_session_count(user_id: int) -> int:
 def get_keywords_count(user_id: int):
     """
     Получение количества ключевых слов для отслеживания
-    :param user_id:
+    :param user_id: Telegram ID пользователя
     :return int: Количество записей (обычно 0 или 1, так как группа одна).
     """
-
-    Keywords = create_keywords_model(user_id)
-
-    # Убедимся, что таблица существует, иначе count() вызовет ошибку
-    if not Keywords.table_exists():
-        return 0
-
-    return Keywords.select().count()
+    return Keywords.select().where(Keywords.user_id == user_id).count()
 
 
-class Keywords(BaseModel):
-    """Модель для хранения ключевых слов пользователя, для последующего поиска ключевых слов в группах и каналах Telegraam"""
+class Keywords(database.Model):
+    """
+    Модель для хранения ключевых слов пользователя, для последующего поиска ключевых слов в группах и каналах Telegram
+    """
+
     id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
     user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
     user_keyword = CharField(unique=True)  # Поле для хранения ключевого слова
 
     class Meta:
         """Метаданные персональной таблицы ключевых слов"""
-        table_name = "keywords"  # Имя таблицы
+
+        table_name = "keywords"  # Имя таблицы с ключевыми словами
+
+
+"""Создает таблицы для базы данных, если ранее небыли созданы"""
+
+
+def init_database():
+    """Инициализация БД и создание таблиц"""
+    database.connect(reuse_if_open=True)
+
+    try:
+        database.execute_sql('PRAGMA journal_mode = WAL;')
+    except Exception as e:
+        logger.warning(f"Failed to set WAL journal mode: {e}")
+
+    database.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
+    database.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
+    database.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
+    database.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
+    database.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
+    database.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
+    database.create_tables([User], safe=True)  # Создание таблицы пользователей
+
+    database.create_tables([PersonalTracking, PersonalTrackingStats], safe=True)
+    logger.info("✅ Таблицы персонального отслеживания (personal_tracking) готовы.")
+
+    # Создаем таблицу с ключевыми словами от пользователей, для парсинга сообщений в Telegram
+    database.create_tables([Keywords], safe=True)
+    logger.info("✅ Таблица (keywords) для Ключевых слов создана.")
+
+    # Проверка наличия колонок stars и last_free_download_at в таблице user (SQLite-миграция)
+    cursor = database.cursor()  #
+    cursor.execute("PRAGMA table_info(user)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "stars" not in columns:
+        logger.info("Migrating database: adding 'stars' column to user table")
+        database.execute_sql('ALTER TABLE "user" ADD COLUMN "stars" INTEGER DEFAULT 0;')
+    if "last_free_download_at" not in columns:
+        logger.info("Migrating database: adding 'last_free_download_at' column to user table")
+        database.execute_sql('ALTER TABLE "user" ADD COLUMN "last_free_download_at" DATETIME;')
+
+    database.close()

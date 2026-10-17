@@ -14,6 +14,7 @@ async def checking_accounts_internal(message: Message, user_id: int, state: FSMC
     """Запускает процесс проверки всех аккаунтов на валидность"""
     try:
         await state.clear()
+        # TODO Сделать единое определение языка пользователя во всем проекте
         user = User.get(User.user_id == user_id)
         records = getting_account()
         logger.info(f"Получено аккаунтов: {len(records)}")
