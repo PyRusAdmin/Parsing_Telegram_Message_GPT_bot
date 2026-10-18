@@ -1,6 +1,9 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import (
+    CallbackQuery, Message
+)
 from loguru import logger
 
 from database.database import add_user_group
@@ -30,6 +33,54 @@ router = Router(name=__name__)
 #         reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
 #     )
 #     await state.set_state(MyStates.entering_group)
+
+
+# group_input
+
+
+class PersonalTrackingStateGroupInput(StatesGroup):
+    """Группа состояний FSM для настройки персонального отслеживания и авторизации аккаунта"""
+
+    waiting_for_target_link_group_input = State()  # Ожидание ссылки или username целевой группы/канала от пользователя
+
+
+@router.callback_query(F.data == "group_input")
+async def process_target_link_input_group_input(callback: CallbackQuery, state: FSMContext):
+    """Обработчик инлайн-кнопки Ввод группы, для отслеживания"""
+
+    await state.clear()  # Очищаем состояние, что бы не получить случайное срабатывание
+
+    await state.set_state(PersonalTrackingStateGroupInput.waiting_for_target_link_group_input)
+    await callback.message.edit_text(
+        "🔗 <b>Отправьте ссылку или username группы/канала для отслеживания</b>\n\n"
+        "Например: <code>https://t.me/python_jobs</code> или <code>@python_jobs</code>",
+        parse_mode="HTML"
+    )
+    # И только потом подтверждаем callback (чтобы убрать «часики»)
+    await callback.answer()
+
+
+@router.message(PersonalTrackingStateGroupInput.waiting_for_target_link_group_input)
+async def process_target_link_input_group_input(message: Message, state: FSMContext):
+    target_input = message.text.strip()
+
+    # Проверяем формат ввода (ссылки либо начинается на http(s))
+    if not target_input.startswith("http") and not target_input.startswith("@"):
+        await message.answer("⚠️ Пожалуйста, введите корректную ссылку (https://t.me/...) или @username группы/канала.")
+        return
+
+    group_list = [
+        group.strip()
+        for group in target_input.split('\n')
+        if group.strip()
+    ]
+
+    add_user_group(user_id=message.from_user.id, group=group_list)
+
+    await message.answer("Группа записана в базу данных")
+
+    await state.clear()  # Очищаем состояние, что бы не получить случайное срабатывание
+
 
 @router.callback_query(F.data == "settings_connect_group")
 # @router.callback_query(F.data.in_({"settings_connect_group", "group_connect"}))

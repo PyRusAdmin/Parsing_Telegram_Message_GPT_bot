@@ -40,7 +40,7 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
 from database.database import (
-    Account, Groups, TelegramGroup, User, UserAccountsTable,
+    Account, Group, TelegramGroup, User, UserAccountsTable,
     get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count, get_session_count,
     get_tracked_channels_count, get_user_accounts, getting_account, getting_number_records_database,
     write_account_to_user_table, database, get_user_keywords_with_id, Keywords
@@ -321,7 +321,7 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
         if GroupModel.table_exists():
             groups = list(GroupModel.select())
             if groups:
-                target_group = groups[0].user_group
+                target_group = groups[0].username_group
 
         tracking_active = str(user_data["id"]) in active_clients
 
@@ -451,7 +451,7 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает список отслеживаемых каналов пользователя"""
     # Управление отслеживаемыми каналами
     # user_id = user_data["id"]
-    records = list(Groups.select().where(Groups.user_id == user_data["id"]).order_by(Groups.date_added.desc()))
+    records = list(Group.select().where(Group.user_id == user_data["id"]).order_by(Group.date_added.desc()))
     return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
             records]
 
@@ -468,7 +468,7 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
         username = f"@{username}"
 
     try:
-        Groups.create(user_id=user_data["id"], username=username)
+        Group.create(user_id=user_data["id"], username=username)
         return {"status": "ok", "username": username}
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -480,7 +480,7 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
 async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):
     """Удаляет канал из списка отслеживаемых по идентификатору"""
     # user_id = user_data["id"]
-    deleted = Groups.delete().where(Groups.user_id == user_data["id"], Groups.id == ch_id).execute()
+    deleted = Group.delete().where(Group.user_id == user_data["id"], Group.id == ch_id).execute()
     if deleted:
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="Channel not found")
@@ -505,7 +505,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
         if not username.startswith("@"):
             username = f"@{username}"
         try:
-            Groups.create(user_id=user_data["id"], username=username)
+            Group.create(user_id=user_data["id"], username=username)
             added_count += 1
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):
@@ -532,7 +532,7 @@ async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
 
     groups = list(GroupModel.select())
     if groups:
-        return {"username": groups[0].user_group}
+        return {"username": groups[0].username_group}
     return {"username": None}
 
 

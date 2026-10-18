@@ -104,27 +104,6 @@ def get_all_questions():
         return []
 
 
-"""
-Работа с группами пользователя для отслеживания ключевых слов. Все данные пользователей хранится в одной таблице, 
-для удобства масштабирования
-"""
-
-
-class Groups(database.Model):
-    """Модель для хранения отслеживаемых пользователем групп и каналов"""
-    id = AutoField()  # автоинкремент
-    user_id = IntegerField()  # ID пользователя Telegram
-    username = CharField(null=True)  # Username пользователя Telegram
-    date_added = DateTimeField(default=datetime.now)  # Дата добавления группы
-
-    class Meta:
-        """Метаданные таблицы отслеживаемых групп пользователей"""
-        table_name = f"users_groups"  # Имя таблицы
-        indexes = (
-            (("user_id", "username"), True),  # один пользователь не добавит один канал дважды
-        )
-
-
 def dell_group(user_id: int, username: str):
     """
     Удаляет группу из отслеживания ключевых слов.
@@ -135,28 +114,11 @@ def dell_group(user_id: int, username: str):
     """
     try:
         (
-            Groups.delete().where(Groups.user_id == user_id, Groups.username == username).execute()
+            Group.delete().where(Group.user_id == user_id, Group.username == username).execute()
         )
         return True
     except Exception as e:
         logger.exception(e)
-
-
-def get_tracked_channels_count(user_id: int) -> int:
-    """
-    Получает количество отслеживаемых каналов для указанного пользователя.
-
-    :param user_id: Telegram ID пользователя
-    :return: Количество отслеживаемых каналов
-    """
-    try:
-        count = (
-            Groups.select().where(Groups.user_id == user_id).count()
-        )
-        return count
-    except Exception as e:
-        logger.exception(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
-        return 0
 
 
 def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
@@ -167,10 +129,10 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     :return: Кортеж (список username, общее количество)
     """
     try:
-        records = (Groups
-                   .select(Groups.username)
-                   .where(Groups.user_id == user_id)
-                   .order_by(Groups.date_added.desc()))
+        records = (Group
+                   .select(Group.username)
+                   .where(Group.user_id == user_id)
+                   .order_by(Group.date_added.desc()))
 
         usernames = [row.username for row in records]
         return usernames, len(usernames)
@@ -389,7 +351,60 @@ class User(database.Model):
 
 """
 Работа с группами пользователей, которые пользователи добавили в бота (в базу данных, для дальнейшего отслеживания ключевых слов)
+
+Работа с группами пользователя для отслеживания ключевых слов. Все данные пользователей хранится в одной таблице, 
+для удобства масштабирования
 """
+
+
+class Group(database.Model):
+    """Динамическая модель для хранения технической группы пользователя"""
+    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
+    user_id = IntegerField()  # Телеграм-ID пользователя
+    username_group = CharField(unique=True)  # Поле для хранения технической группы
+    date_added = DateTimeField(default=datetime.now)  # Дата добавления
+
+    class Meta:
+        """Метаданные персональной таблицы целевой группы"""
+        table_name = "group"  # Имя таблицы с группами
+        # Уникальная связка: один пользователь не может добавить одну группу дважды,
+        # но разные пользователи могут использовать одинаковые группы.
+        indexes = (
+            (("user_id", "username_group"), True),  # один пользователь не добавит один канал дважды
+        )
+
+
+# class Group(database.Model):
+#     """Модель для хранения отслеживаемых пользователем групп и каналов"""
+#     id = AutoField()  # автоинкремент
+#     user_id = IntegerField()  # ID пользователя Telegram
+#     username_group = CharField(null=True)  # Username пользователя Telegram
+#     date_added = DateTimeField(default=datetime.now)  # Дата добавления группы
+#
+#     class Meta:
+#         """Метаданные таблицы отслеживаемых групп пользователей"""
+#         table_name = f"users_groups"  # Имя таблицы
+#         indexes = (
+#             (("user_id", "username_group"), True),  # один пользователь не добавит один канал дважды
+#         )
+
+
+def get_tracked_channels_count(user_id: int) -> int:
+    """
+    Получает количество отслеживаемых каналов для указанного пользователя.
+
+    :param user_id: Telegram ID пользователя
+    :return: Количество отслеживаемых каналов
+    """
+    # try:
+    # count = (
+    #     Group.select().where(Group.user_id == user_id).count()
+    # )
+    return Group.select().where(Group.user_id == user_id).count()
+    # )
+    # except Exception as e:
+    #     logger.exception(f"Ошибка при получении количества отслеживаемых каналов для пользователя {user_id}: {e}")
+    #     return 0
 
 
 def get_group_count(user_id: int):
@@ -411,24 +426,7 @@ def add_user_group(user_id: int, group: list[str]) -> None:
     :return None: Нечего не возвращаем, так как записываем в базу данных
     """
     for gr in group:
-        Group.get_or_create(user_id=user_id, user_keyword=gr)
-
-
-class Group(database.Model):
-    """Динамическая модель для хранения технической группы пользователя"""
-    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
-    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
-    user_group = CharField(unique=True)  # Поле для хранения технической группы
-    date_added = DateTimeField(default=datetime.now)  # Дата добавления
-
-    class Meta:
-        """Метаданные персональной таблицы целевой группы"""
-        table_name = "group"  # Имя таблицы с группами
-        # Уникальная связка: один пользователь не может добавить одну группу дважды,
-        # но разные пользователи могут использовать одинаковые группы.
-        indexes = (
-            (("user_id", "user_group"), True),
-        )
+        Group.get_or_create(user_id=user_id, user_group=gr)
 
 
 """
@@ -704,7 +702,7 @@ def init_database():
     database.create_tables([Account], safe=True)  # Создание таблицы аккаунтов
     database.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (свободных)
     database.create_tables([UserAccountsTable], safe=True)  # Создание таблицы аккаунтов пользователя
-    database.create_tables([Groups], safe=True)  # Создание таблицы с группами пользователей
+    database.create_tables([Group], safe=True)  # Создание таблицы с группами пользователей
     database.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
     database.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний
     database.create_tables([User], safe=True)  # Создание таблицы пользователей

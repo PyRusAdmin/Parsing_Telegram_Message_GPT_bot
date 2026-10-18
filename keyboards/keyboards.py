@@ -244,8 +244,19 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("update_list_button", lang=lang), callback_data="settings_update_list"),
-                InlineKeyboardButton(text=t("enter_keyword_button", lang=lang), callback_data="settings_enter_keyword")
+                InlineKeyboardButton(text="Ввод группы, для отслеживания",
+                                     callback_data="group_input")
+            ],
+
+            [
+                InlineKeyboardButton(
+                    text=t("update_list_button", lang=lang),  # 🔁 Обновить список
+                    callback_data="settings_update_list"
+                ),
+                InlineKeyboardButton(
+                    text=t("enter_keyword_button", lang=lang),  # 🔍 Ввод ключевого слова
+                    callback_data="settings_enter_keyword"
+                )
             ],
             [
                 InlineKeyboardButton(text=t("delete_group_from_tracking_button", lang=lang),

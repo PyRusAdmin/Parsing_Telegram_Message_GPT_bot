@@ -16,7 +16,7 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
 from database.database import (
-    TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups, User, dell_group,
+    TelegramGroup, get_user_accounts, get_user_channel_usernames, Group, User, dell_group,
     get_user_keywords, get_keywords_count
 )
 from handlers.user_language import determines_user_language
@@ -88,7 +88,7 @@ async def join_target_group(client, user_id, message):
             reply_markup=connect_grup_keyboard_tech()
         )
         return None  # Возвращаем None, если группа не найдена
-    target_username = groups[0].user_group
+    target_username = groups[0].username_group
     if not target_username:
         logger.error(f"❌ Целевая группа имеет пустой username для user_id={user_id}")
         await message.answer(
@@ -719,7 +719,7 @@ async def ensure_joined_target_group(client, message, user_id: int):
 
 async def get_user_channels_or_notify(user_id: int, user, message, client):
     """Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии"""
-    channels = [group.username for group in Groups.select().where(Groups.user_id == user_id)]
+    channels = [group.username for group in Group.select().where(Group.user_id == user_id)]
 
     if not channels:
         logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
@@ -799,7 +799,7 @@ async def filter_messages(message, user_id, user):
                 return
 
             # Получаем entity целевой группы через Telegram (быстро — один запрос)
-            target_username = groups[0].user_group
+            target_username = groups[0].username_group
             try:
                 entity = await client.get_entity(target_username)
                 target_group_id = entity.id

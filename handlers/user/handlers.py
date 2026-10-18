@@ -10,7 +10,7 @@ from loguru import logger
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from database.database import (
-    User, getting_number_records_database, get_session_count, get_keywords_count, get_tracked_channels_count, Groups,
+    User, getting_number_records_database, get_session_count, get_keywords_count, get_tracked_channels_count, Group,
     get_group_count
 )
 from keyboards.keyboards import (
@@ -381,7 +381,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
     for username in usernames:
         username = username if username.startswith("@") else f"@{username}"
         try:
-            Groups.create(
+            Group.create(
                 user_id=message.from_user.id,
                 username=username
             )
