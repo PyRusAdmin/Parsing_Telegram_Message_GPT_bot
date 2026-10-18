@@ -7,7 +7,7 @@ from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
-from database.database import User
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStatesParsing
@@ -15,20 +15,20 @@ from states.states import MyStatesParsing
 router = Router(name=__name__)
 
 
-@router.message(
-    (F.text == t('check_group_for_keywords_button', 'ru')) | (F.text == t('check_group_for_keywords_button', 'en')))
-async def checking_group_for_keywords(message: Message, state: FSMContext):
-    """
-    Обработчик команды "Проверка группы на наличие ключевых слов" (текст).
-    """
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    user = User.get(User.user_id == message.from_user.id)
-    await message.answer(
-        text=t("check_group_ask_url", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language),
-        parse_mode="HTML"
-    )
-    await state.set_state(MyStatesParsing.get_url)
+# @router.message(
+#     (F.text == t('check_group_for_keywords_button', 'ru')) | (F.text == t('check_group_for_keywords_button', 'en')))
+# async def checking_group_for_keywords(message: Message, state: FSMContext):
+#     """
+#     Обработчик команды "Проверка группы на наличие ключевых слов" (текст).
+#     """
+#     await state.clear()  # Завершаем текущее состояние машины состояния
+#     user = User.get(User.user_id == message.from_user.id)
+#     await message.answer(
+#         text=t("check_group_ask_url", lang=user.language),
+#         reply_markup=back_keyboard(lang=user.language),
+#         parse_mode="HTML"
+#     )
+#     await state.set_state(MyStatesParsing.get_url)
 
 
 @router.callback_query(F.data == "menu_check_group")
@@ -37,11 +37,11 @@ async def checking_group_for_keywords_cb(callback: CallbackQuery, state: FSMCont
     Обработчик инлайн-кнопки "Проверка группы на наличие ключевых слов".
     """
     await state.clear()
-    # TODO Сделать единое определение языка пользователя во всем проекте
-    user = User.get(User.user_id == callback.from_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.message.answer(
-        text=t("check_group_ask_url", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language),
+        text=t("check_group_ask_url", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang),
         parse_mode="HTML"
     )
     await state.set_state(MyStatesParsing.get_url)
@@ -56,10 +56,10 @@ async def get_url(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
     await state.update_data(url=message.text.strip())  # Сохраняем URL в контекст данных
-    user = User.get(User.user_id == message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
-        text=t("check_group_ask_keyword", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language),
+        text=t("check_group_ask_keyword", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang),
         parse_mode="HTML"
     )
     await state.set_state(MyStatesParsing.get_keyword)
@@ -73,10 +73,10 @@ async def get_keyword(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
     keyword = message.text.strip()  # Получаем ключевое слово из сообщения
-    user = User.get(User.user_id == message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
-        text=t("check_group_started", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language)
+        text=t("check_group_started", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang)
     )
     await state.update_data(keyword=keyword)
     data = await state.get_data()  # Получаем данные из контекста состояния
@@ -94,7 +94,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
     """
     try:
         user_id = message.from_user.id  # Получаем ID пользователя
-        user = User.get(User.user_id == message.from_user.id)
+        user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
         checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
@@ -163,7 +163,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                         await message.answer(
                             text=t(
                                 "check_group_new_message_with_link",
-                                lang=user.language,
+                                lang=user_lang,
                                 title=title,
                                 msg_date=msg_date,
                                 message_link=message_link,
@@ -175,7 +175,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
                         await message.answer(
                             text=t(
                                 "check_group_new_message_no_link",
-                                lang=user.language,
+                                lang=user_lang,
                                 title=title,
                                 msg_date=msg_date,
                                 display_text=display_text
@@ -189,7 +189,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
             await message.answer(
                 text=t(
                     "check_group_summary",
-                    lang=user.language,
+                    lang=user_lang,
                     count=count,
                     keyword=keyword,
                     matched_count=matched_count
@@ -199,7 +199,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
             logger.warning("❌ Не удалось найти группу или канал. Возможно не подходящий гео аккаунта.")
         except Exception as e:
             logger.exception(f"❌ Ошибка при парсинге группы: {e}")
-            await message.answer(t("check_group_parse_error", lang=user.language))
+            await message.answer(t("check_group_parse_error", lang=user_lang))
         finally:
             if client is not None:
                 await client.disconnect()

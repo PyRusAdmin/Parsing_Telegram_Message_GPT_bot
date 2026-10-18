@@ -6,7 +6,7 @@ from aiogram.types import (
 )
 from loguru import logger
 
-from database.database import add_user_group
+from database.group_user_database import add_user_group
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t

@@ -16,9 +16,10 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
 from database.database import (
-    TelegramGroup, get_user_accounts, get_user_channel_usernames, Group, User, dell_group,
+    TelegramGroup, get_user_accounts, User,
     get_user_keywords, get_keywords_count
 )
+from database.group_user_database import get_user_channel_usernames, dell_group, Group
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -70,7 +71,7 @@ async def join_target_group(client, user_id, message):
     :raises InviteRequestSentError: Если требуется подтверждение приглашения.
     :raises Exception: Логируется при любых других ошибках.
     """
-    # user = User.get(User.user_id == message.from_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     # group_model = create_group_model(user_id=user_id)
 
@@ -84,7 +85,7 @@ async def join_target_group(client, user_id, message):
         logger.warning(f"❌ Не найдена целевая группа для пользователя {user_id}")
         # Если группа не найдена, то высылаем сообщение пользователю группы, что такой группы нет и клавиатуру для добавления группы для пересылки
         await message.answer(
-            text=t("target_group_not_found", lang=user.language),
+            text=t("target_group_not_found", lang=user_lang),
             reply_markup=connect_grup_keyboard_tech()
         )
         return None  # Возвращаем None, если группа не найдена
@@ -92,7 +93,7 @@ async def join_target_group(client, user_id, message):
     if not target_username:
         logger.error(f"❌ Целевая группа имеет пустой username для user_id={user_id}")
         await message.answer(
-            text=t("target_group_not_found", lang=user.language),
+            text=t("target_group_not_found", lang=user_lang),
             reply_markup=connect_grup_keyboard_tech()
         )
         return None

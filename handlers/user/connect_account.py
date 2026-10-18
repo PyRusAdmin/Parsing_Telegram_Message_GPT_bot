@@ -10,6 +10,7 @@ from telethon.sessions import StringSession
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from database.database import User, AccountFree
 from database.database import write_account_to_user_table
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
 from states.states import MyStates
@@ -30,8 +31,8 @@ async def connect_account_free_internal(message: Message, user_tg, state: FSMCon
             "language": "unset"
         }
     )
-    # TODO Сделать единое определение языка пользователя во всем проекте
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     free_accounts = list(AccountFree.select())
     if not free_accounts:
@@ -62,12 +63,12 @@ async def connect_account_free_internal(message: Message, user_tg, state: FSMCon
     )
 
 
-@router.message((F.text == t('connect_free_account_button', 'ru')) | (F.text == t('connect_free_account_button', 'en')))
-async def handle_connect_account_free(message: Message, state: FSMContext):
-    """
-    Обработчик команды "🔐 Подключить свободный аккаунт" (текст).
-    """
-    await connect_account_free_internal(message, message.from_user, state)
+# @router.message((F.text == t('connect_free_account_button', 'ru')) | (F.text == t('connect_free_account_button', 'en')))
+# async def handle_connect_account_free(message: Message, state: FSMContext):
+#     """
+#     Обработчик команды "🔐 Подключить свободный аккаунт" (текст).
+#     """
+#     await connect_account_free_internal(message, message.from_user, state)
 
 
 @router.callback_query(F.data == "account_connect_free")
@@ -119,10 +120,10 @@ async def connect_account_internal(message: Message, user_tg, state: FSMContext)
     await state.set_state(MyStates.waiting_for_session_file_user)
 
 
-@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
-async def handle_connect_account(message: Message, state: FSMContext):
-    """Обрабатывает команду подключения аккаунта (текст)"""
-    await connect_account_internal(message, message.from_user, state)
+# @router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
+# async def handle_connect_account(message: Message, state: FSMContext):
+#     """Обрабатывает команду подключения аккаунта (текст)"""
+#     await connect_account_internal(message, message.from_user, state)
 
 
 @router.callback_query(F.data.in_({"settings_connect_account", "account_connect"}))
@@ -138,8 +139,8 @@ async def handle_account_file(message: Message, state: FSMContext):
     """Обработчик приёма файла сессии (.session) от пользователя"""
     local_file_path = None  # для безопасного удаления в finally
 
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     try:
         logger.info(f"User {message.from_user.id} отправил файл: {message.document.file_name}")

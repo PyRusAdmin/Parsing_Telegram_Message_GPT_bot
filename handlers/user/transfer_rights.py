@@ -1,6 +1,6 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery
 
 from keyboards.keyboards import back_keyboard
 from states.states import MyStates
@@ -28,15 +28,15 @@ router = Router(name=__name__)
 #     logger.warning("Таблица успешно переименована!")
 
 
-@router.message(F.text == "🔄 Передать настройки пользователю")
-async def transfer_settings(message: Message, state: FSMContext) -> None:
-    """Запрашивает ID пользователя для передачи настроек (текст)"""
-    await state.clear()  # Завершаем текущее состояние машины состояния
-    await message.answer(
-        "Введите ID пользователя для передачи настроек:\n\nПример ввода - 1234567890",
-        reply_markup=back_keyboard(callback_data="menu_settings")
-    )
-    await state.set_state(MyStates.get_id_user_transfer)
+# @router.message(F.text == "🔄 Передать настройки пользователю")
+# async def transfer_settings(message: Message, state: FSMContext) -> None:
+#     """Запрашивает ID пользователя для передачи настроек (текст)"""
+#     await state.clear()  # Завершаем текущее состояние машины состояния
+#     await message.answer(
+#         "Введите ID пользователя для передачи настроек:\n\nПример ввода - 1234567890",
+#         reply_markup=back_keyboard(callback_data="menu_settings")
+#     )
+#     await state.set_state(MyStates.get_id_user_transfer)
 
 
 @router.callback_query(F.data == "settings_transfer_rights")

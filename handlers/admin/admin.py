@@ -9,6 +9,7 @@ from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import getting_account, User, get_all_questions
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import admin_keyboard, category_method_keyboard
 from locales.locales import t
 from states.states import CategoryMethod
@@ -18,11 +19,14 @@ router = Router(name=__name__)
 
 async def export_questions_internal(message: Message, user_id: int):
     """Экспортирует вопросы и ответы из базы данных в CSV-файл"""
-    try:
-        user = User.get(User.user_id == user_id)
-        user_lang = user.language if user.language != "unset" else "ru"
-    except Exception:
-        user_lang = "ru"
+    # try:
+    #     user = User.get(User.user_id == user_id)
+    #     user_lang = user.language if user.language != "unset" else "ru"
+    # except Exception:
+    #     user_lang = "ru"
+
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     try:
         questions = get_all_questions()
@@ -51,12 +55,12 @@ async def export_questions_internal(message: Message, user_id: int):
         await message.answer(t("export_error", lang=user_lang, error=str(e)))
 
 
-@router.message((F.text == t('export_questions_button', 'ru')) | (F.text == t('export_questions_button', 'en')))
-async def export_questions(message: Message):
-    """
-    Экспортирует вопросы и ответы из базы данных в CSV файл (текст).
-    """
-    await export_questions_internal(message, message.from_user.id)
+# @router.message((F.text == t('export_questions_button', 'ru')) | (F.text == t('export_questions_button', 'en')))
+# async def export_questions(message: Message):
+#     """
+#     Экспортирует вопросы и ответы из базы данных в CSV файл (текст).
+#     """
+#     await export_questions_internal(message, message.from_user.id)
 
 
 @router.callback_query(F.data == "admin_export_questions")
