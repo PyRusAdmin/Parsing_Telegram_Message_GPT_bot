@@ -37,12 +37,6 @@ async def checking_accounts_internal(message: Message, state: FSMContext):
         logger.exception(e)
 
 
-# @router.message((F.text == t('check_accounts_button', 'ru')) | (F.text == t('check_accounts_button', 'en')))
-# async def checking_accounts_handler(message: Message, state: FSMContext):
-#     """✅ Проверка аккаунтов на валидность (текст)"""
-#     await checking_accounts_internal(message, message.from_user.id, state)
-
-
 @router.callback_query(F.data == "admin_check_accounts")
 async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
     """✅ Проверка аккаунтов на валидность (инлайн)"""

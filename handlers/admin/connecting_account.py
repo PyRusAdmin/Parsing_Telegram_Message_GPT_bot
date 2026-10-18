@@ -36,12 +36,6 @@ async def admin_connecting_account_internal(message: Message, user_id: int, stat
     logger.info(f"Админ {user_id} начал добавление новых сессий")
 
 
-@router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
-async def admin_connecting_account(message: Message, state: FSMContext):
-    """Админ нажимает кнопку → бот просит .session файл(ы) (текст)"""
-    await admin_connecting_account_internal(message, message.from_user.id, state)
-
-
 @router.callback_query(F.data == "admin_connect_account")
 async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext):
     """Админ нажимает кнопку → бот просит .session файл(ы) (инлайн)"""

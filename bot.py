@@ -6,7 +6,8 @@ import sys
 import uvicorn
 from loguru import logger
 
-from database.database import clean_telegram_id_duplicates, init_database, migrate_categories_to_lowercase
+from database.create_tables_database import init_database
+from database.database import clean_telegram_id_duplicates, migrate_categories_to_lowercase
 
 from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import router as checking_accounts

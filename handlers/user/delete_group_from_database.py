@@ -5,7 +5,8 @@ from loguru import logger
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe
-from database.database import dell_group, get_user_accounts, User
+from database.database import get_user_accounts, User
+from database.group_user_database import dell_group
 from keyboards.keyboards import back_keyboard, main_menu_keyboard, menu_launch_tracking_keyboard
 from locales.locales import t
 from states.states import MyStates
