@@ -137,7 +137,7 @@ async def get_tracking_links_list_cb(callback: types.CallbackQuery, state: FSMCo
     """
     Обработчик инлайн-кнопки "🌐 Ссылки для отслеживания".
     """
-    await callback.answer()
+    # await callback.answer()
 
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -154,14 +154,14 @@ async def get_tracking_links_list_cb(callback: types.CallbackQuery, state: FSMCo
     for idx, username in enumerate(usernames_list, start=1):
         data.append((idx, username))
 
-    filename = f"tracking_links_{callback.from_user.id}.xlsx"
-    headers = [t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)]
+    # filename = f"tracking_links_{callback.from_user.id}.xlsx"
+    # headers = [t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)]
 
     try:
         filepath = create_excel_file(
             data=data,
-            headers=headers,
-            filename=filename,
+            headers=[t('excel_header_number', lang=user_lang), t('excel_header_username', lang=user_lang)],
+            filename=f"tracking_links_{callback.from_user.id}.xlsx",
             sheet_name="Tracking Links"
         )
 

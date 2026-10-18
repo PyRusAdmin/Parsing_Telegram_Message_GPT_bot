@@ -19,7 +19,8 @@ from database.database import (
     TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups, User, dell_group,
     get_user_keywords, get_keywords_count
 )
-from keyboards.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech
+from handlers.user_language import determines_user_language
+from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
 
 
@@ -69,8 +70,10 @@ async def join_target_group(client, user_id, message):
     :raises InviteRequestSentError: Если требуется подтверждение приглашения.
     :raises Exception: Логируется при любых других ошибках.
     """
-    user = User.get(User.user_id == message.from_user.id)
-    group_model = create_group_model(user_id=user_id)
+    # user = User.get(User.user_id == message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    # group_model = create_group_model(user_id=user_id)
+
     logger.info(f"🔍 Проверяю целевую группу... {group_model}")
     if not group_model.table_exists():
         group_model.create_table()

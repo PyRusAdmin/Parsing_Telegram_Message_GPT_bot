@@ -392,6 +392,15 @@ class User(database.Model):
 """
 
 
+def get_group_count(user_id: int):
+    """
+    Получение количества групп для отслеживания
+    :param user_id: Telegram ID пользователя
+    :return int: Количество записей (обычно 0 или 1, так как группа одна).
+    """
+    return Group.select().where(Group.user_id == user_id).count()
+
+
 def add_user_group(user_id: int, group: list[str]) -> None:
     """
     Безопасно добавляет список групп/каналов в базу данных data/bot.db, пропуская дубликаты, если они есть.
@@ -584,23 +593,23 @@ def getting_number_records_database():
     return TelegramGroup.select().count()
 
 
-def get_target_group_count(user_id: int) -> int:
-    """
-    Получает количество технических групп (куда пересылаются уведомления),
-    подключённых конкретным пользователем.
-
-    Ищет записи в таблице `group_{user_id}`.
-
-    :param user_id: (int) ID пользователя Telegram.
-    :return int: Количество записей (обычно 0 или 1, так как группа одна).
-    """
-    GroupModel = create_group_model(user_id)
-
-    # Убедимся, что таблица существует, иначе count() вызовет ошибку
-    if not GroupModel.table_exists():
-        return 0
-
-    return GroupModel.select().count()
+# def get_target_group_count(user_id: int) -> int:
+#     """
+#     Получает количество технических групп (куда пересылаются уведомления),
+#     подключённых конкретным пользователем.
+#
+#     Ищет записи в таблице `group_{user_id}`.
+#
+#     :param user_id: (int) ID пользователя Telegram.
+#     :return int: Количество записей (обычно 0 или 1, так как группа одна).
+#     """
+#     GroupModel = create_group_model(user_id)
+#
+#     # Убедимся, что таблица существует, иначе count() вызовет ошибку
+#     if not GroupModel.table_exists():
+#         return 0
+#
+#     return GroupModel.select().count()
 
 
 def get_session_count(user_id: int) -> int:

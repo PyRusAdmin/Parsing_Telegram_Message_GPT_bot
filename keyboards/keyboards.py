@@ -252,9 +252,14 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                                      callback_data="settings_delete_group")
             ],
             [
-                InlineKeyboardButton(text=t("keywords_list_button", lang=lang), callback_data="settings_keywords_list"),
-                InlineKeyboardButton(text=t("tracking_links_button", lang=lang),
-                                     callback_data="settings_tracking_links")
+                InlineKeyboardButton(
+                    text=t("keywords_list_button", lang=lang),  # 🔍 Список ключевых слов
+                    callback_data="settings_keywords_list"
+                ),
+                InlineKeyboardButton(
+                    text=t("tracking_links_button", lang=lang),  # 🌐 Ссылки для отслеживания
+                    callback_data="settings_tracking_links"
+                )
             ],
             [
                 InlineKeyboardButton(text=t("connect_account_button", lang=lang),

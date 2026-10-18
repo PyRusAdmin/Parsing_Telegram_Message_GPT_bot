@@ -40,11 +40,10 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
 from database.database import (
-    Account, Groups, TelegramGroup, User, UserAccountsTable, create_group_model,
-    get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count,
-    get_session_count, get_target_group_count, get_tracked_channels_count, get_user_accounts,
-    getting_account, getting_number_records_database, write_account_to_user_table, database, get_user_keywords_with_id,
-    Keywords
+    Account, Groups, TelegramGroup, User, UserAccountsTable,
+    get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count, get_session_count,
+    get_tracked_channels_count, get_user_accounts, getting_account, getting_number_records_database,
+    write_account_to_user_table, database, get_user_keywords_with_id, Keywords
 )
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
@@ -526,7 +525,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает текущую целевую группу пользователя для пересылки сообщений"""
     # Конфигурация целевой группы
-    # user_id = user_data["id"]
+
     GroupModel = create_group_model(user_data["id"])
     if not GroupModel.table_exists():
         return {"username": None}
@@ -540,7 +539,7 @@ async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
 @app.post("/api/target-group")
 async def set_target_group(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """Устанавливает целевую группу пользователя для пересылки сообщений"""
-    # user_id = user_data["id"]
+
     username = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")

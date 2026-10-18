@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
+from database.database import add_user_group
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
@@ -95,6 +96,14 @@ async def handle_group_username_submission(message: Message, state: FSMContext):
         # GroupModel.delete().execute()
         # Вставляем новую
         # GroupModel.create(user_group=group_username)
+
+        group_list = [
+            group.strip()
+            for group in group_username.split('\n')
+            if group.strip()
+        ]
+
+        add_user_group(user_id=message.from_user.id, group=group_list)
 
         await message.answer(t("group_added", lang=user_lang, group=group_username))
         logger.info(f"username {group_username} добавлено пользователем {message.from_user.id}")
