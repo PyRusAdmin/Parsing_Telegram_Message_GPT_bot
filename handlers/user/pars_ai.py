@@ -6,7 +6,7 @@ from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
-    BufferedInputFile, ReplyKeyboardRemove, Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
+    BufferedInputFile, Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
 )
 from loguru import logger
 from openpyxl import Workbook
@@ -396,8 +396,8 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
             logger.info(f"Найдено {group_count} записей в категории '{selected_category}'")
             if group_count == 0:
                 await message.answer(
-                    t("category_empty", lang=user_lang, category=selected_category),
-                    reply_markup=ReplyKeyboardRemove()
+                    text=t("category_empty", lang=user_lang, category=selected_category),
+                    # reply_markup=ReplyKeyboardRemove()
                 )
                 return
 
@@ -450,7 +450,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
                 ),
                 caption=t("category_export_caption", lang=user_lang, group_count=group_count,
                           category=selected_category),
-                reply_markup=ReplyKeyboardRemove()
+                # reply_markup=ReplyKeyboardRemove()
             )
             logger.info(f"Документ категории '{selected_category}' отправлен пользователю {user_id}")
 

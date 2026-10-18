@@ -13,6 +13,7 @@ from database.database import (
     User, getting_number_records_database, get_session_count, get_keywords_count
 )
 from database.group_user_database import get_group_count, get_tracked_channels_count
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     get_lang_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
     connect_keyboard_account, get_stars_topup_inline_keyboard, menu_user_admin_keyboard
@@ -77,14 +78,12 @@ async def show_main_menu(message: Message, user_tg, state: FSMContext, edit: boo
     """
     await state.clear()
     user = get_or_create_user(user_tg)
-    # is_admin = user_tg.id in ADMIN_USER_ID
 
     if user.language == "unset":
         text = "👋 Привет! Пожалуйста, выберите язык / Please choose your language:"
-        # reply_markup = get_lang_keyboard()
+
     else:
         text = generate_welcome_message(user_language=user.language, user_tg_id=user_tg.id)
-        # reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
 
     if edit:
         try:
@@ -154,8 +153,6 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
         user.language = selected_lang
         user.save()
 
-        # is_admin = callback.from_user.id in ADMIN_USER_ID
-        # reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
         welcome_text = generate_welcome_message(user_language=user.language, user_tg_id=callback.from_user.id)
         confirmation_text = t("lang_selected", lang=user.language)
 
@@ -179,44 +176,11 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
         logger.exception(e)
 
 
-@router.message((F.text == t('russian_language_button', 'ru')) | (F.text == t('english_language_button', 'en')))
-async def handle_language_selection(message: Message, state: FSMContext):
-    """
-    Обработчик текстового выбора языка.
-    """
-    try:
-        await state.clear()
-        user = get_or_create_user(message.from_user)
-        if message.text == t('russian_language_button', 'ru'):
-            user.language = "ru"
-            confirmation_text = t("lang_selected", lang="ru")
-        else:
-            user.language = "en"
-            confirmation_text = t("lang_selected", lang="en")
-        user.save()
-
-        # is_admin = message.from_user.id in ADMIN_USER_ID
-        # reply_markup = main_admin_keyboard(lang=user.language) if is_admin else main_menu_keyboard(lang=user.language)
-        await message.answer(
-            confirmation_text,
-            reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=message.from_user.id)
-        )
-    except Exception as e:
-        logger.exception(e)
-
-
 async def show_settings_menu(message: Message, user_tg, state: FSMContext):
     """Отображение меню настроек"""
     await state.clear()
     user = User.get(User.user_id == user_tg.id)
-    # text = t("settings_message", lang=user.language)
-    # kb = settings_keyboard(lang=user.language)
-    # if edit:
-    #     try:
-    #         await message.edit_text(text, reply_markup=kb)
-    #         return
-    #     except Exception:
-    #         pass
+
     await message.edit_text(
         text=t("settings_message", lang=user.language),  # Текст меню настройки
         reply_markup=settings_keyboard(lang=user.language)
@@ -311,30 +275,11 @@ async def start_tracking_internal(message: Message, user_tg, state: FSMContext):
         logger.exception(e)
 
 
-@router.message((F.text == t('launch_tracking_button', 'ru')) | (F.text == t('launch_tracking_button', 'en')))
-async def handle_start_tracking(message: Message, state: FSMContext):
-    """Обработчик команды Запуск отслеживания (текст)"""
-    await start_tracking_internal(message, message.from_user, state)
-
-
 @router.callback_query(F.data == "menu_launch_tracking")
 async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик команды Запуск отслеживания (инлайн)"""
     await callback.answer()
     await start_tracking_internal(callback.message, callback.from_user, state)
-
-
-@router.message((F.text == t('update_list_button', 'ru')) | (F.text == t('update_list_button', 'en')))
-async def handle_refresh_groups_list(message: Message, state: FSMContext):
-    """Обработчик команды Обновить список (текст)"""
-    user = User.get(User.user_id == message.from_user.id)
-    logger.info(f"Пользователь {message.from_user.id} перешел в меню 🔁 Обновить список")
-    await message.answer(
-        text=t("update_list", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings"),
-        parse_mode="HTML"
-    )
-    await state.set_state(MyStates.waiting_username_group)
 
 
 @router.callback_query(F.data == "settings_update_list")
@@ -356,11 +301,14 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
     """
     Обработчик загрузки .txt файла со списком групп/каналов.
     """
-    user = User.get(User.user_id == message.from_user.id)
+
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+
     document = message.document
 
     if not document.file_name.endswith(".txt"):
-        await message.answer(t("only_txt_files_supported", lang=user.language))
+        await message.answer(t("only_txt_files_supported", lang=user_lang))
         return
 
     file = await bot.get_file(document.file_id)
@@ -370,7 +318,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
     usernames = [line.strip() for line in content.splitlines() if line.strip()]
 
     if not usernames:
-        await message.answer(t("empty_file_no_usernames", lang=user.language))
+        await message.answer(t("empty_file_no_usernames", lang=user_lang))
         await state.clear()
         return
 
@@ -395,30 +343,13 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
 
     response = t(
         "groups_upload_summary",
-        lang=user.language,
+        lang=user_lang,
         added=added_count,
         skipped=skipped_count,
         errors=errors_count
     )
-    await message.answer(response, reply_markup=settings_keyboard(lang=user.language))
+    await message.answer(response, reply_markup=settings_keyboard(lang=user_lang))
     await state.clear()
-
-
-@router.message((F.text == t('topup_stars_button', 'ru')) | (F.text == t('topup_stars_button', 'en')))
-async def handle_stars_balance(message: Message, state: FSMContext):
-    """Профиль и пополнение звезд (текст)"""
-    await state.clear()
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
-
-    # keyboard = get_stars_topup_inline_keyboard(user_lang)
-    # msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
-
-    await message.answer(
-        text=t("stars_balance_msg", lang=user_lang, stars=user.stars),
-        reply_markup=get_stars_topup_inline_keyboard(user_lang),
-        parse_mode="HTML"
-    )
 
 
 @router.callback_query(F.data == "settings_topup_stars")
@@ -426,9 +357,9 @@ async def handle_stars_balance_cb(callback: CallbackQuery, state: FSMContext):
     """Профиль и пополнение звезд (инлайн)"""
     await state.clear()
     user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
-    # keyboard = get_stars_topup_inline_keyboard(user_lang)
-    # msg_text = t("stars_balance_msg", lang=user_lang, stars=user.stars)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+
     try:
         await callback.message.edit_text(
             text=t("stars_balance_msg", lang=user_lang, stars=user.stars),
@@ -447,8 +378,9 @@ async def handle_stars_balance_cb(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("buy_stars_"))
 async def handle_buy_stars_callback(callback: CallbackQuery):
     """Обрабатывает выбор количества звезд для покупки через Telegram Stars"""
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     action = callback.data.split("_")[2]
 

@@ -22,18 +22,13 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     :param user_id: Telegram ID пользователя
     :return: Кортеж (список username, общее количество)
     """
-    try:
-        records = (Group
-                   .select(Group.username)
-                   .where(Group.user_id == user_id)
-                   .order_by(Group.date_added.desc()))
+    records = (Group
+               .select(Group.username_group)
+               .where(Group.user_id == user_id)
+               .order_by(Group.date_added.desc()))
 
-        usernames = [row.username for row in records]
-        return usernames, len(usernames)
-
-    except Exception as e:
-        logger.exception(f"Ошибка при получении каналов пользователя {user_id}: {e}")
-        return [], 0
+    usernames = [row.username for row in records]
+    return usernames, len(usernames)
 
 
 class Group(database.Model):
@@ -95,7 +90,7 @@ def dell_group(user_id: int, username: str):
     """
     try:
         (
-            Group.delete().where(Group.user_id == user_id, Group.username == username).execute()
+            Group.delete().where(Group.user_id == user_id, Group.username_group == username).execute()
         )
         return True
     except Exception as e:
