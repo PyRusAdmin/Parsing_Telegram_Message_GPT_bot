@@ -31,7 +31,7 @@ class PersonalTracking(database.Model):
     target_link = CharField()  # Отслеживаемая ссылка Telegram
     created_group_link = CharField(null=True)  # Группа в которую будут отправляться сообщения
     created_group_id = BigIntegerField(null=True)  # Telegram-id группы которую сознал аккаунт для пересылки сообщений
-    keywords = TextField()  # Ключевые слова через запятую
+    # keywords = TextField()  # Ключевые слова через запятую
     last_changed_at = DateTimeField(default=datetime.now)  # Время последнего изменения
     created_at = DateTimeField(default=datetime.now)  # Дата создания
     personal_account = CharField(default="", null=True)  # Добавить персональный аккаунт для отслеживания
@@ -626,7 +626,15 @@ def get_user_keywords_with_id(user_id: int) -> list[Keywords]:
 
 
 def add_user_keywords(user_id: int, keywords: list[str]) -> None:
-    """Безопасно добавляет список ключевых слов, пропуская дубликаты."""
+    """
+    Безопасно добавляет список ключевых слов в базу данных data/bot.db, пропуская дубликаты, если они есть.
+    В базе данных могут быть одинаковые ключевые слова, но не у одного пользователя. Например, 1 пользователь ввел слово
+    'Ищу' и у второго пользователя может быть 'Ищу', но не может быть у 1 пользователя 2 слова 'Ищу' в базе данных
+    data/bot.db в таблице keywords.
+    :param user_id: ID пользователя Telegram.
+    :param keywords: Список ключевых слов, которые будут отслеживаться в Группе / канале Telegram.
+    :return None: Нечего не возвращаем, так как записываем в базу данных
+    """
     for kw in keywords:
         Keywords.get_or_create(user_id=user_id, user_keyword=kw)
 

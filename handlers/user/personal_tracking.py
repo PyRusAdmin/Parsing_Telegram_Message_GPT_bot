@@ -25,7 +25,7 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity
 from core.config import API_ID, API_HASH, mobile_device
 from database.database import (
-    write_account_to_db, PersonalTracking, PersonalTrackingStats, get_user_accounts, getting_account
+    write_account_to_db, PersonalTracking, PersonalTrackingStats, get_user_accounts, getting_account, add_user_keywords
 )
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
@@ -436,12 +436,22 @@ async def process_target_link_input(message: Message, state: FSMContext):
 @router.message(PersonalTrackingState.waiting_for_keywords)
 async def process_keywords_input(message: Message, state: FSMContext):
     """Обрабатывает ввод ключевых слов и сохраняет персональное отслеживание"""
-    keywords_text = message.text.strip()
+
     data = await state.get_data()
 
     target_link = data.get("target_link")
     invite_link = data.get("invite_link")
     created_group_id = data.get("created_group_id")
+
+    keywords_text = message.text.strip()
+    keywords_list = [
+        keyword.strip()
+        for keyword in keywords_text.split('\n')
+        if keyword.strip()
+    ]
+
+    # Безопасно добавляет список ключевых слов, пропуская дубликаты.
+    add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
     # Сохраняем запись в таблицу personal_tracking
     rec = PersonalTracking.create(
@@ -449,7 +459,7 @@ async def process_keywords_input(message: Message, state: FSMContext):
         target_link=target_link,
         created_group_link=invite_link,
         created_group_id=created_group_id,
-        keywords=keywords_text,
+
         last_changed_at=datetime.now(),
         personal_account=data.get("personal_account", ""),
         shared_account=data.get("shared_account", "")
