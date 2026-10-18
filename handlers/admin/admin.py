@@ -17,13 +17,8 @@ from states.states import CategoryMethod
 router = Router(name=__name__)
 
 
-async def export_questions_internal(message: Message, user_id: int):
+async def export_questions_internal(message: Message):
     """Экспортирует вопросы и ответы из базы данных в CSV-файл"""
-    # try:
-    #     user = User.get(User.user_id == user_id)
-    #     user_lang = user.language if user.language != "unset" else "ru"
-    # except Exception:
-    #     user_lang = "ru"
 
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -55,21 +50,13 @@ async def export_questions_internal(message: Message, user_id: int):
         await message.answer(t("export_error", lang=user_lang, error=str(e)))
 
 
-# @router.message((F.text == t('export_questions_button', 'ru')) | (F.text == t('export_questions_button', 'en')))
-# async def export_questions(message: Message):
-#     """
-#     Экспортирует вопросы и ответы из базы данных в CSV файл (текст).
-#     """
-#     await export_questions_internal(message, message.from_user.id)
-
-
 @router.callback_query(F.data == "admin_export_questions")
 async def export_questions_cb(callback: CallbackQuery):
     """
     Экспортирует вопросы и ответы из базы данных в CSV файл (инлайн).
     """
     await callback.answer()
-    await export_questions_internal(callback.message, callback.from_user.id)
+    await export_questions_internal(callback.message)
 
 
 async def show_admin_panel(message: Message, user_id: int, state: FSMContext, edit: bool = False):
@@ -96,12 +83,6 @@ async def show_admin_panel(message: Message, user_id: int, state: FSMContext, ed
         await message.answer(text=text, parse_mode="HTML", reply_markup=kb)
     except Exception as e:
         logger.exception(e)
-
-
-@router.message((F.text == t('admin_panel_button', 'ru')) | (F.text == t('admin_panel_button', 'en')))
-async def admin_panel(message: Message, state: FSMContext):
-    """Обработчик команды Панель администратора (текст)"""
-    await show_admin_panel(message, message.from_user.id, state, edit=False)
 
 
 @router.callback_query(F.data == "menu_admin_panel")
