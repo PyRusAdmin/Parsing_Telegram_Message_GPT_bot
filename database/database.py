@@ -195,7 +195,7 @@ class UserAccountsTable(database.Model):
 
     class Meta:
         """Метаданные таблицы аккаунтов пользователей"""
-        # database = db
+
         table_name = f"user_accounts_table"  # Динамическое имя таблицы
 
 
@@ -267,7 +267,7 @@ class Account(database.Model):
 
     class Meta:
         """Метаданные таблицы рабочих аккаунтов"""
-        # database = db
+
         table_name = 'account'
 
 
@@ -278,7 +278,7 @@ class AccountFree(database.Model):
 
     class Meta:
         """Метаданные таблицы свободных аккаунтов"""
-        # database = db
+
         table_name = 'account_free'
 
 
@@ -387,34 +387,39 @@ class User(database.Model):
     last_free_download_at = DateTimeField(null=True)
 
 
-def create_group_model(user_id):
+"""
+Работа с группами пользователей, которые пользователи добавили в бота (в базу данных, для дальнейшего отслеживания ключевых слов)
+"""
+
+
+def add_user_group(user_id: int, group: list[str]) -> None:
     """
-    Динамически создаёт модель Peewee для хранения технической группы пользователя.
-
-    Модель используется для сохранения одного Telegram-чата (группы или канала),
-    куда бот будет пересылать найденные сообщения, содержащие ключевые слова.
-    Создаётся отдельная таблица для каждого пользователя по шаблону 'group_<user_id>'.
-
-    :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-    :return peewee.Model: Класс модели Peewee с полями `id` и `user_group`.
-
-    Model Fields:
-        id (AutoField):
-            Автоинкрементный первичный ключ.
-        user_group (CharField):
-            Уникальное имя технической группы (например, @my_alerts_channel).
+    Безопасно добавляет список групп/каналов в базу данных data/bot.db, пропуская дубликаты, если они есть.
+    В базе данных могут быть одинаковые username групп, но не у одного пользователя. Например, @python_jobs
+    может быть добавлен несколькими пользователями, но не может быть дважды у одного пользователя в таблице Groups.
+    :param user_id: ID пользователя Telegram.
+    :param group: Список username групп/каналов, которые будут отслеживаться.
+    :return None: Нечего не возвращаем, так как записываем в базу данных
     """
+    for gr in group:
+        Group.get_or_create(user_id=user_id, user_keyword=gr)
 
-    class Group(database.Model):
-        """Динамическая модель для хранения технической группы пользователя"""
-        id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
-        user_group = CharField(unique=True)  # Поле для хранения технической группы
 
-        class Meta:
-            """Метаданные персональной таблицы целевой группы"""
-            table_name = f"{user_id}_group"  # Имя таблицы
+class Group(database.Model):
+    """Динамическая модель для хранения технической группы пользователя"""
+    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
+    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
+    user_group = CharField(unique=True)  # Поле для хранения технической группы
+    date_added = DateTimeField(default=datetime.now)  # Дата добавления
 
-    return Group  # Возвращаем класс модели
+    class Meta:
+        """Метаданные персональной таблицы целевой группы"""
+        table_name = "group"  # Имя таблицы с группами
+        # Уникальная связка: один пользователь не может добавить одну группу дважды,
+        # но разные пользователи могут использовать одинаковые группы.
+        indexes = (
+            (("user_id", "user_group"), True),
+        )
 
 
 """
@@ -701,6 +706,10 @@ def init_database():
     # Создаем таблицу с ключевыми словами от пользователей, для парсинга сообщений в Telegram
     database.create_tables([Keywords], safe=True)
     logger.info("✅ Таблица (keywords) для Ключевых слов создана.")
+
+    # Создаем таблицу с группами / каналами от пользователей, для последующего парсинга сообщений в Telegram
+    database.create_tables([Group], safe=True)
+    logger.info("✅ Таблица (group) для Групп / каналов слов создана.")
 
     # Проверка наличия колонок stars и last_free_download_at в таблице user (SQLite-миграция)
     cursor = database.cursor()  #

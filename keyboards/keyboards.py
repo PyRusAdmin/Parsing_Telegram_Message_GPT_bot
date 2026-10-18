@@ -295,21 +295,21 @@ def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
-    """
-    Инлайн-клавиатура для подключения группы сообщений
-    """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
-                                     callback_data="group_connect")
-            ],
-            [
-                back_button(lang)  # Кнопка ⬅️ Назад
-            ]
-        ]
-    )
+# def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
+#     """
+#     Инлайн-клавиатура для подключения группы сообщений
+#     """
+#     return InlineKeyboardMarkup(
+#         inline_keyboard=[
+#             [
+#                 InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
+#                                      callback_data="group_connect")
+#             ],
+#             [
+#                 back_button(lang)  # Кнопка ⬅️ Назад
+#             ]
+#         ]
+#     )
 
 
 def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineKeyboardMarkup:

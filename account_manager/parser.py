@@ -16,7 +16,7 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
 from database.database import (
-    create_group_model, TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups, User, dell_group,
+    TelegramGroup, get_user_accounts, get_user_channel_usernames, Groups, User, dell_group,
     get_user_keywords, get_keywords_count
 )
 from keyboards.keyboards import menu_launch_tracking_keyboard, connect_grup_keyboard_tech

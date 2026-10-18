@@ -70,6 +70,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
         )
         await state.clear()
         return
+
     # Безопасно добавляет список ключевых слов, пропуская дубликаты.
     add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
