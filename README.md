@@ -1,5 +1,17 @@
 ### 📡 Telegram бот для отслеживания ключевых слов и AI-поиска (https://t.me/AutoParseAlertBot)
 
+<p align="center">
+  <a href="README_en.md">English</a> •
+  <a href="README_zh.md">中文 (简体)</a> •
+  <a href="README_hi.md">हिन्दी</a> •
+  <a href="README_es.md">Español</a> •
+  <a href="README_fr.md">Français</a> •
+  <a href="README_ar.md">العربية</a> •
+  <a href="README_bn.md">বাংলা</a> •
+  <a href="README_pt.md">Português</a> •
+  <b>Русский</b>
+</p>
+
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Aiogram](https://img.shields.io/badge/Aiogram-3.x-orange.svg)](https://docs.aiogram.dev/)
 [![Telethon](https://img.shields.io/badge/Telethon-1.x-blueviolet.svg)](https://docs.telethon.dev/)
