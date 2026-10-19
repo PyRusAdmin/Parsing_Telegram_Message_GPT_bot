@@ -5,7 +5,7 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile, CallbackQuery
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
 from database.database import getting_account, User, get_all_questions
@@ -341,7 +341,7 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
         user = User.get(User.user_id == message.from_user.id)
         records = getting_account()  # Получаем все аккаунты в базе данных
         logger.info(f"Получено аккаунтов: {len(records)}")
-        await message.answer(t("checking_accounts_start", lang=user.language, count=len(records)))
+        await message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
         for session_name in records:
             logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
             # ✅ Проверка аккаунтов на валидность
@@ -351,7 +351,7 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
             )
             await checker.verify_account(session_name)
         await message.answer(
-            t("checking_accounts_complete", lang=user.language)
+            t("checking_accounts_complete", lang=user_lang)
         )
     except Exception as e:
         logger.exception(e)
@@ -363,7 +363,7 @@ async def checking_group_for_ai_db(message: Message, state: FSMContext):
     await state.set_state(CategoryMethod.waiting_for_method)
     user = User.get(User.user_id == message.from_user.id)
     await message.answer(
-        t("ai_category_select_method", lang=user.language),
-        reply_markup=category_method_keyboard(lang=user.language),
+        t("ai_category_select_method", lang=user_lang),
+        reply_markup=category_method_keyboard(lang=user_lang),
         parse_mode="HTML"
     )

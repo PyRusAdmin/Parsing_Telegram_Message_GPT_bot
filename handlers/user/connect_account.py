@@ -4,7 +4,7 @@ from pathlib import Path
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
@@ -112,7 +112,8 @@ async def connect_account_internal(message: Message, user_tg, state: FSMContext)
             "language": "unset"
         }
     )
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
         text=t("connect_account", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")

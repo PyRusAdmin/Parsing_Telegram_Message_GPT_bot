@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from asgiref.sync import sync_to_async
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from peewee import (
     SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, CharField, DoesNotExist, fn
 )
@@ -20,10 +20,8 @@ class PersonalTracking(database.Model):
 
     id = AutoField()  # ID записи в базе данных
     user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
-    # target_link = CharField()  # Отслеживаемая ссылка Telegram
     created_group_link = CharField(null=True)  # Группа в которую будут отправляться сообщения
     created_group_id = BigIntegerField(null=True)  # Telegram-id группы которую сознал аккаунт для пересылки сообщений
-    # keywords = TextField()  # Ключевые слова через запятую
     last_changed_at = DateTimeField(default=datetime.now)  # Время последнего изменения
     created_at = DateTimeField(default=datetime.now)  # Дата создания
     personal_account = CharField(default="", null=True)  # Добавить персональный аккаунт для отслеживания
@@ -477,3 +475,6 @@ def get_session_count(user_id: int) -> int:
     except Exception as e:
         logger.exception(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
         return 0
+
+
+

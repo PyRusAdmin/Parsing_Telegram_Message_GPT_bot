@@ -4,7 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
     CallbackQuery, Message
 )
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.group_user_database import add_user_group
 from handlers.user_language import determines_user_language

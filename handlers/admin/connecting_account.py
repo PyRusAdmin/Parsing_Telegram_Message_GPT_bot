@@ -4,7 +4,7 @@ from pathlib import Path
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
@@ -54,7 +54,7 @@ async def receive_session_file(message: Message, state: FSMContext):
 
     # ✅ Проверяем расширение
     if not document.file_name.endswith('.session'):
-        await message.answer(t("connect_account_invalid_file", lang=user.language))
+        await message.answer(t("connect_account_invalid_file", lang=user_lang))
         return
 
     # ✅ Получаем данные из состояния
@@ -62,7 +62,7 @@ async def receive_session_file(message: Message, state: FSMContext):
 
     if len(data.get("received_files", [])) >= MAX_SESSIONS_PER_BATCH:
         await message.answer(
-            t("connect_account_limit_reached", lang=user.language, max=MAX_SESSIONS_PER_BATCH)
+            t("connect_account_limit_reached", lang=user_lang, max=MAX_SESSIONS_PER_BATCH)
         )
         return
 
@@ -79,7 +79,7 @@ async def receive_session_file(message: Message, state: FSMContext):
     total = len(received_files)
     if total > 1:
         await message.answer(
-            t("connect_account_file_queued", lang=user.language, filename=document.file_name, total=total))
+            t("connect_account_file_queued", lang=user_lang, filename=document.file_name, total=total))
     try:
         # ✅ Создаём папку для временного хранения
         sessions_dir = creates_temporary_folder_for_accounts()
@@ -116,7 +116,7 @@ async def receive_session_file(message: Message, state: FSMContext):
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
             # ✅ Отправляем результат для этого файла
             await message.answer(
-                t("connect_account_success", lang=user.language, filename=safe_file_name, phone=phone, name=first_name),
+                t("connect_account_success", lang=user_lang, filename=safe_file_name, phone=phone, name=first_name),
                 parse_mode="HTML"
             )
         else:
@@ -128,7 +128,7 @@ async def receive_session_file(message: Message, state: FSMContext):
                     logger.warning(f"Could not delete session file {local_file_path}: {e}")
             fail_count += 1
             logger.warning(f"❌ Сессия не валидна: {safe_file_name}")
-            await message.answer(t("connect_account_failed", lang=user.language, filename=safe_file_name),
+            await message.answer(t("connect_account_failed", lang=user_lang, filename=safe_file_name),
                                  parse_mode="HTML")
 
     except Exception as e:
@@ -139,7 +139,7 @@ async def receive_session_file(message: Message, state: FSMContext):
                 local_file_path.unlink()
             except Exception as pe:
                 logger.warning(f"Could not delete session file {local_file_path}: {pe}")
-        await message.answer(t("connect_account_error", lang=user.language, filename=safe_file_name), parse_mode="HTML")
+        await message.answer(t("connect_account_error", lang=user_lang, filename=safe_file_name), parse_mode="HTML")
 
     finally:
         # ✅ Обновляем состояние: файл обработан
@@ -151,9 +151,9 @@ async def receive_session_file(message: Message, state: FSMContext):
         )
 
         await message.answer(
-            t("connect_account_processing_done", lang=user.language),
+            t("connect_account_processing_done", lang=user_lang),
             parse_mode="HTML",
-            reply_markup=back_keyboard(lang=user.language)
+            reply_markup=back_keyboard(lang=user_lang)
         )
 
     # ✅ Очищаем очередь в состоянии

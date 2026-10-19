@@ -1,4 +1,4 @@
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.database import database, Account, AccountFree, UserAccountsTable, TelegramGroup, Question, User, \
     PersonalTracking, PersonalTrackingStats

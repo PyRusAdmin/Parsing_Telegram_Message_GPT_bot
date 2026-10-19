@@ -8,7 +8,7 @@ from asgiref.sync import sync_to_async
 from g4f.client import Client
 import g4f.errors
 from groq import AsyncGroq
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from openai import AsyncOpenAI
 
 from ai.ai import category_assignment
@@ -24,8 +24,8 @@ router = Router(name=__name__)
 async def show_category_method_menu(message: Message, user_id: int, state: FSMContext, edit: bool = False):
     """Отображает меню выбора метода присвоения категорий"""
     await state.set_state(CategoryMethod.waiting_for_method)
-    user = User.get(User.user_id == user_id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     text = t("ai_category_select_method", lang=user_lang)
     kb = category_method_keyboard(lang=user_lang)
 
@@ -96,8 +96,8 @@ async def get_best_g4f_model(client: Client) -> str:
 @router.message(StateFilter(CategoryMethod.waiting_for_method))
 async def process_category_method_choice(message: Message, state: FSMContext):
     """Обрабатывает выбор метода присвоения категорий"""
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     if message.text == t('back_button', lang=user_lang):
         await state.clear()
@@ -156,8 +156,8 @@ async def process_category_method_choice(message: Message, state: FSMContext):
 async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает выбор метода присвоения категорий (инлайн)"""
     method = callback.data.split("_", 2)[2]
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await callback.answer()
 
     if method == "back":
@@ -204,8 +204,8 @@ async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMC
 
 async def assign_categories(message: Message, client, model):
     """Универсальная функция присвоения категорий (любой AI клиент)"""
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     status_msg = await message.answer(t("ai_category_processing", lang=user_lang, total=0))
 
@@ -258,9 +258,8 @@ async def assign_categories(message: Message, client, model):
 @router.message((F.text == t('get_database_button', 'ru')) | (F.text == t('get_database_button', 'en')))
 async def get_groups_without_category_message(message: Message):
     """Информация о группах без категории"""
-    # TODO Сделать единое определение языка пользователя во всем проекте
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     def _count():
         """Подсчитывает количество групп без присвоенной категории в БД"""

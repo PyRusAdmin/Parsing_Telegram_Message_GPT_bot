@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import sys
 
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 # Путь к корню проекта
 project_root = os.path.dirname(os.path.abspath(__file__))

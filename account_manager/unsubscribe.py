@@ -1,4 +1,4 @@
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.errors import (
     UsernameInvalidError, UsernameNotOccupiedError, UserNotParticipantError, ChannelPrivateError, FloodWaitError
 )

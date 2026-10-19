@@ -1,6 +1,6 @@
 import random
 
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -26,7 +26,7 @@ async def find_session_file(user_id: int, user, message):
         if not accounts:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
             await message.answer(
-                t("no_accounts", lang=user.language),
+                t("no_accounts", lang=user_lang),
                 reply_markup=menu_launch_tracking_keyboard()
             )
             return None
@@ -44,7 +44,7 @@ async def find_session_file(user_id: int, user, message):
             delete_account_from_user_table(user_id, session_string)
             await delete_account_from_db(session_string)
             await message.answer(
-                t("session_invalid", lang=user.language, phone=phone),
+                t("session_invalid", lang=user_lang, phone=phone),
                 reply_markup=menu_launch_tracking_keyboard()
             )
 
@@ -61,7 +61,7 @@ async def find_session_file(user_id: int, user, message):
     except Exception as e:
         logger.exception(f"❌ Ошибка получения аккаунта из БД для пользователя {user_id}: {e}")
         await message.answer(
-            t("account_fetch_error", lang=user.language),
+            t("account_fetch_error", lang=user_lang),
             reply_markup=menu_launch_tracking_keyboard()
         )
         return None

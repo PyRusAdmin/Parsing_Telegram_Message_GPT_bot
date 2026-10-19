@@ -2,7 +2,7 @@ import os
 
 from aiogram import Router
 from asgiref.sync import sync_to_async
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from openai import OpenAI
 
 from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES

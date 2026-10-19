@@ -5,7 +5,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file

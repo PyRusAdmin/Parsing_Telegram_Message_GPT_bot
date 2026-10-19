@@ -9,7 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
     CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 )
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from peewee import fn
 from telethon import TelegramClient
 from telethon.errors import (

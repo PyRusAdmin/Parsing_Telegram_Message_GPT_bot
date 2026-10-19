@@ -4,7 +4,7 @@ import os
 import random
 from pathlib import Path
 
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import (
     AuthKeyDuplicatedError, TimedOutError, PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,

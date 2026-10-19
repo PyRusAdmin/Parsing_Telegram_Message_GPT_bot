@@ -1,7 +1,7 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.database import User
 from keyboards.keyboards import menu_launch_tracking_keyboard
@@ -14,8 +14,8 @@ router = Router(name=__name__)
 async def stop_tracking_internal(message: Message, user_id: int, state: FSMContext):
     """Выполняет остановку процесса отслеживания сообщений для пользователя"""
     await state.clear()
-    user = User.get(User.user_id == user_id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     logger.info(f"Пользователь {user_id} нажал кнопку остановки отслеживания")
     await stop_tracking(user_id=user_id, message=message)

@@ -6,7 +6,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from groq import AsyncGroq
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.utilit import choosing_random_ai_model
 from core.config import GROQ_API_KEY, ADMIN_USER_ID

@@ -1,9 +1,12 @@
 from datetime import datetime
 
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from peewee import IntegerField, AutoField, DateTimeField, CharField
 
 from database.database import database
+
+from keyboards.keyboards import menu_launch_tracking_keyboard
+from locales.locales import t
 
 """
 Работа с группами пользователей, которые пользователи добавили в бота (в базу данных, для дальнейшего отслеживания ключевых слов)
@@ -11,22 +14,6 @@ from database.database import database
 Работа с группами пользователя для отслеживания ключевых слов. Все данные пользователей хранится в одной таблице, 
 для удобства масштабирования
 """
-
-
-def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
-    """
-    Получает все username каналов/групп пользователя по user_id.
-
-    :param user_id: Telegram ID пользователя
-    :return: Кортеж (список username, общее количество)
-    """
-    records = (Group
-               .select(Group.username_group)
-               .where(Group.user_id == user_id)
-               .order_by(Group.date_added.desc()))
-
-    usernames = [row.username for row in records]
-    return usernames, len(usernames)
 
 
 class Group(database.Model):
@@ -44,6 +31,22 @@ class Group(database.Model):
         indexes = (
             (("user_id", "username_group"), True),  # один пользователь не добавит один канал дважды
         )
+
+
+def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
+    """
+    Получает все username каналов/групп пользователя по user_id.
+
+    :param user_id: Telegram ID пользователя
+    :return: Кортеж (список username, общее количество)
+    """
+    records = (Group
+               .select(Group.username_group)
+               .where(Group.user_id == user_id)
+               .order_by(Group.date_added.desc()))
+
+    usernames = [row.username for row in records]
+    return usernames, len(usernames)
 
 
 def get_tracked_channels_count(user_id: int) -> int:
@@ -93,3 +96,19 @@ def dell_group(user_id: int, username: str):
         return True
     except Exception as e:
         logger.exception(e)
+
+
+async def get_user_channels_or_notify(user_id: int, user, message, client):
+    """Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии"""
+    channels = [group.username for group in Group.select().where(Group.user_id == user_id)]
+
+    if not channels:
+        logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
+        await client.disconnect()
+        await message.answer(
+            t("tracking_launch_error", lang=user_lang),
+            reply_markup=menu_launch_tracking_keyboard()
+        )
+        return None
+
+    return channels

@@ -1,7 +1,7 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.keywords_user_database import add_user_keywords, get_keywords_count
 from handlers.user_language import determines_user_language

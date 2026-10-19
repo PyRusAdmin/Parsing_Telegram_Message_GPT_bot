@@ -591,12 +591,12 @@ async def join_required_channels(client, user_id, message, already_subscribed):
 
     logger.info(f"📊 Всего каналов для подписки: {total_count}, уже подписан на: {len(already_subscribed)}")
     if total_count == 0:
-        await message.answer(t("no_channels_to_track", lang=user.language))
+        await message.answer(t("no_channels_to_track", lang=user_lang))
         return
 
     if len(list(db_channels - already_subscribed)) > 500:
         await message.answer(
-            t("too_many_channels", lang=user.language, total=len(list(db_channels - already_subscribed)), limit=500)
+            t("too_many_channels", lang=user_lang, total=len(list(db_channels - already_subscribed)), limit=500)
         )
 
     for channel in list(db_channels - already_subscribed)[:500]:  # Ограничиваем до 500 записей
@@ -655,7 +655,7 @@ async def join_required_channels(client, user_id, message, already_subscribed):
 
             if is_subscribed:
                 await message.answer(
-                    t("channel_subscribed", lang=user.language, channel=channel, delay=random_delay)
+                    t("channel_subscribed", lang=user_lang, channel=channel, delay=random_delay)
                 )
                 await asyncio.sleep(random_delay)
             else:
@@ -717,20 +717,7 @@ async def ensure_joined_target_group(client, message, user_id: int):
     return target_group_id
 
 
-async def get_user_channels_or_notify(user_id: int, user, message, client):
-    """Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии"""
-    channels = [group.username for group in Group.select().where(Group.user_id == user_id)]
 
-    if not channels:
-        logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
-        await client.disconnect()
-        await message.answer(
-            t("tracking_launch_error", lang=user.language),
-            reply_markup=menu_launch_tracking_keyboard()
-        )
-        return None
-
-    return channels
 
 
 async def filter_messages(message, user_id, user):
@@ -758,7 +745,7 @@ async def filter_messages(message, user_id, user):
         if not accounts:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
             await message.answer(
-                t("no_accounts", lang=user.language),
+                t("no_accounts", lang=user_lang),
                 reply_markup=menu_launch_tracking_keyboard()
             )
             return None
@@ -793,7 +780,7 @@ async def filter_messages(message, user_id, user):
             if not groups:
                 logger.warning("❌ Целевая группа не задана в БД")
                 await message.answer(
-                    t("target_group_not_configured", lang=user.language),
+                    t("target_group_not_configured", lang=user_lang),
                     reply_markup=connect_grup_keyboard_tech()
                 )
                 return
@@ -811,7 +798,7 @@ async def filter_messages(message, user_id, user):
             except Exception as e:
                 logger.exception(f"❌ Не удалось получить целевую группу: {e}")
                 await message.answer(
-                    t("target_group_fetch_error", lang=user.language),
+                    t("target_group_fetch_error", lang=user_lang),
                     reply_markup=connect_grup_keyboard_tech()
                 )
                 return
@@ -832,7 +819,7 @@ async def filter_messages(message, user_id, user):
 
             logger.info("👂 Бот слушает новые сообщения...")
             await message.answer(
-                text=t("bot_listening", lang=user.language),
+                text=t("bot_listening", lang=user_lang),
                 reply_markup=menu_launch_tracking_keyboard()
             )
 
@@ -840,7 +827,7 @@ async def filter_messages(message, user_id, user):
             await stop_event.wait()
 
             logger.info(f"🛑 Прослушивание остановлено для user_id={user_id}")
-            await message.answer(t("tracking_stopped", lang=user.language))
+            await message.answer(t("tracking_stopped", lang=user_lang))
 
         # === Функция подписки — работает параллельно в фоне ===
         async def subscribe():
@@ -893,7 +880,7 @@ async def stop_tracking(user_id, message):
     if user_id not in stop_flags:
         logger.warning(f"⚠️ Отслеживание для user_id={user_id} не активно или уже остановлено.")
         await message.answer(
-            t("tracking_not_active", lang=user.language),
+            t("tracking_not_active", lang=user_lang),
             reply_markup=menu_launch_tracking_keyboard()
         )
         return
@@ -904,6 +891,6 @@ async def stop_tracking(user_id, message):
 
     logger.info(f"✅ Флаг остановки установлен для user_id={user_id}")
     await message.answer(
-        t("tracking_stop_requested", lang=user.language),
+        t("tracking_stop_requested", lang=user_lang),
         reply_markup=menu_launch_tracking_keyboard()
     )

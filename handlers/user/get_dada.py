@@ -2,7 +2,7 @@ import os
 
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 

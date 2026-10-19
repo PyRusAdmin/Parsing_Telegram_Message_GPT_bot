@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     BufferedInputFile, Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
 )
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError, fn
@@ -252,8 +252,8 @@ async def check_and_start_download(message: Message, state: FSMContext, download
     effective_user_id = user_id if user_id is not None else message.from_user.id
     logger.info(
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
-    user = User.get(User.user_id == effective_user_id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     can_dl, remaining_sec = can_user_download_free(user)
     if can_dl:
@@ -285,8 +285,8 @@ async def check_and_start_download(message: Message, state: FSMContext, download
 async def perform_download(message: Message, user_id: int, download_type: str, category: str = None):
     """Формирует и отправляет пользователю файл выгрузки базы данных"""
     logger.info(f"📥 Начало perform_download для user_id={user_id}, download_type={download_type}, category={category}")
-    user = User.get(User.user_id == user_id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     # Оповещаем пользователя о начале генерации
     status_msg = await message.answer(t("generating_database_wait", lang=user_lang))
@@ -516,8 +516,8 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     Обрабатывает запрос пользователя на получение базы Telegram-групп и каналов.
     """
     await state.clear()
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     await message.answer(
         text=t("get_database_menu", lang=user_lang),
@@ -530,8 +530,8 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
 async def handle_get_database_menu_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик инлайн-кнопки Получить базу"""
     await state.clear()
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     try:
         await callback.message.edit_text(
@@ -553,8 +553,8 @@ async def start_category_export(message: Message, state: FSMContext):
     """
     Запускает процесс выбора категории для экспорта.
     """
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
         t("select_category_prompt", lang=user_lang),
         reply_markup=get_categories_keyboard(lang=user_lang)
@@ -565,8 +565,8 @@ async def start_category_export(message: Message, state: FSMContext):
 @router.callback_query(F.data == "db_export_category_menu")
 async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
     """Запускает выбор категории через инлайн-кнопку"""
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     try:
         await callback.message.edit_text(
             t("select_category_prompt", lang=user_lang),
@@ -584,8 +584,8 @@ async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("cat_sel:"))
 async def handle_category_callback(callback: CallbackQuery, state: FSMContext):
     """Обработчик нажатия на инлайн-кнопку категории"""
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     cat_code = callback.data.split(":", 1)[1]
 
     if cat_code == "back":
@@ -625,8 +625,8 @@ async def handle_category_selection(message: Message, state: FSMContext):
     """
     Обрабатывает выбор категории и запускает проверку лимита/скачивание (текст).
     """
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     selected_category = message.text.strip()
 
     if selected_category == t('back_button', lang=user_lang):
@@ -653,8 +653,8 @@ async def handle_category_selection(message: Message, state: FSMContext):
 async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает списание звезд с баланса для оплаты выгрузки базы"""
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     if user.stars < 5:
         logger.warning(f"Недостаточно звезд у {callback.from_user.id} (баланс: {user.stars})")
@@ -680,8 +680,8 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
 async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
     """Формирует инвойс на прямую оплату выгрузки базы звездами Telegram Stars"""
     logger.info(f"⭐ Пользователь {callback.from_user.id} выбрал прямую оплату 5 звезд")
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     await callback.message.answer_invoice(
         title=t("stars_invoice_dl_title", lang=user_lang),
@@ -698,8 +698,8 @@ async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
 async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
     """Отменяет выбор оплаты выгрузки базы данных"""
     logger.info(f"❌ Пользователь {callback.from_user.id} отменил оплату")
-    user = User.get(User.user_id == callback.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     await callback.message.edit_text(t("action_cancelled", lang=user_lang))
     await state.clear()
@@ -718,8 +718,8 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
 async def process_successful_payment(message: Message, state: FSMContext):
     """Обрабатывает успешный платеж за выгрузку базы данных или покупку звезд"""
     logger.info(f"⭐ Получен successful_payment от {message.from_user.id}")
-    user = User.get(User.user_id == message.from_user.id)
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     payment_info = message.successful_payment
     payload = payment_info.invoice_payload

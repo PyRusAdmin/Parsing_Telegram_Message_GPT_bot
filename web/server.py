@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from g4f.client import Client
 from groq import AsyncGroq
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
-from loguru import logger
+from loguru import logger  # https://github.com/Delgan/loguru
 from openai import AsyncOpenAI
 from telethon.errors import (
     AuthKeyUnregisteredError, FloodWaitError, UsernameInvalidError
@@ -625,7 +625,8 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
                 await client.disconnect()
 
                 # Отправьте уведомление через бота
-                user_lang = user.language if user.language != "unset" else "ru"
+                # Определяем язык пользователя, который пользователь выбрал при старте бота
+                user_lang = determines_user_language(message_or_callback=message.from_user.id)
                 await mock_msg.answer(
                     text=t("session_connected_success",
                            lang=user_lang,
@@ -698,7 +699,8 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
     user = User.get_or_none(User.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     try:
         # TODO Сделать проверку на валидность ссылки
@@ -791,7 +793,8 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
         # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
         try:
             user = User.get_or_none(User.user_id == user_data["id"])
-            user_lang = user.language if user.language != "unset" else "ru"
+            # Определяем язык пользователя, который пользователь выбрал при старте бота
+            user_lang = determines_user_language(message_or_callback=message.from_user.id)
             excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
             filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             excel_file = BufferedInputFile(excel_bytes, filename=filename)
@@ -889,7 +892,8 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
     groups = list(TelegramGroup.select().where(
         (TelegramGroup.id.in_(ids)) | (TelegramGroup.telegram_id.in_(ids))
     ))
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     excel_bytes = create_excel_file(groups, lang=user_lang)
 
     filename = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -972,7 +976,8 @@ async def download_database(
     groups = list(query)
 
     # Создать Excel в памяти
-    user_lang = user.language if user.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     excel_bytes = create_excel_file(groups, lang=user_lang)
 
     filename = f"db_export_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
