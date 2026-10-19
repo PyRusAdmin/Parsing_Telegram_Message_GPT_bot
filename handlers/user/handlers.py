@@ -10,7 +10,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from database.database import (
-    User, getting_number_records_database
+    User, getting_number_records_database, get_session_count
 )
 from database.group_user_database import get_group_count, get_tracked_channels_count, Group
 from database.keywords_user_database import get_keywords_count
@@ -31,8 +31,9 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     """
     version = "0.1.0"
     groups_count = getting_number_records_database()  # Общее число найденных групп
+
     count = get_session_count(user_id=user_tg_id)  # Сессии пользователя
-    group_count = get_group_count(user_id=user_tg_id)  # Группы для пересылки
+    group_count = get_group_count(user_id=user_tg_id)  # Группы для для отслеживания
     get_groups = get_tracked_channels_count(user_id=user_tg_id)  # Отслеживаемые каналы
     keywords_count = get_keywords_count(user_id=user_tg_id)  # Ключевые слова
 
