@@ -50,14 +50,14 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     return usernames, len(usernames)
 
 
-def get_tracked_channels_count(user_id: int) -> int:
-    """
-    Получает количество отслеживаемых каналов для указанного пользователя.
-
-    :param user_id: Telegram ID пользователя
-    :return: Количество отслеживаемых каналов
-    """
-    return Group.select().where(Group.user_id == user_id).count()
+# def get_tracked_channels_count(user_id: int) -> int:
+#     """
+#     Получает количество отслеживаемых каналов для указанного пользователя.
+#
+#     :param user_id: Telegram ID пользователя
+#     :return: Количество отслеживаемых каналов
+#     """
+#     return Group.select().where(Group.user_id == user_id).count()
 
 
 def get_group_count(user_id: int):
