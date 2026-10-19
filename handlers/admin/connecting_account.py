@@ -9,7 +9,7 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH
-from database.database import write_account_to_db, User
+from database.database import write_account_to_db
 from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard

@@ -41,16 +41,18 @@ from core.config import (
 )
 from database.database import (
     Account, TelegramGroup, User, UserAccountsTable,
-    get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_keywords_count, get_session_count,
+    get_all_data_telegram_groups, get_all_questions, get_groups_without_category, get_session_count,
     get_user_accounts, getting_account, getting_number_records_database,
-    write_account_to_user_table, database, get_user_keywords_with_id, Keywords
+    write_account_to_user_table, database
 )
 from database.group_user_database import get_tracked_channels_count, Group
+from database.keywords_user_database import get_keywords_count, get_user_keywords_with_id, Keywords
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
 from handlers.user.pars_ai import (
     can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db, parse_search_input
 )
+from handlers.user_language import determines_user_language
 from locales.locales import t
 from system.dispatcher import bot
 
