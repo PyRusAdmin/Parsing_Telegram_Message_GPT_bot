@@ -21,7 +21,6 @@ def init_database():
                            safe=True)  # Создание таблицы аккаунтов (Аккаунты используются для массового поиска групп / каналов)
     database.create_tables([AccountFree],
                            safe=True)  # Создание таблицы аккаунтов для подключения (Аккаунты, которые используются для парсинга ключевых слов)
-    # database.create_tables([UserAccountsTable], safe=True)  # FIXME удалить, так как не будет использоваться в дальнейшем. Все пользователи а одной таблице
 
     database.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп
     database.create_tables([Question], safe=True)  # Создание таблицы вопросов пользователей для расширения базы знаний

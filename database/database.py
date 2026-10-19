@@ -29,6 +29,7 @@ def get_group_id_with_personal_tracking(user_id):
     return PersonalTracking.select(PersonalTracking.created_group_id).where(
         PersonalTracking.user_id == user_id).scalar()
 
+
 def get_session_count(user_id: int) -> int:
     """
     Подсчитывает количество подключенных персональных аккаунтов пользователя в базе данных.
@@ -41,6 +42,7 @@ def get_session_count(user_id: int) -> int:
         (PersonalTracking.personal_account.is_null(False)) &
         (PersonalTracking.personal_account != '')
     ).count()
+
 
 class PersonalTracking(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
@@ -487,5 +489,3 @@ def migrate_categories_to_lowercase():
 def getting_number_records_database():
     """Получает количество записей в базе данных о найденных группах пользователями"""
     return TelegramGroup.select().count()
-
-
