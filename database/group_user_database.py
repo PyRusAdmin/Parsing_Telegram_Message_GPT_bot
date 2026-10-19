@@ -1,9 +1,7 @@
 from datetime import datetime
 
 from loguru import logger
-from peewee import (
-    IntegerField, AutoField, DateTimeField, CharField
-)
+from peewee import IntegerField, AutoField, DateTimeField, CharField
 
 from database.database import database
 

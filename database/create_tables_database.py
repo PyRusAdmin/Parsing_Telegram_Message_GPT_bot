@@ -1,8 +1,9 @@
 from loguru import logger
 
 from database.database import database, Account, AccountFree, UserAccountsTable, TelegramGroup, Question, User, \
-    PersonalTracking, PersonalTrackingStats, Keywords
+    PersonalTracking, PersonalTrackingStats
 from database.group_user_database import Group
+from database.keywords_user_database import Keywords
 
 """Создает таблицы для базы данных, если ранее небыли созданы"""
 

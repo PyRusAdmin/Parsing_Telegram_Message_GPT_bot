@@ -15,20 +15,12 @@ database = SqliteDatabase(
 )
 
 
-# class BaseModel(Model):
-#     """Базовая модель базы данных SQLite"""
-#
-#     class Meta:
-#         """Метаданные базовой модели базы данных"""
-#         database = db
-
-
 class PersonalTracking(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
 
     id = AutoField()  # ID записи в базе данных
     user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
-    target_link = CharField()  # Отслеживаемая ссылка Telegram
+    # target_link = CharField()  # Отслеживаемая ссылка Telegram
     created_group_link = CharField(null=True)  # Группа в которую будут отправляться сообщения
     created_group_id = BigIntegerField(null=True)  # Telegram-id группы которую сознал аккаунт для пересылки сообщений
     # keywords = TextField()  # Ключевые слова через запятую
@@ -473,25 +465,6 @@ def getting_number_records_database():
     return TelegramGroup.select().count()
 
 
-# def get_target_group_count(user_id: int) -> int:
-#     """
-#     Получает количество технических групп (куда пересылаются уведомления),
-#     подключённых конкретным пользователем.
-#
-#     Ищет записи в таблице `group_{user_id}`.
-#
-#     :param user_id: (int) ID пользователя Telegram.
-#     :return int: Количество записей (обычно 0 или 1, так как группа одна).
-#     """
-#     GroupModel = create_group_model(user_id)
-#
-#     # Убедимся, что таблица существует, иначе count() вызовет ошибку
-#     if not GroupModel.table_exists():
-#         return 0
-#
-#     return GroupModel.select().count()
-
-
 def get_session_count(user_id: int) -> int:
     """
     Подсчитывает количество подключенных аккаунтов пользователя в базе данных.
@@ -504,66 +477,3 @@ def get_session_count(user_id: int) -> int:
     except Exception as e:
         logger.exception(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
         return 0
-
-
-"""Таблица с ключевыми словами пользователей для поиска ключевых слов в группах и каналах"""
-
-
-def get_user_keywords_with_id(user_id: int) -> list[Keywords]:
-    """Возвращает список словарей [{'id': 1, 'keyword': 'слово'}, ...] для API. (Для ВЕБ АПП)"""
-    query = (
-        Keywords.select(Keywords.id, Keywords.user_keyword.alias("keyword"))
-        .where(Keywords.user_id == user_id)
-        .dicts()
-    )
-    return list(query)
-
-
-def add_user_keywords(user_id: int, keywords: list[str]) -> None:
-    """
-    Безопасно добавляет список ключевых слов в базу данных data/bot.db, пропуская дубликаты, если они есть.
-    В базе данных могут быть одинаковые ключевые слова, но не у одного пользователя. Например, 1 пользователь ввел слово
-    'Ищу' и у второго пользователя может быть 'Ищу', но не может быть у 1 пользователя 2 слова 'Ищу' в базе данных
-    data/bot.db в таблице keywords.
-    :param user_id: ID пользователя Telegram.
-    :param keywords: Список ключевых слов, которые будут отслеживаться в Группе / канале Telegram.
-    :return None: Нечего не возвращаем, так как записываем в базу данных
-    """
-    for kw in keywords:
-        Keywords.get_or_create(user_id=user_id, user_keyword=kw)
-
-
-def get_user_keywords(user_id: int) -> list[str]:
-    """Возвращает список ключевых слов (строк) для пользователя."""
-    query = Keywords.select(Keywords.user_keyword).where(Keywords.user_id == user_id)
-    return [row.user_keyword for row in query]
-
-
-def get_keywords_count(user_id: int):
-    """
-    Получение количества ключевых слов для отслеживания
-    :param user_id: Telegram ID пользователя
-    :return int: Количество записей (обычно 0 или 1, так как группа одна).
-    """
-    return Keywords.select().where(Keywords.user_id == user_id).count()
-
-
-class Keywords(database.Model):
-    """
-    Модель для хранения ключевых слов пользователя, для последующего поиска ключевых слов в группах и каналах Telegram
-    """
-
-    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
-    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
-    user_keyword = CharField()  # Поле для хранения ключевого слова для пользователя
-    date_added = DateTimeField(default=datetime.now)  # Дата добавления
-
-    class Meta:
-        """Метаданные персональной таблицы ключевых слов"""
-
-        table_name = "keywords"  # Имя таблицы с ключевыми словами
-        # Уникальная связка: один пользователь не может добавить одно слово дважды,
-        # но разные пользователи могут использовать одинаковые слова.
-        indexes = (
-            (("user_id", "user_keyword"), True),
-        )
