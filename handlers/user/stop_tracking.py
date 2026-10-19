@@ -3,9 +3,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import User
-from keyboards.keyboards import menu_launch_tracking_keyboard
 from account_manager.parser import stop_tracking
+from handlers.user_language import determines_user_language
+from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
 
 router = Router(name=__name__)
@@ -26,10 +26,10 @@ async def stop_tracking_internal(message: Message, user_id: int, state: FSMConte
     )
 
 
-@router.message((F.text == t('stop_tracking_button', 'ru')) | (F.text == t('stop_tracking_button', 'en')))
-async def handle_stop_tracking(message: Message, state: FSMContext):
-    """Обработчик команды Остановить отслеживание (текст)"""
-    await stop_tracking_internal(message, message.from_user.id, state)
+# @router.message((F.text == t('stop_tracking_button', 'ru')) | (F.text == t('stop_tracking_button', 'en')))
+# async def handle_stop_tracking(message: Message, state: FSMContext):
+#     """Обработчик команды Остановить отслеживание (текст)"""
+#     await stop_tracking_internal(message, message.from_user.id, state)
 
 
 @router.callback_query(F.data == "tracking_stop")

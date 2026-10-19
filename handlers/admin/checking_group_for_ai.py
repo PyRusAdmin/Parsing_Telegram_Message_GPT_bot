@@ -1,19 +1,20 @@
 import asyncio
 
+import g4f.errors
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from asgiref.sync import sync_to_async
 from g4f.client import Client
-import g4f.errors
 from groq import AsyncGroq
 from loguru import logger  # https://github.com/Delgan/loguru
 from openai import AsyncOpenAI
 
 from ai.ai import category_assignment
 from core.config import GROQ_API_KEY, OPENROUTER_API_KEY
-from database.database import TelegramGroup, get_groups_without_category, User, database
+from database.database import TelegramGroup, get_groups_without_category, database
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import category_method_keyboard, admin_keyboard
 from locales.locales import t
 from states.states import CategoryMethod

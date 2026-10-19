@@ -18,6 +18,7 @@ from locales.locales import t
 
 class Group(database.Model):
     """Динамическая модель для хранения технической группы пользователя"""
+
     id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
     user_id = IntegerField()  # Телеграм-ID пользователя
     username_group = CharField()  # Поле для хранения технической группы
@@ -98,8 +99,14 @@ def dell_group(user_id: int, username: str):
         logger.exception(e)
 
 
-async def get_user_channels_or_notify(user_id: int, user, message, client):
-    """Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии"""
+async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
+    """
+    Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии
+    :param user_id:
+    :param user_lang:
+    :param message:
+    :param client:
+    """
     channels = [group.username for group in Group.select().where(Group.user_id == user_id)]
 
     if not channels:

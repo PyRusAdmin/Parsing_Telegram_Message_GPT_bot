@@ -14,6 +14,7 @@ from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
 from database.database import User, TelegramGroup
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP, get_payment_inline_keyboard
 from locales.locales import t
 from states.states import ExportStates
@@ -254,7 +255,7 @@ async def check_and_start_download(message: Message, state: FSMContext, download
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
+    user = User.get(User.user_id == message.from_user.id)
     can_dl, remaining_sec = can_user_download_free(user)
     if can_dl:
         logger.info(f"User {effective_user_id} is allowed to download for free.")
@@ -655,7 +656,7 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
+    user = User.get(User.user_id == message.from_user.id)
     if user.stars < 5:
         logger.warning(f"Недостаточно звезд у {callback.from_user.id} (баланс: {user.stars})")
         await callback.answer(t("download_insufficient_stars", lang=user_lang), show_alert=True)
@@ -720,6 +721,8 @@ async def process_successful_payment(message: Message, state: FSMContext):
     logger.info(f"⭐ Получен successful_payment от {message.from_user.id}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
+
+    user = User.get(User.user_id == message.from_user.id)
 
     payment_info = message.successful_payment
     payload = payment_info.invoice_payload

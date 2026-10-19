@@ -12,7 +12,7 @@ from account_manager.session import find_session_file
 from database.database import (
     User, getting_number_records_database, get_session_count
 )
-from database.group_user_database import get_group_count, get_tracked_channels_count
+from database.group_user_database import get_group_count, get_tracked_channels_count, Group
 from database.keywords_user_database import get_keywords_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
@@ -270,7 +270,6 @@ async def start_tracking_internal(message: Message, user_tg, state: FSMContext):
         await filter_messages(
             message=message,
             user_id=user_tg.id,
-            user=user,
         )
     except Exception as e:
         logger.exception(e)
@@ -332,7 +331,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
         try:
             Group.create(
                 user_id=message.from_user.id,
-                username=username
+                username_group=username
             )
             added_count += 1
         except Exception as e:

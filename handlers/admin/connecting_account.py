@@ -46,11 +46,14 @@ async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext
 @router.message(MyStates.waiting_for_session_file, F.document)
 async def receive_session_file(message: Message, state: FSMContext):
     """Получаем .session файл(ы) от админа и обрабатываем по очереди"""
-    user_id = message.from_user.id  # получаем id пользователя
+    # user_id = message.from_user.id  # получаем id пользователя
     # TODO Сделать единое определение языка пользователя во всем проекте
-    user = User.get(User.user_id == user_id)
+    # user = User.get(User.user_id == user_id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+
     document = message.document  # получаем файл сессии
-    logger.info(f"User {user_id} отправил файл: {document.file_name}")
+    logger.info(f"User {message.from_user.id} отправил файл: {document.file_name}")
 
     # ✅ Проверяем расширение
     if not document.file_name.endswith('.session'):

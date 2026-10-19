@@ -14,6 +14,21 @@ database = SqliteDatabase(
     autocommit=True  # ✅ Важно!
 )
 
+"""
+Работа с таблицей personal_tracking, для дальнейшего получения аккаунта, ID группы (created_group_id) в которую будут пересылаться 
+найденные сообщения (целевая группа). 
+"""
+
+
+def get_group_id_with_personal_tracking(user_id):
+    """
+    Получает created_group_id (ID группы, в которую пересылаются найденные сообщения по ключевым словам)
+    :param user_id: ID пользователя Telegram.
+    :return Any: ID группы, в которую будут отправляться сообщения, которые были найдены по ключевым словам.
+    """
+    return PersonalTracking.select(PersonalTracking.created_group_id).where(
+        PersonalTracking.user_id == user_id).scalar()
+
 
 class PersonalTracking(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
@@ -475,6 +490,3 @@ def get_session_count(user_id: int) -> int:
     except Exception as e:
         logger.exception(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
         return 0
-
-
-

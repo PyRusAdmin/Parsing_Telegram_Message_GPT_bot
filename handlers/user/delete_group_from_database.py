@@ -7,6 +7,7 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe
 from database.database import get_user_accounts, User
 from database.group_user_database import dell_group
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard, main_menu_keyboard, menu_launch_tracking_keyboard
 from locales.locales import t
 from states.states import MyStates
@@ -22,7 +23,9 @@ async def delete_group_from_database(message: Message, state: FSMContext):
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
     # TODO Сделать единое определение языка пользователя во всем проекте
-    user = User.get(User.user_id == message.from_user.id)
+    # user = User.get(User.user_id == message.from_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
         t("delete_group_prompt", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
@@ -36,8 +39,10 @@ async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMConte
     Удаление группы из базы данных (инлайн)
     """
     await state.clear()
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     # TODO Сделать единое определение языка пользователя во всем проекте
-    user = User.get(User.user_id == callback.from_user.id)
+    # user = User.get(User.user_id == callback.from_user.id)
     await callback.message.answer(
         t("delete_group_prompt", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
@@ -51,7 +56,10 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     """
     Удаляем группу из отслеживания
     """
-    user = User.get(User.user_id == message.from_user.id)
+    # user = User.get(User.user_id == message.from_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+
     group_username = message.text.strip()
     await state.clear()  # Завершаем текущее состояние машины состояния
     logger.info(f"Пользователь ввёл ссылку для удаления: {group_username}")
