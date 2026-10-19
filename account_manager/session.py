@@ -5,7 +5,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
-from database.database import get_user_accounts, delete_account_from_user_table, delete_account_from_db
+from database.database import delete_account_from_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t

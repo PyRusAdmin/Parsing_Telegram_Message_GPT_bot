@@ -10,7 +10,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from database.database import (
-    User, getting_number_records_database, get_session_count
+    User, getting_number_records_database
 )
 from database.group_user_database import get_group_count, get_tracked_channels_count, Group
 from database.keywords_user_database import get_keywords_count

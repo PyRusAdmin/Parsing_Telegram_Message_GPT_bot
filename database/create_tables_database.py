@@ -1,6 +1,7 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import database, Account, AccountFree, TelegramGroup, Question, User, PersonalTracking, PersonalTrackingStats
+from database.database import database, Account, AccountFree, TelegramGroup, Question, User, PersonalTracking, \
+    PersonalTrackingStats
 from database.group_user_database import Group
 from database.keywords_user_database import Keywords
 
@@ -16,8 +17,10 @@ def init_database():
     except Exception as e:
         logger.warning(f"Failed to set WAL journal mode: {e}")
 
-    database.create_tables([Account], safe=True)  # Создание таблицы аккаунтов (Аккаунты используются для массового поиска групп / каналов)
-    database.create_tables([AccountFree], safe=True)  # Создание таблицы аккаунтов для подключения (Аккаунты, которые используются для парсинга ключевых слов)
+    database.create_tables([Account],
+                           safe=True)  # Создание таблицы аккаунтов (Аккаунты используются для массового поиска групп / каналов)
+    database.create_tables([AccountFree],
+                           safe=True)  # Создание таблицы аккаунтов для подключения (Аккаунты, которые используются для парсинга ключевых слов)
     # database.create_tables([UserAccountsTable], safe=True)  # FIXME удалить, так как не будет использоваться в дальнейшем. Все пользователи а одной таблице
 
     database.create_tables([TelegramGroup], safe=True)  # Создание таблицы Telegram-групп

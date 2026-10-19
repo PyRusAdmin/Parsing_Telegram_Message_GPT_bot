@@ -9,7 +9,6 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH
-from database.database import write_account_to_db
 from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
@@ -19,11 +18,14 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-async def admin_connecting_account_internal(message: Message, user_id: int, state: FSMContext):
-    """Инициирует процесс добавления сессий администратором"""
+@router.callback_query(F.data == "admin_connect_account")
+async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext):
+    """Админ нажимает кнопку → бот просит .session файл(ы) (инлайн). Инициирует процесс добавления сессий администратором"""
+    await callback.answer()
+
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     # ✅ Инициализируем очередь файлов в состоянии
     await state.update_data(received_files=[], processed_count=0, success_count=0, fail_count=0)
@@ -33,14 +35,7 @@ async def admin_connecting_account_internal(message: Message, user_id: int, stat
         t("connect_account_ask_session", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_admin_panel")
     )
-    logger.info(f"Админ {user_id} начал добавление новых сессий")
-
-
-@router.callback_query(F.data == "admin_connect_account")
-async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext):
-    """Админ нажимает кнопку → бот просит .session файл(ы) (инлайн)"""
-    await callback.answer()
-    await admin_connecting_account_internal(callback.message, callback.from_user.id, state)
+    logger.info(f"Админ {callback.from_user.id} начал добавление новых сессий")
 
 
 @router.message(MyStates.waiting_for_session_file, F.document)

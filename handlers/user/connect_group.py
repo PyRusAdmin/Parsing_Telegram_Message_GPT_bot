@@ -60,7 +60,6 @@ async def process_target_link_input_group_input(message: Message, state: FSMCont
 
 
 @router.callback_query(F.data == "settings_connect_group")
-# @router.callback_query(F.data.in_({"settings_connect_group", "group_connect"}))
 async def handle_connect_message_group_cb(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик инлайн-кнопки "📤 Подключить группу для сообщений".
@@ -69,8 +68,6 @@ async def handle_connect_message_group_cb(callback: CallbackQuery, state: FSMCon
 
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-
-    # user = User.get(User.user_id == callback.from_user.id)
 
     logger.info(
         f"Пользователь {callback.from_user.id} перешел в меню 📤 Подключить группу для сообщений через инлайн-кнопку")
@@ -107,7 +104,6 @@ async def handle_group_username_submission(message: Message, state: FSMContext):
 
     # Защита на случай, если прислали не текст (фото, стикер и т.д.)
     if not message.text:
-        # await message.answer(text=t("no_keywords_entered", lang=user_lang))
         return
 
     logger.info(f"Пользователь ввёл ссылку: {group_username}")
