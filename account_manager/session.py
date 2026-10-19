@@ -6,6 +6,7 @@ from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
 from database.database import get_user_accounts, delete_account_from_user_table, delete_account_from_db
+from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
 
@@ -22,6 +23,9 @@ async def find_session_file(user_id: int, user, message):
     try:
         # Получаем все аккаунты пользователя из его персональной таблицы
         accounts = get_user_accounts(user_id)
+
+        # Определяем язык пользователя, который пользователь выбрал при старте бота
+        user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
         if not accounts:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")

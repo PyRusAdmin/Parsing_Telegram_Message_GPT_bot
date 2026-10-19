@@ -6,7 +6,7 @@ from peewee import (
     SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, CharField, DoesNotExist, fn
 )
 
-from core.config import ADMIN_USER_ID
+# from core.config import ADMIN_USER_ID
 
 database = SqliteDatabase(
     'data/bot.db', timeout=30,
@@ -113,77 +113,76 @@ def get_all_questions():
 Таблица с аккаунтами пользователя пользователей телеграмм бота
 """
 
-
-class UserAccountsTable(database.Model):
-    """Модель для хранения сессий подключенных Telegram-аккаунтов пользователей"""
-    id = AutoField()  # ✅ Первичный ключ (обязательно!)
-    user_id = IntegerField(index=True)  # ID пользователя Telegram
-    session_string = CharField(unique=True, max_length=500, index=True)
-    phone_number = CharField(max_length=20, index=True)
-    created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
-
-    class Meta:
-        """Метаданные таблицы аккаунтов пользователей"""
-
-        table_name = f"user_accounts_table"  # Динамическое имя таблицы
-
-
-def write_account_to_user_table(user_id: int, session_string: str, phone_number: str):
-    """
-    Записывает аккаунт в персональную таблицу пользователя: {user_id}_accounts
-    """
-    try:
-        user_accounts = UserAccountsTable.create(
-            user_id=user_id,  # ID пользователя Telegram
-            session_string=session_string,  # Строка сессии Telegram аккаунта
-            phone_number=phone_number  # Номер телефона аккаунта
-        )
-        user_accounts.save()
-    except Exception as e:
-        logger.exception(e)
+# class UserAccountsTable(database.Model):
+#     """Модель для хранения сессий подключенных Telegram-аккаунтов пользователей"""
+#     id = AutoField()  # ✅ Первичный ключ (обязательно!)
+#     user_id = IntegerField(index=True)  # ID пользователя Telegram
+#     session_string = CharField(unique=True, max_length=500, index=True)
+#     phone_number = CharField(max_length=20, index=True)
+#     created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
+#
+#     class Meta:
+#         """Метаданные таблицы аккаунтов пользователей"""
+#
+#         table_name = f"user_accounts_table"  # Динамическое имя таблицы
 
 
-def get_user_accounts(user_id: int):
-    """
-    Получает все аккаунты пользователя из его персональной таблицы
-
-    :param user_id: ID пользователя Telegram
-    :return: Список словарей с данными аккаунтов
-    """
-    try:
-        accounts = (UserAccountsTable
-                    .select()
-                    .where(UserAccountsTable.user_id == user_id)
-                    )
-
-        # Преобразуем объекты модели в словари
-        result = [
-            {
-                'user_id': account.user_id,
-                'session_string': account.session_string,
-                'phone_number': account.phone_number,
-                'created_at': account.created_at
-            }
-            for account in accounts
-        ]
-        return result
-    except Exception as e:
-        logger.exception(f"❌ Ошибка получения аккаунтов пользователя {user_id}: {e}")
-        return []
+# def write_account_to_user_table(user_id: int, session_string: str, phone_number: str):
+#     """
+#     Записывает аккаунт в персональную таблицу пользователя: {user_id}_accounts
+#     """
+#     try:
+#         user_accounts = UserAccountsTable.create(
+#             user_id=user_id,  # ID пользователя Telegram
+#             session_string=session_string,  # Строка сессии Telegram аккаунта
+#             phone_number=phone_number  # Номер телефона аккаунта
+#         )
+#         user_accounts.save()
+#     except Exception as e:
+#         logger.exception(e)
 
 
-def delete_account_from_user_table(user_id: int, session_string: str) -> None:
-    """
-    Удаляет аккаунт из таблицы 'user_accounts_table' по user_id и session_string.
-    """
-    try:
-        query = UserAccountsTable.delete().where(
-            (UserAccountsTable.user_id == user_id) & (UserAccountsTable.session_string == session_string)
-        )
-        deleted_count = query.execute()
-        logger.info(f"🗑️ Удалено {deleted_count} невалидных записей из UserAccountsTable для user_id={user_id}")
-    except Exception as e:
-        logger.exception(f"❌ Ошибка при удалении аккаунта из UserAccountsTable: {e}")
+# def get_user_accounts(user_id: int):
+#     """
+#     Получает все аккаунты пользователя из его персональной таблицы
+#
+#     :param user_id: ID пользователя Telegram
+#     :return: Список словарей с данными аккаунтов
+#     """
+#     try:
+#         accounts = (UserAccountsTable
+#                     .select()
+#                     .where(UserAccountsTable.user_id == user_id)
+#                     )
+#
+#         # Преобразуем объекты модели в словари
+#         result = [
+#             {
+#                 'user_id': account.user_id,
+#                 'session_string': account.session_string,
+#                 'phone_number': account.phone_number,
+#                 'created_at': account.created_at
+#             }
+#             for account in accounts
+#         ]
+#         return result
+#     except Exception as e:
+#         logger.exception(f"❌ Ошибка получения аккаунтов пользователя {user_id}: {e}")
+#         return []
+
+
+# def delete_account_from_user_table(user_id: int, session_string: str) -> None:
+#     """
+#     Удаляет аккаунт из таблицы 'user_accounts_table' по user_id и session_string.
+#     """
+#     try:
+#         query = UserAccountsTable.delete().where(
+#             (UserAccountsTable.user_id == user_id) & (UserAccountsTable.session_string == session_string)
+#         )
+#         deleted_count = query.execute()
+#         logger.info(f"🗑️ Удалено {deleted_count} невалидных записей из UserAccountsTable для user_id={user_id}")
+#     except Exception as e:
+#         logger.exception(f"❌ Ошибка при удалении аккаунта из UserAccountsTable: {e}")
 
 
 """Работа с аккаунтами"""
@@ -211,36 +210,36 @@ class AccountFree(database.Model):
         table_name = 'account_free'
 
 
-def write_account_to_db(session_string, phone_number, user_id):
-    """
-    Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
-    если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
-    :param phone_number: Номер телефона аккаунта
-    :param session_string: Строка сессии
-    :param user_id: ID пользователя Telegram (определяем админ или нет)
-    """
-
-    # Если пользователь является администратором, то записываем в таблицу с общими аккаунтами
-    if user_id in ADMIN_USER_ID:
-        logger.warning(f"Аккаунт {phone_number} подключается администратором")
-        AccountFree.insert(
-            session_string=session_string,  # Строка сессии аккаунта Telegram
-            phone_number=phone_number  # Номер телефона аккаунта Telegram
-        ).on_conflict(action='IGNORE').execute()
-
-    # Иначе записываем в таблицу (user_accounts_table) пользователя с аккаунтами для личного использования
-    else:
-        logger.info(f"Аккаунт {phone_number} подключается обычным пользователем {user_id} для личного использования")
-        try:
-            UserAccountsTable.insert(
-                user_id=user_id,  # ID пользователя Telegram,
-                session_string=session_string,  # Строка сессии аккаунта Telegram
-                phone_number=phone_number  # Номер телефона аккаунта Telegram
-            ).on_conflict(action='IGNORE').execute()
-        except Exception as e:
-            logger.exception(e)
-
-    logger.info(f"Аккаунт {phone_number} успешно записан в базу данных")
+# def write_account_to_db(session_string, phone_number, user_id):
+#     """
+#     Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
+#     если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
+#     :param phone_number: Номер телефона аккаунта
+#     :param session_string: Строка сессии
+#     :param user_id: ID пользователя Telegram (определяем админ или нет)
+#     """
+#
+#     # Если пользователь является администратором, то записываем в таблицу с общими аккаунтами
+#     if user_id in ADMIN_USER_ID:
+#         logger.warning(f"Аккаунт {phone_number} подключается администратором")
+#         AccountFree.insert(
+#             session_string=session_string,  # Строка сессии аккаунта Telegram
+#             phone_number=phone_number  # Номер телефона аккаунта Telegram
+#         ).on_conflict(action='IGNORE').execute()
+#
+#     # Иначе записываем в таблицу (user_accounts_table) пользователя с аккаунтами для личного использования
+#     else:
+#         logger.info(f"Аккаунт {phone_number} подключается обычным пользователем {user_id} для личного использования")
+#         try:
+#             UserAccountsTable.insert(
+#                 user_id=user_id,  # ID пользователя Telegram,
+#                 session_string=session_string,  # Строка сессии аккаунта Telegram
+#                 phone_number=phone_number  # Номер телефона аккаунта Telegram
+#             ).on_conflict(action='IGNORE').execute()
+#         except Exception as e:
+#             logger.exception(e)
+#
+#     logger.info(f"Аккаунт {phone_number} успешно записан в базу данных")
 
 
 def getting_free_account():
@@ -477,16 +476,15 @@ def getting_number_records_database():
     """Получает количество записей в базе данных о найденных группах пользователями"""
     return TelegramGroup.select().count()
 
-
-def get_session_count(user_id: int) -> int:
-    """
-    Подсчитывает количество подключенных аккаунтов пользователя в базе данных.
-
-    :param user_id: (int) ID пользователя Telegram.
-    :return int: Количество сессий (0, если аккаунты отсутствуют).
-    """
-    try:
-        return UserAccountsTable.select().where(UserAccountsTable.user_id == user_id).count()
-    except Exception as e:
-        logger.exception(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
-        return 0
+# def get_session_count(user_id: int) -> int:
+#     """
+#     Подсчитывает количество подключенных аккаунтов пользователя в базе данных.
+#
+#     :param user_id: (int) ID пользователя Telegram.
+#     :return int: Количество сессий (0, если аккаунты отсутствуют).
+#     """
+#     try:
+#         return UserAccountsTable.select().where(UserAccountsTable.user_id == user_id).count()
+#     except Exception as e:
+#         logger.exception(f"Ошибка при получении количества сессий пользователя {user_id}: {e}")
+#         return 0

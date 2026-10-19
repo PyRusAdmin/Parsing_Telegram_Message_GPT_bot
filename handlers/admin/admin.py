@@ -338,7 +338,9 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
     """✅ Проверка аккаунтов на валидность"""
     try:
         await state.clear()  # Сбрасываем текущее состояние FSM
-        user = User.get(User.user_id == message.from_user.id)
+        # user = User.get(User.user_id == message.from_user.id)
+        # Определяем язык пользователя, который пользователь выбрал при старте бота
+        user_lang = determines_user_language(message_or_callback=message.from_user.id)
         records = getting_account()  # Получаем все аккаунты в базе данных
         logger.info(f"Получено аккаунтов: {len(records)}")
         await message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
@@ -361,7 +363,9 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
 async def checking_group_for_ai_db(message: Message, state: FSMContext):
     """Предлагает выбор метода присвоения категорий"""
     await state.set_state(CategoryMethod.waiting_for_method)
-    user = User.get(User.user_id == message.from_user.id)
+    # user = User.get(User.user_id == message.from_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
         t("ai_category_select_method", lang=user_lang),
         reply_markup=category_method_keyboard(lang=user_lang),
