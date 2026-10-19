@@ -6,8 +6,8 @@ from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from database.database import get_keywords_count, get_user_keywords
 from database.group_user_database import get_user_channel_usernames
+from database.keywords_user_database import get_keywords_count, get_user_keywords
 from handlers.user_language import determines_user_language
 from locales.locales import t
 

@@ -16,10 +16,10 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
 from database.database import (
-    TelegramGroup, get_user_accounts, User,
-    get_user_keywords, get_keywords_count
+    TelegramGroup, get_user_accounts, User
 )
 from database.group_user_database import get_user_channel_usernames, dell_group, Group
+from database.keywords_user_database import get_keywords_count, get_user_keywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -154,7 +154,6 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         return
 
     # Получаем ключевые слова из базы данных для данного пользователя
-    # keywords = create_keywords_model(user_id=user_id)
     keywords = get_user_keywords(user_id=user_id)
 
     # Создаем таблицу, если она не существует

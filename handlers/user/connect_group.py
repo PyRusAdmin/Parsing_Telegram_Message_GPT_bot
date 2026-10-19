@@ -15,29 +15,6 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-# @router.message(
-#     (F.text == t('connect_group_for_messages_button', 'ru')) | (F.text == t('connect_group_for_messages_button', 'en')))
-# async def handle_connect_message_group(message: Message, state: FSMContext):
-#     """
-#     Обработчик команды "📤 Подключить группу для сообщений" (текст).
-#     """
-#     await state.clear()  # Завершаем текущее состояние машины состояния
-#     # TODO Сделать единое определение языка пользователя во всем проекте
-#     user = User.get(User.user_id == message.from_user.id)
-#
-#     logger.info(
-#         f"Пользователь {message.from_user.id} {message.from_user.username} {message.from_user.first_name} {message.from_user.last_name} перешел в меню 📤 Подключить группу для сообщений")
-#
-#     await message.answer(
-#         t("enter_group", lang=user.language),
-#         reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings")
-#     )
-#     await state.set_state(MyStates.entering_group)
-
-
-# group_input
-
-
 class PersonalTrackingStateGroupInput(StatesGroup):
     """Группа состояний FSM для настройки персонального отслеживания и авторизации аккаунта"""
 

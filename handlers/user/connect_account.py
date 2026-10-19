@@ -120,12 +120,6 @@ async def connect_account_internal(message: Message, user_tg, state: FSMContext)
     await state.set_state(MyStates.waiting_for_session_file_user)
 
 
-# @router.message((F.text == t('connect_account_button', 'ru')) | (F.text == t('connect_account_button', 'en')))
-# async def handle_connect_account(message: Message, state: FSMContext):
-#     """Обрабатывает команду подключения аккаунта (текст)"""
-#     await connect_account_internal(message, message.from_user, state)
-
-
 @router.callback_query(F.data.in_({"settings_connect_account", "account_connect"}))
 async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает команду подключения аккаунта (инлайн)"""

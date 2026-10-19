@@ -5,9 +5,6 @@ from aiogram.types import CallbackQuery
 from keyboards.keyboards import back_keyboard
 from states.states import MyStates
 
-# from loguru import logger
-# from playhouse.migrate import SqliteMigrator, migrate
-
 router = Router(name=__name__)
 
 

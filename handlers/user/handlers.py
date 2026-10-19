@@ -10,9 +10,10 @@ from loguru import logger
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from database.database import (
-    User, getting_number_records_database, get_session_count, get_keywords_count
+    User, getting_number_records_database, get_session_count
 )
 from database.group_user_database import get_group_count, get_tracked_channels_count
+from database.keywords_user_database import get_keywords_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     get_lang_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
