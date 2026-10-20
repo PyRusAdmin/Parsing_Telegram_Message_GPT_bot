@@ -40,11 +40,10 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
 )
 from database.database import (
-    Account, TelegramGroup, User,
-    get_all_data_telegram_groups, get_all_questions, get_groups_without_category, getting_account,
-    getting_number_records_database, database
+    Account, TelegramGroup, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
+    getting_account, getting_number_records_database, database, get_session_count
 )
-from database.group_user_database import get_tracked_channels_count, Group
+from database.group_user_database import Group
 from database.keywords_user_database import get_keywords_count, get_user_keywords_with_id, Keywords
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri

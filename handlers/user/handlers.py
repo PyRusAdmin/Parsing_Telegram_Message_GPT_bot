@@ -120,15 +120,15 @@ async def handle_start_command(message: Message, state: FSMContext) -> None:
         logger.exception(e)
 
 
-@router.message((F.text == t('back_button', 'ru')) | (F.text == t('back_button', 'en')))
-async def handle_back_to_main_menu(message: Message, state: FSMContext):
-    """
-    Обработчик текстовой кнопки "Назад".
-    """
-    try:
-        await show_main_menu(message, message.from_user, state, edit=False)
-    except Exception as e:
-        logger.exception(e)
+# @router.message((F.text == t('back_button', 'ru')) | (F.text == t('back_button', 'en')))
+# async def handle_back_to_main_menu(message: Message, state: FSMContext):
+#     """
+#     Обработчик текстовой кнопки "Назад".
+#     """
+#     try:
+#         await show_main_menu(message, message.from_user, state, edit=False)
+#     except Exception as e:
+#         logger.exception(e)
 
 
 @router.callback_query(F.data == "menu_main")
@@ -136,11 +136,39 @@ async def handle_back_to_main_menu_cb(callback: CallbackQuery, state: FSMContext
     """
     Обработчик инлайн-кнопки "Назад в главное меню".
     """
-    try:
-        await show_main_menu(callback.message, callback.from_user, state, edit=True)
-        await callback.answer()
-    except Exception as e:
-        logger.exception(e)
+    # try:
+    #     await show_main_menu(callback.message, callback.from_user, state, edit=True)
+    #     await callback.answer()
+    # except Exception as e:
+    #     logger.exception(e)
+
+    await state.clear()
+    user = get_or_create_user(user_tg)
+
+    if user.language == "unset":
+        text = "👋 Привет! Пожалуйста, выберите язык / Please choose your language:"
+
+    else:
+        text = generate_welcome_message(user_language=user.language, user_tg_id=callback.from_user.id)
+
+    if edit:
+        try:
+            await message.edit_text(
+                text=text,
+                reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=callback.from_user.id),
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True)
+            )
+            return
+        except Exception:
+            pass
+
+    await message.answer(
+        text=text,
+        reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=callback.from_user.id),
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True)
+    )
 
 
 @router.callback_query(F.data.in_({"lang_ru", "lang_en"}))
@@ -178,47 +206,54 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
         logger.exception(e)
 
 
-async def show_settings_menu(message: Message, user_tg, state: FSMContext):
-    """Отображение меню настроек"""
-    await state.clear()
-    user = User.get(User.user_id == user_tg.id)
+# async def show_settings_menu(message: Message, user_tg, state: FSMContext):
+#     """Отображение меню настроек"""
+#     await state.clear()
+#     user = User.get(User.user_id == user_tg.id)
+#
+#     await message.edit_text(
+#         text=t("settings_message", lang=user.language),  # Текст меню настройки
+#         reply_markup=settings_keyboard(lang=user.language)
+#     )
 
-    await message.edit_text(
-        text=t("settings_message", lang=user.language),  # Текст меню настройки
-        reply_markup=settings_keyboard(lang=user.language)
-    )
 
-
-@router.message((F.text == t('settings_button', 'ru')) | (F.text == t('settings_button', 'en')))
-async def handle_settings_menu(message: Message, state: FSMContext):
-    """Обработчик команды Настройки (текст)"""
-    try:
-        await show_settings_menu(message, message.from_user, state)
-    except Exception as e:
-        logger.exception(e)
+# @router.message((F.text == t('settings_button', 'ru')) | (F.text == t('settings_button', 'en')))
+# async def handle_settings_menu(message: Message, state: FSMContext):
+#     """Обработчик команды Настройки (текст)"""
+#     try:
+#         await show_settings_menu(message, message.from_user, state)
+#     except Exception as e:
+#         logger.exception(e)
 
 
 @router.callback_query(F.data == "menu_settings")
 async def handle_settings_menu_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик инлайн-кнопки Настройки"""
-    try:
-        await show_settings_menu(callback.message, callback.from_user, state)
-        await callback.answer()
-    except Exception as e:
-        logger.exception(e)
+    # try:
+    #     await show_settings_menu(callback.message, callback.from_user, state)
+    #     await callback.answer()
+    # except Exception as e:
+    #     logger.exception(e)
+    await state.clear()
+    # user = User.get(User.user_id == callback.id)
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    await message.edit_text(
+        text=t("settings_message", lang=user_lang),  # Текст меню настройки
+        reply_markup=settings_keyboard(lang=user_lang)
+    )
 
 
 @router.message((F.text == t('change_language_button', 'ru')) | (F.text == t('change_language_button', 'en')))
 async def handle_change_language(message: Message, state: FSMContext):
     """Обработчик смены языка (текст)"""
-    try:
-        await state.clear()
-        await message.answer(
-            t("welcome_ask_language", lang="ru"),
-            reply_markup=get_lang_keyboard()
-        )
-    except Exception as e:
-        logger.exception(e)
+    # try:
+    await state.clear()
+    await message.answer(
+        t("welcome_ask_language", lang="ru"),
+        reply_markup=get_lang_keyboard()
+    )
+    # except Exception as e:
+    #     logger.exception(e)
 
 
 @router.callback_query(F.data == "settings_change_language")
@@ -226,30 +261,80 @@ async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик инлайн-кнопки смены языка"""
     try:
         await state.clear()
-        text = t("welcome_ask_language", lang="ru")
-        kb = get_lang_keyboard()
+        # text = t("welcome_ask_language", lang="ru")
+        # kb = get_lang_keyboard()
         try:
-            await callback.message.edit_text(text=text, reply_markup=kb)
+            await callback.message.edit_text(
+                text=t("welcome_ask_language", lang="ru"),
+                reply_markup=get_lang_keyboard()
+            )
         except Exception:
-            await callback.message.answer(text=text, reply_markup=kb)
+            await callback.message.answer(
+                text=t("welcome_ask_language", lang="ru"),
+                reply_markup=get_lang_keyboard()
+            )
         await callback.answer()
     except Exception as e:
         logger.exception(e)
 
 
-async def start_tracking_internal(message: Message, user_tg, state: FSMContext):
-    """Внутренняя логика запуска отслеживания"""
+# async def start_tracking_internal(message: Message, user_tg, state: FSMContext):
+#     """Внутренняя логика запуска отслеживания"""
+#     await state.clear()
+#     try:
+#         user = User.get(User.user_id == user_tg.id)
+#         logger.info(
+#             f"Пользователь {user_tg.id} {user_tg.username} {user_tg.first_name} перешел в меню запуска парсинга.")
+#
+#         session_dir = os.path.join("accounts", str(user_tg.id))
+#         os.makedirs(session_dir, exist_ok=True)
+#
+#         session_path = await find_session_file(
+#             user_id=user_tg.id,
+#             user=user,
+#             message=message
+#         )
+#
+#         logger.info(session_path)
+#         if session_path is None:
+#             logger.warning("Нет подключенного аккаунта")
+#             await message.answer(
+#                 text="Нет подключенного аккаунта. Подключите аккаунт.",
+#                 reply_markup=connect_keyboard_account(lang=user.language)
+#             )
+#             return
+#
+#         await message.answer(
+#             t("launching_tracking", lang=user.language),
+#             reply_markup=menu_launch_tracking_keyboard(lang=user.language)
+#         )
+#
+#         await filter_messages(
+#             message=message,
+#             user_id=user_tg.id,
+#         )
+#     except Exception as e:
+#         logger.exception(e)
+
+
+@router.callback_query(F.data == "menu_launch_tracking")
+async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
+    """Обработчик команды Запуск отслеживания (инлайн)"""
+    await callback.answer()
+    # await start_tracking_internal(callback.message, callback.from_user, state)
     await state.clear()
     try:
-        user = User.get(User.user_id == user_tg.id)
+        # Определяем язык пользователя, который пользователь выбрал при старте бота
+        user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+        user = User.get(User.user_id == callback.from_user.id)
         logger.info(
-            f"Пользователь {user_tg.id} {user_tg.username} {user_tg.first_name} перешел в меню запуска парсинга.")
+            f"Пользователь {callback.from_user.id} {callback.from_user.username} {callback.from_user.first_name} перешел в меню запуска парсинга.")
 
-        session_dir = os.path.join("accounts", str(user_tg.id))
+        session_dir = os.path.join("accounts", str(callback.from_user.id))
         os.makedirs(session_dir, exist_ok=True)
 
         session_path = await find_session_file(
-            user_id=user_tg.id,
+            user_id=callback.from_user.id,
             user=user,
             message=message
         )
@@ -259,39 +344,34 @@ async def start_tracking_internal(message: Message, user_tg, state: FSMContext):
             logger.warning("Нет подключенного аккаунта")
             await message.answer(
                 text="Нет подключенного аккаунта. Подключите аккаунт.",
-                reply_markup=connect_keyboard_account(lang=user.language)
+                reply_markup=connect_keyboard_account(lang=user_lang)
             )
             return
 
         await message.answer(
-            t("launching_tracking", lang=user.language),
-            reply_markup=menu_launch_tracking_keyboard(lang=user.language)
+            t("launching_tracking", lang=user_lang),
+            reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
         )
 
         await filter_messages(
             message=message,
-            user_id=user_tg.id,
+            user_id=callback.from_user.id,
         )
     except Exception as e:
         logger.exception(e)
-
-
-@router.callback_query(F.data == "menu_launch_tracking")
-async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик команды Запуск отслеживания (инлайн)"""
-    await callback.answer()
-    await start_tracking_internal(callback.message, callback.from_user, state)
 
 
 @router.callback_query(F.data == "settings_update_list")
 async def handle_refresh_groups_list_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик команды Обновить список (инлайн)"""
     await callback.answer()
-    user = User.get(User.user_id == callback.from_user.id)
+    # user = User.get(User.user_id == callback.from_user.id)
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     logger.info(f"Пользователь {callback.from_user.id} перешел в меню 🔁 Обновить список")
     await callback.message.answer(
-        text=t("update_list", lang=user.language),
-        reply_markup=back_keyboard(lang=user.language, callback_data="menu_settings"),
+        text=t("update_list", lang=user_lang),
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings"),
         parse_mode="HTML"
     )
     await state.set_state(MyStates.waiting_username_group)
