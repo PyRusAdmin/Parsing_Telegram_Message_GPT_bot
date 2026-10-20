@@ -275,8 +275,8 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(text=t("connect_account_button", lang=lang),
                                      callback_data="settings_connect_account"),
-                InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
-                                     callback_data="settings_connect_group")
+                # InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
+                #                      callback_data="settings_connect_group")
             ],
             [
                 InlineKeyboardButton(text=t("change_language_button", lang=lang),

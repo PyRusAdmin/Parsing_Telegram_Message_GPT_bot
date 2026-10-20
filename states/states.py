@@ -46,3 +46,9 @@ class ExportStates(StatesGroup):
 class CategoryMethod(StatesGroup):
     """Состояния для выбора метода присвоения категорий"""
     waiting_for_method = State()
+
+
+class PersonalTrackingStateGroupInput(StatesGroup):
+    """Группа состояний FSM для настройки персонального отслеживания и авторизации аккаунта"""
+
+    waiting_for_target_link_group_input = State()  # Ожидание ссылки или username целевой группы/канала от пользователя

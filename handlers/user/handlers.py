@@ -9,6 +9,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
+from core.config import version
 from database.database import (
     User, getting_number_records_database, get_session_count
 )
@@ -29,12 +30,10 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     """
     Генерирует приветственное сообщение для пользователя с подставленными данными.
     """
-    version = "0.1.0"
+
     groups_count = getting_number_records_database()  # Общее число найденных групп с помощью Ai.
     count = get_session_count(user_id=user_tg_id)  # Сессии пользователя дял отслеживания групп / каналов
     group_count = get_group_count(user_id=user_tg_id)  # Группы для для отслеживания
-
-    # get_groups = get_tracked_channels_count(user_id=user_tg_id)  # Отслеживаемые каналы
     keywords_count = get_keywords_count(user_id=user_tg_id)  # Ключевые слова
 
     return t(
@@ -118,17 +117,6 @@ async def handle_start_command(message: Message, state: FSMContext) -> None:
         logger.error(f"Пользователь {message.from_user.id, message.from_user.username} заблокировал бота")
     except Exception as e:
         logger.exception(e)
-
-
-# @router.message((F.text == t('back_button', 'ru')) | (F.text == t('back_button', 'en')))
-# async def handle_back_to_main_menu(message: Message, state: FSMContext):
-#     """
-#     Обработчик текстовой кнопки "Назад".
-#     """
-#     try:
-#         await show_main_menu(message, message.from_user, state, edit=False)
-#     except Exception as e:
-#         logger.exception(e)
 
 
 @router.callback_query(F.data == "menu_main")
