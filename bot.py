@@ -18,7 +18,7 @@ from handlers.admin.post_log import router as post_log
 from handlers.user.settings_handlers.settings import router as settings
 from handlers.user.checking_group_for_keywords import router as checking_group_for_keywords
 from handlers.user.connect_account import router as connect_account
-from handlers.user.connect_group import router as connect_group
+from handlers.user.settings_handlers.connect_group import router as connect_group
 from handlers.user.delete_group_from_database import router as delete_group_from_database
 from handlers.user.entering_keyword import router as entering_keyword
 from handlers.user.get_dada import router as get_dada
@@ -65,7 +65,7 @@ async def main() -> None:
         """
         dp.include_router(handlers)
         dp.include_router(entering_keyword)
-        dp.include_router(connect_group)
+
         dp.include_router(get_dada)
         dp.include_router(stop_tracking)
         dp.include_router(pars_ai)
@@ -89,10 +89,10 @@ async def main() -> None:
         """
         Меню настроек
         """
-        dp.include_router(settings)
+        dp.include_router(settings)  # Меню настроек
+        dp.include_router(connect_group)  # Ввод групп / каналов, для отслеживания ключевых слов
 
         # Миграция: приводим все категории к нижнему регистру
-
         logger.info("🔄 Запуск миграции категорий в нижнем регистре...")
         updated = migrate_categories_to_lowercase()
         if updated:
