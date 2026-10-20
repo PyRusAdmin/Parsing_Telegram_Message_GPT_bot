@@ -11,12 +11,41 @@ from locales.locales import t
 router = Router(name=__name__)
 
 
-async def checking_accounts_internal(message: Message, state: FSMContext):
-    """Запускает процесс проверки всех аккаунтов на валидность"""
+# async def checking_accounts_internal(message: Message, state: FSMContext):
+#     """Запускает процесс проверки всех аккаунтов на валидность"""
+#     try:
+#         await state.clear()
+#         # Определяем язык пользователя, который пользователь выбрал при старте бота
+#         user_lang = determines_user_language(message_or_callback=message.from_user.id)
+#         records = getting_account()
+#         logger.info(f"Получено аккаунтов: {len(records)}")
+#
+#         await message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
+#
+#         for session_name in records:
+#             logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
+#             checker = CheckingAccountsValidity(
+#                 message=message,
+#             )
+#             await checker.verify_account(session_name)
+#
+#         await message.answer(
+#             t("checking_accounts_complete", lang=user_lang)
+#         )
+#
+#     except Exception as e:
+#         logger.exception(e)
+
+
+@router.callback_query(F.data == "admin_check_accounts")
+async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
+    """✅ Проверка аккаунтов на валидность (инлайн)"""
+    await callback.answer()
+    # await checking_accounts_internal(callback.message, state)
     try:
         await state.clear()
         # Определяем язык пользователя, который пользователь выбрал при старте бота
-        user_lang = determines_user_language(message_or_callback=message.from_user.id)
+        user_lang = determines_user_language(message_or_callback=callback.from_user.id)
         records = getting_account()
         logger.info(f"Получено аккаунтов: {len(records)}")
 
@@ -35,10 +64,3 @@ async def checking_accounts_internal(message: Message, state: FSMContext):
 
     except Exception as e:
         logger.exception(e)
-
-
-@router.callback_query(F.data == "admin_check_accounts")
-async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
-    """✅ Проверка аккаунтов на валидность (инлайн)"""
-    await callback.answer()
-    await checking_accounts_internal(callback.message, state)

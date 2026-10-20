@@ -15,6 +15,7 @@ from handlers.admin.checking_group_for_ai import router as checking_group_for_ai
 from handlers.admin.connecting_account import router as connecting_account
 from handlers.admin.language_detection import router as language_detection
 from handlers.admin.post_log import router as post_log
+from handlers.user.settings import router as settings
 from handlers.user.checking_group_for_keywords import router as checking_group_for_keywords
 from handlers.user.connect_account import router as connect_account
 from handlers.user.connect_group import router as connect_group
@@ -84,6 +85,11 @@ async def main() -> None:
         dp.include_router(checking_accounts)
         dp.include_router(language_detection)
         dp.include_router(connecting_account)
+
+        """
+        Меню настроек
+        """
+        dp.include_router(settings)
 
         # Миграция: приводим все категории к нижнему регистру
 

@@ -6,17 +6,13 @@ from asgiref.sync import sync_to_async
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types
-from telethon.errors import (
-    MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
-)
+from telethon.errors import MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
 from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
-from database.database import (
-    TelegramGroup, get_group_id_with_personal_tracking
-)
+from database.database import TelegramGroup, get_group_id_with_personal_tracking
 from database.group_user_database import get_user_channel_usernames, dell_group, get_user_channels_or_notify
 from database.keywords_user_database import get_keywords_count, get_user_keywords
 from handlers.user_language import determines_user_language

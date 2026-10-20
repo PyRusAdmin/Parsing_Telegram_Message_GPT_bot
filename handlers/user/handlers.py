@@ -16,8 +16,8 @@ from database.group_user_database import get_group_count, Group
 from database.keywords_user_database import get_keywords_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
-    get_lang_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard,
-    connect_keyboard_account, get_stars_topup_inline_keyboard, menu_user_admin_keyboard
+    get_lang_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
+    get_stars_topup_inline_keyboard, menu_user_admin_keyboard
 )
 from locales.locales import t
 from states.states import MyStates
@@ -134,38 +134,14 @@ async def handle_start_command(message: Message, state: FSMContext) -> None:
 @router.callback_query(F.data == "menu_main")
 async def handle_back_to_main_menu_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки "Назад в главное меню".
+    Обработчик инлайн-кнопки "⬅️ Назад".
     """
-    # try:
-    #     await show_main_menu(callback.message, callback.from_user, state, edit=True)
-    #     await callback.answer()
-    # except Exception as e:
-    #     logger.exception(e)
-
-    await state.clear()
-    user = get_or_create_user(user_tg)
-
-    if user.language == "unset":
-        text = "👋 Привет! Пожалуйста, выберите язык / Please choose your language:"
-
-    else:
-        text = generate_welcome_message(user_language=user.language, user_tg_id=callback.from_user.id)
-
-    if edit:
-        try:
-            await message.edit_text(
-                text=text,
-                reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=callback.from_user.id),
-                parse_mode="HTML",
-                link_preview_options=LinkPreviewOptions(is_disabled=True)
-            )
-            return
-        except Exception:
-            pass
-
-    await message.answer(
-        text=text,
-        reply_markup=menu_user_admin_keyboard(lang=user.language, user_id=callback.from_user.id),
+    await state.clear()  # Сбрасываем состояние пользователя, для не допущения ошибки, если действие не было завершено
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+    await callback.message.edit_text(
+        text=generate_welcome_message(user_language=user_lang, user_tg_id=callback.from_user.id),
+        reply_markup=menu_user_admin_keyboard(lang=user_lang, user_id=callback.from_user.id),
         parse_mode="HTML",
         link_preview_options=LinkPreviewOptions(is_disabled=True)
     )
@@ -224,23 +200,6 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
 #         await show_settings_menu(message, message.from_user, state)
 #     except Exception as e:
 #         logger.exception(e)
-
-
-@router.callback_query(F.data == "menu_settings")
-async def handle_settings_menu_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик инлайн-кнопки Настройки"""
-    # try:
-    #     await show_settings_menu(callback.message, callback.from_user, state)
-    #     await callback.answer()
-    # except Exception as e:
-    #     logger.exception(e)
-    await state.clear()
-    # user = User.get(User.user_id == callback.id)
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    await message.edit_text(
-        text=t("settings_message", lang=user_lang),  # Текст меню настройки
-        reply_markup=settings_keyboard(lang=user_lang)
-    )
 
 
 @router.message((F.text == t('change_language_button', 'ru')) | (F.text == t('change_language_button', 'en')))
