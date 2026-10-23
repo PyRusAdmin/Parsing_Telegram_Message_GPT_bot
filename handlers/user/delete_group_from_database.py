@@ -63,7 +63,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     await state.clear()  # Завершаем текущее состояние машины состояния
     logger.info(f"Пользователь ввёл ссылку для удаления: {group_username}")
 
-    deletion_result = dell_group(user_id=message.from_user.id, username=group_username)
+    deletion_result = dell_group(user_id=message.from_user.id, username_group=group_username)
 
     if deletion_result:
         await message.answer(

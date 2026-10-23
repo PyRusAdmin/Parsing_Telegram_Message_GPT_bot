@@ -659,7 +659,7 @@ async def join_required_channels(client, user_id, message, already_subscribed):
             else:
                 logger.warning(f"⚠️ Не удалось подписаться на {channel}. Удаляем невалидный канал из базы...")
                 try:
-                    dell_group(user_id=int(user_id), username=channel)
+                    dell_group(user_id=int(user_id), username_group=channel)
                 except Exception as del_err:
                     logger.debug(f"Не удалось удалить невалидный канал {channel}: {del_err}")
         except Exception as e:
