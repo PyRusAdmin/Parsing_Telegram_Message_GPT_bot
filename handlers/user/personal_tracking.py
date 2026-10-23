@@ -22,10 +22,10 @@ from telethon.tl.functions.channels import JoinChannelRequest, CreateChannelRequ
 from telethon.tl.functions.messages import ExportChatInviteRequest
 from telethon.tl.types import ChatAdminRights
 
-from account_manager.auth import CheckingAccountsValidity
+from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import API_ID, API_HASH, mobile_device
 from database.database import (
-    PersonalTracking, PersonalTrackingStats, getting_account
+    PersonalTracking, PersonalTrackingStats, getting_account, write_account_to_db
 )
 from database.keywords_user_database import add_user_keywords
 from handlers.user_language import determines_user_language
@@ -938,7 +938,6 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
     password = message.text.strip()
     data = await state.get_data()
     session_str = data.get("session_str")
-    phone = data.get("phone_number")
 
     status_msg = await message.answer("🔄 <i>Проверяем 2FA пароль...</i>", parse_mode="HTML")
 
@@ -956,23 +955,23 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
     try:
         await client.connect()
         await client.sign_in(password=password)
-        me = await client.get_me()
+        # Получаем информацию о клиенте
+        account_info = await get_account_info(client=client)
         final_session = client.session.save()
         await client.disconnect()
 
-        # Сохраняем аккаунт в БД
+        # Сохраняем аккаунт в БД, если аккаунт подключает обычный пользователь
         write_account_to_db(
             session_string=final_session,
             user_id=message.from_user.id,
-            phone_number=me.phone or phone
         )
 
         await state.clear()
         await status_msg.edit_text(
             f"🎉 <b>Аккаунт успешно авторизован с 2FA паролем!</b>\n\n"
-            f"👤 <b>Имя:</b> {me.first_name or ''} {me.last_name or ''}\n"
-            f"📱 <b>Телефон:</b> +{me.phone}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{me.id}</code>\n\n"
+            f"👤 <b>Имя:</b> {account_info["first_name"] or ""} {account_info["last_name"] or ""}\n"
+            f"📱 <b>Телефон:</b> +{account_info["phone"] or ""}\n"
+            f"🆔 <b>Telegram ID:</b> <code>{account_info["id"] or ""}</code>\n\n"
             f"✅ Сессия успешно сохранена в базе данных.",
             parse_mode="HTML"
         )

@@ -6,8 +6,6 @@ from peewee import (
     SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, CharField, DoesNotExist, fn
 )
 
-# from core.config import ADMIN_USER_ID
-
 database = SqliteDatabase(
     'data/bot.db', timeout=30,
     pragmas={'cache_size': 4096, 'synchronous': 'NORMAL'},
@@ -48,7 +46,7 @@ class PersonalTracking(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
 
     id = AutoField()  # ID записи в базе данных
-    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
+    user_id = BigIntegerField(unique=True, index=True)  # Телеграм-ID пользователя
     created_group_link = CharField(null=True)  # Группа в которую будут отправляться сообщения
     created_group_id = BigIntegerField(null=True)  # Telegram-id группы которую сознал аккаунт для пересылки сообщений
     last_changed_at = DateTimeField(default=datetime.now)  # Время последнего изменения
@@ -59,6 +57,28 @@ class PersonalTracking(database.Model):
     class Meta:
         """Метаданные таблицы персонального отслеживания"""
         table_name = "personal_tracking"  # Название таблицы
+
+
+def write_account_to_db(session_string: str, user_id: int):
+    """
+    Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
+    если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
+    :param session_string: Строка сессии
+    :param user_id: ID пользователя Telegram (определяем админ или нет)
+    """
+
+    PersonalTracking.insert(
+        user_id=user_id,
+        personal_account=session_string,
+    ).on_conflict(
+        conflict_target=[PersonalTracking.user_id],
+        update={
+            PersonalTracking.personal_account: session_string,
+            PersonalTracking.last_changed_at: datetime.now(),
+        }
+    ).execute()
+
+    logger.info(f"Аккаунт успешно записан в базу данных")
 
 
 class PersonalTrackingStats(database.Model):
@@ -222,38 +242,6 @@ class AccountFree(database.Model):
         """Метаданные таблицы свободных аккаунтов"""
 
         table_name = 'account_free'
-
-
-# def write_account_to_db(session_string, phone_number, user_id):
-#     """
-#     Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
-#     если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
-#     :param phone_number: Номер телефона аккаунта
-#     :param session_string: Строка сессии
-#     :param user_id: ID пользователя Telegram (определяем админ или нет)
-#     """
-#
-#     # Если пользователь является администратором, то записываем в таблицу с общими аккаунтами
-#     if user_id in ADMIN_USER_ID:
-#         logger.warning(f"Аккаунт {phone_number} подключается администратором")
-#         AccountFree.insert(
-#             session_string=session_string,  # Строка сессии аккаунта Telegram
-#             phone_number=phone_number  # Номер телефона аккаунта Telegram
-#         ).on_conflict(action='IGNORE').execute()
-#
-#     # Иначе записываем в таблицу (user_accounts_table) пользователя с аккаунтами для личного использования
-#     else:
-#         logger.info(f"Аккаунт {phone_number} подключается обычным пользователем {user_id} для личного использования")
-#         try:
-#             UserAccountsTable.insert(
-#                 user_id=user_id,  # ID пользователя Telegram,
-#                 session_string=session_string,  # Строка сессии аккаунта Telegram
-#                 phone_number=phone_number  # Номер телефона аккаунта Telegram
-#             ).on_conflict(action='IGNORE').execute()
-#         except Exception as e:
-#             logger.exception(e)
-#
-#     logger.info(f"Аккаунт {phone_number} успешно записан в базу данных")
 
 
 def getting_free_account():

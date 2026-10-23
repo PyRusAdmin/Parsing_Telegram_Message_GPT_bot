@@ -21,11 +21,18 @@ async def get_account_info(client: TelegramClient) -> dict:
     Получает информацию о пользователе Telegram через client.get_me().
 
     :param client: Авторизованный клиент Telethon.
-    :return: dict с полями: id, phone, first_name, last_name, username
+    :return: dict с полями: id - Идентификатор пользователя Telegram, phone - Номер телефона пользователя Telegram,
+    first_name - Имя пользователя Telegram, last_name - Фамилия пользователя Telegram, username - Никнейм пользователя
+    Telegram
     """
     me = await client.get_me()
     phone = me.phone or ""
     logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
+
+    # phone = account_info["phone"] or ""
+    # account_info["first_name"] or ""
+    # account_info["last_name"] or ""
+    # account_info["id"] or ""
 
     return {
         "id": me.id,  # Идентификатор пользователя Telegram
@@ -44,9 +51,7 @@ class CheckingAccountsValidity:
         :param message: Сообщение для отправки уведомлений (опционально)
         :param path: Путь к папке с .session файлами (опционально)
         """
-        # self.message = message
         self.path = Path(path) if path else None
-        # self.user_id = message.from_user.id
 
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """

@@ -1,7 +1,9 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import database, Account, AccountFree, TelegramGroup, Question, User, PersonalTracking, \
+from database.database import (
+    database, Account, AccountFree, TelegramGroup, Question, User, PersonalTracking,
     PersonalTrackingStats
+)
 from database.group_user_database import Group
 from database.keywords_user_database import Keywords
 
