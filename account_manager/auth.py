@@ -29,11 +29,6 @@ async def get_account_info(client: TelegramClient) -> dict:
     phone = me.phone or ""
     logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
 
-    # phone = account_info["phone"] or ""
-    # account_info["first_name"] or ""
-    # account_info["last_name"] or ""
-    # account_info["id"] or ""
-
     return {
         "id": me.id,  # Идентификатор пользователя Telegram
         "phone": phone,  # Номер телефона пользователя Telegram

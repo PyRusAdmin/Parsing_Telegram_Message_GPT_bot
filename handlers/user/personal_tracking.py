@@ -23,9 +23,9 @@ from telethon.tl.functions.messages import ExportChatInviteRequest
 from telethon.tl.types import ChatAdminRights
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from core.config import API_ID, API_HASH, mobile_device
+from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
-    PersonalTracking, PersonalTrackingStats, getting_account, write_account_to_db
+    PersonalTracking, PersonalTrackingStats, getting_account, write_account_to_db, write_account_to_db_free
 )
 from database.keywords_user_database import add_user_keywords
 from handlers.user_language import determines_user_language
@@ -858,7 +858,8 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
     try:
         await client.connect()
         await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
-        me = await client.get_me()
+        # Получаем информацию о клиенте
+        account_info = await get_account_info(client=client)
         final_session = client.session.save()
         await client.disconnect()
 
@@ -867,18 +868,25 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         что бы пользовались бесплатно или расширяли свой пакет)
         """
 
-        write_account_to_db(
-            session_string=final_session,
-            user_id=callback.from_user.id,
-            phone_number=me.phone or phone
-        )
+        if message.from_user.id == ADMIN_USER_ID:
+            # Сохраняем аккаунт в общую базу бесплатных аккаунтов
+            write_account_to_db_free(
+                session_string=final_session,  # Стринг сессия Telegram
+                phone_number=account_info["phone"] or ""  # Номер телефонаа подключаемого аккаунта
+            )
+        else:
+            # Сохраняем аккаунт в персональную базу пользователя
+            write_account_to_db(
+                session_string=final_session,  # Стринг сессия Telegram
+                user_id=message.from_user.id,  # ID пользователя Telegram
+            )
 
         await state.clear()
         await callback.message.edit_text(
             f"🎉 <b>Аккаунт успешно авторизован и подключен!</b>\n\n"
-            f"👤 <b>Имя:</b> {me.first_name or ''} {me.last_name or ''}\n"
-            f"📱 <b>Телефон:</b> +{me.phone}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{me.id}</code>\n\n"
+            f"👤 <b>Имя:</b> {account_info["first_name"] or ""} {account_info["last_name"] or ""}\n"
+            f"📱 <b>Телефон:</b> +{account_info["phone"] or ""}\n"
+            f"🆔 <b>Telegram ID:</b> <code>{account_info["id"] or ""}</code>\n\n"
             f"✅ Сессия сохранена в базе и готова к отслеживанию.",
             parse_mode="HTML"
         )
@@ -960,11 +968,18 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         final_session = client.session.save()
         await client.disconnect()
 
-        # Сохраняем аккаунт в БД, если аккаунт подключает обычный пользователь
-        write_account_to_db(
-            session_string=final_session,
-            user_id=message.from_user.id,
-        )
+        if message.from_user.id == ADMIN_USER_ID:
+            # Сохраняем аккаунт в общую базу бесплатных аккаунтов
+            write_account_to_db_free(
+                session_string=final_session,  # Стринг сессия Telegram
+                phone_number=account_info["phone"] or ""  # Номер телефонаа подключаемого аккаунта
+            )
+        else:
+            # Сохраняем аккаунт в персональную базу пользователя
+            write_account_to_db(
+                session_string=final_session,  # Стринг сессия Telegram
+                user_id=message.from_user.id,  # ID пользователя Telegram
+            )
 
         await state.clear()
         await status_msg.edit_text(

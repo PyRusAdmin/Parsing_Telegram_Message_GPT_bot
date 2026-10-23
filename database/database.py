@@ -64,7 +64,7 @@ def write_account_to_db(session_string: str, user_id: int):
     Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
     если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
     :param session_string: Строка сессии
-    :param user_id: ID пользователя Telegram (определяем админ или нет)
+    :param user_id: ID пользователя Telegram
     """
 
     PersonalTracking.insert(
@@ -144,8 +144,43 @@ def get_all_questions():
 
 
 """
-Таблица с аккаунтами пользователя пользователей телеграмм бота
+Таблица с аккаунтами подключаемых администратором бота, для общего использования
 """
+
+
+class AccountFree(database.Model):
+    """Свободные аккаунты для подключения, которые подключает администратор бота"""
+    session_string = CharField(unique=True)  # Уникальность для защиты от дубликатов
+    phone_number = CharField()  # Номер телефона аккаунта
+
+    class Meta:
+        """Метаданные таблицы свободных аккаунтов"""
+
+        table_name = 'account_free'
+
+
+def write_account_to_db_free(session_string: str, phone_number: str):
+    """
+    Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
+    если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
+    :param session_string: Строка сессии
+    :param phone_number: номер телефона Telegram
+    """
+
+    AccountFree.insert(
+        session_string=session_string,
+        phone_number=phone_number,
+    ).on_conflict(
+        conflict_target=[AccountFree.session_string],
+        update={
+            AccountFree.phone_number: phone_number,
+        }
+    ).execute()
+
+    logger.info(
+        f"Аккаунт {phone_number} успешно записан в базу данных"
+    )
+
 
 # class UserAccountsTable(database.Model):
 #     """Модель для хранения сессий подключенных Telegram-аккаунтов пользователей"""
@@ -231,17 +266,6 @@ class Account(database.Model):
         """Метаданные таблицы рабочих аккаунтов"""
 
         table_name = 'account'
-
-
-class AccountFree(database.Model):
-    """Свободные аккаунты для подключения, которые подключает администратор бота"""
-    session_string = CharField(unique=True)  # Уникальность для защиты от дубликатов
-    phone_number = CharField()  # Номер телефона аккаунта
-
-    class Meta:
-        """Метаданные таблицы свободных аккаунтов"""
-
-        table_name = 'account_free'
 
 
 def getting_free_account():
