@@ -5,7 +5,7 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://github.com/Delgan/loguru
-from telethon import events, types
+from telethon import events, types, TelegramClient
 from telethon.errors import MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
 from telethon.tl.functions.channels import GetFullChannelRequest
 
@@ -750,13 +750,18 @@ async def filter_messages(message, user_id):
         # === Подключаем клиент ===
         checker = CheckingAccountsValidity()  # ✅ Сохраняем активный клиент
         client = await checker.client_connect_string_session(accounts[0]['session_string'])
+
+        if not client:
+            return
+
         active_clients[str(user_id)] = client
 
         already_subscribed = await sync_account_channels(client)  # Получаем список каналов, где аккаунт уже состоит
 
-        # === 1️⃣ Читаем каналы из БД — быстро, без запросов к Telegram ===
-        channels = await get_user_channels_or_notify(user_id=int(user_id), message=message, client=client,
-                                                     user_lang=user_lang)
+        # === 1️. Читаем каналы из БД — быстро, без запросов к Telegram ===
+        channels: TelegramClient | None = await get_user_channels_or_notify(user_id=int(user_id), message=message,
+                                                                            client=client,
+                                                                            user_lang=user_lang)
         # Если каналов нет — выходим
         if not channels:
             return

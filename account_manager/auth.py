@@ -120,7 +120,7 @@ class CheckingAccountsValidity:
         """
         try:
             logger.info(f"Проверка аккаунта {session_name}")
-            client: TelegramClient = await self.client_connect_string_session(session_name=session_name)
+            client: TelegramClient | None = await self.client_connect_string_session(session_name=session_name)
 
             if client is None:
                 return

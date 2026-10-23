@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger  # https://github.com/Delgan/loguru
+from telethon import TelegramClient
 
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe
@@ -21,8 +22,6 @@ async def delete_group_from_database(message: Message, state: FSMContext):
     Удаление группы из базы данных (текст)
     """
     await state.clear()  # Сбрасываем текущее состояние FSM
-    # TODO Сделать единое определение языка пользователя во всем проекте
-    # user = User.get(User.user_id == message.from_user.id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
@@ -91,7 +90,10 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {message.from_user.id}")
 
     checker = CheckingAccountsValidity(message=message)  # ✅ Сохраняем активный клиент
-    client = await checker.client_connect_string_session(accounts[0]['session_string'])
+    client: TelegramClient | None = await checker.client_connect_string_session(accounts[0]['session_string'])
+
+    if client is None:
+        return None
 
     await unsubscribe(client, group_username)  # Отписываемся от группы или канала по username
 

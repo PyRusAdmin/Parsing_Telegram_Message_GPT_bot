@@ -230,7 +230,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
     for attempt_idx in range(max_attempts):
         session_str, acc_type = candidate_sessions[attempt_idx]
-        client = await checker.client_connect_string_session(session_str)
+        client: TelegramClient | None = await checker.client_connect_string_session(session_str)
         if not client:
             continue
 
