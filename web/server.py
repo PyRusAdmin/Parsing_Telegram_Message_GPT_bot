@@ -460,16 +460,16 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
 @app.post("/api/channels")
 async def add_channel(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """Добавляет новый канал в список отслеживаемых"""
-    # user_id = user_data["id"]
-    username = username.strip()
+
+    username_group = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
 
     if not username.startswith("@"):
-        username = f"@{username}"
+        username_group = f"@{username}"
 
     try:
-        Group.create(user_id=user_data["id"], username=username)
+        Group.create(user_id=user_data["id"], username_group=username_group)
         return {"status": "ok", "username": username}
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -490,23 +490,23 @@ async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_us
 @app.post("/api/channels/upload")
 async def upload_channels_file(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
     """Загружает список каналов из текстового файла"""
-    # user_id = user_data["id"]
+
     if not file.filename.endswith(".txt"):
         raise HTTPException(status_code=400, detail="Only .txt files are supported")
 
     contents = await file.read()
     text = contents.decode("utf-8")
-    usernames = [line.strip() for line in text.splitlines() if line.strip()]
+    username_group = [line.strip() for line in text.splitlines() if line.strip()]
 
     added_count = 0
     skipped_count = 0
     errors_count = 0
 
-    for username in usernames:
+    for username in username_group:
         if not username.startswith("@"):
-            username = f"@{username}"
+            username_group = f"@{username}"
         try:
-            Group.create(user_id=user_data["id"], username=username)
+            Group.create(user_id=user_data["id"], username_group=username_group)
             added_count += 1
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):

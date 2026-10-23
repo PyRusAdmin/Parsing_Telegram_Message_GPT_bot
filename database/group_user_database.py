@@ -46,7 +46,7 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
                .where(Group.user_id == user_id)
                .order_by(Group.date_added.desc()))
 
-    usernames = [row.username for row in records]
+    usernames = [row.username_group for row in records]
     return usernames, len(usernames)
 
 
@@ -72,17 +72,17 @@ def add_user_group(user_id: int, group: list[str]) -> None:
         Group.get_or_create(user_id=user_id, username_group=gr)
 
 
-def dell_group(user_id: int, username: str):
+def dell_group(user_id: int, username_group: str):
     """
     Удаляет группу из отслеживания ключевых слов.
 
     :param user_id: Telegram ID пользователя
-    :param username: Username группы
+    :param username_group: Username группы
     :return: True, если группа удалена, иначе False
     """
     try:
         (
-            Group.delete().where(Group.user_id == user_id, Group.username_group == username).execute()
+            Group.delete().where(Group.user_id == user_id, Group.username_group == username_group).execute()
         )
         return True
     except Exception as e:
@@ -97,7 +97,7 @@ async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
     :param message:
     :param client:
     """
-    channels = [group.username for group in Group.select().where(Group.user_id == user_id)]
+    channels = [group.username_group for group in Group.select().where(Group.user_id == user_id)]
 
     if not channels:
         logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
