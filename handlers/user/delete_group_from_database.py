@@ -97,4 +97,4 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
 
     await unsubscribe(client, group_username)  # Отписываемся от группы или канала по username
 
-    client.disconnect()
+    await client.disconnect()
