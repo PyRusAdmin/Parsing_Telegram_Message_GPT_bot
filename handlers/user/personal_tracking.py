@@ -25,9 +25,10 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
-    PersonalTracking, PersonalTrackingStats, getting_account, write_account_to_db, write_account_to_db_free
+    PersonalTrackingStats, getting_account, write_account_to_db_free
 )
 from database.keywords_user_database import add_user_keywords
+from database.personal_tracking import get_user_accounts, PersonalTracking, write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
 from system.dispatcher import bot

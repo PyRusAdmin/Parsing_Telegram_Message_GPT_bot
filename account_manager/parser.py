@@ -12,9 +12,10 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
-from database.database import TelegramGroup, PersonalTracking, get_group_id_with_personal_tracking
+from database.database import TelegramGroup
 from database.group_user_database import get_user_channel_usernames, dell_group, get_user_channels_or_notify
 from database.keywords_user_database import get_keywords_count, get_user_keywords
+from database.personal_tracking import get_group_id_with_personal_tracking, PersonalTracking
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -792,7 +793,8 @@ async def filter_messages(message, user_id):
         # Если у пользователя используется общий аккаунт, разрешён максимум 1 канал
         is_shared_account = bool(pt_rec.shared_account and not pt_rec.personal_account)
         if is_shared_account and len(channels) > 1:
-            logger.warning(f"⚠️ Пользователь {user_id} использует общий аккаунт и превысил лимит каналов ({len(channels)} > 1)")
+            logger.warning(
+                f"⚠️ Пользователь {user_id} использует общий аккаунт и превысил лимит каналов ({len(channels)} > 1)")
             buy_stars_kb = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [

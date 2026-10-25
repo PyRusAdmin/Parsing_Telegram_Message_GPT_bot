@@ -8,7 +8,8 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from database.database import User, AccountFree, write_account_to_db
+from database.database import User, AccountFree
+from database.personal_tracking import write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t

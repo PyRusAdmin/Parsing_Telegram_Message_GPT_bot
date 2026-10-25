@@ -7,8 +7,8 @@ from telethon import TelegramClient
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.unsubscribe import unsubscribe
 from account_manager.utilit import normalize_telegram_link
-from database.database import PersonalTracking
 from database.group_user_database import dell_group
+from database.personal_tracking import PersonalTracking
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard, main_menu_keyboard
 from locales.locales import t

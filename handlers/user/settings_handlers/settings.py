@@ -4,7 +4,6 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from database.database import PersonalTracking
 from database.group_user_database import (
     dell_group,
     clear_all_user_groups,
@@ -15,6 +14,7 @@ from database.keywords_user_database import (
     get_user_keywords_paginated,
     get_keywords_count,
 )
+from database.personal_tracking import PersonalTracking
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     settings_keyboard,

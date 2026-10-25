@@ -11,10 +11,11 @@ from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from core.config import version
 from database.database import (
-    User, getting_number_records_database, get_session_count
+    User, getting_number_records_database
 )
 from database.group_user_database import get_group_count
 from database.keywords_user_database import get_keywords_count
+from database.personal_tracking import get_session_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     get_lang_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
