@@ -115,7 +115,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
         )
         return None
 
-    checker = CheckingAccountsValidity(message=message)
+    checker = CheckingAccountsValidity()
     client: TelegramClient | None = await checker.client_connect_string_session(session_string)
 
     if client is None:

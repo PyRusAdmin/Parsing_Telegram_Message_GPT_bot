@@ -13,7 +13,10 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH, mobile_device
-from database.database import delete_account_from_db, getting_account
+from database.database import getting_account
+from database.personal_tracking import delete_account_from_user_table
+from keyboards.keyboards import menu_launch_tracking_keyboard
+from locales.locales import t
 
 
 async def get_account_info(client: TelegramClient) -> dict:
@@ -113,10 +116,13 @@ class CheckingAccountsValidity:
                         invalid_sessions.append(row[0])
         return invalid_sessions
 
-    async def verify_account(self, session_name) -> None:
+    # TODO 25.10.2026 Сделать универсальную функцию проверки сессий для всего проекта. Добавить в общий туду лист
+    async def verify_account(self, session_name, user_id, user_lang) -> None:
         """
         Проверяет и сортирует аккаунты.
+        :param user_lang: Язык пользователя
         :param session_name: Имя аккаунта для проверки
+        :param user_id: ID пользователя
         """
         try:
             logger.info(f"Проверка аккаунта {session_name}")
@@ -135,7 +141,13 @@ class CheckingAccountsValidity:
                     await client.disconnect()
             except (PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
                     AuthKeyUnregisteredError, AuthKeyDuplicatedError) as e:
-                await delete_account_from_db(session_string=session_name)
+                # await delete_account_from_db(session_string=session_name)
+                # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
+                delete_account_from_user_table(user_id=user_id, personal_account=session_name)
+                await message.answer(
+                    t("session_invalid", lang=user_lang),
+                    reply_markup=menu_launch_tracking_keyboard()
+                )
             except TimedOutError as e:
                 logger.exception(e)
                 await asyncio.sleep(2)
@@ -145,7 +157,8 @@ class CheckingAccountsValidity:
             invalid_sessions = await self.read_invalid_sessions()
             logger.info(f"❌ Невалидные сессии: {invalid_sessions}")
             for session in invalid_sessions:
-                await delete_account_from_db(session_string=session)
+                # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
+                delete_account_from_user_table(user_id=user_id, personal_account=session)
 
             try:
                 os.remove("file.csv")
@@ -191,6 +204,8 @@ class CheckingAccountsValidity:
                 pass
             return None
 
+    # TODO данная функция, это только для поиска групп и аккаунтов. Пользователь использует только свой аккаунт или
+    #  аккаунт, который подключил администратор бота, для поиска групп и аккаунтов
     async def start_random_client(self):
         """
         Запускает клиент Telethon или из подключенного пользователем аккаунта или берется случайным образом 

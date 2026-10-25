@@ -282,7 +282,6 @@ async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
 
         session_path = await find_session_file(
             user_id=callback.from_user.id,
-            user=user,
             message=message
         )
 

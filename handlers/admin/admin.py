@@ -1,23 +1,22 @@
+import asyncio
 import csv
 import os
 from datetime import datetime
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile, CallbackQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
-from database.database import getting_account, get_all_questions
-from handlers.user_language import determines_user_language
-from locales.locales import t
-import asyncio
-from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from core.config import ADMIN_USER_ID
 from database.database import User
-from keyboards.keyboards import admin_keyboard, category_method_keyboard, broadcast_preview_keyboard, back_keyboard
-from states.states import CategoryMethod, BroadcastState
-
+from database.database import getting_account, get_all_questions
+from handlers.user_language import determines_user_language
+from keyboards.keyboards import admin_keyboard, broadcast_preview_keyboard, back_keyboard
+from locales.locales import t
+from states.states import BroadcastState
 
 router = Router(name=__name__)
 
@@ -120,32 +119,11 @@ async def export_questions_cb(callback: CallbackQuery):
 @router.callback_query(F.data == "menu_admin_panel")
 async def admin_panel_cb(callback: CallbackQuery, state: FSMContext):
     """Обработчик команды Панель администратора (инлайн)"""
-    # await show_admin_panel(callback.message, callback.from_user.id, state, edit=True)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    # try:
     await state.clear()
-    # try:
-    #     user = User.get(User.user_id == user_id)
-    #     user_lang = user.language if user.language != "unset" else "ru"
-    # except Exception as e:
-    #     logger.exception(e)
-    #     user_lang = "ru"
-
-    # if edit:
-    #     try:
     await callback.message.edit_text(text=t("admin_panel_message", lang=user_lang), parse_mode="HTML",
-                            reply_markup=admin_keyboard(lang=user_lang))
-    # return
-    # except Exception:
-    #     pass
-
-    # await message.answer(text=t("admin_panel_message", lang=user_lang), parse_mode="HTML",
-    #                      reply_markup=admin_keyboard(lang=user_lang))
-
-    # except Exception as e:
-    #     logger.exception(e)
-
+                                     reply_markup=admin_keyboard(lang=user_lang))
     await callback.answer()
 
 
@@ -395,7 +373,6 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
     """✅ Проверка аккаунтов на валидность"""
     try:
         await state.clear()  # Сбрасываем текущее состояние FSM
-        # user = User.get(User.user_id == message.from_user.id)
         # Определяем язык пользователя, который пользователь выбрал при старте бота
         user_lang = determines_user_language(message_or_callback=message.from_user.id)
         records = getting_account()  # Получаем все аккаунты в базе данных
@@ -404,11 +381,8 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
         for session_name in records:
             logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
             # ✅ Проверка аккаунтов на валидность
-            checker = CheckingAccountsValidity(
-                message=message,
-                # path=path
-            )
-            await checker.verify_account(session_name)
+            checker = CheckingAccountsValidity()
+            await checker.verify_account(session_name=session_name, user_id=message.from_user.id, user_lang=user_lang)
         await message.answer(
             t("checking_accounts_complete", lang=user_lang)
         )
@@ -416,18 +390,18 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
         logger.exception(e)
 
 
-@router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
-async def checking_group_for_ai_db(message: Message, state: FSMContext):
-    """Предлагает выбор метода присвоения категорий"""
-    await state.set_state(CategoryMethod.waiting_for_method)
-    # user = User.get(User.user_id == message.from_user.id)
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    await message.answer(
-        t("ai_category_select_method", lang=user_lang),
-        reply_markup=category_method_keyboard(lang=user_lang),
-        parse_mode="HTML"
-    )
+# @router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
+# async def checking_group_for_ai_db(message: Message, state: FSMContext):
+#     """Предлагает выбор метода присвоения категорий"""
+#     await state.set_state(CategoryMethod.waiting_for_method)
+#     # user = User.get(User.user_id == message.from_user.id)
+#     # Определяем язык пользователя, который пользователь выбрал при старте бота
+#     user_lang = determines_user_language(message_or_callback=message.from_user.id)
+#     await message.answer(
+#         t("ai_category_select_method", lang=user_lang),
+#         reply_markup=category_method_keyboard(lang=user_lang),
+#         parse_mode="HTML"
+#     )
 
 
 # ==================== 📢 МОДУЛЬ РАССЫЛКИ СООБЩЕНИЙ ====================

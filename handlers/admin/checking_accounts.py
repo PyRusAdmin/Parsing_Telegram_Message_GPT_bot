@@ -41,7 +41,7 @@ router = Router(name=__name__)
 async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
     """✅ Проверка аккаунтов на валидность (инлайн)"""
     await callback.answer()
-    # await checking_accounts_internal(callback.message, state)
+
     try:
         await state.clear()
         # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -53,9 +53,7 @@ async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
 
         for session_name in records:
             logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
-            checker = CheckingAccountsValidity(
-                message=message,
-            )
+            checker = CheckingAccountsValidity()
             await checker.verify_account(session_name)
 
         await message.answer(

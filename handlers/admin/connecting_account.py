@@ -9,6 +9,7 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH
+from database.personal_tracking import write_account_to_db
 from handlers.user.connect_account import creates_temporary_folder_for_accounts, sanitization_file_name
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
@@ -91,7 +92,7 @@ async def receive_session_file(message: Message, state: FSMContext):
         # ✅ Извлекаем путь без расширения для Telethon
         session_path_without_ext = str(local_file_path.with_suffix(""))
         # ✅ Проверяем валидность аккаунта
-        checker = CheckingAccountsValidity(message=message, path=session_path_without_ext)
+        checker = CheckingAccountsValidity(path=session_path_without_ext)
         client = await checker.connect_client()
 
         if client:
@@ -101,7 +102,7 @@ async def receive_session_file(message: Message, state: FSMContext):
 
             # ✅ Конвертируем в StringSession и сохраняем в БД
             session_string = StringSession.save(client.session)
-            write_account_to_db(session_string=session_string, phone_number=phone)
+            write_account_to_db(session_string=session_string, user_id=message.from_user.id)
             await client.disconnect()
             # ✅ Удаляем временный .session файл
             if local_file_path.exists():

@@ -97,7 +97,7 @@ async def parse_group_for_keywords(url, keyword, message: Message):
         user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
         # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
-        checker = CheckingAccountsValidity(message=message)  # path=None по умолчанию
+        checker = CheckingAccountsValidity()  # path=None по умолчанию
         client = await checker.start_random_client()
         if not client:
             await message.answer("⚠️ Нет доступных рабочих сессий для проверки.")
