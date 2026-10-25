@@ -5,7 +5,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH
-from database.database import delete_account_from_db
+from database.database import delete_account_from_db, get_user_accounts
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -45,6 +45,7 @@ async def find_session_file(user_id: int, user, message):
         # Быстрая проверка валидности StringSession (опционально, но рекомендуется)
         if not await _is_session_valid(session_string):
             logger.warning(f"⚠️ Сессия {phone} не валидна — удаляем из БД")
+            # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
             delete_account_from_user_table(user_id, session_string)
             await delete_account_from_db(session_string)
             await message.answer(
