@@ -65,3 +65,26 @@ class Keywords(database.Model):
         indexes = (
             (("user_id", "user_keyword"), True),
         )
+
+
+def clear_all_user_keywords(user_id: int) -> int:
+    from loguru import logger
+    try:
+        deleted = Keywords.delete().where(Keywords.user_id == user_id).execute()
+        logger.info(f'Deleted {deleted} keywords for user {user_id}')
+        return deleted
+    except Exception as e:
+        logger.exception(e)
+        return 0
+
+
+def get_user_keywords_paginated(user_id: int, page: int = 0, page_size: int = 5) -> tuple:
+    total = Keywords.select().where(Keywords.user_id == user_id).count()
+    records = (
+        Keywords.select()
+        .where(Keywords.user_id == user_id)
+        .order_by(Keywords.date_added.desc())
+        .offset(page * page_size)
+        .limit(page_size)
+    )
+    return list(records), total

@@ -239,44 +239,31 @@ def menu_launch_tracking_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Создаёт инлайн-клавиатуру меню настроек.
+    Создаёт инлайн-клавиатуру главного меню настроек (3 раздела).
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Ввод группы, для отслеживания",
-                                     callback_data="group_input")
-            ],
-
-            [
                 InlineKeyboardButton(
-                    text=t("update_list_button", lang=lang),  # 🔁 Обновить список
-                    callback_data="settings_update_list"
-                ),
-                InlineKeyboardButton(
-                    text=t("enter_keyword_button", lang=lang),  # 🔍 Ввод ключевого слова
-                    callback_data="settings_enter_keyword"
+                    text="🌐 Каналы отслеживания",
+                    callback_data="settings_section_channels"
                 )
             ],
             [
-                InlineKeyboardButton(text=t("delete_group_from_tracking_button", lang=lang),
-                                     callback_data="settings_delete_group")
+                InlineKeyboardButton(
+                    text="🔍 Ключевые слова",
+                    callback_data="settings_section_keywords"
+                )
             ],
             [
                 InlineKeyboardButton(
-                    text=t("keywords_list_button", lang=lang),  # 🔍 Список ключевых слов
-                    callback_data="settings_keywords_list"
-                ),
-                InlineKeyboardButton(
-                    text=t("tracking_links_button", lang=lang),  # 🌐 Ссылки для отслеживания
-                    callback_data="settings_tracking_links"
+                    text="📢 Группа уведомлений",
+                    callback_data="settings_section_notification"
                 )
             ],
             [
                 InlineKeyboardButton(text=t("connect_account_button", lang=lang),
                                      callback_data="settings_connect_account"),
-                # InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
-                #                      callback_data="settings_connect_group")
             ],
             [
                 InlineKeyboardButton(text=t("change_language_button", lang=lang),
@@ -284,14 +271,10 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("topup_stars_button", lang=lang), callback_data="settings_topup_stars")
             ],
             [
-                InlineKeyboardButton(text="🔄 Передать настройки пользователю", callback_data="settings_transfer_rights")
-            ],
-            [
                 back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]
     )
-
 
 def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
     """Инлайн-клавиатура предложения подключить аккаунт"""
@@ -416,6 +399,194 @@ def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
 
     # return buttons
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+"""⚙️ Меню настроек"""
+
+
+def settings_menu_tracking_channels(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура подраздела 🌐 Каналы отслеживания
+    :return: InlineKeyboardMarkup
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ Добавить каналы (текстом или .txt)",
+                    callback_data="settings_update_list"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 Список каналов",
+                    callback_data="settings_channels_list"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📥 Экспорт в Excel",
+                    callback_data="settings_tracking_links"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧹 Очистить весь список",
+                    callback_data="settings_channels_clear_confirm"
+                ),
+            ],
+            [
+                back_button(lang)  # Кнопка ⬅️ Назад
+            ]
+        ]
+    )
+
+
+def settings_keywords_submenu_kb(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура подраздела 🔍 Ключевые слова
+    :return: InlineKeyboardMarkup
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ Добавить ключевые слова",
+                    callback_data="settings_enter_keyword"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 Список ключевых слов",
+                    callback_data="settings_keywords_list_inline"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📥 Экспорт ключевых слов",
+                    callback_data="settings_keywords_list"
+                )
+            ],
+            [
+                back_button(lang)  # Кнопка ⬅️ Назад
+            ]
+        ]
+    )
+
+
+def settings_notification_group_kb(lang: str = 'ru', group_link: str = '') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура подраздела 📢 Группа уведомлений
+    :return: InlineKeyboardMarkup
+    """
+    buttons = []
+    if group_link:
+        buttons.append([
+            InlineKeyboardButton(
+                text="🔗 Перейти в группу уведомлений",
+                url=group_link
+            )
+        ])
+    else:
+        buttons.append([
+            InlineKeyboardButton(
+                text="🔗 Группа ещё не создана",
+                callback_data="settings_notification_no_group"
+            )
+        ])
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔄 Пересоздать группу",
+            callback_data="settings_notification_recreate"
+        )
+    ])
+    buttons.append([
+        back_button(lang)  # Кнопка ⬅️ Назад
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def channels_list_keyboard(records: list, page: int, total_pages: int, lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура списка каналов с пагинацией и кнопками удаления.
+    :param records: Список объектов Group для текущей страницы
+    :param page: Текущая страница (0-based)
+    :param total_pages: Всего страниц
+    :return: InlineKeyboardMarkup
+    """
+    buttons = []
+    for rec in records:
+        name = str(rec.username_group)
+        display = name if len(name) <= 30 else name[:27] + "..."
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"❌ {display}",
+                callback_data=f"ch_del:{name[:60]}"
+            )
+        ])
+    # Навигация
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀️ Назад", callback_data=f"ch_page:{page - 1}"))
+    if page < total_pages - 1:
+        nav.append(InlineKeyboardButton(text="Вперёд ▶️", callback_data=f"ch_page:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+    buttons.append([
+        back_button(lang, callback_data="settings_section_channels")
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def keywords_list_inline_kb(records: list, page: int, total_pages: int, lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура списка ключевых слов с пагинацией и кнопками удаления.
+    :param records: Список объектов Keywords для текущей страницы
+    :param page: Текущая страница (0-based)
+    :param total_pages: Всего страниц
+    :return: InlineKeyboardMarkup
+    """
+    buttons = []
+    for rec in records:
+        kw = str(rec.user_keyword)
+        display = kw if len(kw) <= 30 else kw[:27] + "..."
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"❌ {display}",
+                callback_data=f"kw_del:{rec.id}"
+            )
+        ])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀️ Назад", callback_data=f"kw_page:{page - 1}"))
+    if page < total_pages - 1:
+        nav.append(InlineKeyboardButton(text="Вперёд ▶️", callback_data=f"kw_page:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+    buttons.append([
+        back_button(lang, callback_data="settings_section_keywords")
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def confirm_clear_keyboard(confirm_cb: str, cancel_cb: str, lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Клавиатура подтверждения очистки.
+    :param confirm_cb: callback_data для подтверждения
+    :param cancel_cb: callback_data для отмены
+    :return: InlineKeyboardMarkup
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Да, очистить", callback_data=confirm_cb),
+                InlineKeyboardButton(text="❌ Отмена", callback_data=cancel_cb)
+            ]
+        ]
+    )
+
+
+"""Клавиатура администратора"""
 
 
 def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:

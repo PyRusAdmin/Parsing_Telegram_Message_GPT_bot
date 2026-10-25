@@ -26,7 +26,7 @@ async def handle_enter_keyword_menu_cb(callback: CallbackQuery, state: FSMContex
 
     await callback.message.answer(
         t("enter_keyword", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
+        reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_keywords")
     )
     await state.set_state(MyStates.entering_keyword)
     await callback.answer()
@@ -76,7 +76,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
 
     await message.answer(
         text=f"✅ Ключевые слова добавлены.\n\n📊 Всего ключевых слов: <b>{get_keywords_count(user_id=message.from_user.id)}</b>",
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings"),
+        reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_keywords"),
         parse_mode="HTML"
     )
 

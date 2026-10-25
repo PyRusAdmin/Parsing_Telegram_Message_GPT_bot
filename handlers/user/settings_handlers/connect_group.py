@@ -123,7 +123,7 @@ async def handle_refresh_groups_list_cb(callback: CallbackQuery, state: FSMConte
     await state.set_state(MyStates.waiting_username_group)
     await callback.message.answer(
         text=t("update_list", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings"),
+        reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_channels"),
         parse_mode="HTML"
     )
     await callback.answer()  # И только потом подтверждаем callback (чтобы убрать «часики»)

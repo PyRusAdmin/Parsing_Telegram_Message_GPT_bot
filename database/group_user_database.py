@@ -89,6 +89,42 @@ def dell_group(user_id: int, username_group: str):
         logger.exception(e)
 
 
+def clear_all_user_groups(user_id: int) -> int:
+    """
+    Удаляет все группы/каналы пользователя из отслеживания.
+
+    :param user_id: Telegram ID пользователя
+    :return: Количество удалённых записей
+    """
+    try:
+        deleted = Group.delete().where(Group.user_id == user_id).execute()
+        logger.info(f"Удалено {deleted} каналов для пользователя {user_id}")
+        return deleted
+    except Exception as e:
+        logger.exception(e)
+        return 0
+
+
+def get_user_groups_paginated(user_id: int, page: int = 0, page_size: int = 5) -> tuple[list, int]:
+    """
+    Возвращает страницу каналов пользователя с пагинацией.
+
+    :param user_id: Telegram ID пользователя
+    :param page: Номер страницы (0-based)
+    :param page_size: Количество записей на странице
+    :return: Кортеж (список объектов Group, общее количество)
+    """
+    total = Group.select().where(Group.user_id == user_id).count()
+    records = (
+        Group.select()
+        .where(Group.user_id == user_id)
+        .order_by(Group.date_added.desc())
+        .offset(page * page_size)
+        .limit(page_size)
+    )
+    return list(records), total
+
+
 async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
     """
     Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии
