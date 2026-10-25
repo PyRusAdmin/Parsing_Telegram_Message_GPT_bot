@@ -1,7 +1,7 @@
 import asyncio
 import random
 
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async
 from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://github.com/Delgan/loguru
@@ -12,8 +12,8 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
-from database.database import TelegramGroup, get_group_id_with_personal_tracking
-from database.group_user_database import get_user_channel_usernames, dell_group, get_user_channels_or_notify
+from database.database import TelegramGroup, PersonalTracking, get_group_id_with_personal_tracking
+from database.group_user_database import get_user_channel_usernames, dell_group, get_user_channels_or_notify, get_group_count
 from database.keywords_user_database import get_keywords_count, get_user_keywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
@@ -734,22 +734,44 @@ async def filter_messages(message, user_id):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     try:
+        # === Проверка группы уведомлений ===
+        target_group_id = get_group_id_with_personal_tracking(user_id)
+        if not target_group_id:
+            logger.warning(f"⚠️ У пользователя {user_id} нет целевой группы уведомлений в БД")
+            create_group_kb = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="📢 Создать группу уведомлений",
+                            callback_data="menu_personal_tracking"
+                        )
+                    ]
+                ]
+            )
+            await message.answer(
+                "⚠️ <b>Группа уведомлений не найдена!</b>\n\n"
+                "Перед запуском отслеживания необходимо создать целевую группу для получения уведомлений.\n"
+                "Нажмите кнопку ниже, чтобы настроить её:",
+                parse_mode="HTML",
+                reply_markup=create_group_kb
+            )
+            return None
+
         # === Проверка аккаунтов ===
-        # Проверка на наличие подключенного аккаунта у пользователя для избежания ошибки
-        # Получаем все аккаунты пользователя из его персональной таблицы
-        accounts = get_user_accounts(user_id)
-        if not accounts:
-            logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
+        pt_rec = PersonalTracking.get_or_none(PersonalTracking.user_id == user_id)
+        session_string = pt_rec.personal_account if pt_rec else None
+
+        if not session_string:
+            logger.warning(f"⚠️ У пользователя {user_id} нет подключённого аккаунта в БД")
             await message.answer(
                 t("no_accounts", lang=user_lang),
                 reply_markup=menu_launch_tracking_keyboard()
             )
             return None
-        logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
 
         # === Подключаем клиент ===
         checker = CheckingAccountsValidity()  # ✅ Сохраняем активный клиент
-        client = await checker.client_connect_string_session(accounts[0]['session_string'])
+        client = await checker.client_connect_string_session(session_string)
 
         if not client:
             return
@@ -765,6 +787,38 @@ async def filter_messages(message, user_id):
         # Если каналов нет — выходим
         if not channels:
             return
+
+        # === 1.1️. Проверка лимитов для общего бесплатного аккаунта (Задача 2.5) ===
+        # Если у пользователя используется общий аккаунт, разрешён максимум 1 канал
+        is_shared_account = bool(pt_rec.shared_account and not pt_rec.personal_account)
+        if is_shared_account and len(channels) > 1:
+            logger.warning(f"⚠️ Пользователь {user_id} использует общий аккаунт и превысил лимит каналов ({len(channels)} > 1)")
+            buy_stars_kb = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="⭐ Докупить слоты (Telegram Stars)",
+                            callback_data="settings_topup_stars"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="📱 Подключить личный аккаунт",
+                            callback_data="menu_personal_tracking"
+                        )
+                    ]
+                ]
+            )
+            await message.answer(
+                "⚠️ <b>Превышен лимит отслеживания!</b>\n\n"
+                "Вы используете <b>общий бесплатный аккаунт</b>, на котором разрешено отслеживать только <b>1 канал</b>.\n\n"
+                "Для отслеживания большего количества каналов:\n"
+                "• Подключите собственный личный Telegram-аккаунт (без ограничений)\n"
+                "• Или оплатите дополнительные слоты через Telegram Stars.",
+                parse_mode="HTML",
+                reply_markup=buy_stars_kb
+            )
+            return None
 
         # === 2️. Инициализируем флаг остановки ===
         stop_event = asyncio.Event()

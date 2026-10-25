@@ -42,6 +42,26 @@ def get_session_count(user_id: int) -> int:
     ).count()
 
 
+
+def get_user_accounts(user_id: int):
+    """
+    Получает аккаунты пользователя из таблицы PersonalTracking.
+    Возвращает список словарей для обратной совместимости.
+    """
+    try:
+        rec = PersonalTracking.get_or_none(PersonalTracking.user_id == user_id)
+        if rec and rec.personal_account:
+            return [{
+                'user_id': rec.user_id,
+                'session_string': rec.personal_account,
+                'phone_number': '',
+                'created_at': rec.created_at
+            }]
+        return []
+    except Exception as e:
+        logger.exception(e)
+        return []
+
 class PersonalTracking(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
 

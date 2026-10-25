@@ -8,7 +8,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from database.database import User, AccountFree
+from database.database import User, AccountFree, write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
@@ -48,10 +48,9 @@ async def connect_account_free_internal(message: Message, user_tg, state: FSMCon
 
     logger.info(f"Подключаем свободный аккаунт {phone_number} пользователю {user.user_id}")
 
-    write_account_to_user_table(
-        user_id=user.user_id,
+    write_account_to_db(
         session_string=session_string,
-        phone_number=phone_number
+        user_id=user.user_id
     )
 
     selected_account.delete_instance()
@@ -163,10 +162,9 @@ async def handle_account_file(message: Message, state: FSMContext):
             first_name = account_info["first_name"] or ""
 
             session_string = StringSession.save(client.session)
-            write_account_to_user_table(
-                user_id=message.from_user.id,
+            write_account_to_db(
                 session_string=session_string,
-                phone_number=phone
+                user_id=message.from_user.id
             )
             await client.disconnect()
 

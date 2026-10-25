@@ -272,6 +272,10 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("topup_stars_button", lang=lang), callback_data="settings_topup_stars")
             ],
             [
+                InlineKeyboardButton(text="🔄 Передать настройки пользователю",
+                                     callback_data="settings_transfer_rights")
+            ],
+            [
                 back_button(lang)  # Кнопка ⬅️ Назад
             ],
         ]

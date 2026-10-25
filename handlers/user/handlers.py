@@ -13,15 +13,14 @@ from core.config import version
 from database.database import (
     User, getting_number_records_database, get_session_count
 )
-from database.group_user_database import get_group_count, Group
+from database.group_user_database import get_group_count
 from database.keywords_user_database import get_keywords_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
-    get_lang_keyboard, settings_keyboard, back_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
+    get_lang_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
     get_stars_topup_inline_keyboard, menu_user_admin_keyboard
 )
 from locales.locales import t
-from states.states import MyStates
 
 router = Router(name=__name__)
 
