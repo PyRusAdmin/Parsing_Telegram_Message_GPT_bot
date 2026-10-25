@@ -41,10 +41,11 @@ from core.config import (
 )
 from database.database import (
     Account, TelegramGroup, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
-    getting_account, getting_number_records_database, database, get_session_count
+    getting_account, getting_number_records_database, database
 )
 from database.group_user_database import Group
 from database.keywords_user_database import get_keywords_count, get_user_keywords_with_id, Keywords
+from database.personal_tracking import get_session_count
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
 from handlers.user.pars_ai import (
@@ -312,8 +313,8 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
         # Получите статистику
         groups_count = getting_number_records_database()
         session_count = get_session_count(user_id=user_data["id"])
-        group_count = get_target_group_count(user_id=user_data["id"])
-        tracked_channels = get_tracked_channels_count(user_id=user_data["id"])
+        # group_count = get_target_group_count(user_id=user_data["id"])
+        # tracked_channels = get_tracked_channels_count(user_id=user_data["id"])
         keywords_count = get_keywords_count(user_id=user_data["id"])
 
         # Получите текущее имя целевой группы пользователя
