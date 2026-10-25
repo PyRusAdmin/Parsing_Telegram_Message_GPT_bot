@@ -6,16 +6,18 @@ from typing import Optional
 
 def normalize_telegram_link(input_link: str) -> Optional[str]:
     """
-    Приводит ссылку или username к виду https://t.me/<username>.
+    Приводит ссылку или username к каноническому виду https://t.me/<username>.
 
     Поддерживает:
       - @username
-      - username
+      - username (bare)
       - t.me/username
       - https://t.me/username
       - https://telegram.dog/username
+      - https://t.me/joinchat/<hash>   — приватная инвайт-ссылка (старый формат)
+      - https://t.me/+<hash>           — приватная инвайт-ссылка (новый формат)
 
-    Возвращает нормализованную ссылку или None.
+    Возвращает нормализованную ссылку или None, если формат не распознан.
     """
     if not isinstance(input_link, str) or not input_link:
         return None
@@ -27,26 +29,48 @@ def normalize_telegram_link(input_link: str) -> Optional[str]:
 
     username_pattern = r"[a-zA-Z][a-zA-Z0-9_]{4,31}"
 
-    # @username
+    # ── @username ────────────────────────────────────────────────────────────
     match = re.fullmatch(rf"@({username_pattern})", link)
     if match:
         return f"https://t.me/{match.group(1)}"
 
-    # username без @ и ссылки
+    # ── bare username (без @ и протокола) ────────────────────────────────────
     match = re.fullmatch(username_pattern, link)
     if match:
         return f"https://t.me/{match.group(0)}"
 
-    # Ссылка на Telegram
+    # ── Публичная ссылка t.me/username ───────────────────────────────────────
     match = re.fullmatch(
         rf"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.dog)/"
         rf"({username_pattern})/?",
         link,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
-
     if match:
         return f"https://t.me/{match.group(1)}"
+
+    # ── Приватная инвайт-ссылка: t.me/joinchat/<hash> (старый формат) ───────
+    match = re.fullmatch(
+        r"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.dog)/joinchat/([A-Za-z0-9_\-]+)/?",
+        link,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        return f"https://t.me/joinchat/{match.group(1)}"
+
+    # ── Приватная инвайт-ссылка: t.me/+<hash> (новый формат) ────────────────
+    match = re.fullmatch(
+        r"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.dog)/\+([A-Za-z0-9_\-]+)/?",
+        link,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        return f"https://t.me/+{match.group(1)}"
+
+    # ── Голый хэш приватного инвайта (начинается с +) ────────────────────────
+    match = re.fullmatch(r"\+([A-Za-z0-9_\-]{10,})", link)
+    if match:
+        return f"https://t.me/+{match.group(1)}"
 
     return None
 

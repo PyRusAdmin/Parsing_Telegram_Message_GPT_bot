@@ -94,6 +94,11 @@
 
 ### 1.6. Исправленные баги (ранее числились в разделе 2)
 
+- [x] **[25.10.2026] Исправлен рассинхрон формата ссылок при удалении канала и добавлена поддержка приватных инвайтов**:
+  - В [`account_manager/utilit.py`](file:///G:/Бот/08_09_2026_AutoParseAlertBot/account_manager/utilit.py) функция `normalize_telegram_link` расширена поддержкой приватных инвайтов (`https://t.me/joinchat/<hash>`, `https://t.me/+<hash>`, `+<hash>`).
+  - В [`handlers/user/delete_group_from_database.py`](file:///G:/Бот/08_09_2026_AutoParseAlertBot/handlers/user/delete_group_from_database.py) введённая строка перед поиском в БД прогоняется через `normalize_telegram_link`.
+  - Заодно исправлена ошибка отсутствия импорта `get_user_accounts` — теперь сессия безопасно берётся из `PersonalTracking`.
+
 - [x] **[23.10.2026] Исправлено обращение к полю `Group.username`**: В `database/group_user_database.py` строки 49 и 100
   исправлены — `row.username` → `row.username_group` (`8f50a56`, `11bc764`).
 - [x] **[23.10.2026] Исправлено имя параметра `dell_group`**: В двух местах исправлен вызов
@@ -118,20 +123,7 @@
 
 ---
 
-### 🐞 2.1. Рассинхрон формата ссылок при удалении канала — **КРИТИЧНО**
 
-- **Файлы**:
-  - `account_manager/utilit.py` — функция `normalize_telegram_link`
-  - `handlers/user/settings_handlers/connect_group.py` — добавление каналов
-  - `handlers/user/delete_group_from_database.py` — удаление канала
-- **Симптом**: Пользователь вводит `@channel_name` для удаления — бот отвечает «группа не найдена».
-- **Причина**: `normalize_telegram_link` сохраняет ссылки в БД в формате **полного URL** `https://t.me/channel_name`,
-  а при удалении хендлер ищет по введённому тексту `@channel_name` или `channel_name` — строки не совпадают.
-- **Что нужно сделать**:
-  1. В `delete_group_from_database.py` перед поиском в БД прогнать введённый пользователем текст через ту же функцию
-     `normalize_telegram_link` (она уже есть в `account_manager/utilit.py`).
-  2. Либо договориться о едином формате хранения: хранить только `@username` без `https://t.me/`.
-  3. Обработать случай приватных инвайтов (`joinchat/+hash`) — сейчас они могут сохраниться некорректно.
 
 ---
 
