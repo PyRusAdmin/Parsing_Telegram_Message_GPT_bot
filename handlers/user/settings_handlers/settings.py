@@ -2,7 +2,7 @@ import math
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery
 
 from database.database import PersonalTracking
 from database.group_user_database import (
@@ -12,7 +12,6 @@ from database.group_user_database import (
     get_user_channel_usernames,
 )
 from database.keywords_user_database import (
-    clear_all_user_keywords,
     get_user_keywords_paginated,
     get_keywords_count,
 )

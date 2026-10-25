@@ -28,16 +28,17 @@ CATEGORY_MAP = {
 }
 
 
-def back_button(lang):
+def back_button(lang: str = 'ru', callback_data: str = "menu_main"):
     """
     Кнопка ⬅️ Назад
 
     :param lang: Язык пользователя
+    :param callback_data: Значение callback_data (по умолчанию "menu_main")
     :return InlineKeyboardButton: Кнопка возврата
     """
     return InlineKeyboardButton(
         text=t("back_button", lang=lang),  # ⬅️ Назад
-        callback_data="menu_main",
+        callback_data=callback_data,
         style="danger"  # Стиль кнопки
     )
 
@@ -275,6 +276,7 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
             ],
         ]
     )
+
 
 def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
     """Инлайн-клавиатура предложения подключить аккаунт"""
@@ -597,6 +599,9 @@ def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
+                InlineKeyboardButton(text="📢 Рассылка пользователям", callback_data="admin_broadcast_start"),
+            ],
+            [
                 InlineKeyboardButton(text=t("get_log_file_button", lang=lang), callback_data="admin_get_log"),
             ],
             [
@@ -611,6 +616,22 @@ def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
             ],
             [
                 back_button(lang)  # Кнопка ⬅️ Назад
+            ]
+        ]
+    )
+
+
+def broadcast_preview_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Клавиатура предпросмотра и подтверждения рассылки
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🚀 Запустить рассылку", callback_data="admin_broadcast_send"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отменить рассылку", callback_data="admin_broadcast_cancel"),
             ]
         ]
     )

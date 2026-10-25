@@ -52,3 +52,9 @@ class PersonalTrackingStateGroupInput(StatesGroup):
     """Группа состояний FSM для настройки персонального отслеживания и авторизации аккаунта"""
 
     waiting_for_target_link_group_input = State()  # Ожидание ссылки или username целевой группы/канала от пользователя
+
+
+class BroadcastState(StatesGroup):
+    """Состояния FSM для рассылки сообщений пользователям"""
+    waiting_for_broadcast_message = State()
+    waiting_for_broadcast_confirmation = State()
