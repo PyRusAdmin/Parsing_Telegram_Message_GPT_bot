@@ -11,8 +11,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.utilit import choosing_random_ai_model
 from core.config import GROQ_API_KEY, ADMIN_USER_ID
 from core.proxy import setup_proxy
-from database.database import User, add_question
-
+from database.database import add_question
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t
@@ -73,8 +72,6 @@ async def send_instruction_cb(callback: CallbackQuery, state: FSMContext):
     Обработчик инлайн-кнопки "Инструкция по использованию".
     """
     await state.clear()
-    # user = User.get(User.user_id == callback.from_user.id)
-    # user_lang = user.language if user.language != "unset" else "ru"
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
@@ -100,12 +97,10 @@ async def handle_instruction_question(message: Message, state: FSMContext):
     Обрабатывает вопросы пользователя по инструкции с использованием Groq AI.
     """
     # text_question = message.text  # Получаем вопрос пользователя
-    user_db = User.get(User.user_id == message.from_user.id)
-    user_lang = user_db.language if user_db.language != "unset" else "ru"
-
-    if message.text == t('back_button', lang=user_lang):
-        await handle_back_to_main_menu(message, state)
-        return
+    # user_db = User.get(User.user_id == message.from_user.id)
+    # user_lang = user_db.language if user_db.language != "unset" else "ru"
+    # Определяем язык пользователя, который пользователь выбрал при старте бота
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     knowledge_base_content = load_knowledge_base()  # Загружаем базу знаний из файла doc/doc.md
 
@@ -115,8 +110,6 @@ async def handle_instruction_question(message: Message, state: FSMContext):
     try:
         setup_proxy()
         client = AsyncGroq(api_key=GROQ_API_KEY)
-
-        # system_prompt = t('ai_support_assistant_system_prompt', lang=user_lang)
 
         model = choosing_random_ai_model()
         logger.debug(f"Выбранная модель: {model} для дальнейшего консультативного ответа на вопрос: {message.text}")
@@ -162,4 +155,4 @@ async def handle_instruction_question(message: Message, state: FSMContext):
 
     except Exception as e:
         logger.exception(e)
-        await message.answer(t("instruction_send_error", lang=user_db.language))
+        await message.answer(t("instruction_send_error", lang=user_lang))

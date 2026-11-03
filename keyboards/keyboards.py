@@ -575,7 +575,7 @@ def keywords_list_inline_kb(records: list, page: int, total_pages: int, lang: st
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def confirm_clear_keyboard(confirm_cb: str, cancel_cb: str, lang: str = 'ru') -> InlineKeyboardMarkup:
+def confirm_clear_keyboard(confirm_cb: str, cancel_cb: str) -> InlineKeyboardMarkup:
     """
     Клавиатура подтверждения очистки.
     :param confirm_cb: callback_data для подтверждения
