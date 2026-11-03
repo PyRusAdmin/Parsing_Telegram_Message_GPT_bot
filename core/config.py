@@ -16,6 +16,7 @@ PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
 
+
 class AdminId(int):
     """
     Класс-обёртка для ID администратора:
@@ -23,6 +24,7 @@ class AdminId(int):
     - Поддерживает оператор in: user_id in ADMIN_USER_ID
     - Итерируем: for admin_id in ADMIN_USER_ID
     """
+
     def __new__(cls, val, all_ids=None):
         instance = super().__new__(cls, val)
         instance._ids = set(all_ids) if all_ids else {int(val)}
