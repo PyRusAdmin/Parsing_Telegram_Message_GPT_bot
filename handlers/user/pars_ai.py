@@ -254,8 +254,10 @@ async def check_and_start_download(message: Message, state: FSMContext, download
     logger.info(
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    user = User.get(User.user_id == message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=effective_user_id)
+    user = User.get_or_none(User.user_id == effective_user_id)
+    if not user:
+        user, _ = User.get_or_create(user_id=effective_user_id, defaults={"language": user_lang})
     can_dl, remaining_sec = can_user_download_free(user)
     if can_dl:
         logger.info(f"User {effective_user_id} is allowed to download for free.")
@@ -287,7 +289,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
     """Формирует и отправляет пользователю файл выгрузки базы данных"""
     logger.info(f"📥 Начало perform_download для user_id={user_id}, download_type={download_type}, category={category}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=user_id)
 
     # Оповещаем пользователя о начале генерации
     status_msg = await message.answer(t("generating_database_wait", lang=user_lang))
@@ -532,7 +534,7 @@ async def handle_get_database_menu_cb(callback: CallbackQuery, state: FSMContext
     """Обработчик инлайн-кнопки Получить базу"""
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     try:
         await callback.message.edit_text(
@@ -567,7 +569,7 @@ async def start_category_export(message: Message, state: FSMContext):
 async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
     """Запускает выбор категории через инлайн-кнопку"""
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     try:
         await callback.message.edit_text(
             t("select_category_prompt", lang=user_lang),
@@ -586,7 +588,7 @@ async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
 async def handle_category_callback(callback: CallbackQuery, state: FSMContext):
     """Обработчик нажатия на инлайн-кнопку категории"""
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     cat_code = callback.data.split(":", 1)[1]
 
     if cat_code == "back":
@@ -655,8 +657,10 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает списание звезд с баланса для оплаты выгрузки базы"""
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    user = User.get(User.user_id == message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+    user = User.get_or_none(User.user_id == callback.from_user.id)
+    if not user:
+        user, _ = User.get_or_create(user_id=callback.from_user.id, defaults={"language": user_lang})
     if user.stars < 5:
         logger.warning(f"Недостаточно звезд у {callback.from_user.id} (баланс: {user.stars})")
         await callback.answer(t("download_insufficient_stars", lang=user_lang), show_alert=True)
@@ -682,7 +686,7 @@ async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
     """Формирует инвойс на прямую оплату выгрузки базы звездами Telegram Stars"""
     logger.info(f"⭐ Пользователь {callback.from_user.id} выбрал прямую оплату 5 звезд")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     await callback.message.answer_invoice(
         title=t("stars_invoice_dl_title", lang=user_lang),
@@ -700,7 +704,7 @@ async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
     """Отменяет выбор оплаты выгрузки базы данных"""
     logger.info(f"❌ Пользователь {callback.from_user.id} отменил оплату")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     await callback.message.edit_text(t("action_cancelled", lang=user_lang))
     await state.clear()
@@ -722,7 +726,9 @@ async def process_successful_payment(message: Message, state: FSMContext):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
-    user = User.get(User.user_id == message.from_user.id)
+    user = User.get_or_none(User.user_id == message.from_user.id)
+    if not user:
+        user, _ = User.get_or_create(user_id=message.from_user.id, defaults={"language": user_lang})
 
     payment_info = message.successful_payment
     payload = payment_info.invoice_payload

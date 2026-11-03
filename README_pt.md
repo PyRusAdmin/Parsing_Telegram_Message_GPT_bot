@@ -19,17 +19,23 @@
 - **Versão:** 0.1.0
 - **Data de atualização:** 04 de setembro de 2026
 
-O bot analisa novas mensagens em grupos e canais selecionados do Telegram em tempo real, notificando instantaneamente sobre correspondências de palavras-chave. Ele também utiliza IA (Groq, OpenRouter) para descobrir inteligentemente novas comunidades temáticas no Telegram.
+O bot analisa novas mensagens em grupos e canais selecionados do Telegram em tempo real, notificando instantaneamente
+sobre correspondências de palavras-chave. Ele também utiliza IA (Groq, OpenRouter) para descobrir inteligentemente novas
+comunidades temáticas no Telegram.
 
 ## ✨ Principais recursos
 
-- 🚀 **Monitoramento em tempo real:** Encaminhamento instantâneo de mensagens com palavras-chave correspondentes para o seu grupo de destino.
+- 🚀 **Monitoramento em tempo real:** Encaminhamento instantâneo de mensagens com palavras-chave correspondentes para o
+  seu grupo de destino.
 - 🤖 **Busca com IA em dois níveis:** Pesquisa no banco de dados local e pesquisa global em todo o Telegram.
-- 📊 **Exportação para XLSX:** Exportação de resultados de pesquisa e monitoramento para Excel com filtros por categoria e nível de atividade.
-- 🛡️ **Painel de administração:** Ferramentas para atualização do banco de dados, categorização em massa via IA e detecção do idioma das conversas.
+- 📊 **Exportação para XLSX:** Exportação de resultados de pesquisa e monitoramento para Excel com filtros por categoria
+  e nível de atividade.
+- 🛡️ **Painel de administração:** Ferramentas para atualização do banco de dados, categorização em massa via IA e
+  detecção do idioma das conversas.
 - 🌍 **Multilíngue:** Suporte completo para português, russo, inglês e outros idiomas (Fluent i18n).
 - 🔐 **Multicontas:** Suporte a múltiplos arquivos `.session` (StringSession) para contornar limites do Telegram.
-- 💰 **Limites e Telegram Stars:** Limite de exportação gratuita do banco de dados (1 vez a cada 24 horas). Downloads adicionais disponíveis por 5 Telegram Stars.
+- 💰 **Limites e Telegram Stars:** Limite de exportação gratuita do banco de dados (1 vez a cada 24 horas). Downloads
+  adicionais disponíveis por 5 Telegram Stars.
 
 <p align="center">
   <img src="doc/MessageParser.jpg" alt="Prévia da interface do bot" width="30%" />
@@ -39,7 +45,8 @@ O bot analisa novas mensagens em grupos e canais selecionados do Telegram em tem
 
 - **Monitoramento:** Rastreamento de palavras-chave em uma lista ilimitada de grupos e canais.
 - **Busca com IA:** Descoberta de novos grupos-alvo por meio de prompts semânticos em linguagem natural.
-- **Exportação inteligente:** Download do banco de dados filtrado por categorias específicas (negócios, cripto, empregos, etc.).
+- **Exportação inteligente:** Download do banco de dados filtrado por categorias específicas (negócios, cripto,
+  empregos, etc.).
 - **Detecção de atividade:** Marcação de comunidades com os status `active`, `inactive` ou `unknown`.
 - **Adição em massa:** Envio de listas de monitoramento através de arquivos `.txt`.
 - **Suporte a Proxy:** Compatibilidade com proxies HTTP/SOCKS5 para conexão estável com IA e a API do Telegram.
@@ -77,11 +84,11 @@ Usuários com privilégios de administrador têm acesso a um painel de controle 
 
 ## 📊 Determinação de atividade
 
-| Status        | Descrição                                                     |
-|:--------------|:--------------------------------------------------------------|
-| 🟢 `active`   | A última mensagem foi postada há **≤ 30 dias**               |
-| 🔴 `inactive` | A última mensagem foi postada há **> 30 dias**               |
-| ⚪ `unknown`  | Não foi possível obter a data (restrições de privacidade)     |
+| Status        | Descrição                                                 |
+|:--------------|:----------------------------------------------------------|
+| 🟢 `active`   | A última mensagem foi postada há **≤ 30 dias**            |
+| 🔴 `inactive` | A última mensagem foi postada há **> 30 dias**            |
+| ⚪ `unknown`  | Não foi possível obter a data (restrições de privacidade) |
 
 ---
 
@@ -90,11 +97,13 @@ Usuários com privilégios de administrador têm acesso a um painel de controle 
 Windows:
 
 No prompt de comando (cmd):
+
 ```cmd
 venv\Scripts\activate.bat
 ```
 
 No PowerShell:
+
 ```powershell
 venv\Scripts\Activate.ps1
 ```

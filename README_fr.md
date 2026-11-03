@@ -19,17 +19,25 @@
 - **Version :** 0.1.0
 - **Date de mise à jour :** 04 septembre 2026
 
-Le bot analyse les nouveaux messages dans des groupes et canaux Telegram sélectionnés en temps réel, vous alertant immédiatement des correspondances de mots-clés. Il exploite également l'IA (Groq, OpenRouter) pour découvrir intelligemment de nouvelles communautés Telegram ciblées.
+Le bot analyse les nouveaux messages dans des groupes et canaux Telegram sélectionnés en temps réel, vous alertant
+immédiatement des correspondances de mots-clés. Il exploite également l'IA (Groq, OpenRouter) pour découvrir
+intelligemment de nouvelles communautés Telegram ciblées.
 
 ## ✨ Fonctionnalités clés
 
-- 🚀 **Surveillance en temps réel :** Transfert instantané des messages contenant les mots-clés vers votre groupe de destination.
-- 🤖 **Recherche IA à deux niveaux :** Recherche locale dans la base de données et recherche globale sur l'ensemble de Telegram.
-- 📊 **Exportation XLSX :** Téléchargement des résultats de recherche et de surveillance sous Excel avec filtrage par catégorie et niveau d'activité.
-- 🛡️ **Panneau d'administration :** Outils de mise à jour de la base de données, catégorisation par lots par IA et détection de la langue des discussions.
+- 🚀 **Surveillance en temps réel :** Transfert instantané des messages contenant les mots-clés vers votre groupe de
+  destination.
+- 🤖 **Recherche IA à deux niveaux :** Recherche locale dans la base de données et recherche globale sur l'ensemble de
+  Telegram.
+- 📊 **Exportation XLSX :** Téléchargement des résultats de recherche et de surveillance sous Excel avec filtrage par
+  catégorie et niveau d'activité.
+- 🛡️ **Panneau d'administration :** Outils de mise à jour de la base de données, catégorisation par lots par IA et
+  détection de la langue des discussions.
 - 🌍 **Multilingue :** Prise en charge complète du français, du russe, de l'anglais et d'autres langues (Fluent i18n).
-- 🔐 **Multi-comptes :** Prise en charge de plusieurs fichiers `.session` (StringSession) pour contourner les limites imposées par Telegram.
-- 💰 **Limites et Telegram Stars :** Exportation gratuite de la base de données (1 fois toutes les 24 heures). Téléchargements supplémentaires disponibles pour 5 Telegram Stars.
+- 🔐 **Multi-comptes :** Prise en charge de plusieurs fichiers `.session` (StringSession) pour contourner les limites
+  imposées par Telegram.
+- 💰 **Limites et Telegram Stars :** Exportation gratuite de la base de données (1 fois toutes les 24 heures).
+  Téléchargements supplémentaires disponibles pour 5 Telegram Stars.
 
 <p align="center">
   <img src="doc/MessageParser.jpg" alt="Aperçu de l'interface du bot" width="30%" />
@@ -39,7 +47,8 @@ Le bot analyse les nouveaux messages dans des groupes et canaux Telegram sélect
 
 - **Surveillance :** Suivi des mots-clés dans une liste illimitée de groupes et de canaux.
 - **Recherche IA :** Découverte de nouveaux groupes cibles grâce à des requêtes sémantiques.
-- **Export intelligent :** Téléchargement de la base de données selon des catégories spécifiques (business, crypto, emploi, etc.).
+- **Export intelligent :** Téléchargement de la base de données selon des catégories spécifiques (business, crypto,
+  emploi, etc.).
 - **Détection d'activité :** Marquage des communautés avec les statuts `active`, `inactive` ou `unknown`.
 - **Ajout groupé :** Chargement de listes de canaux via des fichiers `.txt`.
 - **Support Proxy :** Prise en charge des proxys HTTP/SOCKS5 pour une connectivité stable avec l'IA et l'API Telegram.
@@ -77,11 +86,11 @@ Les utilisateurs disposant des droits d'administrateur ont accès à un panneau 
 
 ## 📊 Détermination de l'activité
 
-| Statut        | Description                                                   |
-|:--------------|:--------------------------------------------------------------|
-| 🟢 `active`   | Le dernier message a été publié il y a **≤ 30 jours**          |
-| 🔴 `inactive` | Le dernier message a été publié il y a **> 30 jours**          |
-| ⚪ `unknown`  | Impossible de récupérer la date (restrictions de sécurité)    |
+| Statut        | Description                                                |
+|:--------------|:-----------------------------------------------------------|
+| 🟢 `active`   | Le dernier message a été publié il y a **≤ 30 jours**      |
+| 🔴 `inactive` | Le dernier message a été publié il y a **> 30 jours**      |
+| ⚪ `unknown`  | Impossible de récupérer la date (restrictions de sécurité) |
 
 ---
 
@@ -90,11 +99,13 @@ Les utilisateurs disposant des droits d'administrateur ont accès à un panneau 
 Windows :
 
 Dans l'invite de commandes (cmd) :
+
 ```cmd
 venv\Scripts\activate.bat
 ```
 
 Dans PowerShell :
+
 ```powershell
 venv\Scripts\Activate.ps1
 ```

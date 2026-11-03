@@ -19,7 +19,8 @@
 - **Version:** 0.1.0
 - **Release Date:** September 04, 2026
 
-The bot analyzes new messages in specified Telegram groups and channels in real-time, instantly notifying about keyword matches. It also leverages AI (Groq, OpenRouter) for intelligent discovery of new niche Telegram communities.
+The bot analyzes new messages in specified Telegram groups and channels in real-time, instantly notifying about keyword
+matches. It also leverages AI (Groq, OpenRouter) for intelligent discovery of new niche Telegram communities.
 
 ## ✨ Key Features
 
@@ -29,7 +30,8 @@ The bot analyzes new messages in specified Telegram groups and channels in real-
 - 🛡️ **Admin Panel:** Tools for database updates, bulk AI categorization, and chat language detection.
 - 🌍 **Multi-language:** Full support for Russian and English (Fluent i18n).
 - 🔐 **Multi-account:** Support for multiple `.session` files (StringSession) to bypass Telegram limits.
-- 💰 **Limits & Telegram Stars:** Free database export limit (once every 24 hours). Additional downloads available for 5 Telegram Stars (balance deduction or direct payment).
+- 💰 **Limits & Telegram Stars:** Free database export limit (once every 24 hours). Additional downloads available for 5
+  Telegram Stars (balance deduction or direct payment).
 
 <p align="center">
   <img src="doc/MessageParser.jpg" alt="Bot interface preview" width="30%" />
@@ -90,11 +92,13 @@ Users with admin privileges have access to a dedicated management dashboard:
 Windows:
 
 In Command Prompt (cmd):
+
 ```cmd
 venv\Scripts\activate.bat
 ```
 
 In PowerShell:
+
 ```powershell
 venv\Scripts\Activate.ps1
 ```
