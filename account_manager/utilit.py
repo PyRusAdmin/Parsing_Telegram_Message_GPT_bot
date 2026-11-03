@@ -89,5 +89,36 @@ def choosing_random_ai_model():
     return model
 
 
+_language_detector = None
+
+
+def detect_language(text: str) -> Optional[str]:
+    """
+    Ленивая детекция языка текста с помощью lingua-py.
+    Детектор создаётся один раз (singleton) только при первом реальном вызове,
+    что предотвращает тяжелые импорты и зависание при старте бота.
+    """
+    global _language_detector
+    if not text or not isinstance(text, str) or not text.strip():
+        return None
+
+    try:
+        if _language_detector is None:
+            from lingua import LanguageDetectorBuilder
+            _language_detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
+
+        result = _language_detector.detect_language_of(text.strip())
+        if result is not None:
+            code = result.iso_code_639_1.name.lower()
+            from core.config import ISO_639_1_CODES
+            if code in ISO_639_1_CODES:
+                return code
+    except Exception as e:
+        from loguru import logger
+        logger.warning(f"Ошибка при определении языка текста: {e}")
+
+    return None
+
+
 if __name__ == "__main__":
     choosing_random_ai_model()

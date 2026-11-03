@@ -5,13 +5,12 @@ import random
 
 import openai
 from groq import AsyncGroq, RateLimitError, AuthenticationError, NotFoundError
-from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
 from loguru import logger  # https://loguru.readthedocs.io/en/stable/overview.html
 from telethon.errors import FloodWaitError, UsernameNotOccupiedError, FrozenMethodInvalidError
 from telethon.sync import functions
 from openai import AsyncOpenAI
 from account_manager.parser import determine_telegram_chat_type
-from account_manager.utilit import choosing_random_ai_model
+from account_manager.utilit import choosing_random_ai_model, detect_language
 from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY, ISO_639_1_CODES
 from core.proxy import setup_proxy
 from database.database import TelegramGroup
@@ -331,14 +330,11 @@ async def search_groups_in_telegram(client, group_names):
                     if not existing_group.language or existing_group.language.strip() in ('', 'unknown', 'none'):
                         logger.info(f"Язык группы {title} {username} не определён в БД, определяем...")
                         try:
-                            detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-                            res = detector.detect_language_of(title)
-                            if res is not None:
-                                code = res.iso_code_639_1.name.lower()
-                                if code in ISO_639_1_CODES:
-                                    existing_group.language = code
-                                    existing_group.save()
-                                    logger.info(f"✅ Обновлён язык для существующей группы {title} {username}: {code}")
+                            code = detect_language(title)
+                            if code:
+                                existing_group.language = code
+                                existing_group.save()
+                                logger.info(f"✅ Обновлён язык для существующей группы {title} {username}: {code}")
                         except Exception as e:
                             logger.warning(f"Ошибка определения языка для существующей группы '{title}': {e}")
                     else:
@@ -375,17 +371,9 @@ async def search_groups_in_telegram(client, group_names):
                 """
                 logger.info(f"Найдена новая группа {title} {username}, определяем язык")
                 try:
-                    detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-                    text = title
-                    result = detector.detect_language_of(text)
-
-                    if result is not None:
-                        detected_lang = result.iso_code_639_1.name.lower()
-                        if detected_lang in ISO_639_1_CODES:
-                            lang_code = detected_lang
-                            logger.info(f"✅ {title} → язык: {lang_code}")
-                        else:
-                            logger.warning(f"Язык {detected_lang} не найден в списке ISO_639_1")
+                    lang_code = detect_language(title) or ''
+                    if lang_code:
+                        logger.info(f"✅ {title} → язык: {lang_code}")
                     else:
                         logger.warning(f"Язык для группы {title} {username} не определён")
                 except Exception as e:

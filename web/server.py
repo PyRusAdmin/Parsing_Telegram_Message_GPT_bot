@@ -1,1490 +1,1 @@
-import asyncio
-import csv
-import hashlib
-import hmac
-import io
-import json
-import os
-import random
-import re
-import urllib.parse
-import urllib.request
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
-
-from aiogram.client import bot
-from aiogram.types import BufferedInputFile, LabeledPrice
-from asgiref.sync import sync_to_async
-from fastapi import (
-    APIRouter, BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-)
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response, StreamingResponse
-from g4f.client import Client
-from groq import AsyncGroq
-from lingua import LanguageDetectorBuilder  # Библиотека для автоматического определения языка
-from loguru import logger  # https://github.com/Delgan/loguru
-from openai import AsyncOpenAI
-from telethon.errors import (
-    AuthKeyUnregisteredError, FloodWaitError, UsernameInvalidError
-)
-from telethon.sessions import StringSession
-
-from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import (
-    active_clients, filter_messages, get_full_info_group, stop_flags, stop_tracking, update_group_channels_data_base
-)
-from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
-from core.config import (
-    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
-)
-from database.database import (
-    Account, TelegramGroup, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
-    getting_account, getting_number_records_database, database
-)
-from database.group_user_database import Group
-from database.keywords_user_database import get_keywords_count, get_user_keywords_with_id, Keywords
-from database.personal_tracking import get_session_count
-from handlers.admin.checking_group_for_ai import get_best_g4f_model
-from handlers.admin.language_detection import ai_llama_fri
-from handlers.user.pars_ai import (
-    can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db, parse_search_input
-)
-from handlers.user_language import determines_user_language
-from locales.locales import t
-from system.dispatcher import bot
-
-# Инициализировать FastAPI
-app = FastAPI(title="AutoParseAlertBot Web API", version="0.1.0")
-
-# Добавьте промежуточное ПО CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# TODO: После рефактинга удалить закоментированный код 29.08.2026
-
-
-class MockMessage:
-    """Имитация объекта сообщения aiogram для обработки запросов из веб-интерфейса"""
-
-    # Mock Message для совместимости с обработчиками ботов
-    def __init__(self, user_id: int, username: Optional[str] = "web_user"):
-        """Инициализирует объект MockMessage для имитации Telegram-сообщения"""
-        self.from_user = type('User', (), {
-            'id': user_id,
-            'username': username or 'web_user',
-            'first_name': 'Web',
-            'last_name': 'User'
-        })()
-        self.chat = type('Chat', (), {'id': user_id})()
-
-        # Лениво обращайтесь к боту для предотвращения круговых зависимостей или неинициализированных переменных
-        from system.dispatcher import bot
-        self.bot = bot
-
-    async def answer(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует отправку текстового ответа пользователю через Telegram-бота"""
-        from system.dispatcher import bot
-        try:
-            return await bot.send_message(
-                chat_id=self.from_user.id,
-                text=text,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup,
-                **kwargs
-            )
-        except Exception as e:
-            logger.exception(f"Failed to send mock answer to {self.from_user.id}: {e}")
-
-    async def reply(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует ответ на сообщение пользователю через Telegram-бота"""
-        return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
-
-    async def answer_document(self, document, caption=None, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует отправку документа пользователю через Telegram-бота"""
-        from system.dispatcher import bot
-        try:
-            return await bot.send_document(
-                chat_id=self.from_user.id,
-                document=document,
-                caption=caption,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup,
-                **kwargs
-            )
-        except Exception as e:
-            logger.exception(f"Failed to send mock document to {self.from_user.id}: {e}")
-
-    async def answer_photo(self, photo, caption=None, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует отправку фотографии пользователю через Telegram-бота"""
-        from system.dispatcher import bot
-        try:
-            return await bot.send_photo(
-                chat_id=self.from_user.id,
-                photo=photo,
-                caption=caption,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup,
-                **kwargs
-            )
-        except Exception as e:
-            logger.exception(f"Failed to send mock photo to {self.from_user.id}: {e}")
-
-    async def edit_text(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует редактирование текста сообщения через Telegram-бота"""
-        return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
-
-
-@app.middleware("http")
-async def db_session_middleware(request, call_next):
-    """Обеспечивает активное подключение к базе данных для каждого HTTP-запроса"""
-    # Промежуточное программное обеспечение для подключения к базе данных
-    if database.is_closed():
-        database.connect(reuse_if_open=True)
-    response = await call_next(request)
-    return response
-
-
-def get_client_ip(request: Request) -> str:
-    """Извлекает реальный IP пользователя с учетом прокси (X-Forwarded-For, X-Real-IP, CF-Connecting-IP)"""
-    x_forwarded_for = request.headers.get("x-forwarded-for")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-    x_real_ip = request.headers.get("x-real-ip")
-    if x_real_ip:
-        return x_real_ip.strip()
-    cf_ip = request.headers.get("cf-connecting-ip")
-    if cf_ip:
-        return cf_ip.strip()
-    if request.client:
-        return request.client.host
-    return "127.0.0.1"
-
-
-async def get_country_by_ip(ip: str) -> Optional[str]:
-    """Определяет двухбуквенный код страны (RU, US и т.д.) по IP через ip-api.com"""
-    if ip.startswith(("127.", "192.168.", "10.", "172.16.", "localhost")):
-        return None
-    try:
-        def _fetch():
-            """Выполняет запрос к внешнему сервису гео-IP для определения кода страны"""
-            url = f"http://ip-api.com/json/{ip}?fields=countryCode,status"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                data = json.loads(resp.read().decode())
-                if data.get("status") == "success":
-                    return data.get("countryCode")
-            return None
-
-        return await asyncio.to_thread(_fetch)
-    except Exception as e:
-        logger.warning(f"⚠️ Ошибка определения страны по IP {ip}: {e}")
-        return None
-
-
-async def detect_language_by_ip(ip: str, accept_language_header: Optional[str] = None) -> str:
-    """
-    Определяет предпочтительный язык ('ru' или 'en') на основе IP пользователя и заголовка Accept-Language.
-    """
-    country_code = await get_country_by_ip(ip)
-    if country_code:
-        ru_countries = {"RU", "BY", "KZ", "KG", "AM", "AZ", "TJ", "TM", "UZ", "MD", "GE"}
-        if country_code.upper() in ru_countries:
-            return "ru"
-        else:
-            return "en"
-
-    if accept_language_header:
-        lang_lower = accept_language_header.lower()
-        if any(code in lang_lower for code in ["ru", "be", "uk", "kk"]):
-            return "ru"
-
-    return "ru"
-
-
-def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
-    """Проверяет авторизацию пользователя Telegram по токену initData"""
-    # Зависимость для проверки аутентификации из initData
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
-
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid authorization scheme")
-
-    token = authorization[7:]
-
-    # Разрешить имитация входа для локальной разработки и тестирования
-    if token.startswith("mock_"):
-        try:
-            mock_id = int(token.split("_")[1])
-
-            return {
-                "id": mock_id,
-                "first_name": "Test",
-                "last_name": "User",
-                "username": f"test_user_{mock_id}",
-                "language_code": "ru",
-                "is_mock": True
-            }
-        except Exception:
-            raise HTTPException(status_code=401, detail="Invalid mock token")
-
-    try:
-        params = dict(urllib.parse.parse_qsl(token, keep_blank_values=True))
-        if 'hash' not in params:
-            raise HTTPException(status_code=401, detail="Missing hash parameter")
-
-        auth_hash = params.pop('hash')
-        sorted_params = sorted(params.items())
-        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted_params)
-
-        # Проверить хеш
-        secret_key = hmac.new("WebAppData".encode(), BOT_TOKEN.encode(), hashlib.sha256).digest()
-        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-
-        if not hmac.compare_digest(calculated_hash, auth_hash):
-            logger.warning(
-                "Telegram auth failed: hash mismatch. BOT_TOKEN in .env does not match the Telegram bot used to open WebApp.")
-            raise HTTPException(status_code=401, detail="Invalid Telegram signature")
-
-        user_data = json.loads(params['user'])
-        return user_data
-    except Exception as e:
-        logger.exception(f"Telegram auth failed: {e}")
-        raise HTTPException(status_code=401, detail="Authentication failed")
-
-
-# Глобальный словарь статуса администратора для показа прогресса в работе администратора в веб-интерфейсе
-admin_task_status = {
-    "action": "none",  # "categorize", "lang_detect", "check_accounts", "actualize", "none"
-    "progress": 0,
-    "total": 0,
-    "status": "idle",  # "running", "completed", "error"
-    "message": ""
-}
-
-# Множество подсоединённых сессий для устранения дублирующего спама в логах при регулярном поллинге каждые 5 сек
-logged_user_sessions = set()
-
-
-def init_web_directories():
-    """Создает необходимые директории для статических файлов веб-сервера"""
-    # Убедитесь, что каталоги существуют
-    os.makedirs("web/static", exist_ok=True)
-    os.makedirs("web/static/css", exist_ok=True)
-    os.makedirs("web/static/js", exist_ok=True)
-
-
-init_web_directories()
-
-
-# ==================== ПУБЛИЧНЫЕ API-ЭНДПОИНТЫ ====================
-
-@app.get("/api/status")
-async def get_status(request: Request, user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает статус пользователя, настройки языка и статистику системы"""
-    try:
-        client_ip = get_client_ip(request)
-
-        # Получить пользователя
-        user = User.get_or_none(User.user_id == user_data["id"])
-        if not user:
-            detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
-            # Зарегистрировать пользователя в базе данных
-            user = User.create(
-                user_id=user_data["id"],
-                username=user_data.get("username"),
-                first_name=user_data.get("first_name"),
-                last_name=user_data.get("last_name"),
-                language=detected_lang
-            )
-        elif user.language == "unset":
-            detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
-            user.language = detected_lang
-            user.save()
-
-        # Получите статистику
-        groups_count = getting_number_records_database()
-        session_count = get_session_count(user_id=user_data["id"])
-        # group_count = get_target_group_count(user_id=user_data["id"])
-        # tracked_channels = get_tracked_channels_count(user_id=user_data["id"])
-        keywords_count = get_keywords_count(user_id=user_data["id"])
-
-        # Получите текущее имя целевой группы пользователя
-        GroupModel = create_group_model(user_data["id"])
-        target_group = None
-        if GroupModel.table_exists():
-            groups = list(GroupModel.select())
-            if groups:
-                target_group = groups[0].username_group
-
-        tracking_active = str(user_data["id"]) in active_clients
-
-        is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-                                                                      (list, set, tuple)) else user_data[
-                                                                                                   "id"] in ADMIN_USER_ID
-        session_key = (user_data["id"], client_ip)
-        if session_key not in logged_user_sessions:
-            logged_user_sessions.add(session_key)
-            logger.info(
-                f"👤 Пользователь {user_data.get('first_name', '')} {user_data.get('last_name', '')} (@{user_data.get('username', 'без username')}, ID: {user_data['id']}) | IP: {client_ip} | Язык: {user.language}. Администратор: {is_admin}")
-
-        return {
-            "user_id": user_data["id"],
-            "username": user.username,
-            "first_name": user.first_name,
-            "language": user.language,
-            "stars": user.stars,
-            "is_admin": is_admin,
-            "stats": {
-                "version": "0.1.0",
-                "db_total_groups": groups_count,
-                "connected_accounts": session_count,
-                "target_groups": group_count,
-                "tracked_channels": tracked_channels,
-                "keywords": keywords_count,
-                "target_group_username": target_group
-            },
-            "tracking_active": tracking_active
-        }
-    except Exception as e:
-        logger.exception(f"Error getting status: {e}")
-
-
-@app.post("/api/settings/language")
-async def update_language(lang: str, user_data: dict = Depends(get_current_tg_user)):
-    """Обновляет языковые настройки текущего пользователя"""
-    if lang not in ["ru", "en"]:
-        raise HTTPException(status_code=400, detail="Invalid language code")
-
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user.language = lang
-    user.save()
-    return {"status": "ok", "language": lang}
-
-
-@app.post("/api/tracking/start")
-async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):
-    """Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if str(user_data["id"]) in active_clients:
-        return {"status": "already_running"}
-
-    # Начинайте асинхронное отслеживание
-    mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"], user=user)
-
-    return {"status": "starting"}
-
-
-@app.post("/api/tracking/stop")
-async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
-    """Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if str(user_data["id"]) not in stop_flags:
-        return {"status": "not_active"}
-
-    mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-    await stop_tracking(user_id=user_data["id"], message=mock_msg)
-
-    return {"status": "stopping"}
-
-
-@app.get("/api/keywords")
-async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает список ключевых слов текущего пользователя"""
-    return get_user_keywords_with_id(user_id=user_data["id"])
-
-
-@app.post("/api/keywords")
-async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Добавляет новое ключевое слово для отслеживания"""
-
-    keyword = keyword.strip()
-    if not keyword:
-        raise HTTPException(status_code=400, detail="Keyword cannot be empty")
-
-    kw_obj, _ = Keywords.get_or_create(
-        user_id=user_data["id"],
-        user_keyword=keyword
-    )
-    return {"status": "ok", "id": kw_obj.id, "keyword": keyword}
-
-
-@app.delete("/api/keywords/{kw_id}")
-async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):
-    """Удаляет ключевое слово пользователя по его идентификатору"""
-    deleted = (
-        Keywords.delete()
-        .where(
-            (Keywords.id == kw_id) &
-            (Keywords.user_id == user_data["id"])
-        )
-        .execute()
-    )
-
-    if deleted:
-        return {"status": "ok"}
-
-    raise HTTPException(status_code=404, detail="Keyword not found")
-
-
-@app.get("/api/channels")
-async def list_channels(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает список отслеживаемых каналов пользователя"""
-    # Управление отслеживаемыми каналами
-    # user_id = user_data["id"]
-    records = list(Group.select().where(Group.user_id == user_data["id"]).order_by(Group.date_added.desc()))
-    return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
-            records]
-
-
-@app.post("/api/channels")
-async def add_channel(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Добавляет новый канал в список отслеживаемых"""
-
-    username_group = username.strip()
-    if not username:
-        raise HTTPException(status_code=400, detail="Username cannot be empty")
-
-    if not username.startswith("@"):
-        username_group = f"@{username}"
-
-    try:
-        Group.create(user_id=user_data["id"], username_group=username_group)
-        return {"status": "ok", "username": username}
-    except Exception as e:
-        if "UNIQUE constraint failed" in str(e):
-            raise HTTPException(status_code=400, detail="Channel already tracked")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.delete("/api/channels/{ch_id}")
-async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):
-    """Удаляет канал из списка отслеживаемых по идентификатору"""
-    # user_id = user_data["id"]
-    deleted = Group.delete().where(Group.user_id == user_data["id"], Group.id == ch_id).execute()
-    if deleted:
-        return {"status": "ok"}
-    raise HTTPException(status_code=404, detail="Channel not found")
-
-
-@app.post("/api/channels/upload")
-async def upload_channels_file(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
-    """Загружает список каналов из текстового файла"""
-
-    if not file.filename.endswith(".txt"):
-        raise HTTPException(status_code=400, detail="Only .txt files are supported")
-
-    contents = await file.read()
-    text = contents.decode("utf-8")
-    username_group = [line.strip() for line in text.splitlines() if line.strip()]
-
-    added_count = 0
-    skipped_count = 0
-    errors_count = 0
-
-    for username in username_group:
-        if not username.startswith("@"):
-            username_group = f"@{username}"
-        try:
-            Group.create(user_id=user_data["id"], username_group=username_group)
-            added_count += 1
-        except Exception as e:
-            if "UNIQUE constraint failed" in str(e):
-                skipped_count += 1
-            else:
-                errors_count += 1
-
-    return {
-        "status": "ok",
-        "added": added_count,
-        "skipped": skipped_count,
-        "errors": errors_count
-    }
-
-
-@app.get("/api/target-group")
-async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает текущую целевую группу пользователя для пересылки сообщений"""
-    # Конфигурация целевой группы
-
-    GroupModel = create_group_model(user_data["id"])
-    if not GroupModel.table_exists():
-        return {"username": None}
-
-    groups = list(GroupModel.select())
-    if groups:
-        return {"username": groups[0].username_group}
-    return {"username": None}
-
-
-@app.post("/api/target-group")
-async def set_target_group(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Устанавливает целевую группу пользователя для пересылки сообщений"""
-
-    username = username.strip()
-    if not username:
-        raise HTTPException(status_code=400, detail="Username cannot be empty")
-
-    if not username.startswith("@"):
-        username = f"@{username}"
-
-    GroupModel = create_group_model(user_data["id"])
-    if not GroupModel.table_exists():
-        GroupModel.create_table()
-
-    # Очистить предыдущую группу
-    GroupModel.delete().execute()
-
-    try:
-        GroupModel.create(user_group=username)
-        return {"status": "ok", "username": username}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/accounts")
-async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает список подключенных Telegram-аккаунтов пользователя"""
-    # Управление аккаунтами Telegram
-    # user_id = user_data["id"]
-    # accounts = get_user_accounts(user_data["id"])
-    # Возвращать сериализируемый дикт (исключая полную сессионную строку)
-    return [
-        {
-            "phone_number": acc["phone_number"],
-            "created_at": acc["created_at"].strftime("%Y-%m-%d %H:%M:%S")
-        }
-        for acc in get_user_accounts(user_data["id"])
-    ]
-
-
-@app.post("/api/accounts/upload")
-async def upload_account_session(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
-    """Загружает и подключает новый файл сессии Telegram-аккаунта"""
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if not file.filename.endswith(".session"):
-        raise HTTPException(status_code=400, detail="Only .session files are supported")
-
-    # Создать временный каталог счетов
-    sessions_dir = Path("accounts")
-    sessions_dir.mkdir(exist_ok=True)
-
-    # Дезинфицируйте и записывайте сессионный файл
-    safe_name = "".join(c for c in file.filename if c.isalnum() or c in "._-")
-    temp_path = sessions_dir / f"temp_{user_data["id"]}_{safe_name}"
-
-    client = None
-    try:
-        with open(temp_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
-
-        session_path_without_ext = str(temp_path.with_suffix(""))
-        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-        checker = CheckingAccountsValidity(path=session_path_without_ext)
-        client = await checker.connect_client()
-
-        if client:
-            try:
-                account_info = await get_account_info(client)
-                phone = account_info["phone"] or "unknown"
-                session_string = StringSession.save(client.session)
-
-                # Сохранить аккаунт в пользовательскую таблицу
-
-                write_account_to_user_table(
-                    user_id=user_data["id"],
-                    session_string=session_string,
-                    phone_number=phone
-                )
-
-                await client.disconnect()
-
-                # Отправьте уведомление через бота
-                # Определяем язык пользователя, который пользователь выбрал при старте бота
-                user_lang = determines_user_language(message_or_callback=message.from_user.id)
-                await mock_msg.answer(
-                    text=t("session_connected_success",
-                           lang=user_lang,
-                           filename=safe_name,
-                           phone=phone,
-                           name=account_info["first_name"]
-                           )
-                )
-
-                return {"status": "ok", "phone": phone, "name": account_info["first_name"]}
-            finally:
-                if client and client.is_connected():
-                    await client.disconnect()
-        else:
-            raise HTTPException(status_code=400, detail="Session file is invalid or not authorized")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception(f"Error processing session file upload: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if temp_path.exists():
-            try:
-                temp_path.unlink()
-            except Exception as pe:
-                logger.warning(f"Could not delete temporary session file {temp_path}: {pe}")
-
-
-@app.delete("/api/accounts/{phone}")
-async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_user)):
-    """Удаляет подключенный аккаунт пользователя по номеру телефона"""
-    user_id = user_data["id"]
-
-    # Получите список пользовательских аккаунтов, чтобы найти сессионную строку, соответствующую этому телефону
-    accounts = get_user_accounts(user_id)
-    session_to_delete = None
-    for acc in accounts:
-        if acc["phone_number"] == phone:
-            session_to_delete = acc["session_string"]
-            break
-
-    if not session_to_delete:
-        raise HTTPException(status_code=404, detail="Account not found")
-
-    # Удаление из таблицы учетных записей пользователей
-    deleted = UserAccountsTable.delete().where(
-        UserAccountsTable.user_id == user_id,
-        UserAccountsTable.phone_number == phone
-    ).execute()
-
-    if deleted:
-        # Также чисто от глобальных активных клиентов, если подключены
-        if str(user_id) in active_clients:
-            # Нужно отключить активного клиента
-            client = active_clients.pop(str(user_id))
-            if client.is_connected():
-                await client.disconnect()
-            if str(user_id) in stop_flags:
-                stop_flags.pop(str(user_id))
-        return {"status": "ok"}
-
-    raise HTTPException(status_code=500, detail="Failed to delete account")
-
-
-@app.post("/api/payment/stars-topup")
-async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):
-    """Создает инвойс-ссылку на пополнение баланса звездами Telegram Stars"""
-    # Ссылка на счет пополнения Stars
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
-    try:
-        # TODO Сделать проверку на валидность ссылки
-        invoice_link = await bot.create_invoice_link(
-            title=t("stars_invoice_title", lang=user_lang),
-            description=t("stars_invoice_desc", lang=user_lang, amount=amount),
-            payload=f"topup_stars_{amount}",
-            provider_token="",  # must be empty for Telegram Stars
-            currency="XTR",
-            prices=[LabeledPrice(label="Stars", amount=amount)]
-        )
-        return {"invoice_link": invoice_link}
-    except Exception as e:
-        logger.exception(f"Error creating invoice link: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/searchs/ai")
-async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """
-    Массовый поиск групп в Telegram по запросу пользователя с помощью AI
-    :param query: Запрос пользователя для поиска групп / каналов в Telegram
-    :param user_data: Данные пользователя
-    :return: Список найденных групп
-    """
-    logger.info(
-        f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]} {user_data["username"]}: {query}")
-    # user = User.get_or_none(User.user_id == user_data["id"])
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User not found")
-    all_saved_groups = []
-
-    words = re.findall(r'\w+', query)
-
-    for word in words:
-        logger.info(f"Поиск группы: {word}")
-
-        try:
-            # mock_msg = MockMessage(user_id=user_data["id"], username=user_data["username"])
-            # Парсим ввод в список запросов (query - запросс пользователя)
-            search_terms = parse_search_input(user_input=word)
-            if not search_terms:
-                return
-
-            try:
-                # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт
-                for idx, term in enumerate(search_terms, 1):
-                    logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")
-                    # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
-                    checker = CheckingAccountsValidity()  # path=None по умолчанию
-                    try:
-                        client = await checker.start_random_client()
-                        if not client:
-                            logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")
-                            continue
-                        # Получаем варианты названий от AI
-                        answer = await get_groq_response(term)
-                        # Чистим и фильтруем названия
-                        group_names = parse_ai_group_names(answer)
-                        logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")
-                        # Ищем группы в Telegram
-                        results = await search_groups_in_telegram(
-                            client=client,
-                            group_names=group_names
-                        )
-                        logger.info(f"✅ Найдено {len(results)} групп для '{term}'")
-                        # Сохраняем в БД
-                        for group_data in results:
-                            saved_group = save_group_to_db(group_data)
-                            if saved_group:
-                                all_saved_groups.append(saved_group)
-                        # 🔌 Обязательно отключаем клиент после каждого запроса
-                        if client:
-                            await client.disconnect()
-                            logger.info(f"🔌 Клиент для '{term}' отключён")
-                        # Пауза между запросами (защита от лимитов API и Telegram)
-                        if idx < len(search_terms):
-                            await asyncio.sleep(2)
-                    except Exception as e:
-                        logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
-                        continue  # Продолжаем со следующим запросом
-
-            except Exception as e:
-                logger.error(f"❌ Критическая ошибка: {e}")
-        except Exception as e:
-            logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")
-
-    # ✅ Проверяем, были ли найдены и сохранены группы
-    if all_saved_groups:
-        # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
-        try:
-            user = User.get_or_none(User.user_id == user_data["id"])
-            # Определяем язык пользователя, который пользователь выбрал при старте бота
-            user_lang = determines_user_language(message_or_callback=message.from_user.id)
-            excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
-            filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-            excel_file = BufferedInputFile(excel_bytes, filename=filename)
-            caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"
-
-            # Отправка итогового файла через бота
-            await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)
-            logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")
-        except Exception as send_err:
-            logger.warning(f"⚠️ Не удалось отправить Excel-файл пользователю {user_data['id']}: {send_err}")
-    else:
-        # ❌ Сообщение выводится только если группы действительно НЕ были найдены
-        logger.info(t("global_search_no_results", lang="ru"))
-
-    return {"status": "ok", "groups": all_saved_groups}
-
-
-@app.post("/api/search/ai")
-async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """
-    Ищет группы в Telegram по запросу пользователя с помощью AI
-    :param query: Запрос пользователя
-    :param user_data: Данные пользователя
-    :return: Список найденных групп
-    """
-    logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
-
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    try:
-        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-        answer = await get_groq_response(query)
-
-        group_names = parse_ai_group_names(answer)
-
-        if not group_names:
-            return {"status": "no_names_generated", "groups": []}
-
-        checker = CheckingAccountsValidity()
-        client = await checker.start_random_client()
-
-        if not client:
-            raise HTTPException(status_code=400, detail="В поиске нет активных аккаунтов Telegram.")
-
-        saved_groups = []
-        try:
-            for name in group_names:
-                results = await search_groups_in_telegram(client=client, group_names=[name])
-                logger.info(f"Результаты поиска: {results}")
-                for group_data in results:
-                    saved = save_group_to_db(group_data)
-                    if saved:
-                        saved_groups.append({
-                            "id": saved.id,
-                            "telegram_id": saved.telegram_id or saved.id,
-                            "name": saved.name,
-                            "username": saved.username,
-                            "participants": saved.participants,
-                            "group_type": saved.group_type,
-                            "availability": saved.availability,
-                            "link": saved.link
-                        })
-        finally:
-            await client.disconnect()
-
-        return {"status": "ok", "groups": saved_groups}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception(f"AI search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/search/export_excel")
-async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Экспортирует результаты поиска групп в файл Excel"""
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    raw_ids = [i.strip() for i in telegram_ids.split(",") if i.strip()]
-    ids = []
-    for item in raw_ids:
-        try:
-            ids.append(int(item))
-        except ValueError:
-            pass
-
-    if not ids:
-        raise HTTPException(status_code=400, detail="No valid group IDs provided")
-
-    groups = list(TelegramGroup.select().where(
-        (TelegramGroup.id.in_(ids)) | (TelegramGroup.telegram_id.in_(ids))
-    ))
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    excel_bytes = create_excel_file(groups, lang=user_lang)
-
-    filename = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-
-    # Отправляем документ также напрямую в чат Telegram пользователю
-    try:
-
-        doc = BufferedInputFile(excel_bytes, filename=filename)
-        caption_text = "📊 Результаты поиска групп в Excel" if user_lang == "ru" else "📊 Group search results in Excel"
-        await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)
-        logger.info(f"Excel-файл с результатами поиска отправлен в чат Telegram {user_data["id"]}")
-    except Exception as e:
-        logger.warning(f"Не удалось отправить Excel-файл с результатами поиска в чат {user_data["id"]}: {e}")
-
-    return Response(
-        content=excel_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-
-@app.get("/api/export/check")
-async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
-    """Проверяет возможность бесплатной выгрузки базы данных и баланс звезд"""
-    # Получить базу данных / Экспортировать XLSX Endpoint
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    is_free, remaining = can_user_download_free(user)
-    return {
-        "is_free": is_free,
-        "remaining_seconds": remaining,
-        "stars_balance": user.stars
-    }
-
-
-@app.post("/api/export/download")
-async def download_database(
-        export_type: str = Form("all"),  # "all", "channels", "groups"
-        category: Optional[str] = Form(None),  # e.g. "investments"
-        user_data: dict = Depends(get_current_tg_user)
-):
-    """Выполняет выгрузку базы данных Telegram-групп в файл Excel"""
-    # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Проверьте, бесплатная ли загрузка или требуется ли звёздочки.
-    is_free, remaining = can_user_download_free(user)
-
-    if not is_free:
-        # Нужно вычесть 5 звёзд из баланса
-        if user.stars < 5:
-            raise HTTPException(
-                status_code=402,
-                detail="Payment required: Need 5 Telegram Stars to download before 24h limit expires"
-            )
-        # Deduct
-        user.stars -= 5
-        user.save()
-        logger.info(f"Deducted 5 Stars from {user_data["id"]}. New balance: {user.stars}")
-    else:
-        # Record free download timestamp
-        user.last_free_download_at = datetime.now()
-        user.save()
-
-    # Группы запросов
-    query = TelegramGroup.select()
-    if export_type == "channels":
-        query = query.where(TelegramGroup.group_type == "Канал")
-    elif export_type == "groups":
-        query = query.where(TelegramGroup.group_type != "Канал")
-
-    if category and category != "all":
-        query = query.where(TelegramGroup.category == category.lower())
-
-    groups = list(query)
-
-    # Создать Excel в памяти
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    excel_bytes = create_excel_file(groups, lang=user_lang)
-
-    filename = f"db_export_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-
-    # Отправляем документ также напрямую в чат Telegram пользователю
-    try:
-
-        doc = BufferedInputFile(excel_bytes, filename=filename)
-        caption_text = "📊 Экспорт базы данных в Excel" if user_lang == "ru" else "📊 Database export in Excel"
-        await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)
-        logger.info(f"Excel-файл базы данных отправлен в чат Telegram {user_data["id"]}")
-    except Exception as e:
-        logger.warning(f"Не удалось отправить Excel-файл базы данных в чат {user_data["id"]}: {e}")
-
-    return Response(
-        content=excel_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-
-def io_bytes_stream(data: bytes):
-    """Генерирует поток байтов из буфера в памяти для передачи файла"""
-    stream = io.BytesIO(data)
-    yield from stream
-
-
-# ==================== КОНЕЧНЫЕ ТОЧКИ API ПАНЕЛИ АДМИНИСТРАТОРА ====================
-
-def require_admin(user_data: dict = Depends(get_current_tg_user)):
-    """Проверяет наличие прав администратора у текущего пользователя"""
-    # user_id = user_data["id"]
-    is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-                                                                  (list, set, tuple)) else user_data[
-                                                                                               "id"] in ADMIN_USER_ID
-    if not is_admin:
-        raise HTTPException(status_code=403, detail="Access denied: Admin only")
-    return user_data["id"]
-
-
-@app.get("/api/admin/status")
-async def get_admin_status():
-    """Возвращает статус фоновых административных задач и системную статистику"""
-    # Рассчитать группы без категории
-    uncategorized_count = TelegramGroup.select().where(
-        (TelegramGroup.username.is_null(False)) &
-        (TelegramGroup.category == '')
-    ).count()
-
-    # Получить общее количество счетов
-    total_accounts = Account.select().count()
-
-    return {
-        "uncategorized_count": uncategorized_count,
-        "total_accounts": total_accounts,
-        "task": admin_task_status
-    }
-
-
-# Фоновые задачи администрирования
-
-async def bg_check_accounts():
-    """
-    Проверка аккаунтов на валидность
-    """
-    logger.info("Начинаем проверку аккаунтов...")
-
-    global admin_task_status
-    admin_task_status["action"] = "check_accounts"
-    admin_task_status["status"] = "running"
-    admin_task_status["progress"] = 0
-    admin_task_status["message"] = "Starting account verification..."
-
-    try:
-        available_sessions = getting_account()
-        total = len(available_sessions)
-        admin_task_status["total"] = total
-
-        mock_msg = MockMessage(user_id=ADMIN_USER_ID)
-        checker = CheckingAccountsValidity()
-
-        for idx, session in enumerate(available_sessions, 1):
-            admin_task_status["progress"] = idx
-            admin_task_status["message"] = f"Checking session {idx}/{total}..."
-            await checker.verify_account(session)
-
-        admin_task_status["status"] = "completed"
-        admin_task_status["message"] = "Account check completed successfully!"
-    except Exception as e:
-        logger.exception(f"Error in bg_check_accounts: {e}")
-        admin_task_status["status"] = "error"
-        admin_task_status["message"] = f"Error: {e}"
-
-
-async def bg_actualize_db():
-    """
-    Актуализирует базу с группами и каналами
-    :return: None
-    """
-    admin_task_status["action"] = "actualize"
-    admin_task_status["status"] = "running"
-    admin_task_status["progress"] = 0
-    admin_task_status["message"] = "Initializing database actualization..."
-
-    try:
-        available_sessions = getting_account()  # Получение аккаунтов из базы данных
-        if not available_sessions:
-            raise Exception("Нет активных сеансов Telegram.")
-
-        # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и
-        # заполнить недостающие данные.
-        data = get_all_data_telegram_groups()
-        total = len(data)  # Количество групп в базе данных
-        admin_task_status["total"] = total
-        admin_task_status["progress"] = 0
-        admin_task_status["message"] = f"Проверка групп: 0 / {total}"
-
-        for index, group in enumerate(data, start=1):
-            admin_task_status["progress"] = index
-            admin_task_status["message"] = (
-                f"Проверка группы {index} / {total}: {group['username']}"
-            )
-
-            logger.info(
-                f"{group['telegram_id']} | {group['group_hash']} | {group['name']} | {group['username']} | {group['description']} | {group['participants']} | {group['category']} | {group['group_type']} | {group['language']} | {group['link']} | {group['availability']} | {group['date_added']}"
-            )
-
-            """
-            Определение категории группы / канала
-            """
-
-            if group['category'] == '':  # Проверка наличия категории у группы (если пустая строка, то пропускаем).
-                logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")
-
-                client = AsyncGroq(api_key=GROQ_API_KEY)
-
-                # Рандомно выбираем модель для определения категории
-                models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
-                model = random.choice(models)
-
-                result = await category_assignment(
-                    group_data=group,
-                    client=client,
-                    model=model
-                )
-
-                if result.get("success") and result.get("category"):
-                    # ✅ Сразу пишем в БД (в нижнем регистре)
-                    category_lower = result["category"].lower()
-                    await sync_to_async(lambda: TelegramGroup.update(category=category_lower)
-                                        .where(TelegramGroup.telegram_id == result["telegram_id"])
-                                        .execute(), thread_sensitive=True)()
-                    logger.info(f"✅ {group['name']} → {category_lower}")
-                else:
-                    logger.warning(f"❌ {group['name']} — AI не определил")
-
-                # Пауза только для g4f (чтобы не блокировали)
-                if type(client).__name__ == 'Client':  # g4f клиент
-                    await asyncio.sleep(0.5)
-
-            # TODO убрать дублирование кода
-            """
-            Определение языка групп / каналов и запись в базу данных
-            """
-
-            if group['language'] == '':  # Проверка наличия языка в гуппах / каналах
-                logger.info(f"Найдена группа {group['username']} без языка, определяем язык")
-
-                detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-
-                text = group['name']
-                result = detector.detect_language_of(text)
-
-                if result is not None:
-                    lang_code = result.iso_code_639_1.name.lower()  # например, 'RU' → 'ru'
-                    if lang_code in ISO_639_1_CODES:
-                        logger.info(f"Определён язык для группы {group['username']}: {lang_code}")
-                        # ✅ Сразу пишем в БД (в нижнем регистре)
-                        # lang_code уже строка, например 'ru' — её и сохраняем в поле language
-                        await sync_to_async(
-                            lambda: TelegramGroup.update(language=lang_code)
-                            .where(TelegramGroup.telegram_id == group['telegram_id'])
-                            .execute(),
-                            thread_sensitive=True
-                        )()
-                        logger.info(f"✅ {group['name']} → {lang_code}")
-                    else:
-                        logger.warning(f"Язык {lang_code} не найден в списке ISO_639_1")
-                else:
-                    logger.warning(f"Язык для группы {group['username']} не определён")
-
-            """
-            Определение типа группы и запись в базу данных
-            """
-            if group['group_type'] == '':  # Проверка наличия типа в группах / каналах
-                logger.info(f"Найдена группа {group['username']} без типа, определяем тип")
-
-                mock_msg = MockMessage(user_id=ADMIN_USER_ID)
-                checker = CheckingAccountsValidity()  # path=None по умолчанию
-                client = await checker.start_random_client()
-
-                if not client:
-                    logger.error(f"Не удалось запустить клиент для группы {group['username']}")
-                    continue
-
-                try:
-                    data_telegram = await get_account_info(client)
-                    if data_telegram:
-                        acc_id = data_telegram.get("id")
-                        acc_phone = data_telegram.get("phone")
-                        acc_first = data_telegram.get("first_name")
-                        acc_last = data_telegram.get("last_name")
-                        acc_user = data_telegram.get("username")
-                        logger.info(
-                            f"Используется аккаунт: {acc_id}, {acc_phone}, {acc_first}, {acc_last}, @{acc_user}")
-                        admin_task_status[
-                            "message"] = f"Подключение к аккаунту: {acc_id}, {acc_phone}, @{acc_user}..."
-
-                    entity = await client.get_entity(group['username'])
-                    logger.info(entity)
-
-                    # Получить полную информацию
-                    data_full = await get_full_info_group(client, entity)
-                    logger.info(f"Полная информация: {data_full}")
-                    logger.info(f"Описание: {data_full.get('description', '')}")
-
-                    # Обновить базу данных
-                    update_group_channels_data_base(data_full, entity, group)
-
-                except UsernameInvalidError:
-                    logger.error(f"Не валидный username {group['username']}")
-                except ValueError:
-                    logger.error(f"Не валидный username {group['username']}")
-                except FloodWaitError as e:
-                    # wait_time = e.seconds
-                    logger.warning(f"FloodWait для {group['username']}: нужно подождать {e.seconds} секунд.")
-                except AuthKeyUnregisteredError:
-                    logger.error(f"Не валидная сессия для проверки группы {group['username']}")
-                except Exception as e:
-                    logger.exception(f"Не удалось обновить группу {group['username']}: {e}")
-                finally:
-                    try:
-                        await client.disconnect()
-                    except Exception:
-                        pass
-
-                await asyncio.sleep(1.5)
-            admin_task_status["progress"] = index
-        admin_task_status["status"] = "completed"
-    except Exception as e:
-        logger.exception(f"Error in bg_actualize_db: {e}")
-        admin_task_status["status"] = "error"
-        admin_task_status["message"] = f"Error: {e}"
-
-
-async def bg_categorize_db(method: str):
-    """Выполняет фоновую классификацию групп по категориям с помощью нейросетей"""
-    global admin_task_status
-    admin_task_status["action"] = "categorize"
-    admin_task_status["status"] = "running"
-    admin_task_status["progress"] = 0
-    admin_task_status["message"] = "Initializing category assignment..."
-
-    try:
-
-        # 1. Настройка клиента на основе метода
-        if method == "fast":
-            client = Client()
-            model = await get_best_g4f_model(client)
-        elif method == "openrouter":
-
-            client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
-            model = "deepseek/deepseek-v4-flash"
-        elif method == "groq":
-
-            client = AsyncGroq(api_key=GROQ_API_KEY)
-            model = "llama-3.1-8b-instant"
-        else:
-            raise Exception(f"Unknown categorization method: {method}")
-
-        groups_to_process = await get_groups_without_category()
-        total = len(groups_to_process)
-        admin_task_status["total"] = total
-
-        if total == 0:
-            admin_task_status["status"] = "completed"
-            admin_task_status["message"] = "All groups already have categories!"
-            return
-
-        for idx, group_data in enumerate(groups_to_process, 1):
-            admin_task_status["progress"] = idx
-            admin_task_status["message"] = f"Categorizing {group_data['name']} ({idx}/{total})..."
-
-            try:
-                result = await category_assignment(group_data, client, model)
-                if result.get("success") and result.get("category"):
-                    category_lower = result["category"].lower()
-                    TelegramGroup.update(category=category_lower).where(
-                        TelegramGroup.telegram_id == result["telegram_id"]
-                    ).execute()
-            except Exception as e:
-                logger.exception(f"Failed to categorize {group_data['name']}: {e}")
-
-            if method == "fast":
-                await asyncio.sleep(0.5)
-            else:
-                await asyncio.sleep(0.2)
-
-        admin_task_status["status"] = "completed"
-        admin_task_status["message"] = f"Category assignment finished! Categorized {total} groups."
-    except Exception as e:
-        logger.exception(f"Error in bg_categorize_db: {e}")
-        admin_task_status["status"] = "error"
-        admin_task_status["message"] = f"Error: {e}"
-
-
-async def bg_detect_language():
-    """Выполняет фоновое определение языка групп с помощью нейросетей"""
-    global admin_task_status
-    admin_task_status["action"] = "lang_detect"
-    admin_task_status["status"] = "running"
-    admin_task_status["progress"] = 0
-    admin_task_status["message"] = "Initializing language detection..."
-
-    try:
-
-        groups_to_detect = list(TelegramGroup.select().where(
-            (TelegramGroup.username.is_null(False)) &
-            ((TelegramGroup.language == '') | (TelegramGroup.language.is_null()))
-        ))
-
-        total = len(groups_to_detect)
-        admin_task_status["total"] = total
-
-        if total == 0:
-            admin_task_status["status"] = "completed"
-            admin_task_status["message"] = "All groups already have language set!"
-            return
-
-        for idx, group in enumerate(groups_to_detect, 1):
-            admin_task_status["progress"] = idx
-            admin_task_status["message"] = f"Detecting language for {group.name or group.username} ({idx}/{total})..."
-
-            group_data = {
-                "group_hash": group.group_hash,
-                "name": group.name,
-                "username": group.username,
-                "description": group.description or ""
-            }
-
-            try:
-                res = await asyncio.to_thread(ai_llama_fri, group_data, lang="ru")
-                if res.get("success") and res.get("language"):
-                    TelegramGroup.update(language=res["language"]).where(
-                        TelegramGroup.group_hash == res["group_hash"]
-                    ).execute()
-            except Exception as e:
-                logger.exception(f"Failed to detect language for {group.name}: {e}")
-
-            await asyncio.sleep(2.0)
-
-        admin_task_status["status"] = "completed"
-        admin_task_status["message"] = f"Language detection finished! Processed {total} groups."
-    except Exception as e:
-        logger.exception(f"Error in bg_detect_language: {e}")
-        admin_task_status["status"] = "error"
-        admin_task_status["message"] = f"Error: {e}"
-
-
-@app.post("/api/admin/check-accounts")
-async def admin_check_accounts(background_tasks: BackgroundTasks):
-    """Запускает административную задачу проверки валидности всех аккаунтов"""
-    if admin_task_status["status"] == "running":
-        return {"status": "busy", "task": admin_task_status}
-    background_tasks.add_task(bg_check_accounts)
-    return {"status": "started"}
-
-
-@app.post("/api/admin/actualize")
-async def admin_actualize_db(background_tasks: BackgroundTasks):
-    """Запускает административную задачу актуализации базы групп через Telegram"""
-    if admin_task_status["status"] == "running":
-        return {"status": "busy", "task": admin_task_status}
-    background_tasks.add_task(bg_actualize_db)
-    return {"status": "started"}
-
-
-@app.post("/api/admin/categorize")
-async def admin_categorize_db(method: str = Query("fast"), background_tasks: BackgroundTasks = None):
-    """Запускает административную задачу категоризации групп с помощью AI"""
-    if admin_task_status["status"] == "running":
-        return {"status": "busy", "task": admin_task_status}
-    background_tasks.add_task(bg_categorize_db, method=method)
-    return {"status": "started"}
-
-
-@app.post("/api/admin/detect-language")
-async def admin_detect_language(background_tasks: BackgroundTasks):
-    """Запускает административную задачу определения языков групп через AI"""
-    if admin_task_status["status"] == "running":
-        return {"status": "busy", "task": admin_task_status}
-    background_tasks.add_task(bg_detect_language)
-    return {"status": "started"}
-
-
-@app.get("/api/admin/export-questions")
-async def admin_export_questions():
-    """Экспортирует вопросы пользователей из базы данных в CSV-файл"""
-    questions = get_all_questions()
-    if not questions:
-        raise HTTPException(status_code=404, detail="No questions found in database")
-
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["user_id", "question", "answer"])
-    writer.writeheader()
-    for q in questions:
-        writer.writerow(q)
-
-    filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-
-    return StreamingResponse(
-        io_bytes_stream(output.getvalue().encode("utf-8")),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-
-@app.get("/api/admin/logs")
-async def admin_download_logs():
-    """Отдает файл логов бота администратору"""
-    log_path = "logs/log.log"
-    if not os.path.exists(log_path):
-        raise HTTPException(status_code=404, detail="Log file not found")
-    return FileResponse(log_path, media_type="text/plain", filename="bot_log.txt")
-
-
-# Роутер для статичных файлов и веб-интерфейса
-static_router = APIRouter()
-
-
-@static_router.get("/")
-async def serve_index(request: Request):
-    """Отдает главную HTML-страницу веб-интерфейса Mini App"""
-    user_str = "Анонимный пользователь"
-
-    auth_header = request.headers.get("Authorization")
-    query_params = dict(request.query_params)
-    token = auth_header or query_params.get("tgWebAppData") or query_params.get("initData") or query_params.get(
-        "init_data") or query_params.get("token")
-
-    user_data = None
-    if token:
-        if token.startswith("Bearer "):
-            token = token[7:]
-        if token.startswith("mock_"):
-            try:
-                mock_id = int(token.split("_")[1])
-                user_data = {"id": mock_id, "username": f"test_user_{mock_id}", "first_name": "Test"}
-            except Exception:
-                pass
-        else:
-            try:
-                params = dict(urllib.parse.parse_qsl(token, keep_blank_values=True))
-                if 'user' in params:
-                    user_data = json.loads(params['user'])
-            except Exception:
-                pass
-
-    if not user_data and ("user_id" in query_params or "id" in query_params):
-        uid = query_params.get("user_id") or query_params.get("id")
-        user_data = {
-            "id": uid,
-            "username": query_params.get("username"),
-            "first_name": query_params.get("first_name", "")
-        }
-
-    client_ip = get_client_ip(request)
-    detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
-
-    if user_data:
-        uid = user_data.get("id", "неизвестен")
-        username = user_data.get("username")
-        username_str = f"@{username}" if username else "без username"
-        first_name = user_data.get("first_name", "")
-        user_str = f"{first_name} ({username_str}, ID: {uid})"
-    else:
-        user_str = "Гость"
-
-    session_key = (user_str, client_ip)
-    if session_key not in logged_user_sessions:
-        logged_user_sessions.add(session_key)
-        logger.info(
-            f"🌐 Пользователь {user_str} [IP: {client_ip}, Язык по IP: {detected_lang}] перешел на начальную страницу")
-    return FileResponse("web/static/index.html")
-
-
-@static_router.get("/{file_path:path}")
-async def serve_static(file_path: str):
-    """Отдает статические файлы веб-интерфейса Mini App"""
-    target_path = os.path.join("web/static", file_path)
-    if os.path.isfile(target_path):
-        return FileResponse(target_path)
-    index_path = os.path.join("web/static", "index.html")
-    if os.path.isfile(index_path):
-        return FileResponse(index_path)
-    raise HTTPException(status_code=404, detail="File not found")
-
-
-app.include_router(static_router)
+import asyncioimport csvimport hashlibimport hmacimport ioimport jsonimport osimport randomimport reimport urllib.parseimport urllib.requestfrom datetime import datetimefrom pathlib import Pathfrom typing import Optionalfrom aiogram.client import botfrom aiogram.types import BufferedInputFile, LabeledPricefrom asgiref.sync import sync_to_asyncfrom fastapi import (    APIRouter, BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile)from fastapi.middleware.cors import CORSMiddlewarefrom fastapi.responses import FileResponse, Response, StreamingResponsefrom g4f.client import Clientfrom groq import AsyncGroqfrom loguru import logger  # https://github.com/Delgan/logurufrom openai import AsyncOpenAIfrom telethon.errors import (    AuthKeyUnregisteredError, FloodWaitError, UsernameInvalidError)from telethon.sessions import StringSessionfrom account_manager.auth import CheckingAccountsValidity, get_account_infofrom account_manager.utilit import detect_languagefrom account_manager.parser import (    active_clients, filter_messages, get_full_info_group, stop_flags, stop_tracking, update_group_channels_data_base)from ai.ai import category_assignment, get_groq_response, search_groups_in_telegramfrom core.config import (    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES)from database.database import (    Account, TelegramGroup, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,    getting_account, getting_number_records_database, database)from database.group_user_database import Groupfrom database.keywords_user_database import get_keywords_count, get_user_keywords_with_id, Keywordsfrom database.personal_tracking import get_session_countfrom handlers.admin.checking_group_for_ai import get_best_g4f_modelfrom handlers.admin.language_detection import ai_llama_frifrom handlers.user.pars_ai import (    can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db, parse_search_input)from handlers.user_language import determines_user_languagefrom locales.locales import tfrom system.dispatcher import bot# Инициализировать FastAPIapp = FastAPI(title="AutoParseAlertBot Web API", version="0.1.0")# Добавьте промежуточное ПО CORSapp.add_middleware(    CORSMiddleware,    allow_origins=["*"],    allow_credentials=True,    allow_methods=["*"],    allow_headers=["*"],)# TODO: После рефактинга удалить закоментированный код 29.08.2026class MockMessage:    """Имитация объекта сообщения aiogram для обработки запросов из веб-интерфейса"""    # Mock Message для совместимости с обработчиками ботов    def __init__(self, user_id: int, username: Optional[str] = "web_user"):        """Инициализирует объект MockMessage для имитации Telegram-сообщения"""        self.from_user = type('User', (), {            'id': user_id,            'username': username or 'web_user',            'first_name': 'Web',            'last_name': 'User'        })()        self.chat = type('Chat', (), {'id': user_id})()        # Лениво обращайтесь к боту для предотвращения круговых зависимостей или неинициализированных переменных        from system.dispatcher import bot        self.bot = bot    async def answer(self, text: str, parse_mode=None, reply_markup=None, **kwargs):        """Имитирует отправку текстового ответа пользователю через Telegram-бота"""        from system.dispatcher import bot        try:            return await bot.send_message(                chat_id=self.from_user.id,                text=text,                parse_mode=parse_mode,                reply_markup=reply_markup,                **kwargs            )        except Exception as e:            logger.exception(f"Failed to send mock answer to {self.from_user.id}: {e}")    async def reply(self, text: str, parse_mode=None, reply_markup=None, **kwargs):        """Имитирует ответ на сообщение пользователю через Telegram-бота"""        return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)    async def answer_document(self, document, caption=None, parse_mode=None, reply_markup=None, **kwargs):        """Имитирует отправку документа пользователю через Telegram-бота"""        from system.dispatcher import bot        try:            return await bot.send_document(                chat_id=self.from_user.id,                document=document,                caption=caption,                parse_mode=parse_mode,                reply_markup=reply_markup,                **kwargs            )        except Exception as e:            logger.exception(f"Failed to send mock document to {self.from_user.id}: {e}")    async def answer_photo(self, photo, caption=None, parse_mode=None, reply_markup=None, **kwargs):        """Имитирует отправку фотографии пользователю через Telegram-бота"""        from system.dispatcher import bot        try:            return await bot.send_photo(                chat_id=self.from_user.id,                photo=photo,                caption=caption,                parse_mode=parse_mode,                reply_markup=reply_markup,                **kwargs            )        except Exception as e:            logger.exception(f"Failed to send mock photo to {self.from_user.id}: {e}")    async def edit_text(self, text: str, parse_mode=None, reply_markup=None, **kwargs):        """Имитирует редактирование текста сообщения через Telegram-бота"""        return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)@app.middleware("http")async def db_session_middleware(request, call_next):    """Обеспечивает активное подключение к базе данных для каждого HTTP-запроса"""    # Промежуточное программное обеспечение для подключения к базе данных    if database.is_closed():        database.connect(reuse_if_open=True)    response = await call_next(request)    return responsedef get_client_ip(request: Request) -> str:    """Извлекает реальный IP пользователя с учетом прокси (X-Forwarded-For, X-Real-IP, CF-Connecting-IP)"""    x_forwarded_for = request.headers.get("x-forwarded-for")    if x_forwarded_for:        return x_forwarded_for.split(",")[0].strip()    x_real_ip = request.headers.get("x-real-ip")    if x_real_ip:        return x_real_ip.strip()    cf_ip = request.headers.get("cf-connecting-ip")    if cf_ip:        return cf_ip.strip()    if request.client:        return request.client.host    return "127.0.0.1"async def get_country_by_ip(ip: str) -> Optional[str]:    """Определяет двухбуквенный код страны (RU, US и т.д.) по IP через ip-api.com"""    if ip.startswith(("127.", "192.168.", "10.", "172.16.", "localhost")):        return None    try:        def _fetch():            """Выполняет запрос к внешнему сервису гео-IP для определения кода страны"""            url = f"http://ip-api.com/json/{ip}?fields=countryCode,status"            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})            with urllib.request.urlopen(req, timeout=3) as resp:                data = json.loads(resp.read().decode())                if data.get("status") == "success":                    return data.get("countryCode")            return None        return await asyncio.to_thread(_fetch)    except Exception as e:        logger.warning(f"⚠️ Ошибка определения страны по IP {ip}: {e}")        return Noneasync def detect_language_by_ip(ip: str, accept_language_header: Optional[str] = None) -> str:    """    Определяет предпочтительный язык ('ru' или 'en') на основе IP пользователя и заголовка Accept-Language.    """    country_code = await get_country_by_ip(ip)    if country_code:        ru_countries = {"RU", "BY", "KZ", "KG", "AM", "AZ", "TJ", "TM", "UZ", "MD", "GE"}        if country_code.upper() in ru_countries:            return "ru"        else:            return "en"    if accept_language_header:        lang_lower = accept_language_header.lower()        if any(code in lang_lower for code in ["ru", "be", "uk", "kk"]):            return "ru"    return "ru"def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:    """Проверяет авторизацию пользователя Telegram по токену initData"""    # Зависимость для проверки аутентификации из initData    if not authorization:        raise HTTPException(status_code=401, detail="Authorization header missing")    if not authorization.startswith("Bearer "):        raise HTTPException(status_code=401, detail="Invalid authorization scheme")    token = authorization[7:]    # Разрешить имитация входа для локальной разработки и тестирования    if token.startswith("mock_"):        try:            mock_id = int(token.split("_")[1])            return {                "id": mock_id,                "first_name": "Test",                "last_name": "User",                "username": f"test_user_{mock_id}",                "language_code": "ru",                "is_mock": True            }        except Exception:            raise HTTPException(status_code=401, detail="Invalid mock token")    try:        params = dict(urllib.parse.parse_qsl(token, keep_blank_values=True))        if 'hash' not in params:            raise HTTPException(status_code=401, detail="Missing hash parameter")        auth_hash = params.pop('hash')        sorted_params = sorted(params.items())        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted_params)        # Проверить хеш        secret_key = hmac.new("WebAppData".encode(), BOT_TOKEN.encode(), hashlib.sha256).digest()        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()        if not hmac.compare_digest(calculated_hash, auth_hash):            logger.warning(                "Telegram auth failed: hash mismatch. BOT_TOKEN in .env does not match the Telegram bot used to open WebApp.")            raise HTTPException(status_code=401, detail="Invalid Telegram signature")        user_data = json.loads(params['user'])        return user_data    except Exception as e:        logger.exception(f"Telegram auth failed: {e}")        raise HTTPException(status_code=401, detail="Authentication failed")# Глобальный словарь статуса администратора для показа прогресса в работе администратора в веб-интерфейсеadmin_task_status = {    "action": "none",  # "categorize", "lang_detect", "check_accounts", "actualize", "none"    "progress": 0,    "total": 0,    "status": "idle",  # "running", "completed", "error"    "message": ""}# Множество подсоединённых сессий для устранения дублирующего спама в логах при регулярном поллинге каждые 5 секlogged_user_sessions = set()def init_web_directories():    """Создает необходимые директории для статических файлов веб-сервера"""    # Убедитесь, что каталоги существуют    os.makedirs("web/static", exist_ok=True)    os.makedirs("web/static/css", exist_ok=True)    os.makedirs("web/static/js", exist_ok=True)init_web_directories()# ==================== ПУБЛИЧНЫЕ API-ЭНДПОИНТЫ ====================@app.get("/api/status")async def get_status(request: Request, user_data: dict = Depends(get_current_tg_user)):    """Возвращает статус пользователя, настройки языка и статистику системы"""    try:        client_ip = get_client_ip(request)        # Получить пользователя        user = User.get_or_none(User.user_id == user_data["id"])        if not user:            detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))            # Зарегистрировать пользователя в базе данных            user = User.create(                user_id=user_data["id"],                username=user_data.get("username"),                first_name=user_data.get("first_name"),                last_name=user_data.get("last_name"),                language=detected_lang            )        elif user.language == "unset":            detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))            user.language = detected_lang            user.save()        # Получите статистику        groups_count = getting_number_records_database()        session_count = get_session_count(user_id=user_data["id"])        # group_count = get_target_group_count(user_id=user_data["id"])        # tracked_channels = get_tracked_channels_count(user_id=user_data["id"])        keywords_count = get_keywords_count(user_id=user_data["id"])        # Получите текущее имя целевой группы пользователя        GroupModel = create_group_model(user_data["id"])        target_group = None        if GroupModel.table_exists():            groups = list(GroupModel.select())            if groups:                target_group = groups[0].username_group        tracking_active = str(user_data["id"]) in active_clients        is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,                                                                      (list, set, tuple)) else user_data[                                                                                                   "id"] in ADMIN_USER_ID        session_key = (user_data["id"], client_ip)        if session_key not in logged_user_sessions:            logged_user_sessions.add(session_key)            logger.info(                f"👤 Пользователь {user_data.get('first_name', '')} {user_data.get('last_name', '')} (@{user_data.get('username', 'без username')}, ID: {user_data['id']}) | IP: {client_ip} | Язык: {user.language}. Администратор: {is_admin}")        return {            "user_id": user_data["id"],            "username": user.username,            "first_name": user.first_name,            "language": user.language,            "stars": user.stars,            "is_admin": is_admin,            "stats": {                "version": "0.1.0",                "db_total_groups": groups_count,                "connected_accounts": session_count,                "target_groups": group_count,                "tracked_channels": tracked_channels,                "keywords": keywords_count,                "target_group_username": target_group            },            "tracking_active": tracking_active        }    except Exception as e:        logger.exception(f"Error getting status: {e}")@app.post("/api/settings/language")async def update_language(lang: str, user_data: dict = Depends(get_current_tg_user)):    """Обновляет языковые настройки текущего пользователя"""    if lang not in ["ru", "en"]:        raise HTTPException(status_code=400, detail="Invalid language code")    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    user.language = lang    user.save()    return {"status": "ok", "language": lang}@app.post("/api/tracking/start")async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):    """Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс"""    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    if str(user_data["id"]) in active_clients:        return {"status": "already_running"}    # Начинайте асинхронное отслеживание    mock_msg = MockMessage(user_id=user_data["id"], username=user.username)    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"], user=user)    return {"status": "starting"}@app.post("/api/tracking/stop")async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):    """Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс"""    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    if str(user_data["id"]) not in stop_flags:        return {"status": "not_active"}    mock_msg = MockMessage(user_id=user_data["id"], username=user.username)    await stop_tracking(user_id=user_data["id"], message=mock_msg)    return {"status": "stopping"}@app.get("/api/keywords")async def list_keywords(user_data: dict = Depends(get_current_tg_user)):    """Возвращает список ключевых слов текущего пользователя"""    return get_user_keywords_with_id(user_id=user_data["id"])@app.post("/api/keywords")async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_current_tg_user)):    """Добавляет новое ключевое слово для отслеживания"""    keyword = keyword.strip()    if not keyword:        raise HTTPException(status_code=400, detail="Keyword cannot be empty")    kw_obj, _ = Keywords.get_or_create(        user_id=user_data["id"],        user_keyword=keyword    )    return {"status": "ok", "id": kw_obj.id, "keyword": keyword}@app.delete("/api/keywords/{kw_id}")async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):    """Удаляет ключевое слово пользователя по его идентификатору"""    deleted = (        Keywords.delete()        .where(            (Keywords.id == kw_id) &            (Keywords.user_id == user_data["id"])        )        .execute()    )    if deleted:        return {"status": "ok"}    raise HTTPException(status_code=404, detail="Keyword not found")@app.get("/api/channels")async def list_channels(user_data: dict = Depends(get_current_tg_user)):    """Возвращает список отслеживаемых каналов пользователя"""    # Управление отслеживаемыми каналами    # user_id = user_data["id"]    records = list(Group.select().where(Group.user_id == user_data["id"]).order_by(Group.date_added.desc()))    return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in            records]@app.post("/api/channels")async def add_channel(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):    """Добавляет новый канал в список отслеживаемых"""    username_group = username.strip()    if not username:        raise HTTPException(status_code=400, detail="Username cannot be empty")    if not username.startswith("@"):        username_group = f"@{username}"    try:        Group.create(user_id=user_data["id"], username_group=username_group)        return {"status": "ok", "username": username}    except Exception as e:        if "UNIQUE constraint failed" in str(e):            raise HTTPException(status_code=400, detail="Channel already tracked")        raise HTTPException(status_code=500, detail=str(e))@app.delete("/api/channels/{ch_id}")async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):    """Удаляет канал из списка отслеживаемых по идентификатору"""    # user_id = user_data["id"]    deleted = Group.delete().where(Group.user_id == user_data["id"], Group.id == ch_id).execute()    if deleted:        return {"status": "ok"}    raise HTTPException(status_code=404, detail="Channel not found")@app.post("/api/channels/upload")async def upload_channels_file(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):    """Загружает список каналов из текстового файла"""    if not file.filename.endswith(".txt"):        raise HTTPException(status_code=400, detail="Only .txt files are supported")    contents = await file.read()    text = contents.decode("utf-8")    username_group = [line.strip() for line in text.splitlines() if line.strip()]    added_count = 0    skipped_count = 0    errors_count = 0    for username in username_group:        if not username.startswith("@"):            username_group = f"@{username}"        try:            Group.create(user_id=user_data["id"], username_group=username_group)            added_count += 1        except Exception as e:            if "UNIQUE constraint failed" in str(e):                skipped_count += 1            else:                errors_count += 1    return {        "status": "ok",        "added": added_count,        "skipped": skipped_count,        "errors": errors_count    }@app.get("/api/target-group")async def get_target_group(user_data: dict = Depends(get_current_tg_user)):    """Возвращает текущую целевую группу пользователя для пересылки сообщений"""    # Конфигурация целевой группы    GroupModel = create_group_model(user_data["id"])    if not GroupModel.table_exists():        return {"username": None}    groups = list(GroupModel.select())    if groups:        return {"username": groups[0].username_group}    return {"username": None}@app.post("/api/target-group")async def set_target_group(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):    """Устанавливает целевую группу пользователя для пересылки сообщений"""    username = username.strip()    if not username:        raise HTTPException(status_code=400, detail="Username cannot be empty")    if not username.startswith("@"):        username = f"@{username}"    GroupModel = create_group_model(user_data["id"])    if not GroupModel.table_exists():        GroupModel.create_table()    # Очистить предыдущую группу    GroupModel.delete().execute()    try:        GroupModel.create(user_group=username)        return {"status": "ok", "username": username}    except Exception as e:        raise HTTPException(status_code=500, detail=str(e))@app.get("/api/accounts")async def list_accounts(user_data: dict = Depends(get_current_tg_user)):    """Возвращает список подключенных Telegram-аккаунтов пользователя"""    # Управление аккаунтами Telegram    # user_id = user_data["id"]    # accounts = get_user_accounts(user_data["id"])    # Возвращать сериализируемый дикт (исключая полную сессионную строку)    return [        {            "phone_number": acc["phone_number"],            "created_at": acc["created_at"].strftime("%Y-%m-%d %H:%M:%S")        }        for acc in get_user_accounts(user_data["id"])    ]@app.post("/api/accounts/upload")async def upload_account_session(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):    """Загружает и подключает новый файл сессии Telegram-аккаунта"""    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    if not file.filename.endswith(".session"):        raise HTTPException(status_code=400, detail="Only .session files are supported")    # Создать временный каталог счетов    sessions_dir = Path("accounts")    sessions_dir.mkdir(exist_ok=True)    # Дезинфицируйте и записывайте сессионный файл    safe_name = "".join(c for c in file.filename if c.isalnum() or c in "._-")    temp_path = sessions_dir / f"temp_{user_data["id"]}_{safe_name}"    client = None    try:        with open(temp_path, "wb") as f:            content = await file.read()            f.write(content)        session_path_without_ext = str(temp_path.with_suffix(""))        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)        checker = CheckingAccountsValidity(path=session_path_without_ext)        client = await checker.connect_client()        if client:            try:                account_info = await get_account_info(client)                phone = account_info["phone"] or "unknown"                session_string = StringSession.save(client.session)                # Сохранить аккаунт в пользовательскую таблицу                write_account_to_user_table(                    user_id=user_data["id"],                    session_string=session_string,                    phone_number=phone                )                await client.disconnect()                # Отправьте уведомление через бота                # Определяем язык пользователя, который пользователь выбрал при старте бота                user_lang = determines_user_language(message_or_callback=message.from_user.id)                await mock_msg.answer(                    text=t("session_connected_success",                           lang=user_lang,                           filename=safe_name,                           phone=phone,                           name=account_info["first_name"]                           )                )                return {"status": "ok", "phone": phone, "name": account_info["first_name"]}            finally:                if client and client.is_connected():                    await client.disconnect()        else:            raise HTTPException(status_code=400, detail="Session file is invalid or not authorized")    except HTTPException:        raise    except Exception as e:        logger.exception(f"Error processing session file upload: {e}")        raise HTTPException(status_code=500, detail=str(e))    finally:        if temp_path.exists():            try:                temp_path.unlink()            except Exception as pe:                logger.warning(f"Could not delete temporary session file {temp_path}: {pe}")@app.delete("/api/accounts/{phone}")async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_user)):    """Удаляет подключенный аккаунт пользователя по номеру телефона"""    user_id = user_data["id"]    # Получите список пользовательских аккаунтов, чтобы найти сессионную строку, соответствующую этому телефону    accounts = get_user_accounts(user_id)    session_to_delete = None    for acc in accounts:        if acc["phone_number"] == phone:            session_to_delete = acc["session_string"]            break    if not session_to_delete:        raise HTTPException(status_code=404, detail="Account not found")    # Удаление из таблицы учетных записей пользователей    deleted = UserAccountsTable.delete().where(        UserAccountsTable.user_id == user_id,        UserAccountsTable.phone_number == phone    ).execute()    if deleted:        # Также чисто от глобальных активных клиентов, если подключены        if str(user_id) in active_clients:            # Нужно отключить активного клиента            client = active_clients.pop(str(user_id))            if client.is_connected():                await client.disconnect()            if str(user_id) in stop_flags:                stop_flags.pop(str(user_id))        return {"status": "ok"}    raise HTTPException(status_code=500, detail="Failed to delete account")@app.post("/api/payment/stars-topup")async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):    """Создает инвойс-ссылку на пополнение баланса звездами Telegram Stars"""    # Ссылка на счет пополнения Stars    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    # Определяем язык пользователя, который пользователь выбрал при старте бота    user_lang = determines_user_language(message_or_callback=message.from_user.id)    try:        # TODO Сделать проверку на валидность ссылки        invoice_link = await bot.create_invoice_link(            title=t("stars_invoice_title", lang=user_lang),            description=t("stars_invoice_desc", lang=user_lang, amount=amount),            payload=f"topup_stars_{amount}",            provider_token="",  # must be empty for Telegram Stars            currency="XTR",            prices=[LabeledPrice(label="Stars", amount=amount)]        )        return {"invoice_link": invoice_link}    except Exception as e:        logger.exception(f"Error creating invoice link: {e}")        raise HTTPException(status_code=500, detail=str(e))@app.post("/api/searchs/ai")async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):    """    Массовый поиск групп в Telegram по запросу пользователя с помощью AI    :param query: Запрос пользователя для поиска групп / каналов в Telegram    :param user_data: Данные пользователя    :return: Список найденных групп    """    logger.info(        f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]} {user_data["username"]}: {query}")    # user = User.get_or_none(User.user_id == user_data["id"])    # if not user:    #     raise HTTPException(status_code=404, detail="User not found")    all_saved_groups = []    words = re.findall(r'\w+', query)    for word in words:        logger.info(f"Поиск группы: {word}")        try:            # mock_msg = MockMessage(user_id=user_data["id"], username=user_data["username"])            # Парсим ввод в список запросов (query - запросс пользователя)            search_terms = parse_search_input(user_input=word)            if not search_terms:                return            try:                # 🔄 Обрабатываем КАЖДЫЙ запрос через НОВЫЙ случайный аккаунт                for idx, term in enumerate(search_terms, 1):                    logger.info(f"[{idx}/{len(search_terms)}] Запрос: '{term}'")                    # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)                    checker = CheckingAccountsValidity()  # path=None по умолчанию                    try:                        client = await checker.start_random_client()                        if not client:                            logger.warning(f"⚠️ Не удалось запустить клиент для '{term}', пропускаю")                            continue                        # Получаем варианты названий от AI                        answer = await get_groq_response(term)                        # Чистим и фильтруем названия                        group_names = parse_ai_group_names(answer)                        logger.info(f"🔍 Ищу {len(group_names)} вариантов для '{term}'")                        # Ищем группы в Telegram                        results = await search_groups_in_telegram(                            client=client,                            group_names=group_names                        )                        logger.info(f"✅ Найдено {len(results)} групп для '{term}'")                        # Сохраняем в БД                        for group_data in results:                            saved_group = save_group_to_db(group_data)                            if saved_group:                                all_saved_groups.append(saved_group)                        # 🔌 Обязательно отключаем клиент после каждого запроса                        if client:                            await client.disconnect()                            logger.info(f"🔌 Клиент для '{term}' отключён")                        # Пауза между запросами (защита от лимитов API и Telegram)                        if idx < len(search_terms):                            await asyncio.sleep(2)                    except Exception as e:                        logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")                        continue  # Продолжаем со следующим запросом            except Exception as e:                logger.error(f"❌ Критическая ошибка: {e}")        except Exception as e:            logger.warning(f"⚠️ Ошибка при обработке '{term}': {e}")    # ✅ Проверяем, были ли найдены и сохранены группы    if all_saved_groups:        # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат        try:            user = User.get_or_none(User.user_id == user_data["id"])            # Определяем язык пользователя, который пользователь выбрал при старте бота            user_lang = determines_user_language(message_or_callback=message.from_user.id)            excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)            filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"            excel_file = BufferedInputFile(excel_bytes, filename=filename)            caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"            # Отправка итогового файла через бота            await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)            logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")        except Exception as send_err:            logger.warning(f"⚠️ Не удалось отправить Excel-файл пользователю {user_data['id']}: {send_err}")    else:        # ❌ Сообщение выводится только если группы действительно НЕ были найдены        logger.info(t("global_search_no_results", lang="ru"))    return {"status": "ok", "groups": all_saved_groups}@app.post("/api/search/ai")async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):    """    Ищет группы в Telegram по запросу пользователя с помощью AI    :param query: Запрос пользователя    :param user_data: Данные пользователя    :return: Список найденных групп    """    logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    try:        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)        answer = await get_groq_response(query)        group_names = parse_ai_group_names(answer)        if not group_names:            return {"status": "no_names_generated", "groups": []}        checker = CheckingAccountsValidity()        client = await checker.start_random_client()        if not client:            raise HTTPException(status_code=400, detail="В поиске нет активных аккаунтов Telegram.")        saved_groups = []        try:            for name in group_names:                results = await search_groups_in_telegram(client=client, group_names=[name])                logger.info(f"Результаты поиска: {results}")                for group_data in results:                    saved = save_group_to_db(group_data)                    if saved:                        saved_groups.append({                            "id": saved.id,                            "telegram_id": saved.telegram_id or saved.id,                            "name": saved.name,                            "username": saved.username,                            "participants": saved.participants,                            "group_type": saved.group_type,                            "availability": saved.availability,                            "link": saved.link                        })        finally:            await client.disconnect()        return {"status": "ok", "groups": saved_groups}    except HTTPException:        raise    except Exception as e:        logger.exception(f"AI search failed: {e}")        raise HTTPException(status_code=500, detail=str(e))@app.post("/api/search/export_excel")async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):    """Экспортирует результаты поиска групп в файл Excel"""    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    raw_ids = [i.strip() for i in telegram_ids.split(",") if i.strip()]    ids = []    for item in raw_ids:        try:            ids.append(int(item))        except ValueError:            pass    if not ids:        raise HTTPException(status_code=400, detail="No valid group IDs provided")    groups = list(TelegramGroup.select().where(        (TelegramGroup.id.in_(ids)) | (TelegramGroup.telegram_id.in_(ids))    ))    # Определяем язык пользователя, который пользователь выбрал при старте бота    user_lang = determines_user_language(message_or_callback=message.from_user.id)    excel_bytes = create_excel_file(groups, lang=user_lang)    filename = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"    # Отправляем документ также напрямую в чат Telegram пользователю    try:        doc = BufferedInputFile(excel_bytes, filename=filename)        caption_text = "📊 Результаты поиска групп в Excel" if user_lang == "ru" else "📊 Group search results in Excel"        await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)        logger.info(f"Excel-файл с результатами поиска отправлен в чат Telegram {user_data["id"]}")    except Exception as e:        logger.warning(f"Не удалось отправить Excel-файл с результатами поиска в чат {user_data["id"]}: {e}")    return Response(        content=excel_bytes,        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",        headers={"Content-Disposition": f"attachment; filename={filename}"}    )@app.get("/api/export/check")async def check_export_status(user_data: dict = Depends(get_current_tg_user)):    """Проверяет возможность бесплатной выгрузки базы данных и баланс звезд"""    # Получить базу данных / Экспортировать XLSX Endpoint    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    is_free, remaining = can_user_download_free(user)    return {        "is_free": is_free,        "remaining_seconds": remaining,        "stars_balance": user.stars    }@app.post("/api/export/download")async def download_database(        export_type: str = Form("all"),  # "all", "channels", "groups"        category: Optional[str] = Form(None),  # e.g. "investments"        user_data: dict = Depends(get_current_tg_user)):    """Выполняет выгрузку базы данных Telegram-групп в файл Excel"""    # user_id = user_data["id"]    user = User.get_or_none(User.user_id == user_data["id"])    if not user:        raise HTTPException(status_code=404, detail="User not found")    # Проверьте, бесплатная ли загрузка или требуется ли звёздочки.    is_free, remaining = can_user_download_free(user)    if not is_free:        # Нужно вычесть 5 звёзд из баланса        if user.stars < 5:            raise HTTPException(                status_code=402,                detail="Payment required: Need 5 Telegram Stars to download before 24h limit expires"            )        # Deduct        user.stars -= 5        user.save()        logger.info(f"Deducted 5 Stars from {user_data["id"]}. New balance: {user.stars}")    else:        # Record free download timestamp        user.last_free_download_at = datetime.now()        user.save()    # Группы запросов    query = TelegramGroup.select()    if export_type == "channels":        query = query.where(TelegramGroup.group_type == "Канал")    elif export_type == "groups":        query = query.where(TelegramGroup.group_type != "Канал")    if category and category != "all":        query = query.where(TelegramGroup.category == category.lower())    groups = list(query)    # Создать Excel в памяти    # Определяем язык пользователя, который пользователь выбрал при старте бота    user_lang = determines_user_language(message_or_callback=message.from_user.id)    excel_bytes = create_excel_file(groups, lang=user_lang)    filename = f"db_export_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"    # Отправляем документ также напрямую в чат Telegram пользователю    try:        doc = BufferedInputFile(excel_bytes, filename=filename)        caption_text = "📊 Экспорт базы данных в Excel" if user_lang == "ru" else "📊 Database export in Excel"        await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)        logger.info(f"Excel-файл базы данных отправлен в чат Telegram {user_data["id"]}")    except Exception as e:        logger.warning(f"Не удалось отправить Excel-файл базы данных в чат {user_data["id"]}: {e}")    return Response(        content=excel_bytes,        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",        headers={"Content-Disposition": f"attachment; filename={filename}"}    )def io_bytes_stream(data: bytes):    """Генерирует поток байтов из буфера в памяти для передачи файла"""    stream = io.BytesIO(data)    yield from stream# ==================== КОНЕЧНЫЕ ТОЧКИ API ПАНЕЛИ АДМИНИСТРАТОРА ====================def require_admin(user_data: dict = Depends(get_current_tg_user)):    """Проверяет наличие прав администратора у текущего пользователя"""    # user_id = user_data["id"]    is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,                                                                  (list, set, tuple)) else user_data[                                                                                               "id"] in ADMIN_USER_ID    if not is_admin:        raise HTTPException(status_code=403, detail="Access denied: Admin only")    return user_data["id"]@app.get("/api/admin/status")async def get_admin_status():    """Возвращает статус фоновых административных задач и системную статистику"""    # Рассчитать группы без категории    uncategorized_count = TelegramGroup.select().where(        (TelegramGroup.username.is_null(False)) &        (TelegramGroup.category == '')    ).count()    # Получить общее количество счетов    total_accounts = Account.select().count()    return {        "uncategorized_count": uncategorized_count,        "total_accounts": total_accounts,        "task": admin_task_status    }# Фоновые задачи администрированияasync def bg_check_accounts():    """    Проверка аккаунтов на валидность    """    logger.info("Начинаем проверку аккаунтов...")    global admin_task_status    admin_task_status["action"] = "check_accounts"    admin_task_status["status"] = "running"    admin_task_status["progress"] = 0    admin_task_status["message"] = "Starting account verification..."    try:        available_sessions = getting_account()        total = len(available_sessions)        admin_task_status["total"] = total        mock_msg = MockMessage(user_id=ADMIN_USER_ID)        checker = CheckingAccountsValidity()        for idx, session in enumerate(available_sessions, 1):            admin_task_status["progress"] = idx            admin_task_status["message"] = f"Checking session {idx}/{total}..."            await checker.verify_account(session)        admin_task_status["status"] = "completed"        admin_task_status["message"] = "Account check completed successfully!"    except Exception as e:        logger.exception(f"Error in bg_check_accounts: {e}")        admin_task_status["status"] = "error"        admin_task_status["message"] = f"Error: {e}"async def bg_actualize_db():    """    Актуализирует базу с группами и каналами    :return: None    """    admin_task_status["action"] = "actualize"    admin_task_status["status"] = "running"    admin_task_status["progress"] = 0    admin_task_status["message"] = "Initializing database actualization..."    try:        available_sessions = getting_account()  # Получение аккаунтов из базы данных        if not available_sessions:            raise Exception("Нет активных сеансов Telegram.")        # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и        # заполнить недостающие данные.        data = get_all_data_telegram_groups()        total = len(data)  # Количество групп в базе данных        admin_task_status["total"] = total        admin_task_status["progress"] = 0        admin_task_status["message"] = f"Проверка групп: 0 / {total}"        for index, group in enumerate(data, start=1):            admin_task_status["progress"] = index            admin_task_status["message"] = (                f"Проверка группы {index} / {total}: {group['username']}"            )            logger.info(                f"{group['telegram_id']} | {group['group_hash']} | {group['name']} | {group['username']} | {group['description']} | {group['participants']} | {group['category']} | {group['group_type']} | {group['language']} | {group['link']} | {group['availability']} | {group['date_added']}"            )            """            Определение категории группы / канала            """            if group['category'] == '':  # Проверка наличия категории у группы (если пустая строка, то пропускаем).                logger.info(f"Найдена группа {group['username']} без категории, определяем категорию")                client = AsyncGroq(api_key=GROQ_API_KEY)                # Рандомно выбираем модель для определения категории                models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]                model = random.choice(models)                result = await category_assignment(                    group_data=group,                    client=client,                    model=model                )                if result.get("success") and result.get("category"):                    # ✅ Сразу пишем в БД (в нижнем регистре)                    category_lower = result["category"].lower()                    await sync_to_async(lambda: TelegramGroup.update(category=category_lower)                                        .where(TelegramGroup.telegram_id == result["telegram_id"])                                        .execute(), thread_sensitive=True)()                    logger.info(f"✅ {group['name']} → {category_lower}")                else:                    logger.warning(f"❌ {group['name']} — AI не определил")                # Пауза только для g4f (чтобы не блокировали)                if type(client).__name__ == 'Client':  # g4f клиент                    await asyncio.sleep(0.5)            # TODO убрать дублирование кода            """            Определение языка групп / каналов и запись в базу данных            """            if group['language'] == '':  # Проверка наличия языка в гуппах / каналах                logger.info(f"Найдена группа {group['username']} без языка, определяем язык")                lang_code = detect_language(group['name'])                if lang_code:                    logger.info(f"Определён язык для группы {group['username']}: {lang_code}")                    # ✅ Сразу пишем в БД (в нижнем регистре)                    await sync_to_async(                        lambda: TelegramGroup.update(language=lang_code)                        .where(TelegramGroup.telegram_id == group['telegram_id'])                        .execute(),                        thread_sensitive=True                    )()                    logger.info(f"✅ {group['name']} → {lang_code}")                else:                    logger.warning(f"Язык для группы {group['username']} не определён")            """            Определение типа группы и запись в базу данных            """            if group['group_type'] == '':  # Проверка наличия типа в группах / каналах                logger.info(f"Найдена группа {group['username']} без типа, определяем тип")                mock_msg = MockMessage(user_id=ADMIN_USER_ID)                checker = CheckingAccountsValidity()  # path=None по умолчанию                client = await checker.start_random_client()                if not client:                    logger.error(f"Не удалось запустить клиент для группы {group['username']}")                    continue                try:                    data_telegram = await get_account_info(client)                    if data_telegram:                        acc_id = data_telegram.get("id")                        acc_phone = data_telegram.get("phone")                        acc_first = data_telegram.get("first_name")                        acc_last = data_telegram.get("last_name")                        acc_user = data_telegram.get("username")                        logger.info(                            f"Используется аккаунт: {acc_id}, {acc_phone}, {acc_first}, {acc_last}, @{acc_user}")                        admin_task_status[                            "message"] = f"Подключение к аккаунту: {acc_id}, {acc_phone}, @{acc_user}..."                    entity = await client.get_entity(group['username'])                    logger.info(entity)                    # Получить полную информацию                    data_full = await get_full_info_group(client, entity)                    logger.info(f"Полная информация: {data_full}")                    logger.info(f"Описание: {data_full.get('description', '')}")                    # Обновить базу данных                    update_group_channels_data_base(data_full, entity, group)                except UsernameInvalidError:                    logger.error(f"Не валидный username {group['username']}")                except ValueError:                    logger.error(f"Не валидный username {group['username']}")                except FloodWaitError as e:                    # wait_time = e.seconds                    logger.warning(f"FloodWait для {group['username']}: нужно подождать {e.seconds} секунд.")                except AuthKeyUnregisteredError:                    logger.error(f"Не валидная сессия для проверки группы {group['username']}")                except Exception as e:                    logger.exception(f"Не удалось обновить группу {group['username']}: {e}")                finally:                    try:                        await client.disconnect()                    except Exception:                        pass                await asyncio.sleep(1.5)            admin_task_status["progress"] = index        admin_task_status["status"] = "completed"    except Exception as e:        logger.exception(f"Error in bg_actualize_db: {e}")        admin_task_status["status"] = "error"        admin_task_status["message"] = f"Error: {e}"async def bg_categorize_db(method: str):    """Выполняет фоновую классификацию групп по категориям с помощью нейросетей"""    global admin_task_status    admin_task_status["action"] = "categorize"    admin_task_status["status"] = "running"    admin_task_status["progress"] = 0    admin_task_status["message"] = "Initializing category assignment..."    try:        # 1. Настройка клиента на основе метода        if method == "fast":            client = Client()            model = await get_best_g4f_model(client)        elif method == "openrouter":            client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)            model = "deepseek/deepseek-v4-flash"        elif method == "groq":            client = AsyncGroq(api_key=GROQ_API_KEY)            model = "llama-3.1-8b-instant"        else:            raise Exception(f"Unknown categorization method: {method}")        groups_to_process = await get_groups_without_category()        total = len(groups_to_process)        admin_task_status["total"] = total        if total == 0:            admin_task_status["status"] = "completed"            admin_task_status["message"] = "All groups already have categories!"            return        for idx, group_data in enumerate(groups_to_process, 1):            admin_task_status["progress"] = idx            admin_task_status["message"] = f"Categorizing {group_data['name']} ({idx}/{total})..."            try:                result = await category_assignment(group_data, client, model)                if result.get("success") and result.get("category"):                    category_lower = result["category"].lower()                    TelegramGroup.update(category=category_lower).where(                        TelegramGroup.telegram_id == result["telegram_id"]                    ).execute()            except Exception as e:                logger.exception(f"Failed to categorize {group_data['name']}: {e}")            if method == "fast":                await asyncio.sleep(0.5)            else:                await asyncio.sleep(0.2)        admin_task_status["status"] = "completed"        admin_task_status["message"] = f"Category assignment finished! Categorized {total} groups."    except Exception as e:        logger.exception(f"Error in bg_categorize_db: {e}")        admin_task_status["status"] = "error"        admin_task_status["message"] = f"Error: {e}"async def bg_detect_language():    """Выполняет фоновое определение языка групп с помощью нейросетей"""    global admin_task_status    admin_task_status["action"] = "lang_detect"    admin_task_status["status"] = "running"    admin_task_status["progress"] = 0    admin_task_status["message"] = "Initializing language detection..."    try:        groups_to_detect = list(TelegramGroup.select().where(            (TelegramGroup.username.is_null(False)) &            ((TelegramGroup.language == '') | (TelegramGroup.language.is_null()))        ))        total = len(groups_to_detect)        admin_task_status["total"] = total        if total == 0:            admin_task_status["status"] = "completed"            admin_task_status["message"] = "All groups already have language set!"            return        for idx, group in enumerate(groups_to_detect, 1):            admin_task_status["progress"] = idx            admin_task_status["message"] = f"Detecting language for {group.name or group.username} ({idx}/{total})..."            group_data = {                "group_hash": group.group_hash,                "name": group.name,                "username": group.username,                "description": group.description or ""            }            try:                res = await asyncio.to_thread(ai_llama_fri, group_data, lang="ru")                if res.get("success") and res.get("language"):                    TelegramGroup.update(language=res["language"]).where(                        TelegramGroup.group_hash == res["group_hash"]                    ).execute()            except Exception as e:                logger.exception(f"Failed to detect language for {group.name}: {e}")            await asyncio.sleep(2.0)        admin_task_status["status"] = "completed"        admin_task_status["message"] = f"Language detection finished! Processed {total} groups."    except Exception as e:        logger.exception(f"Error in bg_detect_language: {e}")        admin_task_status["status"] = "error"        admin_task_status["message"] = f"Error: {e}"@app.post("/api/admin/check-accounts")async def admin_check_accounts(background_tasks: BackgroundTasks):    """Запускает административную задачу проверки валидности всех аккаунтов"""    if admin_task_status["status"] == "running":        return {"status": "busy", "task": admin_task_status}    background_tasks.add_task(bg_check_accounts)    return {"status": "started"}@app.post("/api/admin/actualize")async def admin_actualize_db(background_tasks: BackgroundTasks):    """Запускает административную задачу актуализации базы групп через Telegram"""    if admin_task_status["status"] == "running":        return {"status": "busy", "task": admin_task_status}    background_tasks.add_task(bg_actualize_db)    return {"status": "started"}@app.post("/api/admin/categorize")async def admin_categorize_db(method: str = Query("fast"), background_tasks: BackgroundTasks = None):    """Запускает административную задачу категоризации групп с помощью AI"""    if admin_task_status["status"] == "running":        return {"status": "busy", "task": admin_task_status}    background_tasks.add_task(bg_categorize_db, method=method)    return {"status": "started"}@app.post("/api/admin/detect-language")async def admin_detect_language(background_tasks: BackgroundTasks):    """Запускает административную задачу определения языков групп через AI"""    if admin_task_status["status"] == "running":        return {"status": "busy", "task": admin_task_status}    background_tasks.add_task(bg_detect_language)    return {"status": "started"}@app.get("/api/admin/export-questions")async def admin_export_questions():    """Экспортирует вопросы пользователей из базы данных в CSV-файл"""    questions = get_all_questions()    if not questions:        raise HTTPException(status_code=404, detail="No questions found in database")    output = io.StringIO()    writer = csv.DictWriter(output, fieldnames=["user_id", "question", "answer"])    writer.writeheader()    for q in questions:        writer.writerow(q)    filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"    return StreamingResponse(        io_bytes_stream(output.getvalue().encode("utf-8")),        media_type="text/csv",        headers={"Content-Disposition": f"attachment; filename={filename}"}    )@app.get("/api/admin/logs")async def admin_download_logs():    """Отдает файл логов бота администратору"""    log_path = "logs/log.log"    if not os.path.exists(log_path):        raise HTTPException(status_code=404, detail="Log file not found")    return FileResponse(log_path, media_type="text/plain", filename="bot_log.txt")# Роутер для статичных файлов и веб-интерфейсаstatic_router = APIRouter()@static_router.get("/")async def serve_index(request: Request):    """Отдает главную HTML-страницу веб-интерфейса Mini App"""    user_str = "Анонимный пользователь"    auth_header = request.headers.get("Authorization")    query_params = dict(request.query_params)    token = auth_header or query_params.get("tgWebAppData") or query_params.get("initData") or query_params.get(        "init_data") or query_params.get("token")    user_data = None    if token:        if token.startswith("Bearer "):            token = token[7:]        if token.startswith("mock_"):            try:                mock_id = int(token.split("_")[1])                user_data = {"id": mock_id, "username": f"test_user_{mock_id}", "first_name": "Test"}            except Exception:                pass        else:            try:                params = dict(urllib.parse.parse_qsl(token, keep_blank_values=True))                if 'user' in params:                    user_data = json.loads(params['user'])            except Exception:                pass    if not user_data and ("user_id" in query_params or "id" in query_params):        uid = query_params.get("user_id") or query_params.get("id")        user_data = {            "id": uid,            "username": query_params.get("username"),            "first_name": query_params.get("first_name", "")        }    client_ip = get_client_ip(request)    detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))    if user_data:        uid = user_data.get("id", "неизвестен")        username = user_data.get("username")        username_str = f"@{username}" if username else "без username"        first_name = user_data.get("first_name", "")        user_str = f"{first_name} ({username_str}, ID: {uid})"    else:        user_str = "Гость"    session_key = (user_str, client_ip)    if session_key not in logged_user_sessions:        logged_user_sessions.add(session_key)        logger.info(            f"🌐 Пользователь {user_str} [IP: {client_ip}, Язык по IP: {detected_lang}] перешел на начальную страницу")    return FileResponse("web/static/index.html")@static_router.get("/{file_path:path}")async def serve_static(file_path: str):    """Отдает статические файлы веб-интерфейса Mini App"""    target_path = os.path.join("web/static", file_path)    if os.path.isfile(target_path):        return FileResponse(target_path)    index_path = os.path.join("web/static", "index.html")    if os.path.isfile(index_path):        return FileResponse(index_path)    raise HTTPException(status_code=404, detail="File not found")app.include_router(static_router)
