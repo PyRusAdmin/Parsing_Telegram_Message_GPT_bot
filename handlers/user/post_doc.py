@@ -1,3 +1,4 @@
+import html
 import os
 import re
 
@@ -137,21 +138,27 @@ async def handle_instruction_question(message: Message, state: FSMContext):
 
     except groq.RateLimitError as e:
         logger.error(f"Ошибка ограничения скорости запросов к Groq AI: {e}")
-        # Отправляем сообщение администратору с ошибкой от Groq AI
-        await message.bot.send_message(
-            chat_id=ADMIN_USER_ID,
-            text=f"Модель {model} недоступна. Ошибка: {e}",
-            parse_mode="HTML"
-        )
+        try:
+            await message.bot.send_message(
+                chat_id=int(ADMIN_USER_ID),
+                text=f"Модель {model} недоступна (RateLimit). Ошибка: {html.escape(str(e))}",
+                parse_mode="HTML"
+            )
+        except Exception as notify_err:
+            logger.warning(f"Не удалось отправить уведомление администратору: {notify_err}")
+        await message.answer(t("instruction_send_error", lang=user_lang))
 
     except groq.BadRequestError as e:
         logger.error(f"Ошибка запроса к Groq AI: {e}")
-        # Отправляем сообщение администратору с ошибкой от Groq AI
-        await message.bot.send_message(
-            chat_id=ADMIN_USER_ID,
-            text=f"Модель {model} недоступна. Ошибка: {e}",
-            parse_mode="HTML"
-        )
+        try:
+            await message.bot.send_message(
+                chat_id=int(ADMIN_USER_ID),
+                text=f"Модель {model} недоступна (BadRequest). Ошибка: {html.escape(str(e))}",
+                parse_mode="HTML"
+            )
+        except Exception as notify_err:
+            logger.warning(f"Не удалось отправить уведомление администратору: {notify_err}")
+        await message.answer(t("instruction_send_error", lang=user_lang))
 
     except Exception as e:
         logger.exception(e)

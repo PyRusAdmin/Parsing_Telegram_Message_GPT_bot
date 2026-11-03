@@ -16,8 +16,34 @@ PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
 
-ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID"))  # ID администратора Telegram
-ADMIN_USER_ID = {ADMIN_USER_ID}
+class AdminId(int):
+    """
+    Класс-обёртка для ID администратора:
+    - Ведёт себя как int (проходит валидацию Pydantic для chat_id в aiogram)
+    - Поддерживает оператор in: user_id in ADMIN_USER_ID
+    - Итерируем: for admin_id in ADMIN_USER_ID
+    """
+    def __new__(cls, val, all_ids=None):
+        instance = super().__new__(cls, val)
+        instance._ids = set(all_ids) if all_ids else {int(val)}
+        return instance
+
+    def __contains__(self, item):
+        try:
+            return int(item) in self._ids
+        except (ValueError, TypeError):
+            return False
+
+    def __iter__(self):
+        return iter(self._ids)
+
+    def __len__(self):
+        return len(self._ids)
+
+
+_raw_admin_id = os.getenv("ADMIN_USER_ID", "0").strip()
+_admin_ids = [int(x.strip()) for x in _raw_admin_id.split(",") if x.strip().isdigit()]
+ADMIN_USER_ID = AdminId(_admin_ids[0] if _admin_ids else 0, _admin_ids)
 
 MIN_USERNAME_LENGTH = 5  # Минимальная длина username
 MAX_USERNAME_LENGTH = 64  # Максимальная длина username
