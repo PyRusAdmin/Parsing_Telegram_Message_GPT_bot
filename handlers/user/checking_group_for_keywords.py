@@ -15,22 +15,6 @@ from states.states import MyStatesParsing
 router = Router(name=__name__)
 
 
-# @router.message(
-#     (F.text == t('check_group_for_keywords_button', 'ru')) | (F.text == t('check_group_for_keywords_button', 'en')))
-# async def checking_group_for_keywords(message: Message, state: FSMContext):
-#     """
-#     Обработчик команды "Проверка группы на наличие ключевых слов" (текст).
-#     """
-#     await state.clear()  # Завершаем текущее состояние машины состояния
-#     user = User.get(User.user_id == message.from_user.id)
-#     await message.answer(
-#         text=t("check_group_ask_url", lang=user.language),
-#         reply_markup=back_keyboard(lang=user.language),
-#         parse_mode="HTML"
-#     )
-#     await state.set_state(MyStatesParsing.get_url)
-
-
 @router.callback_query(F.data == "menu_check_group")
 async def checking_group_for_keywords_cb(callback: CallbackQuery, state: FSMContext):
     """

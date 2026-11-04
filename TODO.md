@@ -64,7 +64,7 @@
     - Удалён дублирующий код из `database/database.py`, обновлены импорты во всём проекте.
 - [x] **[25.10.2026] Централизованная инициализация таблиц (`8e125c9`, `create_tables_database.py`)**:
     - Все таблицы (`Account`, `AccountFree`, `TelegramGroup`, `Question`, `User`, `PersonalTracking`,
-      `PersonalTrackingStats`, `Keywords`, `Group`) инициализируются единым вызовом `create_tables(safe=True)`.
+      `Keywords`, `Group`) инициализируются единым вызовом `create_tables(safe=True)`.
     - Добавлено детальное и понятное логирование каждой таблицы при старте приложения.
 - [x] **[25.10.2026] Документирование моделей и функций**:
     - Полный docstring для функции `delete_account_from_user_table` с описанием параметров и назначения.

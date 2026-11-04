@@ -12,7 +12,8 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.utilit import choosing_random_ai_model
 from core.config import GROQ_API_KEY, ADMIN_USER_ID
 from core.proxy import setup_proxy
-from database.database import add_question
+from database.question_database import add_question
+
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t

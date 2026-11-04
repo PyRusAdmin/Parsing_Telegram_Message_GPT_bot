@@ -12,7 +12,8 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.auth import CheckingAccountsValidity
 from core.config import ADMIN_USER_ID
 from database.database import User
-from database.database import getting_account, get_all_questions
+from database.database import getting_account
+from database.question_database import get_all_questions
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import admin_keyboard, broadcast_preview_keyboard, back_keyboard
 from locales.locales import t
@@ -21,46 +22,13 @@ from states.states import BroadcastState
 router = Router(name=__name__)
 
 
-# async def export_questions_internal(message: Message):
-#     """Экспортирует вопросы и ответы из базы данных в CSV-файл"""
-#
-#     # Определяем язык пользователя, который пользователь выбрал при старте бота
-#     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-#
-#     try:
-#         questions = get_all_questions()
-#         if not questions:
-#             await message.answer(t("no_questions_in_db", lang=user_lang))
-#             return
-#
-#         if not os.path.exists("exports"):
-#             os.makedirs("exports")
-#
-#         file_path = f"exports/questions_export_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
-#
-#         with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
-#             fieldnames = ["user_id", "question", "answer"]
-#             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-#
-#             writer.writeheader()
-#             for question_data in questions:
-#                 writer.writerow(question_data)
-#
-#         await message.answer_document(FSInputFile(file_path), caption=t("questions_export_caption", lang=user_lang))
-#         os.remove(file_path)
-#
-#     except Exception as e:
-#         logger.exception(e)
-#         await message.answer(t("export_error", lang=user_lang, error=str(e)))
-
-
 @router.callback_query(F.data == "admin_export_questions")
 async def export_questions_cb(callback: CallbackQuery):
     """
     Экспортирует вопросы и ответы из базы данных в CSV файл (инлайн).
     """
     await callback.answer()
-    # await export_questions_internal(callback.message)
+
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
@@ -89,31 +57,6 @@ async def export_questions_cb(callback: CallbackQuery):
     except Exception as e:
         logger.exception(e)
         await message.answer(t("export_error", lang=user_lang, error=str(e)))
-
-
-# async def show_admin_panel(message: Message, user_id: int, state: FSMContext, edit: bool = False):
-#     """Отображает главное меню панели администратора"""
-#     try:
-#         await state.clear()
-#         try:
-#             user = User.get(User.user_id == user_id)
-#             user_lang = user.language if user.language != "unset" else "ru"
-#         except Exception as e:
-#             logger.exception(e)
-#             user_lang = "ru"
-#
-#         if edit:
-#             try:
-#                 await callback.message.edit_text(text=t("admin_panel_message", lang=user_lang), parse_mode="HTML",
-#                                         reply_markup=admin_keyboard(lang=user_lang))
-#                 return
-#             except Exception:
-#                 pass
-#
-#         await message.answer(text=t("admin_panel_message", lang=user_lang), parse_mode="HTML",
-#                              reply_markup=admin_keyboard(lang=user_lang))
-#     except Exception as e:
-#         logger.exception(e)
 
 
 @router.callback_query(F.data == "menu_admin_panel")

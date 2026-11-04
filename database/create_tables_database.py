@@ -1,11 +1,12 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.database import (
-    database, Account, AccountFree, TelegramGroup, Question, User, PersonalTrackingStats
+    database, Account, AccountFree, TelegramGroup, User
 )
 from database.group_user_database import Group
 from database.keywords_user_database import Keywords
 from database.personal_tracking import PersonalTracking
+from database.question_database import Question
 
 """Создает таблицы для базы данных, если ранее не были созданы"""
 
@@ -30,20 +31,30 @@ def migrate_old_table_names():
             existing_tables.remove(old_name)
             existing_tables.add(new_name)
 
+    # Удаляем устаревшую таблицу personal_tracking_stats, если она существует
+    if "personal_tracking_stats" in existing_tables:
+        logger.info("🗑️ Удаление устаревшей таблицы 'personal_tracking_stats'...")
+        database.execute_sql("DROP TABLE IF EXISTS personal_tracking_stats;")
+        logger.success("✅ Устаревшая таблица 'personal_tracking_stats' успешно удалена")
+        existing_tables.remove("personal_tracking_stats")
+
     # Проверяем колонки в users_accounts
     if "users_accounts" in existing_tables:
         cursor_cols = database.execute_sql("PRAGMA table_info(users_accounts);")
         existing_cols = {row[1] for row in cursor_cols.fetchall()}
 
         if "session_string" in existing_cols and "user_session_string" not in existing_cols:
-            logger.info("🔄 Миграция: переименование колонки 'session_string' -> 'user_session_string' в 'users_accounts'...")
+            logger.info(
+                "🔄 Миграция: переименование колонки 'session_string' -> 'user_session_string' в 'users_accounts'...")
             database.execute_sql("ALTER TABLE users_accounts RENAME COLUMN session_string TO user_session_string;")
             existing_cols.remove("session_string")
             existing_cols.add("user_session_string")
 
         if "phone_number" in existing_cols and "phone_number_session_string" not in existing_cols:
-            logger.info("🔄 Миграция: переименование колонки 'phone_number' -> 'phone_number_session_string' в 'users_accounts'...")
-            database.execute_sql("ALTER TABLE users_accounts RENAME COLUMN phone_number TO phone_number_session_string;")
+            logger.info(
+                "🔄 Миграция: переименование колонки 'phone_number' -> 'phone_number_session_string' в 'users_accounts'...")
+            database.execute_sql(
+                "ALTER TABLE users_accounts RENAME COLUMN phone_number TO phone_number_session_string;")
             existing_cols.remove("phone_number")
             existing_cols.add("phone_number_session_string")
 
@@ -115,7 +126,6 @@ def init_database():
             User,  # Таблица профилей пользователей Telegram (язык, баланс Stars, регистрация)
             PersonalTracking,
             # Таблица настроек персонального отслеживания (целевые группы, привязанные сессии, ID техгруппы)
-            PersonalTrackingStats,  # Таблица статистики персонального отслеживания (подключение групп, покупка слотов)
             Keywords,  # Таблица ключевых слов пользователей (users_keywords)
             Group  # Таблица целевых каналов и групп пользователей для мониторинга (users_groups)
         ],
@@ -130,7 +140,6 @@ def init_database():
         "  • Question — вопросы пользователей для базы знаний\n"
         "  • User — профили пользователей бота (язык, Stars)\n"
         "  • PersonalTracking (users_personal_tracking) — данные о пользователе бота, персональные настройки трекинга\n"
-        "  • PersonalTrackingStats — статистика трекинга и покупок слотов\n"
         "  • Keywords (users_keywords) — ключевые слова пользователей для отслеживания\n"
         "  • Group (users_groups) — отслеживаемые пользователями каналы и группы"
     )

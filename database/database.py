@@ -12,69 +12,6 @@ database = SqliteDatabase(
     autocommit=True  # ✅ Важно!
 )
 
-
-class PersonalTrackingStats(database.Model):
-    """Модель базы данных для хранения статистики персонального отслеживания"""
-
-    id = AutoField()
-    user_id = BigIntegerField(index=True)
-    event_type = CharField()  # 'group_connected', 'slot_purchased', 'changed_target'
-    stars_amount = IntegerField(default=0)
-    created_at = DateTimeField(default=datetime.now)
-
-    class Meta:
-        """Метаданные таблицы статистики персонального отслеживания"""
-        table_name = "personal_tracking_stats"
-
-
-"""
-Запись в базу данных вопросов пользователей, что бы расширить базу знаний
-"""
-
-
-class Question(database.Model):
-    """Модель для хранения вопросов пользователей и ответов базы знаний"""
-    id = AutoField()  # автоинкремент
-    user_id = IntegerField()  # ID пользователя Telegram
-    question = TextField()  # Вопрос пользователя
-    answer = TextField(null=True)  # Ответ на вопрос
-
-
-def add_question(user_id: int, question: str, answer: str):
-    """
-    Добавляет вопрос в базу данных.
-
-    :param user_id: Telegram ID пользователя
-    :param question: Вопрос пользователя
-    :param answer: Ответ на вопрос
-    :return: True, если вопрос добавлен, иначе False
-    """
-    Question.create(user_id=user_id, question=question, answer=answer)
-    return True
-
-
-def get_all_questions():
-    """
-    Получает все вопросы и ответы из базы данных.
-
-    :return: Список словарей с вопросами и ответами
-    """
-    try:
-        questions = Question.select()
-        result = [
-            {
-                'user_id': q.user_id,
-                'question': q.question,
-                'answer': q.answer
-            }
-            for q in questions
-        ]
-        return result
-    except Exception as e:
-        logger.exception(f"❌ Ошибка получения всех вопросов: {e}")
-        return []
-
-
 """
 Таблица с аккаунтами подключаемых администратором бота, для общего использования
 """
@@ -155,7 +92,8 @@ class Account(database.Model):
     user_id = BigIntegerField(index=True, null=True)  # id пользователя Telegram
     user_username = CharField(default="", null=True)  # username пользователя Telegram
     user_firstname = CharField(default="", null=True)  # firstname пользователя Telegram
-    user_session_string = CharField(unique=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах
+    user_session_string = CharField(
+        unique=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах
     phone_number_session_string = CharField(default="", null=True)  # номер телефона аккаунта
     date_added = DateTimeField(default=datetime.now)  # Дата добавления в базу данных
 
@@ -180,7 +118,8 @@ class Account(database.Model):
         self.phone_number_session_string = value
 
 
-def write_account_to_user_table(user_id: int, session_string: str, phone_number: str = "", user_username: str = "", user_firstname: str = ""):
+def write_account_to_user_table(user_id: int, session_string: str, phone_number: str = "", user_username: str = "",
+                                user_firstname: str = ""):
     """
     Записывает или обновляет аккаунт пользователя в таблице users_accounts.
     """

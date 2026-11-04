@@ -10,7 +10,6 @@ from aiogram.types import (
     CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 )
 from loguru import logger  # https://github.com/Delgan/loguru
-from peewee import fn
 from telethon import TelegramClient
 from telethon.errors import (
     FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
@@ -25,7 +24,7 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
-    PersonalTrackingStats, getting_account, write_account_to_db_free, write_account_to_user_table
+    getting_account, write_account_to_db_free, write_account_to_user_table
 )
 from database.keywords_user_database import add_user_keywords
 from database.personal_tracking import get_user_accounts, PersonalTracking, write_account_to_db
@@ -74,12 +73,10 @@ username_bot = "@Botzzzz_admin_bot"  # Бот администратор, кот
 
 Модели БД
 ---------
-PersonalTracking      — настройки отслеживания (user_id, target_link,
-                        created_group_link/id, keywords)
-PersonalTrackingStats — учёт событий (подключение группы, покупка слота)
+PersonalTracking      — настройки отслеживания (users_personal_tracking)
 User                  — профиль пользователя (язык, баланс Stars)
-UserAccountsTable     — персональные сессии пользователей
-Account / AccountFree — общие сессии от администратора
+Account               — персональные сессии пользователей (users_accounts)
+AccountFree           — общие сессии от администратора
 
 
 Слоты (Slots)
@@ -139,7 +136,7 @@ waiting_for_2fa_password  → ввод 2FA-пароля
 """
 
 
-# Модели PersonalTracking и PersonalTrackingStats определены в database.database
+# Модель PersonalTracking определена в database.personal_tracking
 
 
 # ==================== МАШИНА СОСТОЯНИЙ ====================
@@ -163,15 +160,11 @@ class PersonalTrackingState(StatesGroup):
 
 def get_user_allowed_slots(user_id: int) -> int:
     """
-    Возвращает количество доступных слотов пользователя (1 бесплатный + купленные)
+    Возвращает количество доступных слотов пользователя
     :param user_id: ID пользователя в Telegram
-    :return: Количество разрешённых слот
+    :return: Количество разрешённых слотов
     """
-    purchased_slots = PersonalTrackingStats.select().where(
-        (PersonalTrackingStats.user_id == user_id) &
-        (PersonalTrackingStats.event_type == 'slot_purchased')
-    ).count()
-    return 1 + purchased_slots
+    return 1
 
 
 def get_user_used_slots(user_id: int) -> int:
@@ -467,13 +460,6 @@ async def process_keywords_input(message: Message, state: FSMContext):
         shared_account=data.get("shared_account", "")
     )
 
-    # Фиксируем статистику подключения группы
-    PersonalTrackingStats.create(
-        user_id=message.from_user.id,
-        event_type="group_connected",
-        stars_amount=0
-    )
-
     await state.clear()
 
     await message.answer(
@@ -520,13 +506,6 @@ async def process_successful_payment(message: Message):
     payload = message.successful_payment.invoice_payload
     if payload.startswith("personal_tracking_slot_"):
         user_id = message.from_user.id
-
-        # Фиксируем оплату в статистике
-        PersonalTrackingStats.create(
-            user_id=user_id,
-            event_type="slot_purchased",
-            stars_amount=2
-        )
 
         allowed = get_user_allowed_slots(user_id)
         await message.answer(
@@ -654,13 +633,6 @@ async def process_edit_keywords(message: Message, state: FSMContext):
         rec.last_changed_at = datetime.now()
         rec.save()
 
-        # Фиксируем в статистике
-        PersonalTrackingStats.create(
-            user_id=message.from_user.id,
-            event_type="changed_target",
-            stars_amount=0
-        )
-
     await state.clear()
     await message.answer("✅ <b>Настройки отслеживания успешно обновлены!</b>", parse_mode="HTML")
 
@@ -669,20 +641,12 @@ async def process_edit_keywords(message: Message, state: FSMContext):
 async def cb_stats(callback: CallbackQuery):
     """Отображает административную статистику персонального отслеживания"""
     total_tracking_users = PersonalTracking.select(PersonalTracking.user_id).distinct().count()
-    total_paid_users = PersonalTrackingStats.select(PersonalTrackingStats.user_id).where(
-        PersonalTrackingStats.event_type == "slot_purchased"
-    ).distinct().count()
-
-    total_stars_query = PersonalTrackingStats.select(fn.SUM(PersonalTrackingStats.stars_amount)).where(
-        PersonalTrackingStats.event_type == "slot_purchased"
-    ).scalar()
-    total_stars = total_stars_query if total_stars_query else 0
+    total_active_slots = PersonalTracking.select().count()
 
     text = (
         "📊 <b>Статистика персонального отслеживания:</b>\n\n"
-        f"👥 Пользователей подключили группы: <b>{total_tracking_users}</b>\n"
-        f"⭐ Пользователей оплатили доп. слоты: <b>{total_paid_users}</b>\n"
-        f"✨ Всего получено Stars: <b>{total_stars} ⭐</b>"
+        f"👥 Пользователей настроили трекинг: <b>{total_tracking_users}</b>\n"
+        f"📌 Всего активных отслеживаний: <b>{total_active_slots}</b>"
     )
 
     await callback.message.answer(text, parse_mode="HTML")

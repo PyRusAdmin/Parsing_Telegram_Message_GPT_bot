@@ -206,22 +206,6 @@ def main_menu_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-# def ai_search_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
-#     """
-#     Инлайн-клавиатура для поиска новых групп / каналов с помощью AI.
-#     """
-#     return InlineKeyboardMarkup(
-#         inline_keyboard=[
-#             [
-#                 InlineKeyboardButton(text=t("global_ai_search_button", lang=lang), callback_data="ai_search_global")
-#             ],
-#             [
-#                 back_button(lang)  # Кнопка ⬅️ Назад
-#             ],
-#         ]
-#     )
-
-
 def menu_launch_tracking_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
     Создаёт инлайн-клавиатуру во время активного отслеживания.
@@ -340,23 +324,6 @@ def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
             ]
         ]
     )
-
-
-# def connect_grup_keyboard_tech(lang: str = 'ru') -> InlineKeyboardMarkup:
-#     """
-#     Инлайн-клавиатура для подключения группы сообщений
-#     """
-#     return InlineKeyboardMarkup(
-#         inline_keyboard=[
-#             [
-#                 InlineKeyboardButton(text=t("connect_group_for_messages_button", lang=lang),
-#                                      callback_data="group_connect")
-#             ],
-#             [
-#                 back_button(lang)  # Кнопка ⬅️ Назад
-#             ]
-#         ]
-#     )
 
 
 def back_keyboard(lang: str = 'ru', callback_data: str = "menu_main") -> InlineKeyboardMarkup:
@@ -802,9 +769,9 @@ def tracking_list_keyboard(records):
 def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Клавиатура покупки звезд
-    :param stars:
+    :param stars: Количество звезд
     :param lang:
-    :return:
+    :return: клавиатура
     """
     buttons = []
     if stars >= 5:
