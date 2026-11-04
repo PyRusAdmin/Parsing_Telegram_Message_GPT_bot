@@ -14,7 +14,7 @@ from peewee import fn
 from telethon import TelegramClient
 from telethon.errors import (
     FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
-    PhoneNumberInvalidError, SessionPasswordNeededError, UsernameNotOccupiedError, UsernameInvalidError,
+    SessionPasswordNeededError, UsernameNotOccupiedError, UsernameInvalidError,
     ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError
 )
 from telethon.sessions import StringSession
@@ -716,128 +716,6 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
                     logger.warning(f"Не удалось отправить алерт в группу {r.created_group_id}: {e}")
 
 
-# ==================== АВТОРИЗАЦИЯ АККАУНТА ПО НОМЕРУ ТЕЛЕФОНА ====================
-
-@router.callback_query(F.data == "pt_auth_phone")
-async def cb_start_phone_auth(callback: CallbackQuery, state: FSMContext):
-    """
-    Начало шага ввода номера телефона. Если аккаунт подключает Администратор, то данные будут записываться в общую папку с аккаунтами
-    """
-    await state.set_state(PersonalTrackingState.waiting_for_phone_number)
-    await callback.message.answer(
-        "📱 <b>Подключение Telegram-аккаунта по номеру телефона</b>\n\n"
-        "Пожалуйста, введите Ваш номер телефона в международном формате.\n"
-        "<i>Пример: <code>+79991234567</code> или <code>+380991234567</code></i>",
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
-
-@router.message(PersonalTrackingState.waiting_for_phone_number)
-async def process_phone_number_input(message: Message, state: FSMContext):
-    """Обработка ввода номера телефона и запрос 5-значного кода через Telethon"""
-    phone = message.text.strip().replace(" ", "").replace("-", "")
-    if not phone.startswith("+"):
-        phone = "+" + phone
-
-    if len(phone) < 10 or not phone[1:].isdigit():
-        await message.answer(
-            "⚠️ Некорректный формат номера. Введите номер начиная со знака + (например, <code>+79991234567</code>):",
-            parse_mode="HTML")
-        return
-
-    status_msg = await message.answer(
-        "🔄 <i>Запрашиваем код подтверждения у Telegram... Пожалуйста, подождите до прихода кода. Если код не пришел, попробуйте позже.</i>",
-        parse_mode="HTML")
-
-    client = TelegramClient(
-        StringSession(),
-        api_id=int(API_ID) if API_ID else 0,
-        api_hash=str(API_HASH) if API_HASH else "",
-        device_model=mobile_device["device_model"],
-        system_version=mobile_device["system_version"],
-        app_version=mobile_device["app_version"],
-        lang_code=mobile_device["lang_code"],
-        system_lang_code=mobile_device["system_lang_code"]
-    )
-
-    try:
-        await client.connect()
-        send_code = await client.send_code_request(phone)
-        session_str = client.session.save()
-        await client.disconnect()
-
-        await state.update_data(
-            phone_number=phone,
-            phone_code_hash=send_code.phone_code_hash,
-            session_str=session_str,
-            current_code=""
-        )
-        await state.set_state(PersonalTrackingState.waiting_for_auth_code)
-
-        await status_msg.edit_text(
-            f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
-            f"📱 <b>Номер:</b> <code>{phone}</code>\n"
-            f"🔢 <b>Введенный код:</b> <code>_ _ _ _ _</code>\n\n"
-            f"⚠️ <i>Используйте эмодзи-клавиатуру ниже для выбора цифр кода, чтобы избежать блокировки от Telegram:</i>",
-            reply_markup=emoji_code_keypad_kb(),
-            parse_mode="HTML"
-        )
-    except PhoneNumberInvalidError:
-        await status_msg.edit_text("❌ Введен недействительный номер телефона. Попробуйте еще раз.")
-        await state.clear()
-    except FloodWaitError as fwe:
-        await status_msg.edit_text(f"⏳ Слишком много попыток. Пожалуйста, подождите {fwe.seconds} секунд.")
-        await state.clear()
-    except Exception as e:
-        logger.exception(f"❌ Ошибка отправки кода на номер {phone}: {e}")
-        await status_msg.edit_text(f"❌ Ошибка при запросе кода: {e}")
-        await state.clear()
-
-
-@router.callback_query(F.data.startswith("pt_digit_"), PersonalTrackingState.waiting_for_auth_code)
-async def cb_handle_emoji_digit(callback: CallbackQuery, state: FSMContext):
-    """Обработка ввода цифр кода с помощью эмодзи-клавиатуры"""
-    action = callback.data.replace("pt_digit_", "")
-    data = await state.get_data()
-    current_code = data.get("current_code", "")
-
-    if action == "clear":
-        current_code = current_code[:-1]
-    elif action == "submit":
-        if len(current_code) < 5:
-            await callback.answer("⚠️ Введите все 5 цифр кода подтверждения!", show_alert=True)
-            return
-        await execute_sign_in(callback, state, current_code)
-        return
-    elif action.isdigit():
-        if len(current_code) < 5:
-            current_code += action
-
-    await state.update_data(current_code=current_code)
-
-    digits_display = " ".join(list(current_code) + ["_"] * (5 - len(current_code)))
-    phone = data.get("phone_number", "")
-
-    try:
-        await callback.message.edit_text(
-            f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
-            f"📱 <b>Номер:</b> <code>{phone}</code>\n"
-            f"🔢 <b>Введенный код:</b> <code>{digits_display}</code>\n\n"
-            f"⚠️ <i>Используйте эмодзи-клавиатуру ниже для выбора цифр кода:</i>",
-            reply_markup=emoji_code_keypad_kb(),
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
-
-    await callback.answer()
-
-    # Авто-отправка при вводе 5 цифр
-    if len(current_code) == 5:
-        await execute_sign_in(callback, state, current_code)
-
-
 async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str):
     """Выполнение входа Telethon по коду"""
     data = await state.get_data()
@@ -860,7 +738,7 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         await client.connect()
         await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
         # Получаем информацию о клиенте
-        account_info = await get_account_info(client=client)
+        account_info = await get_account_info(client)
         final_session = client.session.save()
         await client.disconnect()
 
@@ -873,7 +751,7 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             # Сохраняем аккаунт в общую базу бесплатных аккаунтов
             write_account_to_db_free(
                 session_string=final_session,  # Стринг сессия Telegram
-                phone_number=account_info["phone"] or ""  # Номер телефонаа подключаемого аккаунта
+                phone_number=account_info.get("phone") or ""  # Номер телефона подключаемого аккаунта
             )
         else:
             # Сохраняем аккаунт в персональную базу пользователя
@@ -885,9 +763,9 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         await state.clear()
         await callback.message.edit_text(
             f"🎉 <b>Аккаунт успешно авторизован и подключен!</b>\n\n"
-            f"👤 <b>Имя:</b> {account_info["first_name"] or ""} {account_info["last_name"] or ""}\n"
-            f"📱 <b>Телефон:</b> +{account_info["phone"] or ""}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{account_info["id"] or ""}</code>\n\n"
+            f"👤 <b>Имя:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
+            f"📱 <b>Телефон:</b> +{account_info.get('phone') or ''}\n"
+            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
             f"✅ Сессия сохранена в базе и готова к отслеживанию.",
             parse_mode="HTML"
         )
@@ -965,7 +843,7 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         await client.connect()
         await client.sign_in(password=password)
         # Получаем информацию о клиенте
-        account_info = await get_account_info(client=client)
+        account_info = await get_account_info(client)
         final_session = client.session.save()
         await client.disconnect()
 
@@ -973,7 +851,7 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
             # Сохраняем аккаунт в общую базу бесплатных аккаунтов
             write_account_to_db_free(
                 session_string=final_session,  # Стринг сессия Telegram
-                phone_number=account_info["phone"] or ""  # Номер телефонаа подключаемого аккаунта
+                phone_number=account_info.get("phone") or ""  # Номер телефона подключаемого аккаунта
             )
         else:
             # Сохраняем аккаунт в персональную базу пользователя
@@ -985,9 +863,9 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         await state.clear()
         await status_msg.edit_text(
             f"🎉 <b>Аккаунт успешно авторизован с 2FA паролем!</b>\n\n"
-            f"👤 <b>Имя:</b> {account_info["first_name"] or ""} {account_info["last_name"] or ""}\n"
-            f"📱 <b>Телефон:</b> +{account_info["phone"] or ""}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{account_info["id"] or ""}</code>\n\n"
+            f"👤 <b>Имя:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
+            f"📱 <b>Телефон:</b> +{account_info.get('phone') or ''}\n"
+            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
             f"✅ Сессия успешно сохранена в базе данных.",
             parse_mode="HTML"
         )

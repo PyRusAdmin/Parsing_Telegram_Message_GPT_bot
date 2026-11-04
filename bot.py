@@ -12,7 +12,7 @@ from database.database import clean_telegram_id_duplicates, migrate_categories_t
 from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import router as checking_accounts
 from handlers.admin.checking_group_for_ai import router as checking_group_for_ai
-from handlers.connecting_account import router as connecting_account
+# from handlers.connecting_account import router as connecting_account
 from handlers.admin.language_detection import router as language_detection
 from handlers.admin.post_log import router as post_log
 from handlers.user.settings_handlers.settings import router as settings
@@ -84,7 +84,7 @@ async def main() -> None:
         dp.include_router(checking_group_for_ai)
         dp.include_router(checking_accounts)
         dp.include_router(language_detection)
-        dp.include_router(connecting_account)
+        # dp.include_router(connecting_account)
 
         """
         Меню настроек

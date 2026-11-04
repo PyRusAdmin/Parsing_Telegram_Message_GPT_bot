@@ -30,14 +30,17 @@ async def get_account_info(client: TelegramClient) -> dict:
     """
     me = await client.get_me()
     phone = me.phone or ""
+    first_name = me.first_name or ""
+    last_name = me.last_name or ""
+    username = me.username or ""
     logger.info(f"🧾 Аккаунт: | ID: {me.id} | Phone: {phone}")
 
     return {
         "id": me.id,  # Идентификатор пользователя Telegram
         "phone": phone,  # Номер телефона пользователя Telegram
-        "first_name": me.first_name,  # Имя пользователя Telegram
-        "last_name": me.last_name,  # Фамилия пользователя Telegram
-        "username": me.username  # Никнейм пользователя Telegram
+        "first_name": first_name,  # Имя пользователя Telegram
+        "last_name": last_name,  # Фамилия пользователя Telegram
+        "username": username  # Никнейм пользователя Telegram
     }
 
 
@@ -81,7 +84,7 @@ class CheckingAccountsValidity:
                     logger.error("❌ Сессия недействительна или аккаунт не авторизован!")
                 return None
 
-            await get_account_info(client)
+            account_info = await get_account_info(client)
             return client
 
         except AuthKeyDuplicatedError:
@@ -194,7 +197,7 @@ class CheckingAccountsValidity:
                     pass
                 return None
             account_info = await get_account_info(client)
-            logger.success(f"✅ Сессия активна: {account_info['phone'] or account_info['id']}")
+            logger.success(f"✅ Сессия активна: {account_info.get('phone') or account_info.get('id')}")
             return client
         except Exception as e:
             logger.exception(f"Ошибка подключения к {self.path}: {e}")

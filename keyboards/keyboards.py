@@ -238,9 +238,36 @@ def menu_launch_tracking_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
+"""Клавиатура меню подключения аккаунтов"""
+
+
+def connect_account_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+    """
+    Создает инлайн-клавиатуру для меню подключения аккаунтов.
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Подключить аккаунт через сессию Telegram",  # Подключение аккаунта сессии Telegram
+                    callback_data="settings_section_channels")
+            ],
+            [
+                InlineKeyboardButton(text="📱 Подключить свой аккаунт (по телефону)", callback_data="pt_auth_phone")
+            ],
+            [
+                back_button(lang)  # Кнопка ⬅️ Назад
+            ],
+        ]
+    )
+
+
+"""Клавиатура меню настроек"""
+
+
 def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Создаёт инлайн-клавиатуру главного меню настроек (3 раздела).
+    Создаёт инлайн-клавиатуру главного меню настроек (3 раздела). (Меню настройки)
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -263,17 +290,32 @@ def settings_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 )
             ],
             [
-                InlineKeyboardButton(text=t("connect_account_button", lang=lang),
-                                     callback_data="settings_connect_account"),
+                InlineKeyboardButton(
+                    text=t("connect_account_button", lang=lang),  # Кнопка 🔐 Подключение аккаунта
+                    callback_data="account_connect_menu"
+                ),
+            ],
+            # [
+            #     InlineKeyboardButton(
+            #         text=t("connect_account_button", lang=lang),  # Кнопка "Подключить аккаунт"
+            #         callback_data="settings_connect_account"
+            #     ),
+            # ], account_connect_menu
+            [
+                InlineKeyboardButton(
+                    text=t("change_language_button", lang=lang),
+                    callback_data="settings_change_language"
+                ),
+                InlineKeyboardButton(
+                    text=t("topup_stars_button", lang=lang),
+                    callback_data="settings_topup_stars"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("change_language_button", lang=lang),
-                                     callback_data="settings_change_language"),
-                InlineKeyboardButton(text=t("topup_stars_button", lang=lang), callback_data="settings_topup_stars")
-            ],
-            [
-                InlineKeyboardButton(text="🔄 Передать настройки пользователю",
-                                     callback_data="settings_transfer_rights")
+                InlineKeyboardButton(
+                    text="🔄 Передать настройки пользователю",
+                    callback_data="settings_transfer_rights"
+                )
             ],
             [
                 back_button(lang)  # Кнопка ⬅️ Назад
@@ -674,9 +716,6 @@ def personal_tracking_menu_kb(user_id: int, lang) -> InlineKeyboardMarkup:
     buttons = [
         [
             InlineKeyboardButton(text="➕ Добавить отслеживание группы", callback_data="pt_add_tracking")
-        ],
-        [
-            InlineKeyboardButton(text="📱 Подключить свой аккаунт (по телефону)", callback_data="pt_auth_phone")
         ],
         [
             InlineKeyboardButton(text="⭐ Докупить +1 слот (2 Stars)", callback_data="pt_buy_slot")
