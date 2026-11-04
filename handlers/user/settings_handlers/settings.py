@@ -5,26 +5,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from database.group_user_database import (
-    dell_group,
-    clear_all_user_groups,
-    get_user_groups_paginated,
-    get_user_channel_usernames,
+    dell_group, clear_all_user_groups, get_user_groups_paginated, get_user_channel_usernames,
 )
 from database.keywords_user_database import (
-    get_user_keywords_paginated,
-    get_keywords_count,
+    get_user_keywords_paginated, get_keywords_count,
 )
 from database.personal_tracking import PersonalTracking
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
-    settings_keyboard,
-    settings_menu_tracking_channels,
-    settings_keywords_submenu_kb,
-    settings_notification_group_kb,
-    channels_list_keyboard,
-    keywords_list_inline_kb,
-    confirm_clear_keyboard,
-    back_keyboard,
+    settings_keyboard, settings_menu_tracking_channels, settings_keywords_submenu_kb, settings_notification_group_kb,
+    channels_list_keyboard, keywords_list_inline_kb, confirm_clear_keyboard, back_keyboard,
 )
 from locales.locales import t
 

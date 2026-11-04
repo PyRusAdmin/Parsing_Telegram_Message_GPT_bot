@@ -36,7 +36,7 @@
   не подключен.
 - [x] **[19.02.2026] Авторизация через StringSession**: Подключение аккаунтов пользователей через `.session` файлы с
   конвертацией и записью в БД в виде `StringSession` (`database/personal_tracking.py`,
-  `handlers/user/connect_account.py`).
+  `handlers/connect_account.py`).
 - [x] **[17.02.2026] Массовый AI поиск**: Реализован поиск и парсинг групп через ИИ (`handlers/user/pars_ai.py`).
 - [x] **[13.10.2026] Переход на инлайн-клавиатуру**: Полный рефакторинг главного меню — все кнопки переведены с
   Reply-клавиатуры на `InlineKeyboardMarkup` (коммиты `f6251de`…`325f487`).

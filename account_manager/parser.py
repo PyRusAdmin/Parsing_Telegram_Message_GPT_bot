@@ -1,81 +1,48 @@
 import asyncio
-
 import random
 
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-
 from asgiref.sync import sync_to_async
-
 from loguru import logger  # https://github.com/Delgan/loguru
-
 from telethon import events, types, TelegramClient
-
 from telethon.errors import MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
-
 from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
-
 from account_manager.subscription import subscription_telegram
-
 from account_manager.utilit import detect_language
-
-from core.config import forwarded_messages, active_clients, stop_flags, ISO_639_1_CODES
-
+from core.config import forwarded_messages, active_clients, stop_flags
 from database.database import TelegramGroup
-
 from database.group_user_database import get_user_channel_usernames, dell_group, get_user_channels_or_notify
-
 from database.keywords_user_database import get_keywords_count, get_user_keywords
-
 from database.personal_tracking import get_group_id_with_personal_tracking, PersonalTracking
-
 from handlers.user_language import determines_user_language
-
 from keyboards.keyboards import menu_launch_tracking_keyboard
-
 from locales.locales import t
 
 
 async def get_full_info_group(client, entity):
     """
-
     Получение полной информации о группе или канале Telegram
-
     :return: Объект с полной информацией о группе или канале Telegram
-
     """
-
     try:
 
         full_channel = await client(GetFullChannelRequest(channel=entity))
-
         description = full_channel.full_chat.about or ""
-
         participants = full_channel.full_chat.participants_count or 0
-
         link = f"https://t.me/{entity.username}" if entity.username else None or ""
-
         new_group_type = determine_telegram_chat_type(entity)
-
         actual_username = f"@{entity.username}" if entity.username else ""
-
         title = entity.title or "Без названия"
 
         return {
-
             "description": description,
-
             "participants": participants,
-
             "link": link,
-
             "group_type": new_group_type,
-
             "actual_username": actual_username,
-
             "title": title
-
         }
 
     except Exception as e:
@@ -98,159 +65,83 @@ async def get_full_info_group(client, entity):
 #
 
 #     - Использует модель `create_group_model` для доступа к данным пользователя.
-
 #     - Предполагается, что в таблице всегда одна запись (первый элемент списка).
-
 #
-
 #     :param client: (TelegramClient) Активный клиент Telethon для выполнения запросов.
-
 #     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-
 #     :param message: (Message) Сообщение, которое вызвало команду (для ответа).
-
 #     :return: int or None: Идентификатор целевой группы (entity.id) или None при ошибке.
-
 #
-
 #     :raises UserAlreadyParticipantError: Если клиент уже участник группы (обрабатывается).
-
 #     :raises FloodWaitError: Если достигнут лимит запросов (обрабатывается с задержкой).
-
 #     :raises InviteRequestSentError: Если требуется подтверждение приглашения.
-
 #     :raises Exception: Логируется при любых других ошибках.
-
 #     """
-
 #     # Определяем язык пользователя, который пользователь выбрал при старте бота
-
 #     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
 #     # group_model = create_group_model(user_id=user_id)
-
 #
-
 #     logger.info(f"🔍 Проверяю целевую группу... {group_model}")
-
 #     if not group_model.table_exists():
-
 #         group_model.create_table()
-
 #         return None
-
 #     groups = list(group_model.select())
-
 #     logger.info(f"🔍 Проверяю целевую группу... {groups}")
-
 #     if not groups:
-
 #         logger.warning(f"❌ Не найдена целевая группа для пользователя {user_id}")
-
 #         # Если группа не найдена, то высылаем сообщение пользователю группы, что такой группы нет и клавиатуру для добавления группы для пересылки
-
 #         # await message.answer(
-
 #         #     text=t("target_group_not_found", lang=user_lang),
-
 #         #     reply_markup=connect_grup_keyboard_tech()
-
 #         # )
-
 #         return None  # Возвращаем None, если группа не найдена
-
 #     target_username = groups[0].username_group
-
 #     if not target_username:
-
 #         logger.error(f"❌ Целевая группа имеет пустой username для user_id={user_id}")
-
 #         # await message.answer(
-
 #         #     text=t("target_group_not_found", lang=user_lang),
-
 #         #     reply_markup=connect_grup_keyboard_tech()
-
 #         # )
-
 #         return None
-
 #     try:
-
 #         # ToDo сделать общую функцию для подписки на канал / группу
-
 #         await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
-
 #         # Получаем ID группы
-
 #         entity = await client.get_entity(target_username)
-
 #         return entity.id
-
 #     except FloodWaitError as e:
-
 #         logger.error(f"⚠️ FloodWait {e.seconds} сек.")
-
 #         await asyncio.sleep(e.seconds)
-
 #         try:
-
 #             # ToDo сделать общую функцию для подписки на канал / группу
-
 #             await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
-
 #         except InviteRequestSentError:
-
 #             logger.error(f"✉️ Приглашение уже отправлено: {f'https://t.me/{target_username.lstrip("@")}'}")
-
 #     except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
-
 #         logger.warning(f"❌ Целевая группа не найдена или неверный юзернейм ({target_username}): {e}")
-
 #         return None
-
 #     except Exception as e:
-
 #         logger.exception(f"❌ Не удалось присоединиться к целевой группе {target_username}: {e}")
-
 #         return None
 
 
 async def process_message(client, message: Message, chat_id: int, user_id, target_group_id):
     """
-
     Обрабатывает входящее сообщение, проверяет его на совпадение с ключевыми словами и пересылает в целевую группу с
-
     контекстом при совпадении.
 
-
-
     Контекст включает название источника, ссылку на сообщение и сам текст.
-
     Использует глобальный set `forwarded_messages` для предотвращения дубликатов.
 
-
-
     - Сообщение пересылается только один раз (проверка по chat_id-message.id).
-
     - Ссылка формируется по разным правилам для супергрупп и обычных чатов.
-
     - Ключевые слова загружаются динамически из базы данных пользователя.
-
-
-
     :param client: (TelegramClient) Активный клиент для отправки сообщений.
-
     :param message: (Message) Входящее сообщение для обработки.
-
     :param chat_id: (int) Идентификатор чата-источника.
-
     :param user_id: (int) Идентификатор пользователя, чьи ключевые слова используются.
-
     :param target_group_id: (int) Идентификатор целевой группы для пересылки.
-
     :return: None
-
     :raises Exception: Логируется при ошибках отправки сообщения.
 
     """
@@ -277,165 +168,88 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     keywords = get_user_keywords(user_id=user_id)
 
     # Создаем таблицу, если она не существует
-
     # if not keywords.table_exists():
-
     #     keywords.create_table()
-
     #     logger.info(f"Создана таблица ключевых слов для пользователя {user_id}")
-
     #     return  # Таблица только что создана, ключевых слов еще нет
-
     # keywords = [keyword.user_keyword for keyword in keywords.select() if keyword.user_keyword]
-
     # Если нет ключевых слов, выходим
-
     # if not keywords:
-
     #     return
-
     # Приводим ключевые слова к нижнему регистру для поиска
 
     keywords_lower = [keyword.lower() for keyword in keywords]
-
     # Используем ключевые слова из базы данных
-
     matched_keyword = next((keyword for keyword in keywords_lower if keyword in message_text), None)
-
     if matched_keyword:
-
         logger.info(f"📌 Найдено совпадение по ключевому слову '{matched_keyword}'. Пересылаю сообщение ID={message.id}")
-
         try:
-
             # Получаем информацию о чате-источнике
-
             try:
-
                 chat_entity = await client.get_entity(chat_id)
-
                 chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "username",
-
                                                                             None) or "Неизвестно"
-
             except Exception as e:
-
                 logger.exception(f"Не удалось получить название чата: {e}")
-
                 chat_title = "Неизвестно"
-
             # Формируем ссылку на сообщение
-
             # Для супергрупп/каналов (chat_id начинается с -100)
-
             if str(chat_id).startswith("-100"):
-
                 # Удаляем префикс -100 и получаем чистый ID
-
                 clean_chat_id = str(chat_id)[4:]
-
                 message_link = f"https://t.me/c/{clean_chat_id}/{message.id}"
-
             else:
-
                 # Для чатов с username (если есть)
-
                 try:
-
                     chat_entity = await client.get_entity(chat_id)
-
                     if chat_entity.username:
-
                         message_link = f"https://t.me/{chat_entity.username}/{message.id}"
-
                     else:
-
                         message_link = "Ссылка недоступна (нет username)"
-
                 except Exception as e:
-
                     logger.exception(f"Не удалось получить ссылку на сообщение: {e}")
-
                     message_link = "Ссылка недоступна"
-
             try:
-
                 # Формируем итоговое сообщение с контекстом
-
                 context_text = (
-
                     f"📥 **Новое сообщение**\n\n"
-
                     f"**Источник:** {chat_title}\n"
-
                     f"**Чат:** @{chat_entity.username}\n"
-
                     f"**Ссылка:** {message_link}\n\n"
-
                     f"**Ключевое слово:** `{matched_keyword}`\n\n"
-
                     f"**Текст сообщения:**\n{message.message}"
-
                 )
-
                 # Отправляем в целевую группу
-
                 await client.send_message(target_group_id, context_text)
-
             except MessageTooLongError:
-
                 logger.warning(
-
                     f"Не удалось отправить сообщение с контекстом, так как оно слишком длинное ({len(context_text)})"
-
                 )
-
             try:
-
                 await client.forward_messages(target_group_id, message)
-
                 logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
-
             except MessageIdInvalidError:
-
                 logger.warning(
-
                     f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего сообщение было удалено")
-
             except ChatForwardsRestrictedError:
-
                 logger.warning(
-
                     f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего запрещено пересылать сообщения")
-
             forwarded_messages.add(msg_key)
-
         except Exception as e:
-
             logger.exception(f"❌ Ошибка при отправке сообщения с контекстом: {e}")
 
 
 def determine_telegram_chat_type(entity):
     """
-
     Определяет тип чата в Telegram по сущности.
 
-
-
     Поддерживаемые типы:
-
     - 'Группа (супергруппа)' — если это мегагруппа
-
     - 'Канал' — если это канал (broadcast)
-
     - 'Обычный чат (группа старого типа)' — обычные группы без username
 
-
-
     :param entity: (Channel, Chat) Объект сущности из Telethon.
-
     :return: str Тип чата как строка.
-
     """
 
     if entity.megagroup:
@@ -453,60 +267,32 @@ def determine_telegram_chat_type(entity):
 
 async def sync_account_channels(client):
     """
-
     Собирает и обновляет данные о группах и каналах из аккаунта пользователя.
-
-
-
     Проходит по всем диалогам, фильтрует супергруппы и каналы, получает полную информацию
-
     (участники, описание, ссылка), определяет тип чата и сохраняет/обновляет запись в базе данных.
-
-
-
     Пропускает личные чаты и обычные группы без username.
-
     Добавлена защита от ошибок и ограничений Telegram API.
 
-
-
     :param client: (TelegramClient) Активный клиент Telethon.
-
     :return: set — множество username (@username), на которые подписан аккаунт
-
     """
-
     subscribed_usernames = set()
-
     try:
-
         async for dialog in client.iter_dialogs():
-
             try:
-
                 # Используем entity напрямую — он уже содержит всю нужную информацию
-
                 entity = dialog.entity
-
                 # Пропускаем личные чаты (User)
-
                 if isinstance(entity, types.User):
                     logger.debug(f"💬 Пропущен личный чат: {entity.id}")
-
                     continue
-
                 # Проверяем, является ли супергруппой или каналом
-
                 if not getattr(entity, 'megagroup', False) and not getattr(entity, 'broadcast', False):
                     continue
-
                 # Собираем username
-
                 if entity.username:
                     subscribed_usernames.add(f"@{entity.username.lower()}")
-
                 # Получаем полную информацию через GetFullChannelRequest
-
                 data = await get_full_info_group(client, entity)
 
                 if data:
@@ -569,33 +355,19 @@ async def sync_account_channels(client):
 
 async def ensure_group_category(group_data: dict) -> str | None:
     """
-
     Проверяет наличие категории у группы в базе данных (TelegramGroup).
-
     - Если категория УЖЕ УКАЗАНА (и не пустая строка), оставляет её без изменений.
-
     - Если категории НЕТ (None или ''), определяет категорию с помощью AI (Groq / category_assignment)
-
       и сохраняет результат в нижнем регистре в таблицу TelegramGroup.
 
-
-
     :param group_data: dict с ключами (telegram_id, name, description, username, group_type)
-
     :return: Категория в нижнем регистре или None
-
     """
-
     from ai.ai import category_assignment
-
     from core.config import GROQ_API_KEY
-
     from groq import AsyncGroq
-
     telegram_id = group_data.get("telegram_id")
-
     username = group_data.get("username")
-
     if not telegram_id and not username:
         return None
 
@@ -621,86 +393,54 @@ async def ensure_group_category(group_data: dict) -> str | None:
 
     if tg_group and tg_group.category and tg_group.category.strip():
         logger.debug(
-
             f"ℹ️ Категория для {group_data.get('name') or telegram_id} уже есть в БД ({tg_group.category}), пропускаем AI.")
-
         return tg_group.category
 
     # 3. Запускаем AI определение категории через AsyncGroq
 
     if not GROQ_API_KEY:
         logger.warning("⚠️ GROQ_API_KEY не установлен, определение категории пропущено.")
-
         return None
 
     try:
 
         logger.info(f"🔍 Определяем категорию через AI для {group_data.get('name') or username or telegram_id}...")
-
         groq_client = AsyncGroq(api_key=GROQ_API_KEY)
-
         models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
-
         model = random.choice(models)
-
         result = await category_assignment(
-
             group_data=group_data,
-
             client=groq_client,
-
             model=model
-
         )
 
         if result.get("success") and result.get("category"):
-
             category_lower = result["category"].lower()
-
             # 4. Сохранение категории в БД (в нижнем регистре)
 
             if tg_group:
-
                 def _update_tg_group():
-
                     """Обновляет категорию группы в базе данных"""
-
                     tg_group.category = category_lower
-
                     tg_group.save()
 
                 await sync_to_async(_update_tg_group, thread_sensitive=True)()
-
             else:
-
                 if telegram_id:
-
                     await sync_to_async(
-
                         lambda: TelegramGroup.update(category=category_lower)
-
                         .where(TelegramGroup.telegram_id == telegram_id)
-
                         .execute(),
-
                         thread_sensitive=True
-
                     )()
-
                 elif username:
 
                     clean_user = username.lstrip('@')
-
                     await sync_to_async(
-
                         lambda: TelegramGroup.update(category=category_lower)
-
                         .where((TelegramGroup.username == clean_user) | (TelegramGroup.username == f"@{clean_user}"))
-
                         .execute(),
-
                         thread_sensitive=True
-
                     )()
 
             logger.info(f"✅ Успешно присвоена категория: {group_data.get('name')} → {category_lower}")
@@ -719,43 +459,25 @@ async def ensure_group_category(group_data: dict) -> str | None:
 
 
 # _language_detector = None
-
 # def get_language_detector():
-
 #     global _language_detector
-
 #     if _language_detector is None:
-
 #         _language_detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-
 #     return _language_detector
 
 
 def ensure_group_language(telegram_id: int = None, name: str = None, description: str = None,
-
                           username: str = None) -> str | None:
     """
-
     Проверяет наличие языка группы в базе данных (TelegramGroup).
-
     - Если язык в БД уже указан (и не пустая строка), оставляет его без изменений.
-
-    - Если языка нет (None, '' или отсутствует запись), определяет язык с помощью Lingua
-
-      по названию/описанию и сохраняет результат в таблицу TelegramGroup.
-
-
+    - Если языка нет (None, '' или отсутствует запись), определяет язык с помощью Lingua по названию/описанию и сохраняет результат в таблицу TelegramGroup.
 
     :param telegram_id: Telegram ID группы/канала
-
     :param name: Название группы/канала
-
     :param description: Описание группы/канала (опционально)
-
     :param username: Юзернейм группы/канала (опционально)
-
     :return: Код языка (например, 'ru', 'en') или None
-
     """
 
     if not telegram_id and not username:
@@ -903,23 +625,14 @@ def update_group_channels_data_base(data, entity, group=None):
     try:
 
         query = TelegramGroup.update(
-
             telegram_id=target_id,
-
             group_hash=str(target_hash) if target_hash else None,
-
             group_type=data.get("group_type", ""),
-
             username=data.get("actual_username", ""),
-
             description=data.get("description", ""),
-
             participants=data.get("participants", 0),
-
             name=getattr(entity, 'title', None) or data.get("title", ""),
-
             availability=''  # Группа активна
-
         )
 
         if target_id:
@@ -959,47 +672,27 @@ def update_group_channels_data_base(data, entity, group=None):
 
 async def join_required_channels(client, user_id, message, already_subscribed):
     """
-
     Подписывает аккаунт Telegram на все отслеживаемые каналы и группы пользователя из базы данных.
 
-
-
     Получает список username из персональной таблицы пользователя и пытается присоединиться к каждому. При успехе
-
     уведомляет пользователя. Невалидные ссылки удаляются из базы данных.
 
-
-
     - Между подписками добавляется задержка в диапазоне от 1 до 10 секунд для избежания Flood.
-
     - Использует модель `create_groups_model` для доступа к данным.
 
-
-
     :param client: (TelegramClient) Активный клиент для выполнения запросов.
-
     :param user_id: (int) Идентификатор пользователя, чьи каналы нужно подключить.
-
     :param message: (Message) Объект сообщения aiogram для отправки уведомлений.
-
     :param already_subscribed: (set) Список каналов, где аккаунт уже состоит.
-
     :return: None
 
     """
-
     # user = User.get(User.user_id == message.from_user.id)
-
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
-
     # ✅ Приводим к set для операции вычитания
-
     db_channels = set(db_channels)
-
     logger.info(f"📊 Всего каналов для подписки: {total_count}, уже подписан на: {len(already_subscribed)}")
 
     if total_count == 0:
@@ -1009,274 +702,121 @@ async def join_required_channels(client, user_id, message, already_subscribed):
 
     if len(list(db_channels - already_subscribed)) > 500:
         await message.answer(
-
             t("too_many_channels", lang=user_lang, total=len(list(db_channels - already_subscribed)), limit=500)
-
         )
-
     for channel in list(db_channels - already_subscribed)[:500]:  # Ограничиваем до 500 записей
-
         random_delay = random.choice(
-
             [
-
-                15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-
-                25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
-
-                35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
-
-                45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
-
-                55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
-
-                65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
-
-                75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
-
-                85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99,
-
-                100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-
-                110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
-
-                120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
-
-                130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
-
-                140, 141, 142, 143, 144, 145, 146, 147, 148, 149,
-
-                150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
-
-                160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
-
-                170, 171, 172, 173, 174, 175, 176, 177, 178, 179,
-
-                180, 181, 182, 183, 184, 185, 186, 187, 188, 189,
-
-                190, 191, 192, 193, 194, 195, 196, 197, 198, 199,
-
-                200, 201, 202, 203, 204, 205, 206, 207, 208, 209,
-
-                300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
-
-                310, 311, 312, 313, 314, 315, 316, 317, 318, 319,
-
-                320, 321, 322, 323, 324, 325, 326, 327, 328, 329,
-
-                330, 331, 332, 333, 334, 335, 336, 337, 338, 339,
-
-                340, 341, 342, 343, 344, 345, 346, 347, 348, 349,
-
-                350, 351, 352, 353, 354, 355, 356, 357, 358, 359,
-
-                360, 361, 362, 363, 364, 365, 366, 367, 368, 369,
-
-                370, 371, 372, 373, 374, 375, 376, 377, 378, 379,
-
-                380, 381, 382, 383, 384, 385, 386, 387, 388, 389,
-
-                390, 391, 392, 393, 394, 395, 396, 397, 398, 399,
-
-                400, 401, 402, 403, 404, 405, 406, 407, 408, 409,
-
-                410, 411, 412, 413, 414, 415, 416, 417, 418, 419,
-
-                420, 421, 422, 423, 424, 425, 426, 427, 428, 429,
-
-                430, 431, 432, 433, 434, 435, 436, 437, 438, 439,
-
-                440, 441, 442, 443, 444, 445, 446, 447, 448, 449,
-
-                450, 451, 452, 453, 454, 455, 456, 457, 458, 459,
-
-                460, 461, 462, 463, 464, 465, 466, 467, 468, 469,
-
-                470, 471, 472, 473, 474, 475, 476, 477, 478, 479,
-
-                480, 481, 482, 483, 484, 485, 486, 487, 488, 489,
-
-                490, 491, 492, 493, 494, 495, 496, 497, 498, 499,
-
-                500, 501, 502, 503, 504, 505, 506, 507, 508, 509,
-
-                510, 511, 512, 513, 514, 515, 516, 517, 518, 519,
-
-                520, 521, 522, 523, 524, 525, 526, 527, 528, 529,
-
-                530, 531, 532, 533, 534, 535, 536, 537, 538, 539,
-
-                540, 541, 542, 543, 544, 545, 546, 547, 548, 549,
-
-                550, 551, 552, 553, 554, 555, 556, 557, 558, 559,
-
+                15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66,
+                67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
+                93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
+                115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
+                136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156,
+                157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177,
+                178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198,
+                199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
+                310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330,
+                331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351,
+                352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372,
+                373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393,
+                394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414,
+                415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431, 432, 433, 434, 435,
+                436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446, 447, 448, 449, 450, 451, 452, 453, 454, 455, 456,
+                457, 458, 459, 460, 461, 462, 463, 464, 465, 466, 467, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477,
+                478, 479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 496, 497, 498,
+                499, 500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519,
+                520, 521, 522, 523, 524, 525, 526, 527, 528, 529, 530, 531, 532, 533, 534, 535, 536, 537, 538, 539, 540,
+                541, 542, 543, 544, 545, 546, 547, 548, 549, 550, 551, 552, 553, 554, 555, 556, 557, 558, 559,
             ]
-
         )
 
         try:
-
             logger.info(f"🔗 Попытка подписки на канал {channel}")
-
             is_subscribed = await subscription_telegram(client=client, target_username=channel)
-
             if is_subscribed:
-
                 await message.answer(
-
                     t("channel_subscribed", lang=user_lang, channel=channel, delay=random_delay)
-
                 )
-
                 await asyncio.sleep(random_delay)
-
             else:
-
                 logger.warning(f"⚠️ Не удалось подписаться на {channel}. Удаляем невалидный канал из базы...")
-
                 try:
-
                     dell_group(user_id=int(user_id), username_group=channel)
-
                 except Exception as del_err:
-
                     logger.debug(f"Не удалось удалить невалидный канал {channel}: {del_err}")
-
         except Exception as e:
-
             logger.exception(f"❌ Ошибка в цикле подписки на {channel}: {e}")
 
         # except ChannelPrivateError:
-
         #     logger.error(f"⚠️ Канал {channel} приватный")
-
         # except UserAlreadyParticipantError:
-
         #     logger.error(f"ℹ️ Уже подписан на {channel}")
-
         # except FloodWaitError as e:
-
         #     logger.error(f"⚠️ FloodWait {e.seconds} сек.")
-
         #     await asyncio.sleep(e.seconds)
-
         #     try:
-
         #         ToDo сделать общую функцию для подписки на канал / группу
-
         #         await client(JoinChannelRequest(channel)) # Подписываемся на канал / группу
-
         #     except InviteRequestSentError:
-
         #         logger.error(f"✉️ Приглашение уже отправлено: {channel}")
-
         # except InviteRequestSentError:
-
         #     logger.error(f"✉️ Приглашение уже отправлено: {channel}")
-
         # except ValueError:
-
         #     logger.error(f"❌ Невалидный username: {channel}")
-
         #     delete_group_by_username(user_id, channel)  # Удаляем невалидный канал / группу
-
         # except Exception as e:
-
         #     logger.exception(f"❌ Ошибка при подписке на {channel}: {e}")
 
 
 # async def ensure_joined_target_group(client, message, user_id: int):
-
 #     """
-
 #     Обеспечивает подключение клиента Telethon к целевой группе пользователя.
-
 #
-
 #     Обёртка вокруг `join_target_group`, которая проверяет успешность подключения и при необходимости отправляет
-
 #     пользователю сообщение об ошибке.
-
 #
-
 #     - Если подключение не удалось, функция возвращает None (клиент НЕ отключается).
-
 #     - Используется для упрощения логики в функции `filter_messages`.
-
 #
-
 #     :param client: (TelegramClient) Активный клиент для выполнения запросов.
-
 #     :param message: (Message) Объект сообщения aiogram для отправки уведомления об ошибке.
-
 #     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-
 #     :return: int or None: Идентификатор целевой группы (entity.id) при успехе, иначе None.
-
 #     """
-
 #     logger.info("Подключаемся к целевой группе для пересылки")
-
 #     target_group_id = await join_target_group(client=client, user_id=user_id, message=message)
-
 #
-
 #     if not target_group_id:
-
 #         logger.error(t("target_group_join_error", lang=User.get(User.user_id == message.from_user.id).language))
-
 #         await message.answer(
-
 #             text=t("target_group_join_error", lang=User.get(User.user_id == message.from_user.id).language),
-
 #             reply_markup=connect_grup_keyboard_tech()
-
 #         )
-
 #         # НЕ отключаем клиент здесь — это будет сделано в finally блоке filter_messages
-
 #         return None
-
 #
-
 #     return target_group_id
 
 
 async def filter_messages(message, user_id):
     """
-
     Основная функция запуска процесса отслеживания сообщений в Telegram.
 
-
-
     1. Читает каналы из БД — мгновенно, без запросов к Telegram.
-
     2️. Параллельно запускает:
-
         - прослушивание новых сообщений (сразу)
-
         - подписку на целевую группу и новые каналы (в фоне)
 
-
-
     :param message: (Message) Объект сообщения aiogram для взаимодействия с пользователем.
-
     :param user_id: (int) Идентификатор пользователя Telegram.
-
     :return: None
-
     :raises Exception: Логируется при ошибках инициализации или подключения.
-
     """
-
     logger.info(f"🚀 Запуск бота для user_id={str(user_id)}...")
-
     client = None
-
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
     try:
 
         # === Проверка группы уведомлений ===
@@ -1351,64 +891,36 @@ async def filter_messages(message, user_id):
             return
 
         # === 1.1️. Проверка лимитов для общего бесплатного аккаунта (Задача 2.5) ===
-
         # Если у пользователя используется общий аккаунт, разрешён максимум 1 канал
-
         is_shared_account = bool(pt_rec.shared_account and not pt_rec.personal_account)
-
         if is_shared_account and len(channels) > 1:
             logger.warning(
-
                 f"⚠️ Пользователь {user_id} использует общий аккаунт и превысил лимит каналов ({len(channels)} > 1)")
-
             buy_stars_kb = InlineKeyboardMarkup(
-
                 inline_keyboard=[
-
                     [
-
                         InlineKeyboardButton(
-
                             text="⭐ Докупить слоты (Telegram Stars)",
-
                             callback_data="settings_topup_stars"
-
                         )
-
                     ],
-
                     [
-
                         InlineKeyboardButton(
-
                             text="📱 Подключить личный аккаунт",
-
                             callback_data="menu_personal_tracking"
-
                         )
-
                     ]
-
                 ]
-
             )
 
             await message.answer(
-
                 "⚠️ <b>Превышен лимит отслеживания!</b>\n\n"
-
                 "Вы используете <b>общий бесплатный аккаунт</b>, на котором разрешено отслеживать только <b>1 канал</b>.\n\n"
-
                 "Для отслеживания большего количества каналов:\n"
-
                 "• Подключите собственный личный Telegram-аккаунт (без ограничений)\n"
-
                 "• Или оплатите дополнительные слоты через Telegram Stars.",
-
                 parse_mode="HTML",
-
                 reply_markup=buy_stars_kb
-
             )
 
             return None
@@ -1430,217 +942,118 @@ async def filter_messages(message, user_id):
             # GroupModel = create_group_model(user_id=user_id)
 
             # if not GroupModel.table_exists():
-
             #     logger.warning("❌ Таблица целевой группы не найдена")
-
             #     return
-
             # groups = list(GroupModel.select())
-
             # if not groups:
-
             #     logger.warning("❌ Целевая группа не задана в БД")
-
             #     await message.answer(
-
             #         t("target_group_not_configured", lang=user_lang),
-
             #         reply_markup=connect_grup_keyboard_tech()
-
             #     )
-
             #     return
-
             # Получаем entity целевой группы через Telegram (быстро — один запрос)
-
             # target_username = groups[0].username_group
-
             # try:
-
             #     entity = await client.get_entity(target_username)
-
             #     target_group_id = entity.id
-
             # except FloodWaitError as e:
-
             #     logger.warning(f"FloodWaitError: {e}")
-
             #     await asyncio.sleep(e.value)
-
             #     entity = await client.get_entity(target_username)
-
             #     target_group_id = entity.id
-
             # except Exception as e:
-
             #     logger.exception(f"❌ Не удалось получить целевую группу: {e}")
-
             #     await message.answer(
-
             #         t("target_group_fetch_error", lang=user_lang),
-
             #         reply_markup=connect_grup_keyboard_tech()
-
             #     )
-
             #     return
 
             @client.on(events.NewMessage(chats=already_subscribed))
             async def handle_new_message(event: events.NewMessage.Event):
-
                 """Обрабатывает новое входящее сообщение из отслеживаемого чата"""
-
                 try:
-
                     await process_message(
-
                         client=client,
-
                         message=event.message,
-
                         chat_id=event.chat_id,
-
                         user_id=str(user_id),
-
                         target_group_id=get_group_id_with_personal_tracking(str(user_id))
-
                     )
-
                 except Exception as e:
-
                     logger.exception(f"Не удалось обработать сообщение: {e}")
 
             logger.info("👂 Бот слушает новые сообщения...")
-
             await message.answer(
-
                 text=t("bot_listening", lang=user_lang),
-
                 reply_markup=menu_launch_tracking_keyboard()
-
             )
-
             # Держим клиент живым до флага остановки
-
             await stop_event.wait()
-
             logger.info(f"🛑 Прослушивание остановлено для user_id={user_id}")
-
             await message.answer(t("tracking_stopped", lang=user_lang))
 
         # === Функция подписки — работает параллельно в фоне ===
 
         async def subscribe():
-
             """Выполняет подписку на целевую группу и отслеживаемые каналы в фоне"""
-
             # await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
-
             await join_required_channels(
-
                 client=client,
-
                 user_id=str(user_id),
-
                 message=message,
-
                 already_subscribed=already_subscribed
-
             )
 
         # 🚀 Запускаем одновременно: прослушивание + подписка
-
         await asyncio.gather(listen(), subscribe())
 
-
-
     except Exception as e:
-
         logger.exception(f"❌ Критическая ошибка в filter_messages: {e}")
-
     finally:
-
         # ✅ Очищаем ресурсы
-
         if user_id in active_clients:
-
             client = active_clients.pop(str(user_id))
-
             if client.is_connected():
                 await client.disconnect()
-
                 logger.info(f"🛑 Клиент для user_id={str(user_id)} отключён.")
-
         if user_id in stop_flags:
             stop_flags.pop(str(user_id))
-
             logger.info(f"🗑️ Флаг остановки для user_id={str(user_id)} удалён.")
 
 
 async def stop_tracking(user_id, message):
     """
-
     Останавливает процесс отслеживания сообщений для пользователя.
 
-
-
-    Устанавливает флаг остановки для активной сессии пользователя, что приводит к
-
-    завершению цикла прослушивания в функции `filter_messages`.
-
-
+    Устанавливает флаг остановки для активной сессии пользователя, что приводит к завершению цикла прослушивания в функции `filter_messages`.
 
     - Не создаёт новое подключение к сессии (избегает блокировки SQLite).
-
     - Использует глобальный словарь `stop_flags` для управления состоянием.
-
     - Безопасно обрабатывает случаи, когда отслеживание уже остановлено.
 
-
-
     :param user_id: (int) Идентификатор пользователя Telegram.
-
     :param message: (Message) Объект сообщения aiogram для отправки подтверждения.
-
     """
-
     # user = User.get(User.user_id == message.from_user.id)
-
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-
     user_id = str(user_id)  # <-- ✅ преобразуем в строку
-
     logger.info(f"🛑 Запрос на остановку отслеживания для user_id={user_id}")
-
     # ✅ Проверяем, есть ли активное отслеживание для этого пользователя
-
     if user_id not in stop_flags:
         logger.warning(f"⚠️ Отслеживание для user_id={user_id} не активно или уже остановлено.")
-
         await message.answer(
-
             t("tracking_not_active", lang=user_lang),
-
             reply_markup=menu_launch_tracking_keyboard()
-
         )
-
         return
-
     # ✅ Устанавливаем флаг остановки
-
     stop_event = stop_flags[user_id]
-
     stop_event.set()
-
     logger.info(f"✅ Флаг остановки установлен для user_id={user_id}")
-
     await message.answer(
-
         t("tracking_stop_requested", lang=user_lang),
-
         reply_markup=menu_launch_tracking_keyboard()
-
     )

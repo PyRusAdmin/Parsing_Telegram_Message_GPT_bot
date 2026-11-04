@@ -12,12 +12,12 @@ from database.database import clean_telegram_id_duplicates, migrate_categories_t
 from handlers.admin.admin import router as admin
 from handlers.admin.checking_accounts import router as checking_accounts
 from handlers.admin.checking_group_for_ai import router as checking_group_for_ai
-from handlers.admin.connecting_account import router as connecting_account
+from handlers.connecting_account import router as connecting_account
 from handlers.admin.language_detection import router as language_detection
 from handlers.admin.post_log import router as post_log
 from handlers.user.settings_handlers.settings import router as settings
 from handlers.user.checking_group_for_keywords import router as checking_group_for_keywords
-from handlers.user.connect_account import router as connect_account
+from handlers.connect_account import router as connect_account
 from handlers.user.settings_handlers.connect_group import router as connect_group
 from handlers.user.delete_group_from_database import router as delete_group_from_database
 from handlers.user.entering_keyword import router as entering_keyword
