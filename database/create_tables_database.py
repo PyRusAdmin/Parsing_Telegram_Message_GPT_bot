@@ -11,10 +11,11 @@ from database.personal_tracking import PersonalTracking
 
 
 def migrate_old_table_names():
-    """Переименовывает старые имена таблиц (keywords -> users_keywords, account -> users_account, user_groups -> users_groups)"""
+    """Переименовывает старые имена таблиц и колонок в новую структуру (users_keywords, users_accounts, users_groups)"""
     table_renames = [
         ("keywords", "users_keywords"),
-        ("account", "users_account"),
+        ("account", "users_accounts"),
+        ("users_account", "users_accounts"),
         ("user_groups", "users_groups")
     ]
     cursor = database.execute_sql("SELECT name FROM sqlite_master WHERE type='table';")
@@ -25,20 +26,57 @@ def migrate_old_table_names():
             logger.info(f"🔄 Миграция таблицы: {old_name} -> {new_name}")
             database.execute_sql(f"ALTER TABLE {old_name} RENAME TO {new_name};")
             logger.success(f"✅ Таблица '{old_name}' успешно переименована в '{new_name}'")
+            existing_tables.remove(old_name)
+            existing_tables.add(new_name)
 
-    # Проверяем и добавляем новые колонки в users_account при необходимости
-    cursor_cols = database.execute_sql("PRAGMA table_info(users_account);")
-    existing_cols = {row[1] for row in cursor_cols.fetchall()}
-    columns_to_add = [
-        ("user_id", "INTEGER"),
-        ("user_username", "VARCHAR(255)"),
-        ("user_firstname", "VARCHAR(255)")
-    ]
-    for col_name, col_type in columns_to_add:
-        if col_name not in existing_cols:
-            logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_account'...")
-            database.execute_sql(f"ALTER TABLE users_account ADD COLUMN {col_name} {col_type};")
-            logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_account'")
+    # Проверяем колонки в users_accounts
+    if "users_accounts" in existing_tables:
+        cursor_cols = database.execute_sql("PRAGMA table_info(users_accounts);")
+        existing_cols = {row[1] for row in cursor_cols.fetchall()}
+
+        if "session_string" in existing_cols and "user_session_string" not in existing_cols:
+            logger.info("🔄 Миграция: переименование колонки 'session_string' -> 'user_session_string' в 'users_accounts'...")
+            database.execute_sql("ALTER TABLE users_accounts RENAME COLUMN session_string TO user_session_string;")
+            existing_cols.remove("session_string")
+            existing_cols.add("user_session_string")
+
+        if "phone_number" in existing_cols and "phone_number_session_string" not in existing_cols:
+            logger.info("🔄 Миграция: переименование колонки 'phone_number' -> 'phone_number_session_string' в 'users_accounts'...")
+            database.execute_sql("ALTER TABLE users_accounts RENAME COLUMN phone_number TO phone_number_session_string;")
+            existing_cols.remove("phone_number")
+            existing_cols.add("phone_number_session_string")
+
+        columns_to_add_accounts = [
+            ("user_id", "INTEGER"),
+            ("user_username", "VARCHAR(255)"),
+            ("user_firstname", "VARCHAR(255)"),
+            ("phone_number_session_string", "VARCHAR(255)"),
+            ("date_added", "DATETIME")
+        ]
+        for col_name, col_type in columns_to_add_accounts:
+            if col_name not in existing_cols:
+                logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_accounts'...")
+                database.execute_sql(f"ALTER TABLE users_accounts ADD COLUMN {col_name} {col_type};")
+                logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_accounts'")
+                existing_cols.add(col_name)
+
+    # Проверяем колонки в users_keywords
+    if "users_keywords" in existing_tables:
+        cursor_kw_cols = database.execute_sql("PRAGMA table_info(users_keywords);")
+        existing_kw_cols = {row[1] for row in cursor_kw_cols.fetchall()}
+
+        columns_to_add_kw = [
+            ("user_username", "VARCHAR(255)"),
+            ("user_firstname", "VARCHAR(255)"),
+            ("user_session_string", "VARCHAR(500)"),
+            ("date_added", "DATETIME")
+        ]
+        for col_name, col_type in columns_to_add_kw:
+            if col_name not in existing_kw_cols:
+                logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_keywords'...")
+                database.execute_sql(f"ALTER TABLE users_keywords ADD COLUMN {col_name} {col_type};")
+                logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_keywords'")
+                existing_kw_cols.add(col_name)
 
 
 def init_database():
@@ -49,7 +87,7 @@ def init_database():
 
     database.create_tables(
         [
-            Account,  # Таблица общих аккаунтов (users_account)
+            Account,  # Таблица аккаунтов пользователей (users_accounts)
             AccountFree,  # Таблица бесплатных аккаунтов от админа (выдаются пользователям для парсинга ключевых слов)
             TelegramGroup,  # Таблица общей базы Telegram-групп и каналов по категориям
             Question,  # Таблица вопросов и ответов пользователей для расширения базы знаний
@@ -65,7 +103,7 @@ def init_database():
 
     logger.info(
         "✅ База данных инициализирована. Проверены/созданы таблицы:\n"
-        "  • Account (users_account) — общие аккаунты для массового AI-поиска\n"
+        "  • Account (users_accounts) — аккаунты пользователей для поиска ключевых слов\n"
         "  • AccountFree — пул бесплатных аккаунтов от администратора\n"
         "  • TelegramGroup — общая база каналов и групп по категориям\n"
         "  • Question — вопросы пользователей для базы знаний\n"

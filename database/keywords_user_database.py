@@ -18,7 +18,7 @@ def get_user_keywords_with_id(user_id: int) -> list[Keywords]:
     return list(query)
 
 
-def add_user_keywords(user_id: int, keywords: list[str]) -> None:
+def add_user_keywords(user_id: int, keywords: list[str], user_username: str = "", user_firstname: str = "", user_session_string: str = "") -> None:
     """
     Безопасно добавляет список ключевых слов в базу данных data/bot.db, пропуская дубликаты, если они есть.
     В базе данных могут быть одинаковые ключевые слова, но не у одного пользователя. Например, 1 пользователь ввел слово
@@ -26,10 +26,24 @@ def add_user_keywords(user_id: int, keywords: list[str]) -> None:
     data/bot.db в таблице users_keywords.
     :param user_id: ID пользователя Telegram.
     :param keywords: Список ключевых слов, которые будут отслеживаться в Группе / канале Telegram.
+    :param user_username: username пользователя Telegram.
+    :param user_firstname: firstname пользователя Telegram.
+    :param user_session_string: стринг сессия аккаунта для отслеживания ключевых слов в группе.
     :return None: Нечего не возвращаем, так как записываем в базу данных
     """
     for kw in keywords:
-        Keywords.get_or_create(user_id=user_id, user_keyword=kw)
+        kw_clean = kw.strip()
+        if not kw_clean:
+            continue
+        Keywords.get_or_create(
+            user_id=user_id,
+            user_keyword=kw_clean,
+            defaults={
+                "user_username": user_username,
+                "user_firstname": user_firstname,
+                "user_session_string": user_session_string,
+            }
+        )
 
 
 def get_user_keywords(user_id: int) -> list[str]:
@@ -49,13 +63,17 @@ def get_keywords_count(user_id: int):
 
 class Keywords(database.Model):
     """
-    Модель для хранения ключевых слов пользователя, для последующего поиска ключевых слов в группах и каналах Telegram
+    Модель для хранения ключевых слов пользователя, для последующего поиска групп и каналов.
+    В таблице users_keywords хранятся ключевые слова для последующего поиска групп и каналов.
     """
 
-    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
-    user_id = BigIntegerField(index=True)  # Телеграм-ID пользователя
-    user_keyword = CharField()  # Поле для хранения ключевого слова для пользователя
-    date_added = DateTimeField(default=datetime.now)  # Дата добавления
+    id = AutoField()  # ID записи в базе данных
+    user_id = BigIntegerField(index=True)  # id пользователя Telegram
+    user_username = CharField(default="", null=True)  # username пользователя Telegram
+    user_firstname = CharField(default="", null=True)  # firstname пользователя Telegram
+    user_keyword = CharField()  # ключевые слова введенные пользователем Telegram
+    user_session_string = CharField(default="", null=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах. Данная сессия будет отслеживать ключевое слово в определенной группе, которую выберет пользователь бота.
+    date_added = DateTimeField(default=datetime.now)  # Дата добавления в базу данных
 
     class Meta:
         """Метаданные персональной таблицы ключевых слов"""
