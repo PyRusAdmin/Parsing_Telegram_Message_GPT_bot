@@ -27,7 +27,7 @@ class PersonalTracking(database.Model):
 
     class Meta:
         """Метаданные таблицы персонального отслеживания"""
-        table_name = "personal_tracking"  # Название таблицы
+        table_name = "users_personal_tracking"  # В таблице users_personal_tracking хранятся данные о пользователе, бота
 
 
 def delete_account_from_user_table(user_id: int, personal_account: str) -> None:

@@ -93,6 +93,7 @@
 - `Group`: Отслеживаемые пользователем группы и каналы (таблица `users_groups`).
 - `Keywords`: Ключевые слова пользователей для отслеживания (таблица `users_keywords`).
 - `Account`: Сессии Telethon платная/системные (таблица `users_accounts`).
+- `PersonalTracking`: Данные о пользователе бота, персональные настройки трекинга (таблица `users_personal_tracking`).
 - `AccountFree`: Бесплатные/общедоступные сессии Telethon.
 - `UserAccountsTable`: Привязка аккаунтов пользователей к их Telegram ID.
 - `TelegramGroup`: База данных Telegram-каналов и чатов (для поиска по категории и ИИ).

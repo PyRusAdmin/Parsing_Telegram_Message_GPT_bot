@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from loguru import logger  # https://github.com/Delgan/loguru
-from peewee import IntegerField, AutoField, DateTimeField, CharField
+from peewee import IntegerField, AutoField, DateTimeField, CharField, BigIntegerField
 
 from database.database import database
 
@@ -18,14 +18,19 @@ from locales.locales import t
 
 class Group(database.Model):
     """
-    Модель для хранения целевых групп и каналов пользователя.
+    Модель для хранения групп для отслеживания ключевых слов.
     В таблице users_groups хранятся группы для отслеживания ключевых слов.
     """
 
-    id = AutoField()  # <-- добавляем первичный ключ (иначе всё пишется в одну строку)
-    user_id = IntegerField()  # Телеграм-ID пользователя
-    username_group = CharField()  # Поле для хранения технической группы
-    date_added = DateTimeField(default=datetime.now)  # Дата добавления
+    id = AutoField()  # ID записи в базе данных
+    user_id = BigIntegerField(index=True)  # id пользователя Telegram
+    user_username = CharField(default="", null=True)  # username пользователя Telegram
+    user_firstname = CharField(default="", null=True)  # firstname пользователя Telegram
+    username_group = CharField(default="", null=True)  # username группы в которой будет отслеживание ключевых слов
+    id_group = BigIntegerField(null=True, index=True)  # id группы в которой будет отслеживаться ключевые слова (для отслеживания закрытых групп. аккаунт будет на них подписан)
+    name_group = CharField(default="", null=True)  # название группы в которой будет отслеживаться ключевые слова
+    user_session_string = CharField(default="", null=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах. Данная сессия будет отслеживать ключевое слово в определенной группе, которую выберет пользователь бота.
+    date_added = DateTimeField(default=datetime.now)  # Дата добавления в базу данных
 
     class Meta:
         """Метаданные персональной таблицы целевой группы"""
@@ -62,17 +67,43 @@ def get_group_count(user_id: int):
     return Group.select().where(Group.user_id == user_id).count()
 
 
-def add_user_group(user_id: int, group: list[str]) -> None:
+def add_user_group(
+    user_id: int,
+    group: list[str],
+    user_username: str = "",
+    user_firstname: str = "",
+    id_group: int | None = None,
+    name_group: str = "",
+    user_session_string: str = ""
+) -> None:
     """
     Безопасно добавляет список групп/каналов в базу данных data/bot.db, пропуская дубликаты, если они есть.
     В базе данных могут быть одинаковые username групп, но не у одного пользователя. Например, @python_jobs
     может быть добавлен несколькими пользователями, но не может быть дважды у одного пользователя в таблице Groups.
     :param user_id: ID пользователя Telegram.
     :param group: Список username групп/каналов, которые будут отслеживаться.
+    :param user_username: username пользователя Telegram.
+    :param user_firstname: firstname пользователя Telegram.
+    :param id_group: ID группы Telegram (для закрытых групп).
+    :param name_group: Название группы Telegram.
+    :param user_session_string: Стринг сессия аккаунта для отслеживания.
     :return None: Нечего не возвращаем, так как записываем в базу данных
     """
     for gr in group:
-        Group.get_or_create(user_id=user_id, username_group=gr)
+        gr_clean = gr.strip()
+        if not gr_clean:
+            continue
+        Group.get_or_create(
+            user_id=user_id,
+            username_group=gr_clean,
+            defaults={
+                "user_username": user_username,
+                "user_firstname": user_firstname,
+                "id_group": id_group,
+                "name_group": name_group,
+                "user_session_string": user_session_string,
+            }
+        )
 
 
 def dell_group(user_id: int, username_group: str):

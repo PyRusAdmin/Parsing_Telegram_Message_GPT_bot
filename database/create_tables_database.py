@@ -16,7 +16,8 @@ def migrate_old_table_names():
         ("keywords", "users_keywords"),
         ("account", "users_accounts"),
         ("users_account", "users_accounts"),
-        ("user_groups", "users_groups")
+        ("user_groups", "users_groups"),
+        ("personal_tracking", "users_personal_tracking")
     ]
     cursor = database.execute_sql("SELECT name FROM sqlite_master WHERE type='table';")
     existing_tables = {row[0] for row in cursor.fetchall()}
@@ -78,6 +79,26 @@ def migrate_old_table_names():
                 logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_keywords'")
                 existing_kw_cols.add(col_name)
 
+    # Проверяем колонки в users_groups
+    if "users_groups" in existing_tables:
+        cursor_gr_cols = database.execute_sql("PRAGMA table_info(users_groups);")
+        existing_gr_cols = {row[1] for row in cursor_gr_cols.fetchall()}
+
+        columns_to_add_gr = [
+            ("user_username", "VARCHAR(255)"),
+            ("user_firstname", "VARCHAR(255)"),
+            ("id_group", "INTEGER"),
+            ("name_group", "VARCHAR(255)"),
+            ("user_session_string", "VARCHAR(500)"),
+            ("date_added", "DATETIME")
+        ]
+        for col_name, col_type in columns_to_add_gr:
+            if col_name not in existing_gr_cols:
+                logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_groups'...")
+                database.execute_sql(f"ALTER TABLE users_groups ADD COLUMN {col_name} {col_type};")
+                logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_groups'")
+                existing_gr_cols.add(col_name)
+
 
 def init_database():
     """Инициализация БД и создание таблиц"""
@@ -108,7 +129,7 @@ def init_database():
         "  • TelegramGroup — общая база каналов и групп по категориям\n"
         "  • Question — вопросы пользователей для базы знаний\n"
         "  • User — профили пользователей бота (язык, Stars)\n"
-        "  • PersonalTracking — персональные настройки трекинга и сессий\n"
+        "  • PersonalTracking (users_personal_tracking) — данные о пользователе бота, персональные настройки трекинга\n"
         "  • PersonalTrackingStats — статистика трекинга и покупок слотов\n"
         "  • Keywords (users_keywords) — ключевые слова пользователей для отслеживания\n"
         "  • Group (users_groups) — отслеживаемые пользователями каналы и группы"
