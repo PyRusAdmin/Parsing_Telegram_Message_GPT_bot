@@ -147,14 +147,47 @@ def write_account_to_db_free(session_string: str, phone_number: str):
 
 
 class Account(database.Model):
-    """Модель аккаунта"""
-    session_string = CharField(unique=True)  # уникальность для защиты от дубликатов
-    phone_number = CharField()  # номер телефона аккаунта
+    """
+    Модель для хранения аккаунтов пользователя.
+    В таблице users_account хранятся аккаунты пользователя.
+    """
+    id = AutoField()  # ID записи в базе данных
+    session_string = CharField(unique=True)  # Стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах
+    phone_number = CharField(default="", null=True)  # Номер телефона аккаунта
+    user_id = BigIntegerField(index=True, null=True)  # ID пользователя Telegram
+    user_username = CharField(default="", null=True)  # Username пользователя Telegram
+    user_firstname = CharField(default="", null=True)  # Firstname пользователя Telegram
 
     class Meta:
-        """Метаданные таблицы рабочих аккаунтов"""
-
+        """Метаданные таблицы аккаунтов пользователей"""
         table_name = 'users_account'
+
+
+def write_account_to_user_table(user_id: int, session_string: str, phone_number: str = "", user_username: str = "", user_firstname: str = ""):
+    """
+    Записывает или обновляет аккаунт пользователя в таблице users_account.
+    """
+    try:
+        account, created = Account.get_or_create(
+            session_string=session_string,
+            defaults={
+                "phone_number": phone_number,
+                "user_id": user_id,
+                "user_username": user_username,
+                "user_firstname": user_firstname
+            }
+        )
+        if not created:
+            account.phone_number = phone_number or account.phone_number
+            account.user_id = user_id or account.user_id
+            account.user_username = user_username or account.user_username
+            account.user_firstname = user_firstname or account.user_firstname
+            account.save()
+        logger.info(f"Аккаунт {phone_number} записан в users_account для user_id={user_id}")
+        return account
+    except Exception as e:
+        logger.exception(f"Ошибка при записи в users_account: {e}")
+        return None
 
 
 def getting_free_account():

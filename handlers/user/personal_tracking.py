@@ -25,7 +25,7 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
-    PersonalTrackingStats, getting_account, write_account_to_db_free
+    PersonalTrackingStats, getting_account, write_account_to_db_free, write_account_to_user_table
 )
 from database.keywords_user_database import add_user_keywords
 from database.personal_tracking import get_user_accounts, PersonalTracking, write_account_to_db
@@ -755,6 +755,13 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             )
         else:
             # Сохраняем аккаунт в персональную базу пользователя
+            write_account_to_user_table(
+                user_id=message.from_user.id,
+                session_string=final_session,
+                phone_number=account_info.get("phone") or "",
+                user_username=message.from_user.username or "",
+                user_firstname=message.from_user.first_name or ""
+            )
             write_account_to_db(
                 session_string=final_session,  # Стринг сессия Telegram
                 user_id=message.from_user.id,  # ID пользователя Telegram
@@ -855,6 +862,13 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
             )
         else:
             # Сохраняем аккаунт в персональную базу пользователя
+            write_account_to_user_table(
+                user_id=message.from_user.id,
+                session_string=final_session,
+                phone_number=account_info.get("phone") or "",
+                user_username=message.from_user.username or "",
+                user_firstname=message.from_user.first_name or ""
+            )
             write_account_to_db(
                 session_string=final_session,  # Стринг сессия Telegram
                 user_id=message.from_user.id,  # ID пользователя Telegram

@@ -26,6 +26,20 @@ def migrate_old_table_names():
             database.execute_sql(f"ALTER TABLE {old_name} RENAME TO {new_name};")
             logger.success(f"✅ Таблица '{old_name}' успешно переименована в '{new_name}'")
 
+    # Проверяем и добавляем новые колонки в users_account при необходимости
+    cursor_cols = database.execute_sql("PRAGMA table_info(users_account);")
+    existing_cols = {row[1] for row in cursor_cols.fetchall()}
+    columns_to_add = [
+        ("user_id", "INTEGER"),
+        ("user_username", "VARCHAR(255)"),
+        ("user_firstname", "VARCHAR(255)")
+    ]
+    for col_name, col_type in columns_to_add:
+        if col_name not in existing_cols:
+            logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_account'...")
+            database.execute_sql(f"ALTER TABLE users_account ADD COLUMN {col_name} {col_type};")
+            logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_account'")
+
 
 def init_database():
     """Инициализация БД и создание таблиц"""

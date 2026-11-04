@@ -12,7 +12,7 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
-from database.database import User, AccountFree
+from database.database import User, AccountFree, write_account_to_user_table
 from database.personal_tracking import write_account_to_db
 from handlers.user.personal_tracking import PersonalTrackingState, execute_sign_in
 from handlers.user_language import determines_user_language
@@ -164,7 +164,14 @@ async def handle_account_file(message: Message, state: FSMContext):
         if client:
             account_info = await get_account_info(client)
             session_string = StringSession.save(client.session)
-            # Записываем сессию в базу данных в таблицу personal_tracking базы данных data/bot.db
+            # Записываем сессию в базу данных users_account и personal_tracking
+            write_account_to_user_table(
+                user_id=message.from_user.id,
+                session_string=session_string,
+                phone_number=account_info.get("phone") or "",
+                user_username=message.from_user.username or "",
+                user_firstname=message.from_user.first_name or ""
+            )
             write_account_to_db(
                 session_string=session_string,
                 user_id=message.from_user.id
@@ -264,6 +271,13 @@ async def receive_session_file(message: Message, state: FSMContext):
             first_name = account_info.get("first_name") or ""
             # ✅ Конвертируем в StringSession и сохраняем в БД
             session_string = StringSession.save(client.session)
+            write_account_to_user_table(
+                user_id=message.from_user.id,
+                session_string=session_string,
+                phone_number=phone,
+                user_username=message.from_user.username or "",
+                user_firstname=message.from_user.first_name or ""
+            )
             write_account_to_db(session_string=session_string, user_id=message.from_user.id)
             await client.disconnect()
             # ✅ Обновляем статистику

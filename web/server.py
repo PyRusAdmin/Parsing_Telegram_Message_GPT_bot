@@ -80,7 +80,7 @@ from database.database import (
 
     Account, TelegramGroup, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
 
-    getting_account, getting_number_records_database, database
+    getting_account, getting_number_records_database, database, write_account_to_user_table
 
 )
 
@@ -620,7 +620,9 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
                 write_account_to_user_table(
                     user_id=user_data["id"],
                     session_string=session_string,
-                    phone_number=account_info.get("phone")
+                    phone_number=account_info.get("phone"),
+                    user_username=user_data.get("username") or "",
+                    user_firstname=user_data.get("first_name") or ""
                 )
                 await client.disconnect()
                 # Отправьте уведомление через бота
