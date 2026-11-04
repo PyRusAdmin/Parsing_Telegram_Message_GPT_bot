@@ -97,7 +97,7 @@
 - `AccountFree`: Бесплатные/общедоступные сессии Telethon.
 - `UserAccountsTable`: Привязка аккаунтов пользователей к их Telegram ID.
 - `TelegramGroup`: База данных Telegram-каналов и чатов (для поиска по категории и ИИ).
-- `Question`: Логи вопросов к Базе Знаний / Поддержке.
+- `Question`: Вопросы пользователей к боту и ответы ИИ (таблица `users_questions`). Поля: `question_number`, `user_id`, `user_username`, `user_firstname`, `user_question`, `answer`, `status`, `date_added`.
 
 ### Основные функции `database.py`:
 

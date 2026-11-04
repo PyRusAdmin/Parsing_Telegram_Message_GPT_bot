@@ -1,8 +1,6 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import (
-    database, Account, AccountFree, TelegramGroup, User
-)
+from database.database import database, Account, AccountFree, TelegramGroup, User
 from database.group_user_database import Group
 from database.keywords_user_database import Keywords
 from database.personal_tracking import PersonalTracking
@@ -12,13 +10,14 @@ from database.question_database import Question
 
 
 def migrate_old_table_names():
-    """Переименовывает старые имена таблиц и колонок в новую структуру (users_keywords, users_accounts, users_groups)"""
+    """Переименовывает старые имена таблиц и колонок в новую структуру (users_keywords, users_accounts, users_groups, users_questions)"""
     table_renames = [
         ("keywords", "users_keywords"),
         ("account", "users_accounts"),
         ("users_account", "users_accounts"),
         ("user_groups", "users_groups"),
-        ("personal_tracking", "users_personal_tracking")
+        ("personal_tracking", "users_personal_tracking"),
+        ("question", "users_questions")
     ]
     cursor = database.execute_sql("SELECT name FROM sqlite_master WHERE type='table';")
     existing_tables = {row[0] for row in cursor.fetchall()}
@@ -110,6 +109,35 @@ def migrate_old_table_names():
                 logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_groups'")
                 existing_gr_cols.add(col_name)
 
+    # Проверяем колонки в users_questions
+    if "users_questions" in existing_tables:
+        cursor_q_cols = database.execute_sql("PRAGMA table_info(users_questions);")
+        existing_q_cols = {row[1] for row in cursor_q_cols.fetchall()}
+
+        if "question" in existing_q_cols and "user_question" not in existing_q_cols:
+            logger.info("🔄 Миграция: переименование колонки 'question' -> 'user_question' в 'users_questions'...")
+            database.execute_sql("ALTER TABLE users_questions RENAME COLUMN question TO user_question;")
+            existing_q_cols.remove("question")
+            existing_q_cols.add("user_question")
+
+        columns_to_add_questions = [
+            ("question_number", "INTEGER"),
+            ("user_username", "VARCHAR(255)"),
+            ("user_firstname", "VARCHAR(255)"),
+            ("status", "VARCHAR(100)"),
+            ("date_added", "DATETIME")
+        ]
+        for col_name, col_type in columns_to_add_questions:
+            if col_name not in existing_q_cols:
+                logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_questions'...")
+                database.execute_sql(f"ALTER TABLE users_questions ADD COLUMN {col_name} {col_type};")
+                logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_questions'")
+                existing_q_cols.add(col_name)
+
+        # Заполняем question_number и status для существующих строк при необходимости
+        database.execute_sql("UPDATE users_questions SET question_number = id WHERE question_number IS NULL;")
+        database.execute_sql("UPDATE users_questions SET status = 'Новый' WHERE status IS NULL;")
+
 
 def init_database():
     """Инициализация БД и создание таблиц"""
@@ -122,7 +150,7 @@ def init_database():
             Account,  # Таблица аккаунтов пользователей (users_accounts)
             AccountFree,  # Таблица бесплатных аккаунтов от админа (выдаются пользователям для парсинга ключевых слов)
             TelegramGroup,  # Таблица общей базы Telegram-групп и каналов по категориям
-            Question,  # Таблица вопросов и ответов пользователей для расширения базы знаний
+            Question,  # Таблица вопросов и ответов пользователей для расширения базы знаний (users_questions)
             User,  # Таблица профилей пользователей Telegram (язык, баланс Stars, регистрация)
             PersonalTracking,
             # Таблица настроек персонального отслеживания (целевые группы, привязанные сессии, ID техгруппы)
@@ -137,7 +165,7 @@ def init_database():
         "  • Account (users_accounts) — аккаунты пользователей для поиска ключевых слов\n"
         "  • AccountFree — пул бесплатных аккаунтов от администратора\n"
         "  • TelegramGroup — общая база каналов и групп по категориям\n"
-        "  • Question — вопросы пользователей для базы знаний\n"
+        "  • Question (users_questions) — вопросы пользователей для базы знаний\n"
         "  • User — профили пользователей бота (язык, Stars)\n"
         "  • PersonalTracking (users_personal_tracking) — данные о пользователе бота, персональные настройки трекинга\n"
         "  • Keywords (users_keywords) — ключевые слова пользователей для отслеживания\n"

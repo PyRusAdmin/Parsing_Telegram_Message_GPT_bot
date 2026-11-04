@@ -18,7 +18,8 @@ def get_user_keywords_with_id(user_id: int) -> list[Keywords]:
     return list(query)
 
 
-def add_user_keywords(user_id: int, keywords: list[str], user_username: str = "", user_firstname: str = "", user_session_string: str = "") -> None:
+def add_user_keywords(user_id: int, keywords: list[str], user_username: str = "", user_firstname: str = "",
+                      user_session_string: str = "") -> None:
     """
     Безопасно добавляет список ключевых слов в базу данных data/bot.db, пропуская дубликаты, если они есть.
     В базе данных могут быть одинаковые ключевые слова, но не у одного пользователя. Например, 1 пользователь ввел слово
@@ -72,7 +73,8 @@ class Keywords(database.Model):
     user_username = CharField(default="", null=True)  # username пользователя Telegram
     user_firstname = CharField(default="", null=True)  # firstname пользователя Telegram
     user_keyword = CharField()  # ключевые слова введенные пользователем Telegram
-    user_session_string = CharField(default="", null=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах. Данная сессия будет отслеживать ключевое слово в определенной группе, которую выберет пользователь бота.
+    user_session_string = CharField(default="",
+                                    null=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах. Данная сессия будет отслеживать ключевое слово в определенной группе, которую выберет пользователь бота.
     date_added = DateTimeField(default=datetime.now)  # Дата добавления в базу данных
 
     class Meta:

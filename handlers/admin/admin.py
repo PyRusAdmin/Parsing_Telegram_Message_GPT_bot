@@ -44,8 +44,11 @@ async def export_questions_cb(callback: CallbackQuery):
         file_path = f"exports/questions_export_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
 
         with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
-            fieldnames = ["user_id", "question", "answer"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            fieldnames = [
+                "question_number", "user_id", "user_username", "user_firstname",
+                "user_question", "answer", "status", "date_added"
+            ]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
 
             writer.writeheader()
             for question_data in questions:

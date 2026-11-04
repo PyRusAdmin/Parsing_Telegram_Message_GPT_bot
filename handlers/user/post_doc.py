@@ -132,7 +132,14 @@ async def handle_instruction_question(message: Message, state: FSMContext):
         answer = clean_ai_response(raw_answer)
 
         # Сохраняем вопрос пользователя и очищенный ответ в базу данных
-        add_question(user_id=message.from_user.id, question=message.text, answer=answer)
+        add_question(
+            user_id=message.from_user.id,
+            user_question=message.text,
+            answer=answer,
+            user_username=message.from_user.username,
+            user_firstname=message.from_user.first_name,
+            status="Новый"
+        )
 
         # Отправляем очищенный простой текст пользователю без разметки
         await message.answer(text=answer, parse_mode=None, reply_markup=back_keyboard(lang=user_lang))

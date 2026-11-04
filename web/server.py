@@ -1308,7 +1308,14 @@ async def admin_export_questions():
     if not questions:
         raise HTTPException(status_code=404, detail="No questions found in database")
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["user_id", "question", "answer"])
+    writer = csv.DictWriter(
+        output,
+        fieldnames=[
+            "question_number", "user_id", "user_username", "user_firstname",
+            "user_question", "answer", "status", "date_added"
+        ],
+        extrasaction="ignore"
+    )
     writer.writeheader()
     for q in questions:
         writer.writerow(q)
