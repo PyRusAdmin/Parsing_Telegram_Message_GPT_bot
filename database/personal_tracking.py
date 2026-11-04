@@ -87,10 +87,9 @@ def get_group_id_with_personal_tracking(user_id):
         PersonalTracking.user_id == user_id).scalar()
 
 
-def write_account_to_db(session_string: str, user_id: int):
+def write_account_to_db(session_string: str, user_id: int) -> None:
     """
-    Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
-    если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
+    Запись аккаунта в базу данных в таблицу personal_tracking.
     :param session_string: Строка сессии
     :param user_id: ID пользователя Telegram
     """

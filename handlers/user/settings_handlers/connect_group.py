@@ -74,7 +74,7 @@ async def process_target_link_input_group_input(message: Message, state: FSMCont
 
         normalized_groups.append(normalized_link)
 
-    # Безопасно добавляет список групп/каналов в базу данных data/bot.db в таблицу user_groups (Groups)
+    # Безопасно добавляет список групп/каналов в базу данных data/bot.db в таблицу users_groups (Groups)
     add_user_group(
         user_id=message.from_user.id,
         group=normalized_groups
@@ -177,7 +177,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
 
         normalized_groups.append(normalized_link)
 
-    # Безопасно добавляет список групп/каналов в базу данных data/bot.db в таблицу user_groups (Groups)
+    # Безопасно добавляет список групп/каналов в базу данных data/bot.db в таблицу users_groups (Groups)
     add_user_group(
         user_id=message.from_user.id,
         group=normalized_groups

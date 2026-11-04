@@ -66,24 +66,42 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     )
 
 
-def creates_temporary_folder_for_accounts():
-    """
-    Создание временной папки для аккаунтов пользователя.
-    :return:
-    """
-    sessions_dir = Path("accounts")
-    sessions_dir.mkdir(parents=True, exist_ok=True)
-    return sessions_dir
-
-
-def sanitization_file_name(document, sessions_dir):
+def sanitization_file_name(document, account_id):
     """
     Очистка имени файла от недопустимых символов (файлов сессии).
-    :return:
+    :param document: Файл сессии Telegram в формате Telethon
+    :param account_id: ID аккаунта пользователя
+    :return: local_file_path - Путь к файлу сессии. safe_file_name - Имя файла сессии.
     """
-    safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
-    local_file_path = sessions_dir / safe_file_name
-    return local_file_path, safe_file_name
+    try:
+        folder_path = Path(f"accounts/{account_id}")
+        folder_path.mkdir(parents=True, exist_ok=True)
+
+        safe_file_name = "".join(c for c in document.file_name if c.isalnum() or c in "._-")
+        local_file_path = folder_path / safe_file_name
+
+        return local_file_path, safe_file_name
+    except Exception as e:
+        logger.exception(f"Ошибка при очистке имени файла: {e}")
+        return None, None
+
+
+def delete_directory(folder_path):
+    """Удаляет папку и все файлы в ней (рекурсивно)"""
+    if not folder_path:
+        return
+    path = Path(folder_path)
+    if path.is_file():
+        path = path.parent
+    try:
+        shutil.rmtree(path)
+        logger.info(f"Папка {path} и всё её содержимое удалены.")
+    except FileNotFoundError:
+        logger.warning(f"Ошибка: указанная папка не существует: {path}")
+    except PermissionError:
+        logger.error(f"Ошибка: нет прав на удаление: {path}")
+    except OSError as e:
+        logger.error(f"Произошла ошибка при удалении: {e}")
 
 
 """Меню подключения аккаунтов"""
@@ -112,16 +130,7 @@ async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.answer()
-    # await connect_account_internal(callback.message, callback.from_user, state)
-    # user, created = User.get_or_create(
-    #     user_id=callback.from_user.id,
-    #     defaults={
-    #         "username": callback.from_user.username,
-    #         "first_name": callback.from_user.first_name,
-    #         "last_name": callback.from_user.last_name,
-    #         "language": "unset"
-    #     }
-    # )
+
     await callback.message.answer(
         text=t("connect_account", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
@@ -133,17 +142,19 @@ async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
 @router.message(MyStates.waiting_for_session_file_user, F.document)
 async def handle_account_file(message: Message, state: FSMContext):
     """Обработчик приёма файла сессии (.session) от пользователя"""
-    local_file_path = None  # для безопасного удаления в finally
+
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    local_file_path = None
     try:
         logger.info(f"User {message.from_user.id} отправил файл: {message.document.file_name}")
         # ✅ Проверяем расширение — если не .session, остаёмся в состоянии
         if not message.document.file_name.endswith('.session'):
             await message.answer(t("invalid_session_file", lang=user_lang))
             return  # state НЕ сбрасываем — ждём правильный файл
-        sessions_dir = creates_temporary_folder_for_accounts()
-        local_file_path, safe_file_name = sanitization_file_name(message.document, sessions_dir)
+
+        local_file_path, safe_file_name = sanitization_file_name(document=message.document,
+                                                                 account_id=message.from_user.id)
         await message.bot.download(message.document, destination=local_file_path)
         logger.info(f"✅ Файл скачан: {local_file_path}")
         await message.answer(t("session_file_received", lang=user_lang, filename=safe_file_name))
@@ -153,6 +164,7 @@ async def handle_account_file(message: Message, state: FSMContext):
         if client:
             account_info = await get_account_info(client)
             session_string = StringSession.save(client.session)
+            # Записываем сессию в базу данных в таблицу personal_tracking базы данных data/bot.db
             write_account_to_db(
                 session_string=session_string,
                 user_id=message.from_user.id
@@ -172,14 +184,11 @@ async def handle_account_file(message: Message, state: FSMContext):
             )
     except Exception as e:
         logger.exception(f"Ошибка при обработке сессии пользователя {message.from_user.id}: {e}")
-        await message.answer(t("session_check_error", lang=user_lang))
+        # await message.answer(t("session_check_error", lang=user_lang))
     finally:
-        # ✅ Удаляем временный файл в любом случае
-        if local_file_path and local_file_path.exists():
-            try:
-                local_file_path.unlink()
-            except Exception as e:
-                logger.warning(f"Could not delete session file {local_file_path}: {e}")
+        # ✅ Удаляем временную папку и все файлы в ней
+        if local_file_path:
+            delete_directory(folder_path=local_file_path.parent)
         # ✅ Сбрасываем состояние только в конце
         await state.clear()
 
@@ -234,11 +243,13 @@ async def receive_session_file(message: Message, state: FSMContext):
     if total > 1:
         await message.answer(
             t("connect_account_file_queued", lang=user_lang, filename=document.file_name, total=total))
+    local_file_path = None
     try:
         # ✅ Создаём папку для временного хранения
-        sessions_dir = creates_temporary_folder_for_accounts()
+        # sessions_dir = creates_temporary_folder_for_accounts()
+
         # ✅ Санитизация имени файла
-        local_file_path, safe_file_name = sanitization_file_name(document, sessions_dir)
+        local_file_path, safe_file_name = sanitization_file_name(document=document, account_id=message.from_user.id)
         # ✅ Скачиваем файл
         # ToDo проверить в будущем document.file_id вместо document
         await message.bot.download(document, destination=local_file_path)
@@ -255,12 +266,6 @@ async def receive_session_file(message: Message, state: FSMContext):
             session_string = StringSession.save(client.session)
             write_account_to_db(session_string=session_string, user_id=message.from_user.id)
             await client.disconnect()
-            # ✅ Удаляем временный .session файл
-            if local_file_path.exists():
-                try:
-                    local_file_path.unlink()
-                except Exception as e:
-                    logger.warning(f"Could not delete session file {local_file_path}: {e}")
             # ✅ Обновляем статистику
             success_count += 1
             logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
@@ -270,12 +275,6 @@ async def receive_session_file(message: Message, state: FSMContext):
                 parse_mode="HTML"
             )
         else:
-            # ❌ Файл не валиден — удаляем
-            if local_file_path.exists():
-                try:
-                    local_file_path.unlink()
-                except Exception as e:
-                    logger.warning(f"Could not delete session file {local_file_path}: {e}")
             fail_count += 1
             logger.warning(f"❌ Сессия не валидна: {safe_file_name}")
             await message.answer(t("connect_account_failed", lang=user_lang, filename=safe_file_name),
@@ -283,13 +282,11 @@ async def receive_session_file(message: Message, state: FSMContext):
     except Exception as e:
         logger.exception(f"Ошибка при обработке {document.file_name}: {e}")
         fail_count += 1
-        if local_file_path.exists():
-            try:
-                local_file_path.unlink()
-            except Exception as pe:
-                logger.warning(f"Could not delete session file {local_file_path}: {pe}")
         await message.answer(t("connect_account_error", lang=user_lang, filename=safe_file_name), parse_mode="HTML")
     finally:
+        # ✅ Удаляем временную папку и все файлы в ней
+        if local_file_path:
+            delete_directory(folder_path=local_file_path.parent)
         # ✅ Обновляем состояние: файл обработан
         processed_count += 1
         await state.update_data(

@@ -154,7 +154,7 @@ class Account(database.Model):
     class Meta:
         """Метаданные таблицы рабочих аккаунтов"""
 
-        table_name = 'account'
+        table_name = 'users_account'
 
 
 def getting_free_account():
