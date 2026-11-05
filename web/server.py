@@ -78,13 +78,13 @@ from core.config import (
 
 from database.database import (
 
-    Account, TelegramGroup, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
+    Account, TelegramGroups, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
 
     getting_account, getting_number_records_database, database, write_account_to_user_table
 
 )
 
-from database.users_groups import Group, get_group_count
+from database.users_groups import UsersGroups, get_group_count
 
 from database.users_keywords import get_keywords_count, get_user_keywords_with_id, Keywords
 
@@ -488,7 +488,7 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает список отслеживаемых каналов пользователя"""
     # Управление отслеживаемыми каналами
     # user_id = user_data["id"]
-    records = list(Group.select().where(Group.user_id == user_data["id"]).order_by(Group.date_added.desc()))
+    records = list(UsersGroups.select().where(UsersGroups.user_id == user_data["id"]).order_by(UsersGroups.date_added.desc()))
     return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
             records]
 
@@ -502,7 +502,7 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
     if not username.startswith("@"):
         username_group = f"@{username}"
     try:
-        Group.create(user_id=user_data["id"], username_group=username_group)
+        UsersGroups.create(user_id=user_data["id"], username_group=username_group)
         return {"status": "ok", "username": username}
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -514,7 +514,7 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
 async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):
     """Удаляет канал из списка отслеживаемых по идентификатору"""
     # user_id = user_data["id"]
-    deleted = Group.delete().where(Group.user_id == user_data["id"], Group.id == ch_id).execute()
+    deleted = UsersGroups.delete().where(UsersGroups.user_id == user_data["id"], UsersGroups.id == ch_id).execute()
     if deleted:
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="Channel not found")
@@ -535,7 +535,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
         if not username.startswith("@"):
             username_group = f"@{username}"
         try:
-            Group.create(user_id=user_data["id"], username_group=username_group)
+            UsersGroups.create(user_id=user_data["id"], username_group=username_group)
             added_count += 1
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):
@@ -869,8 +869,8 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
             pass
     if not ids:
         raise HTTPException(status_code=400, detail="No valid group IDs provided")
-    groups = list(TelegramGroup.select().where(
-        (TelegramGroup.id.in_(ids)) | (TelegramGroup.telegram_id.in_(ids))
+    groups = list(TelegramGroups.select().where(
+        (TelegramGroups.id.in_(ids)) | (TelegramGroups.telegram_id.in_(ids))
     ))
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -936,13 +936,13 @@ async def download_database(
         user.last_free_download_at = datetime.now()
         user.save()
     # Группы запросов
-    query = TelegramGroup.select()
+    query = TelegramGroups.select()
     if export_type == "channels":
-        query = query.where(TelegramGroup.group_type == "Канал")
+        query = query.where(TelegramGroups.group_type == "Канал")
     elif export_type == "groups":
-        query = query.where(TelegramGroup.group_type != "Канал")
+        query = query.where(TelegramGroups.group_type != "Канал")
     if category and category != "all":
-        query = query.where(TelegramGroup.category == category.lower())
+        query = query.where(TelegramGroups.category == category.lower())
     groups = list(query)
     # Создать Excel в памяти
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -988,9 +988,9 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
 async def get_admin_status():
     """Возвращает статус фоновых административных задач и системную статистику"""
     # Рассчитать группы без категории
-    uncategorized_count = TelegramGroup.select().where(
-        (TelegramGroup.username.is_null(False)) &
-        (TelegramGroup.category == '')
+    uncategorized_count = TelegramGroups.select().where(
+        (TelegramGroups.username.is_null(False)) &
+        (TelegramGroups.category == '')
     ).count()
     # Получить общее количество счетов
     total_accounts = Account.select().count()
@@ -1077,8 +1077,8 @@ async def bg_actualize_db():
                 if result.get("success") and result.get("category"):
                     # ✅ Сразу пишем в БД (в нижнем регистре)
                     category_lower = result["category"].lower()
-                    await sync_to_async(lambda: TelegramGroup.update(category=category_lower)
-                                        .where(TelegramGroup.telegram_id == result["telegram_id"])
+                    await sync_to_async(lambda: TelegramGroups.update(category=category_lower)
+                                        .where(TelegramGroups.telegram_id == result["telegram_id"])
                                         .execute(), thread_sensitive=True)()
                     logger.info(f"✅ {group['name']} → {category_lower}")
                 else:
@@ -1097,8 +1097,8 @@ async def bg_actualize_db():
                     logger.info(f"Определён язык для группы {group['username']}: {lang_code}")
                     # ✅ Сразу пишем в БД (в нижнем регистре)
                     await sync_to_async(
-                        lambda: TelegramGroup.update(language=lang_code)
-                        .where(TelegramGroup.telegram_id == group['telegram_id'])
+                        lambda: TelegramGroups.update(language=lang_code)
+                        .where(TelegramGroups.telegram_id == group['telegram_id'])
                         .execute(),
                         thread_sensitive=True
                     )()
@@ -1196,9 +1196,9 @@ async def bg_categorize_db(method: str):
                 if result.get("success") and result.get("category"):
                     category_lower = result["category"].lower()
 
-                    TelegramGroup.update(category=category_lower).where(
+                    TelegramGroups.update(category=category_lower).where(
 
-                        TelegramGroup.telegram_id == result["telegram_id"]
+                        TelegramGroups.telegram_id == result["telegram_id"]
 
                     ).execute()
 
@@ -1229,9 +1229,9 @@ async def bg_detect_language():
     admin_task_status["progress"] = 0
     admin_task_status["message"] = "Initializing language detection..."
     try:
-        groups_to_detect = list(TelegramGroup.select().where(
-            (TelegramGroup.username.is_null(False)) &
-            ((TelegramGroup.language == '') | (TelegramGroup.language.is_null()))
+        groups_to_detect = list(TelegramGroups.select().where(
+            (TelegramGroups.username.is_null(False)) &
+            ((TelegramGroups.language == '') | (TelegramGroups.language.is_null()))
         ))
         total = len(groups_to_detect)
         admin_task_status["total"] = total
@@ -1251,8 +1251,8 @@ async def bg_detect_language():
             try:
                 res = await asyncio.to_thread(ai_llama_fri, group_data, lang="ru")
                 if res.get("success") and res.get("language"):
-                    TelegramGroup.update(language=res["language"]).where(
-                        TelegramGroup.group_hash == res["group_hash"]
+                    TelegramGroups.update(language=res["language"]).where(
+                        TelegramGroups.group_hash == res["group_hash"]
                     ).execute()
             except Exception as e:
                 logger.exception(f"Failed to detect language for {group.name}: {e}")

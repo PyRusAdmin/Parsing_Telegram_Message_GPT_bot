@@ -12,7 +12,7 @@ from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from account_manager.utilit import detect_language
 from core.config import forwarded_messages, active_clients, stop_flags
-from database.database import TelegramGroup
+from database.database import TelegramGroups
 from database.users_groups import get_user_channel_usernames, dell_group, get_user_channels_or_notify
 from database.users_keywords import get_keywords_count, get_user_keywords
 from database.users_personal_trackings import get_group_id_with_personal_tracking, PersonalTracking
@@ -376,16 +376,16 @@ async def ensure_group_category(group_data: dict) -> str | None:
     tg_group = None
 
     if telegram_id:
-        tg_group = await sync_to_async(TelegramGroup.get_or_none, thread_sensitive=True)(
+        tg_group = await sync_to_async(TelegramGroups.get_or_none, thread_sensitive=True)(
 
-            TelegramGroup.telegram_id == telegram_id)
+            TelegramGroups.telegram_id == telegram_id)
 
     if not tg_group and username:
         clean_user = username.lstrip('@')
 
-        tg_group = await sync_to_async(TelegramGroup.get_or_none, thread_sensitive=True)(
+        tg_group = await sync_to_async(TelegramGroups.get_or_none, thread_sensitive=True)(
 
-            (TelegramGroup.username == clean_user) | (TelegramGroup.username == f"@{clean_user}")
+            (TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}")
 
         )
 
@@ -428,8 +428,8 @@ async def ensure_group_category(group_data: dict) -> str | None:
             else:
                 if telegram_id:
                     await sync_to_async(
-                        lambda: TelegramGroup.update(category=category_lower)
-                        .where(TelegramGroup.telegram_id == telegram_id)
+                        lambda: TelegramGroups.update(category=category_lower)
+                        .where(TelegramGroups.telegram_id == telegram_id)
                         .execute(),
                         thread_sensitive=True
                     )()
@@ -437,8 +437,8 @@ async def ensure_group_category(group_data: dict) -> str | None:
 
                     clean_user = username.lstrip('@')
                     await sync_to_async(
-                        lambda: TelegramGroup.update(category=category_lower)
-                        .where((TelegramGroup.username == clean_user) | (TelegramGroup.username == f"@{clean_user}"))
+                        lambda: TelegramGroups.update(category=category_lower)
+                        .where((TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}"))
                         .execute(),
                         thread_sensitive=True
                     )()
@@ -488,14 +488,14 @@ def ensure_group_language(telegram_id: int = None, name: str = None, description
     tg_group = None
 
     if telegram_id:
-        tg_group = TelegramGroup.get_or_none(TelegramGroup.telegram_id == telegram_id)
+        tg_group = TelegramGroups.get_or_none(TelegramGroups.telegram_id == telegram_id)
 
     if not tg_group and username:
         clean_user = username.lstrip('@')
 
-        tg_group = TelegramGroup.get_or_none(
+        tg_group = TelegramGroups.get_or_none(
 
-            (TelegramGroup.username == clean_user) | (TelegramGroup.username == f"@{clean_user}"))
+            (TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}"))
 
     # 2. Если в БД язык уже заполнен — НЕ ТРОГАЕМ
 
@@ -553,17 +553,17 @@ def ensure_group_language(telegram_id: int = None, name: str = None, description
 
                 if telegram_id:
 
-                    TelegramGroup.update(language=lang_code).where(
+                    TelegramGroups.update(language=lang_code).where(
 
-                        TelegramGroup.telegram_id == telegram_id).execute()
+                        TelegramGroups.telegram_id == telegram_id).execute()
 
                 elif username:
 
                     clean_user = username.lstrip('@')
 
-                    TelegramGroup.update(language=lang_code).where(
+                    TelegramGroups.update(language=lang_code).where(
 
-                        (TelegramGroup.username == clean_user) | (TelegramGroup.username == f"@{clean_user}")
+                        (TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}")
 
                     ).execute()
 
@@ -624,7 +624,7 @@ def update_group_channels_data_base(data, entity, group=None):
 
     try:
 
-        query = TelegramGroup.update(
+        query = TelegramGroups.update(
             telegram_id=target_id,
             group_hash=str(target_hash) if target_hash else None,
             group_type=data.get("group_type", ""),
@@ -639,15 +639,15 @@ def update_group_channels_data_base(data, entity, group=None):
 
             query = query.where(
 
-                (TelegramGroup.telegram_id == target_id) | (TelegramGroup.username == data.get("actual_username")))
+                (TelegramGroups.telegram_id == target_id) | (TelegramGroups.username == data.get("actual_username")))
 
         elif target_hash:
 
-            query = query.where(TelegramGroup.group_hash == str(target_hash))
+            query = query.where(TelegramGroups.group_hash == str(target_hash))
 
         elif data.get("actual_username"):
 
-            query = query.where(TelegramGroup.username == data.get("actual_username"))
+            query = query.where(TelegramGroups.username == data.get("actual_username"))
 
         else:
 

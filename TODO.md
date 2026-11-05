@@ -53,24 +53,24 @@
 ### 1.3. Архитектура базы данных и модули (Рефакторинг октябрь 2026)
 
 - [x] **[18.10.2026] Разбивка БД на модули**:
-    - `database/database.py` — общие таблицы и подключение (`User`, `Account`, `AccountFree`, `TelegramGroup`,
-      `Question`).
-    - `database/users_groups.py` — модель `Group` (таблица `user_groups`) и функции работы с каналами
+    - `database/database.py` — общие таблицы и подключение (`User`, `Account`, `AccountFree`, `TelegramGroups`,
+      `UsersQuestions`).
+    - `database/users_groups.py` — модель `UsersGroups` (таблица `user_groups`) и функции работы с каналами
       пользователя.
     - `database/users_keywords.py` — модель `Keywords` (таблица `keywords`) и функции работы с ключевыми
       словами.
 - [x] **[25.10.2026] Вынос модуля `PersonalTracking` (`0f64820`)**:
     - Модель `PersonalTracking` и вспомогательные функции вынесены в отдельный файл `database/users_personal_trackings.py`.
     - Удалён дублирующий код из `database/database.py`, обновлены импорты во всём проекте.
-- [x] **[25.10.2026] Централизованная инициализация таблиц (`8e125c9`, `create_tables_database.py`)**:
-    - Все таблицы (`Account`, `AccountFree`, `TelegramGroup`, `Question`, `User`, `PersonalTracking`,
-      `Keywords`, `Group`) инициализируются единым вызовом `create_tables(safe=True)`.
+- [x] **[25.10.2026] Централизованная инициализация таблиц (`8e125c9`, `create_tables.py`)**:
+    - Все таблицы (`Account`, `AccountFree`, `TelegramGroups`, `UsersQuestions`, `User`, `PersonalTracking`,
+      `Keywords`, `UsersGroups`) инициализируются единым вызовом `create_tables(safe=True)`.
     - Добавлено детальное и понятное логирование каждой таблицы при старте приложения.
 - [x] **[25.10.2026] Документирование моделей и функций**:
     - Полный docstring для функции `delete_account_from_user_table` с описанием параметров и назначения.
 - [x] **[18.10.2026] Переход на единую таблицу `Keywords`**: Удалена динамическая схема таблиц, все ключевые слова
   пользователей хранятся в общей таблице `keywords` с полем `user_id` (`7ae7654`).
-- [x] **[18.10.2026] Переход на единую таблицу `Group`**: Удалена функция `create_group_model`, переход на прямые
+- [x] **[18.10.2026] Переход на единую таблицу `UsersGroups`**: Удалена функция `create_group_model`, переход на прямые
   запросы через единую таблицу `user_groups` (`8f4b5a1`, `fb0c4e1`).
 - [x] **[18.10.2026] Переименование поля**: `user_group` → `username_group` во всех файлах проекта (`2c1a280`).
 
@@ -294,7 +294,7 @@
 #### 📌 2.7. Периодическая проверка целостности базы данных групп
 
 - **Файлы**: `database/database.py`, `web/server.py`
-- **Описание**: В базе данных `TelegramGroup` периодически могут накапливаться группы без категорий или языков.
+- **Описание**: В базе данных `TelegramGroups` периодически могут накапливаться группы без категорий или языков.
 - **Что сделать**:
     - Настроить периодическую фоновую актуализацию категорий и языков для записей со значением `None` или пустой
       строкой.

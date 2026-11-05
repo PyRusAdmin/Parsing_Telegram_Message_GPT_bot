@@ -90,14 +90,14 @@
 ### Таблицы (Модели):
 
 - `User`: Пользователи бота (ID, язык, баланс звёзд Stars, дата подписки, лимиты).
-- `Group`: Отслеживаемые пользователем группы и каналы (таблица `users_groups`).
+- `UsersGroups`: Отслеживаемые пользователем группы и каналы (таблица `users_groups`).
 - `Keywords`: Ключевые слова пользователей для отслеживания (таблица `users_keywords`).
 - `Account`: Сессии Telethon платная/системные (таблица `users_accounts`).
 - `PersonalTracking`: Данные о пользователе бота, персональные настройки трекинга (таблица `users_personal_tracking`).
 - `AccountFree`: Бесплатные/общедоступные сессии Telethon.
 - `UserAccountsTable`: Привязка аккаунтов пользователей к их Telegram ID.
-- `TelegramGroup`: База данных Telegram-каналов и чатов (для поиска по категории и ИИ).
-- `Question`: Вопросы пользователей к боту и ответы ИИ (таблица `users_questions`). Поля: `question_number`, `user_id`, `user_username`, `user_firstname`, `user_question`, `answer`, `status`, `date_added`.
+- `TelegramGroups`: База данных Telegram-каналов и чатов (для поиска по категории и ИИ).
+- `UsersQuestions`: Вопросы пользователей к боту и ответы ИИ (таблица `users_questions`). Поля: `question_number`, `user_id`, `user_username`, `user_firstname`, `user_question`, `answer`, `status`, `date_added`.
 
 ### Основные функции `database.py`:
 
@@ -114,7 +114,7 @@
 | `write_account_to_db(session_string, phone_number)`                  | Добавляет новую сессию в общую базу аккаунтов.                              |
 | `getting_free_account()` / `getting_account()`                       | Получает доступную сессию из базы для парсинга.                             |
 | `delete_account_from_db(session_string)`                             | Удаляет невалидную или забаненную сессию.                                   |
-| `get_all_data_telegram_groups()`                                     | Получает список всех каналов из общей базы `TelegramGroup`.                 |
+| `get_all_data_telegram_groups()`                                     | Получает список всех каналов из общей базы `TelegramGroups`.                 |
 | `clean_telegram_id_duplicates()`                                     | Очищает дубликаты каналов по `telegram_id`.                                 |
 | `get_groups_without_category()`                                      | Возвращает каналы без присвоенной категории ИИ.                             |
 | `migrate_categories_to_lowercase()`                                  | Приводит категории в базе к нижнему регистру.                               |
@@ -148,7 +148,7 @@
 - `determine_telegram_chat_type(entity)`: Определяет тип чата (Channel, Supergroup, Chat).
 - `get_full_info_group(client, entity)`: Собирает подробную информацию о канале (подписчики, описания, типы).
 - `update_group_channels_data_base(data, entity, group)`: Обновляет/сохраняет распарсенные данные группы в таблицу
-  `TelegramGroup`.
+  `TelegramGroups`.
 - `stop_tracking(user_id, message)`: Останавливает парсинг для пользователя и отключает Telethon-клиенты.
 
 ### `../account_manager/session.py`

@@ -1,10 +1,11 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import database, Account, AccountFree, TelegramGroup, User
-from database.users_groups import Group
+from database.database import database, AccountFree, TelegramGroups, User
+from database.users_accounts import UsersAccounts
+from database.users_groups import UsersGroups
 from database.users_keywords import Keywords
 from database.users_personal_trackings import PersonalTracking
-from database.users_questions import Question
+from database.users_questions import UsersQuestions
 
 """Создает таблицы для базы данных, если ранее не были созданы"""
 
@@ -147,15 +148,15 @@ def init_database():
 
     database.create_tables(
         [
-            Account,  # Таблица аккаунтов пользователей (users_accounts)
+            UsersAccounts,  # Таблица аккаунтов пользователей (users_accounts)
             AccountFree,  # Таблица бесплатных аккаунтов от админа (выдаются пользователям для парсинга ключевых слов)
-            TelegramGroup,  # Таблица общей базы Telegram-групп и каналов по категориям
-            Question,  # Таблица вопросов и ответов пользователей для расширения базы знаний (users_questions)
+            TelegramGroups,  # Таблица общей базы Telegram-групп и каналов по категориям
+            UsersQuestions,  # Таблица вопросов и ответов пользователей для расширения базы знаний (users_questions)
             User,  # Таблица профилей пользователей Telegram (язык, баланс Stars, регистрация)
             PersonalTracking,
             # Таблица настроек персонального отслеживания (целевые группы, привязанные сессии, ID техгруппы)
             Keywords,  # Таблица ключевых слов пользователей (users_keywords)
-            Group  # Таблица целевых каналов и групп пользователей для мониторинга (users_groups)
+            UsersGroups  # Таблица целевых каналов и групп пользователей для мониторинга (users_groups)
         ],
         safe=True
     )

@@ -13,7 +13,7 @@ from openai import AsyncOpenAI
 
 from ai.ai import category_assignment
 from core.config import GROQ_API_KEY, OPENROUTER_API_KEY
-from database.database import TelegramGroup, get_groups_without_category, database
+from database.database import TelegramGroups, get_groups_without_category, database
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import category_method_keyboard, admin_keyboard
 from locales.locales import t
@@ -233,8 +233,8 @@ async def assign_categories(message: Message, client, model):
                 if result.get("success") and result.get("category"):
                     # ✅ Сразу пишем в БД (в нижнем регистре)
                     category_lower = result["category"].lower()
-                    await sync_to_async(lambda: TelegramGroup.update(category=category_lower)
-                                        .where(TelegramGroup.telegram_id == result["telegram_id"])
+                    await sync_to_async(lambda: TelegramGroups.update(category=category_lower)
+                                        .where(TelegramGroups.telegram_id == result["telegram_id"])
                                         .execute(), thread_sensitive=True)()
                     logger.info(f"[{i}/{total}] ✅ {group_data['name']} → {category_lower}")
                 else:
@@ -266,9 +266,9 @@ async def get_groups_without_category_message(message: Message):
         """Подсчитывает количество групп без присвоенной категории в БД"""
         if database.is_closed():
             database.connect(reuse_if_open=True)
-        return TelegramGroup.select().where(
-            (TelegramGroup.username.is_null(False)) &
-            (TelegramGroup.category == '')
+        return TelegramGroups.select().where(
+            (TelegramGroups.username.is_null(False)) &
+            (TelegramGroups.category == '')
         ).count()
 
     count = await sync_to_async(_count)()

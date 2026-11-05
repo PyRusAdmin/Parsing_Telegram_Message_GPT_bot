@@ -13,7 +13,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
-from database.database import User, TelegramGroup
+from database.database import User, TelegramGroups
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP, get_payment_inline_keyboard
 from locales.locales import t
@@ -84,10 +84,10 @@ def save_group_to_db(group_data: dict):
 
         # ========== 1. Проверяем по telegram_id (основной способ) ==========
         if telegram_id is not None:
-            existing = TelegramGroup.get_or_none(TelegramGroup.telegram_id == telegram_id)
+            existing = TelegramGroups.get_or_none(TelegramGroups.telegram_id == telegram_id)
         else:
             # ========== 2. Fallback — проверяем по group_hash ==========
-            existing = TelegramGroup.get_or_none(TelegramGroup.group_hash == group_hash)
+            existing = TelegramGroups.get_or_none(TelegramGroups.group_hash == group_hash)
 
         if existing:
             # Обновляем существующую запись
@@ -113,7 +113,7 @@ def save_group_to_db(group_data: dict):
             category = group_data.get('category')
             if category:
                 category = category.lower()
-            new_group = TelegramGroup.create(
+            new_group = TelegramGroups.create(
                 telegram_id=telegram_id,
                 group_hash=group_hash,
                 name=group_data.get('name'),
@@ -300,32 +300,32 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
             logger.info("Обработка экспорта всей базы...")
             deleted_count = 0
             duplicates = (
-                TelegramGroup
+                TelegramGroups
                 .select(
-                    TelegramGroup.telegram_id,
-                    fn.COUNT(TelegramGroup.id).alias('cnt')
+                    TelegramGroups.telegram_id,
+                    fn.COUNT(TelegramGroups.id).alias('cnt')
                 )
-                .where(TelegramGroup.telegram_id.is_null(False))
-                .group_by(TelegramGroup.telegram_id)
-                .having(fn.COUNT(TelegramGroup.id) > 1)
+                .where(TelegramGroups.telegram_id.is_null(False))
+                .group_by(TelegramGroups.telegram_id)
+                .having(fn.COUNT(TelegramGroups.id) > 1)
             )
 
             for dup in duplicates:
                 tid = dup.telegram_id
                 keep_record = (
-                    TelegramGroup
-                    .select(TelegramGroup.id)
-                    .where(TelegramGroup.telegram_id == tid)
-                    .order_by(TelegramGroup.date_added.desc())
+                    TelegramGroups
+                    .select(TelegramGroups.id)
+                    .where(TelegramGroups.telegram_id == tid)
+                    .order_by(TelegramGroups.date_added.desc())
                     .limit(1)
                     .get()
                 )
                 deleted = (
-                    TelegramGroup
+                    TelegramGroups
                     .delete()
                     .where(
-                        (TelegramGroup.telegram_id == tid) &
-                        (TelegramGroup.id != keep_record.id)
+                        (TelegramGroups.telegram_id == tid) &
+                        (TelegramGroups.id != keep_record.id)
                     )
                     .execute()
                 )
@@ -334,7 +334,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
             if deleted_count > 0:
                 logger.info(f"✅ Очищено {deleted_count} дубликатов по telegram_id")
 
-            groups = TelegramGroup.select()
+            groups = TelegramGroups.select()
             logger.info(f"Выбрано {len(groups)} записей для полной выгрузки")
             if not groups:
                 await message.answer(t("database_empty", lang=user_lang))
@@ -359,8 +359,8 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
 
         elif download_type == "channels":
             logger.info("Обработка экспорта базы каналов...")
-            groups = TelegramGroup.select().where(
-                TelegramGroup.group_type == 'Канал'
+            groups = TelegramGroups.select().where(
+                TelegramGroups.group_type == 'Канал'
             )
             logger.info(f"Выбрано {len(groups)} каналов")
             if not groups:
@@ -376,8 +376,8 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
 
         elif download_type == "groups":
             logger.info("Обработка экспорта базы супергрупп...")
-            groups = TelegramGroup.select().where(
-                TelegramGroup.group_type == 'Группа (супергруппа)'
+            groups = TelegramGroups.select().where(
+                TelegramGroups.group_type == 'Группа (супергруппа)'
             )
             logger.info(f"Выбрано {len(groups)} групп")
             if not groups:
@@ -394,7 +394,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
         elif download_type == "category":
             selected_category = category
             logger.info(f"Обработка экспорта по категории '{selected_category}'...")
-            groups = TelegramGroup.select().where(TelegramGroup.category == selected_category.lower())
+            groups = TelegramGroups.select().where(TelegramGroups.category == selected_category.lower())
             group_count = groups.count()
             logger.info(f"Найдено {group_count} записей в категории '{selected_category}'")
             if group_count == 0:

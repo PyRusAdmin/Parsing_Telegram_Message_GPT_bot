@@ -13,7 +13,7 @@ from account_manager.parser import determine_telegram_chat_type
 from account_manager.utilit import choosing_random_ai_model, detect_language
 from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY, ISO_639_1_CODES
 from core.proxy import setup_proxy
-from database.database import TelegramGroup
+from database.database import TelegramGroups
 from system.dispatcher import bot
 
 """
@@ -319,9 +319,9 @@ async def search_groups_in_telegram(client, group_names):
                 }
 
                 # Проверяем, существует ли уже группа
-                existing_group = TelegramGroup.get_or_none(
-                    (TelegramGroup.telegram_id == telegram_id) |
-                    (TelegramGroup.group_hash == group_hash)
+                existing_group = TelegramGroups.get_or_none(
+                    (TelegramGroups.telegram_id == telegram_id) |
+                    (TelegramGroups.group_hash == group_hash)
                 )
                 if existing_group:
                     logger.warning(f"Группа {title} {username} уже существует в базе данных")
@@ -430,7 +430,7 @@ async def search_groups_in_telegram(client, group_names):
 
                 # Сохранение в базу данных data/bot.db, таблица telegram_groups
                 try:
-                    TelegramGroup.create(
+                    TelegramGroups.create(
                         telegram_id=telegram_id,
                         group_hash=group_hash,
                         name=title,

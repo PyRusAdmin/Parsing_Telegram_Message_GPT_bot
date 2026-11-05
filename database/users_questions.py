@@ -12,7 +12,7 @@ from database.database import database
 """
 
 
-class Question(database.Model):
+class UsersQuestions(database.Model):
     """
     Модель для хранения вопросов пользователей и ответов базы знаний.
     Таблица users_questions.
@@ -30,15 +30,6 @@ class Question(database.Model):
     class Meta:
         """Метаданные таблицы с вопросами от пользователей"""
         table_name = 'users_questions'
-
-    @property
-    def question(self):
-        """Алиас для обратной совместимости со старым кодом"""
-        return self.user_question
-
-    @question.setter
-    def question(self, value):
-        self.user_question = value
 
 
 def add_question(user_id: int, question: str = None, answer: str = None, user_question: str = None,
@@ -58,10 +49,10 @@ def add_question(user_id: int, question: str = None, answer: str = None, user_qu
     try:
         final_question = user_question or question or ""
         # Определяем следующий порядковый номер вопроса
-        max_num = Question.select(fn.MAX(Question.question_number)).scalar()
+        max_num = UsersQuestions.select(fn.MAX(UsersQuestions.question_number)).scalar()
         next_num = (max_num or 0) + 1
 
-        rec = Question.create(
+        rec = UsersQuestions.create(
             question_number=next_num,
             user_id=user_id,
             user_username=user_username,
@@ -84,7 +75,7 @@ def get_all_questions():
     :return: Список словарей с подробной информацией о вопросах
     """
     try:
-        questions = Question.select().order_by(Question.id.asc())
+        questions = UsersQuestions.select().order_by(UsersQuestions.id.asc())
         result = [
             {
                 'id': q.id,

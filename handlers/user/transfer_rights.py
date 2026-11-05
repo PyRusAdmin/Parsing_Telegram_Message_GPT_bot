@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
 from database.database import User
-from database.users_groups import Group
+from database.users_groups import UsersGroups
 from database.users_keywords import Keywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
@@ -22,9 +22,9 @@ def transfer_user_settings(from_user_id: int, to_user_id: int) -> tuple[int, int
     added_keywords = 0
 
     # 1. Перенос групп/каналов
-    existing_groups = list(Group.select(Group.username_group).where(Group.user_id == from_user_id))
+    existing_groups = list(UsersGroups.select(UsersGroups.username_group).where(UsersGroups.user_id == from_user_id))
     for g in existing_groups:
-        _, created = Group.get_or_create(user_id=to_user_id, username_group=g.username_group)
+        _, created = UsersGroups.get_or_create(user_id=to_user_id, username_group=g.username_group)
         if created:
             added_groups += 1
 

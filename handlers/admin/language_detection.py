@@ -7,7 +7,7 @@ from openai import OpenAI
 
 from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES
 
-from database.database import TelegramGroup, database
+from database.database import TelegramGroups, database
 from locales.locales import t
 
 router = Router(name=__name__)
@@ -171,9 +171,9 @@ async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
                 for item in updates:
                     try:
                         rows = (
-                            TelegramGroup
+                            TelegramGroups
                             .update(language=item['language'])
-                            .where(TelegramGroup.group_hash == item['group_hash'])
+                            .where(TelegramGroups.group_hash == item['group_hash'])
                             .execute()
                         )
 

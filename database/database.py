@@ -3,7 +3,7 @@ from datetime import datetime
 from asgiref.sync import sync_to_async
 from loguru import logger  # https://github.com/Delgan/loguru
 from peewee import (
-    SqliteDatabase, IntegerField, BigIntegerField, AutoField, TextField, DateTimeField, CharField, DoesNotExist, fn
+    SqliteDatabase, IntegerField, TextField, DateTimeField, CharField, fn
 )
 
 database = SqliteDatabase(
@@ -80,72 +80,6 @@ def write_account_to_db_free(session_string: str, phone_number: str):
 #         logger.exception(e)
 
 
-"""Работа с аккаунтами"""
-
-
-class Account(database.Model):
-    """
-    Модель для хранения аккаунтов пользователя.
-    В таблице users_accounts хранятся аккаунты пользователя.
-    """
-    id = AutoField()  # ID записи в базе данных
-    user_id = BigIntegerField(index=True, null=True)  # id пользователя Telegram
-    user_username = CharField(default="", null=True)  # username пользователя Telegram
-    user_firstname = CharField(default="", null=True)  # firstname пользователя Telegram
-    user_session_string = CharField(
-        unique=True)  # стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах
-    phone_number_session_string = CharField(default="", null=True)  # номер телефона аккаунта
-    date_added = DateTimeField(default=datetime.now)  # Дата добавления в базу данных
-
-    class Meta:
-        """Метаданные таблицы аккаунтов пользователей"""
-        table_name = 'users_accounts'
-
-    @property
-    def session_string(self):
-        return self.user_session_string
-
-    @session_string.setter
-    def session_string(self, value):
-        self.user_session_string = value
-
-    @property
-    def phone_number(self):
-        return self.phone_number_session_string
-
-    @phone_number.setter
-    def phone_number(self, value):
-        self.phone_number_session_string = value
-
-
-def write_account_to_user_table(user_id: int, session_string: str, phone_number: str = "", user_username: str = "",
-                                user_firstname: str = ""):
-    """
-    Записывает или обновляет аккаунт пользователя в таблице users_accounts.
-    """
-    try:
-        account, created = Account.get_or_create(
-            user_session_string=session_string,
-            defaults={
-                "phone_number_session_string": phone_number,
-                "user_id": user_id,
-                "user_username": user_username,
-                "user_firstname": user_firstname
-            }
-        )
-        if not created:
-            account.phone_number_session_string = phone_number or account.phone_number_session_string
-            account.user_id = user_id or account.user_id
-            account.user_username = user_username or account.user_username
-            account.user_firstname = user_firstname or account.user_firstname
-            account.save()
-        logger.info(f"Аккаунт {phone_number} записан в users_accounts для user_id={user_id}")
-        return account
-    except Exception as e:
-        logger.exception(f"Ошибка при записи в users_accounts: {e}")
-        return None
-
-
 def getting_free_account():
     """
     Получение свободных аккаунтов для подключения
@@ -156,41 +90,6 @@ def getting_free_account():
         records.append(record.session_string)
 
     return records
-
-
-def getting_account():
-    """
-    Получение аккаунтов из базы данных
-    :return: Список аккаунтов из базы данных
-    """
-    records = []
-    for record in Account.select(Account.user_session_string):
-        records.append(record.user_session_string)
-
-    return records
-
-
-async def delete_account_from_db(session_string: str) -> None:
-    """
-    Удаляет аккаунт из таблицы 'users_accounts' по session_string.
-    Перед удалением извлекает и логирует номер телефона.
-
-    :param session_string: Строка сессии аккаунта
-    :return: None
-    """
-    try:
-        # Ищем аккаунт по user_session_string
-        account = Account.get(Account.user_session_string == session_string)
-        phone_number = account.phone_number_session_string
-        logger.info(f"Найден аккаунт для удаления: {phone_number}")
-        # Удаляем запись
-        account.delete_instance()
-        logger.info(f"Аккаунт {phone_number} успешно удалён из базы данных.")
-    except DoesNotExist:
-        logger.info(f"Аккаунт с session_string='{session_string}' не найден в базе.")
-    except Exception as e:
-        logger.exception("Ошибка при удалении аккаунта")
-        logger.info(f"Ошибка при удалении аккаунта: {e}")
 
 
 class User(database.Model):
@@ -224,7 +123,7 @@ class User(database.Model):
 """
 
 
-class TelegramGroup(database.Model):
+class TelegramGroups(database.Model):
     """
     Модель для хранения данных о найденных Telegram-группах и каналах.
 
@@ -269,7 +168,7 @@ class TelegramGroup(database.Model):
 
 def get_all_data_telegram_groups():
     """Возвращает все записи из таблицы telegram_groups в виде списка словарей."""
-    return list(TelegramGroup.select().dicts())
+    return list(TelegramGroups.select().dicts())
 
 
 def clean_telegram_id_duplicates():
@@ -278,14 +177,14 @@ def clean_telegram_id_duplicates():
 
     # Находим все telegram_id с дублями
     duplicates = (
-        TelegramGroup
+        TelegramGroups
         .select(
-            TelegramGroup.telegram_id,
-            fn.COUNT(TelegramGroup.id).alias("cnt")
+            TelegramGroups.telegram_id,
+            fn.COUNT(TelegramGroups.id).alias("cnt")
         )
-        .where(TelegramGroup.telegram_id.is_null(False))
-        .group_by(TelegramGroup.telegram_id)
-        .having(fn.COUNT(TelegramGroup.id) > 1)
+        .where(TelegramGroups.telegram_id.is_null(False))
+        .group_by(TelegramGroups.telegram_id)
+        .having(fn.COUNT(TelegramGroups.id) > 1)
     )
 
     for dup in duplicates:
@@ -293,21 +192,21 @@ def clean_telegram_id_duplicates():
 
         # Оставляем самую новую запись
         keep = (
-            TelegramGroup
-            .select(TelegramGroup.id)
-            .where(TelegramGroup.telegram_id == tid)
-            .order_by(TelegramGroup.date_added.desc())
+            TelegramGroups
+            .select(TelegramGroups.id)
+            .where(TelegramGroups.telegram_id == tid)
+            .order_by(TelegramGroups.date_added.desc())
             .limit(1)
             .get()
         )
 
         # Удаляем все остальные
         deleted = (
-            TelegramGroup
+            TelegramGroups
             .delete()
             .where(
-                (TelegramGroup.telegram_id == tid) &
-                (TelegramGroup.id != keep.id)
+                (TelegramGroups.telegram_id == tid) &
+                (TelegramGroups.id != keep.id)
             )
             .execute()
         )
@@ -325,9 +224,9 @@ async def get_groups_without_category() -> list[dict]:
         if database.is_closed():
             database.connect(reuse_if_open=True)
 
-        groups = TelegramGroup.select().where(
-            (TelegramGroup.username.is_null(False)) &
-            (TelegramGroup.category == '')
+        groups = TelegramGroups.select().where(
+            (TelegramGroups.username.is_null(False)) &
+            (TelegramGroups.category == '')
         )
 
         return [
@@ -357,9 +256,9 @@ def migrate_categories_to_lowercase():
         database.connect(reuse_if_open=True)
 
     try:
-        groups = TelegramGroup.select().where(
-            TelegramGroup.category.is_null(False) &
-            (TelegramGroup.category != '')
+        groups = TelegramGroups.select().where(
+            TelegramGroups.category.is_null(False) &
+            (TelegramGroups.category != '')
         )
 
         updated_count = 0
@@ -378,4 +277,4 @@ def migrate_categories_to_lowercase():
 
 def getting_number_records_database():
     """Получает количество записей в базе данных о найденных группах пользователями"""
-    return TelegramGroup.select().count()
+    return TelegramGroups.select().count()
