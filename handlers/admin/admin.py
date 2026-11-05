@@ -11,7 +11,8 @@ from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
 from core.config import ADMIN_USER_ID
-from database.database import User
+# from database.database import User
+from database.users_personal_trackings import UsersPersonalTrackings
 from database.users_accounts import getting_account
 from database.users_questions import get_all_questions
 from handlers.user_language import determines_user_language
@@ -388,7 +389,8 @@ async def broadcast_message_received(message: Message, state: FSMContext):
         return
 
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    total_users = User.select().count()
+    # total_users = User.select().count()
+    total_users = UsersPersonalTrackings.select().count()
 
     # Сохраняем ID сообщения и чата для последующего копирования через copy_message
     await state.update_data(
@@ -453,8 +455,9 @@ async def broadcast_send_cb(callback: CallbackQuery, state: FSMContext, bot):
     )
     await callback.answer()
 
-    # Запрашиваем ID всех пользователей из таблицы User
-    users = list(User.select(User.user_id))
+    # Запрашиваем ID всех пользователей из таблицы users_personal_trackings (ранее User)
+    # users = list(User.select(User.user_id))
+    users = list(UsersPersonalTrackings.select(UsersPersonalTrackings.user_id))
     total = len(users)
 
     sent_count = 0

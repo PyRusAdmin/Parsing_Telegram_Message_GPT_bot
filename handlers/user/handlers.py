@@ -11,11 +11,12 @@ from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from core.config import version
 from database.database import (
-    User, getting_number_records_database
+    # User,  # Таблица User объединена с users_personal_trackings
+    getting_number_records_database
 )
 from database.users_groups import get_group_count
 from database.users_keywords import get_keywords_count
-from database.users_personal_trackings import get_session_count
+from database.users_personal_trackings import get_session_count, UsersPersonalTrackings
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     get_lang_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
@@ -52,19 +53,20 @@ def get_or_create_user(user_tg):
     """
     Получает существующего пользователя из базы данных или создаёт нового, если он не существует.
     """
-    user, created = User.get_or_create(
+    # user, created = User.get_or_create(
+    user, created = UsersPersonalTrackings.get_or_create(
         user_id=user_tg.id,
         defaults={
-            "username": user_tg.username,
-            "first_name": user_tg.first_name,
-            "last_name": user_tg.last_name,
+            "user_username": user_tg.username,
+            "user_firstname": user_tg.first_name,
+            "user_last_name": user_tg.last_name,
             "language": "unset"  # ← ключевое: "unset" = язык не выбран
         }
     )
     if not created:
-        user.username = user_tg.username
-        user.first_name = user_tg.first_name
-        user.last_name = user_tg.last_name
+        user.user_username = user_tg.username
+        user.user_firstname = user_tg.first_name
+        user.user_last_name = user_tg.last_name
         user.save()
 
     logger.info(
@@ -273,7 +275,8 @@ async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
     try:
         # Определяем язык пользователя, который пользователь выбрал при старте бота
         user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-        user = User.get(User.user_id == callback.from_user.id)
+        # user = User.get(User.user_id == callback.from_user.id)
+        user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == callback.from_user.id)
         logger.info(
             f"Пользователь {callback.from_user.id} {callback.from_user.username} {callback.from_user.first_name} перешел в меню запуска парсинга.")
 
@@ -311,7 +314,8 @@ async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
 async def handle_stars_balance_cb(callback: CallbackQuery, state: FSMContext):
     """Профиль и пополнение звезд (инлайн)"""
     await state.clear()
-    user = User.get(User.user_id == callback.from_user.id)
+    # user = User.get(User.user_id == callback.from_user.id)
+    user = UsersPersonalTrackings.get(UsersPersonalTrackings.user_id == callback.from_user.id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 

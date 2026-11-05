@@ -40,7 +40,8 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 )
 from database.database import (
-    TelegramGroups, User, get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
+    TelegramGroups,  # User (объединен с UsersPersonalTrackings),
+    get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
 )
 from database.users_accounts import write_account_to_user_table, Account, getting_account
@@ -290,16 +291,24 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
         client_ip = get_client_ip(request)
         logger.info(f"User {user_data['id']} connected from {client_ip}")
         # Получить пользователя
-        user = User.get_or_none(User.user_id == user_data["id"])
+        # user = User.get_or_none(User.user_id == user_data["id"])
+        user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
         if not user:
             detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
             # Зарегистрировать пользователя в базе данных
 
-            user = User.create(
+            # user = User.create(
+            #     user_id=user_data["id"],
+            #     username=user_data.get("username"),
+            #     first_name=user_data.get("first_name"),
+            #     last_name=user_data.get("last_name"),
+            #     language=detected_lang
+            # )
+            user = UsersPersonalTrackings.create(
                 user_id=user_data["id"],
-                username=user_data.get("username"),
-                first_name=user_data.get("first_name"),
-                last_name=user_data.get("last_name"),
+                user_username=user_data.get("username"),
+                user_firstname=user_data.get("first_name"),
+                user_last_name=user_data.get("last_name"),
                 language=detected_lang
             )
 
@@ -356,7 +365,8 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
     if lang not in ["ru", "en"]:
         raise HTTPException(status_code=400, detail="Invalid language code")
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.language = lang
@@ -368,7 +378,8 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
 async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):
     """Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if str(user_data["id"]) in active_clients:
@@ -383,7 +394,8 @@ async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict
 async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
     """Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if str(user_data["id"]) not in stop_flags:
@@ -537,7 +549,8 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
 async def upload_account_session(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
     """Загружает и подключает новый файл сессии Telegram-аккаунта"""
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not file.filename.endswith(".session"):
@@ -640,7 +653,8 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
     """Создает инвойс-ссылку на пополнение баланса звездами Telegram Stars"""
     # Ссылка на счет пополнения Stars
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -731,7 +745,8 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     if all_saved_groups:
         # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
         try:
-            user = User.get_or_none(User.user_id == user_data["id"])
+            # user = User.get_or_none(User.user_id == user_data["id"])
+            user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
             # Определяем язык пользователя, который пользователь выбрал при старте бота
             user_lang = determines_user_language(message_or_callback=message.from_user.id)
             excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
@@ -758,7 +773,8 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     :return: Список найденных групп
     """
     logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     try:
@@ -803,7 +819,8 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
 async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """Экспортирует результаты поиска групп в файл Excel"""
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     raw_ids = [i.strip() for i in telegram_ids.split(",") if i.strip()]
@@ -842,7 +859,8 @@ async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
     """Проверяет возможность бесплатной выгрузки базы данных и баланс звезд"""
     # Получить базу данных / Экспортировать XLSX Endpoint
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     is_free, remaining = can_user_download_free(user)
@@ -861,7 +879,8 @@ async def download_database(
 ):
     """Выполняет выгрузку базы данных Telegram-групп в файл Excel"""
     # user_id = user_data["id"]
-    user = User.get_or_none(User.user_id == user_data["id"])
+    # user = User.get_or_none(User.user_id == user_data["id"])
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     # Проверьте, бесплатная ли загрузка или требуется ли звёздочки.

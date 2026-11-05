@@ -66,6 +66,10 @@ class UsersQuestions(database.Model):
         self.status_question = value
 
 
+# Алиас для обратной совместимости
+Question = UsersQuestions
+
+
 def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
                  user_username: str = None, user_firstname: str = None,
                  status_question: str = "Не проверен",

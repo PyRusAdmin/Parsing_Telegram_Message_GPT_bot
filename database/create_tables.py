@@ -1,10 +1,11 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.database import database, AccountFree, TelegramGroups, User
+from database.database import database, AccountFree, TelegramGroups
+# from database.database import User  # Таблица User объединена с users_personal_trackings
 from database.users_accounts import UsersAccounts
 from database.users_groups import UsersGroups
-from database.users_keywords import UsersKeywords
-from database.users_personal_trackings import UsersPersonalTrackings
+from database.users_keywords import Keywords
+from database.users_personal_trackings import UsersPersonalTrackings, PersonalTracking
 from database.users_questions import UsersQuestions
 
 """Создает таблицы для базы данных, если ранее не были созданы"""
@@ -18,6 +19,7 @@ def migrate_old_table_names():
     - user_groups -> users_groups
     - personal_tracking / users_personal_tracking -> users_personal_trackings
     - question -> users_questions
+    - user объединяется с users_personal_trackings (за основу берется User с переносом данных)
     Удаляет устаревшую таблицу personal_tracking_stats.
     """
     cursor = database.execute_sql("SELECT name FROM sqlite_master WHERE type='table';")
@@ -49,6 +51,69 @@ def migrate_old_table_names():
             logger.success(f"✅ Таблица '{old_name}' успешно переименована в '{new_name}'")
             existing_tables.remove(old_name)
             existing_tables.add(new_name)
+
+    # Объединение таблицы User с таблицей users_personal_trackings (за основу берется User)
+    if "user" in existing_tables:
+        if "users_personal_trackings" in existing_tables:
+            cursor_cnt = database.execute_sql("SELECT COUNT(*) FROM users_personal_trackings;")
+            pt_count = cursor_cnt.fetchone()[0]
+            if pt_count == 0:
+                logger.info("🔄 Замена пустой таблицы 'users_personal_trackings' на основу из 'user'...")
+                database.execute_sql("DROP TABLE users_personal_trackings;")
+                database.execute_sql("ALTER TABLE user RENAME TO users_personal_trackings;")
+                existing_tables.remove("user")
+            else:
+                logger.info("🔄 Перенос пользователей из 'user' в 'users_personal_trackings'...")
+                database.execute_sql("""
+                    INSERT OR IGNORE INTO users_personal_trackings (
+                        user_id, language, stars, last_free_download_at, last_changed_at
+                    )
+                    SELECT user_id, language, stars, last_free_download_at, CURRENT_TIMESTAMP
+                    FROM user;
+                """)
+        else:
+            logger.info("🔄 Переименование базовой таблицы 'user' в 'users_personal_trackings'...")
+            database.execute_sql("ALTER TABLE user RENAME TO users_personal_trackings;")
+            existing_tables.remove("user")
+            existing_tables.add("users_personal_trackings")
+
+    # Проверяем колонки в users_personal_trackings
+    cursor = database.execute_sql("SELECT name FROM sqlite_master WHERE type='table';")
+    existing_tables = {row[0] for row in cursor.fetchall()}
+
+    if "users_personal_trackings" in existing_tables:
+        cursor_pt_cols = database.execute_sql("PRAGMA table_info(users_personal_trackings);")
+        existing_pt_cols = {row[1] for row in cursor_pt_cols.fetchall()}
+
+        columns_to_add_pt = [
+            ("user_username", "VARCHAR(255)"),
+            ("user_firstname", "VARCHAR(255)"),
+            ("user_last_name", "VARCHAR(255)"),
+            ("created_group_link", "VARCHAR(255)"),
+            ("created_group_id", "INTEGER"),
+            ("language", "VARCHAR(10) DEFAULT 'ru'"),
+            ("stars", "INTEGER DEFAULT 0"),
+            ("last_free_download_at", "DATETIME"),
+            ("shared_account", "VARCHAR(255) DEFAULT ''"),
+            ("personal_account", "VARCHAR(255) DEFAULT ''"),
+            ("last_changed_at", "DATETIME")
+        ]
+        for col_name, col_type in columns_to_add_pt:
+            if col_name not in existing_pt_cols:
+                logger.info(f"🔄 Миграция: добавление колонки '{col_name}' в 'users_personal_trackings'...")
+                database.execute_sql(f"ALTER TABLE users_personal_trackings ADD COLUMN {col_name} {col_type};")
+                logger.success(f"✅ Колонка '{col_name}' успешно добавлена в 'users_personal_trackings'")
+                existing_pt_cols.add(col_name)
+
+        # Копируем данные из старых колонок (username -> user_username, first_name -> user_firstname, last_name -> user_last_name)
+        if "username" in existing_pt_cols:
+            database.execute_sql("UPDATE users_personal_trackings SET user_username = username WHERE user_username IS NULL AND username IS NOT NULL;")
+        if "first_name" in existing_pt_cols:
+            database.execute_sql("UPDATE users_personal_trackings SET user_firstname = first_name WHERE user_firstname IS NULL AND first_name IS NOT NULL;")
+        if "last_name" in existing_pt_cols:
+            database.execute_sql("UPDATE users_personal_trackings SET user_last_name = last_name WHERE user_last_name IS NULL AND last_name IS NOT NULL;")
+
+        database.execute_sql("UPDATE users_personal_trackings SET last_changed_at = CURRENT_TIMESTAMP WHERE last_changed_at IS NULL;")
 
     # Проверяем колонки в users_accounts
     if "users_accounts" in existing_tables:
@@ -162,8 +227,7 @@ def migrate_old_table_names():
 
         # Заполняем question_number и status_question для существующих строк при необходимости
         database.execute_sql("UPDATE users_questions SET question_number = id WHERE question_number IS NULL;")
-        database.execute_sql(
-            "UPDATE users_questions SET status_question = 'Не проверен' WHERE status_question IS NULL OR status_question = 'Новый';")
+        database.execute_sql("UPDATE users_questions SET status_question = 'Не проверен' WHERE status_question IS NULL OR status_question = 'Новый';")
 
 
 def init_database():
@@ -178,10 +242,10 @@ def init_database():
             AccountFree,  # Таблица бесплатных аккаунтов от админа (выдаются пользователям для парсинга ключевых слов)
             TelegramGroups,  # Таблица общей базы Telegram-групп и каналов по категориям
             UsersQuestions,  # Таблица вопросов и ответов пользователей для расширения базы знаний (users_questions)
-            User,  # Таблица профилей пользователей Telegram (язык, баланс Stars, регистрация)
+            # User,  # Таблица User объединена с users_personal_trackings (закомментирована, но не удалена)
             UsersPersonalTrackings,
-            # Таблица настроек персонального отслеживания (users_personal_trackings)
-            UsersKeywords,  # Таблица ключевых слов пользователей (users_keywords)
+            # Таблица данных о пользователе бота и настроек персонального отслеживания (users_personal_trackings)
+            Keywords,  # Таблица ключевых слов пользователей (users_keywords)
             UsersGroups  # Таблица целевых каналов и групп пользователей для мониторинга (users_groups)
         ],
         safe=True
@@ -193,8 +257,7 @@ def init_database():
         "  • AccountFree — пул бесплатных аккаунтов от администратора\n"
         "  • TelegramGroup — общая база каналов и групп по категориям\n"
         "  • Question (users_questions) — вопросы пользователей для базы знаний\n"
-        "  • User — профили пользователей бота (язык, Stars)\n"
-        "  • PersonalTracking (users_personal_trackings) — данные о пользователе бота, персональные настройки трекинга\n"
+        "  • UsersPersonalTrackings (users_personal_trackings) — профили пользователей бота и персональный трекинг\n"
         "  • Keywords (users_keywords) — ключевые слова пользователей для отслеживания\n"
         "  • Group (users_groups) — отслеживаемые пользователями каналы и группы"
     )

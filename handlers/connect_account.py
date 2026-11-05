@@ -12,7 +12,9 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
-from database.database import User, AccountFree
+# from database.database import User, AccountFree
+from database.database import AccountFree
+from database.users_personal_trackings import UsersPersonalTrackings
 from database.users_accounts import write_account_to_user_table
 from database.users_personal_trackings import write_account_to_db
 from handlers.user.personal_tracking import PersonalTrackingState, execute_sign_in
@@ -35,12 +37,21 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    user, created = User.get_or_create(
+    # user, created = User.get_or_create(
+    #     user_id=callback.from_user.id,
+    #     defaults={
+    #         "username": callback.from_user.username,
+    #         "first_name": callback.from_user.first_name,
+    #         "last_name": callback.from_user.last_name,
+    #         "language": "unset"
+    #     }
+    # )
+    user, created = UsersPersonalTrackings.get_or_create(
         user_id=callback.from_user.id,
         defaults={
-            "username": callback.from_user.username,
-            "first_name": callback.from_user.first_name,
-            "last_name": callback.from_user.last_name,
+            "user_username": callback.from_user.username,
+            "user_firstname": callback.from_user.first_name,
+            "user_last_name": callback.from_user.last_name,
             "language": "unset"
         }
     )

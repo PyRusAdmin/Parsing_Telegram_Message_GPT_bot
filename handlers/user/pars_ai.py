@@ -13,7 +13,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
-from database.database import User, TelegramGroups
+# from database.database import User, TelegramGroups
+from database.database import TelegramGroups
+from database.users_personal_trackings import UsersPersonalTrackings
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import search_group_ai, get_categories_keyboard, CATEGORY_MAP, get_payment_inline_keyboard
 from locales.locales import t
@@ -233,7 +235,8 @@ def create_excel_file(groups, lang='ru'):
 from datetime import timedelta
 
 
-def can_user_download_free(user: User) -> tuple[bool, int]:
+# def can_user_download_free(user: User) -> tuple[bool, int]:
+def can_user_download_free(user: UsersPersonalTrackings) -> tuple[bool, int]:
     """
     Проверяет, может ли пользователь скачать базу бесплатно (1 раз в 24 часа).
     Возвращает (True, 0) или (False, оставшееся_время_в_секундах).
@@ -255,9 +258,12 @@ async def check_and_start_download(message: Message, state: FSMContext, download
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=effective_user_id)
-    user = User.get_or_none(User.user_id == effective_user_id)
+    # user = User.get_or_none(User.user_id == effective_user_id)
+    # if not user:
+    #     user, _ = User.get_or_create(user_id=effective_user_id, defaults={"language": user_lang})
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == effective_user_id)
     if not user:
-        user, _ = User.get_or_create(user_id=effective_user_id, defaults={"language": user_lang})
+        user, _ = UsersPersonalTrackings.get_or_create(user_id=effective_user_id, defaults={"language": user_lang})
     can_dl, remaining_sec = can_user_download_free(user)
     if can_dl:
         logger.info(f"User {effective_user_id} is allowed to download for free.")
@@ -658,9 +664,12 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    user = User.get_or_none(User.user_id == callback.from_user.id)
+    # user = User.get_or_none(User.user_id == callback.from_user.id)
+    # if not user:
+    #     user, _ = User.get_or_create(user_id=callback.from_user.id, defaults={"language": user_lang})
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == callback.from_user.id)
     if not user:
-        user, _ = User.get_or_create(user_id=callback.from_user.id, defaults={"language": user_lang})
+        user, _ = UsersPersonalTrackings.get_or_create(user_id=callback.from_user.id, defaults={"language": user_lang})
     if user.stars < 5:
         logger.warning(f"Недостаточно звезд у {callback.from_user.id} (баланс: {user.stars})")
         await callback.answer(t("download_insufficient_stars", lang=user_lang), show_alert=True)
@@ -726,9 +735,12 @@ async def process_successful_payment(message: Message, state: FSMContext):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
-    user = User.get_or_none(User.user_id == message.from_user.id)
+    # user = User.get_or_none(User.user_id == message.from_user.id)
+    # if not user:
+    #     user, _ = User.get_or_create(user_id=message.from_user.id, defaults={"language": user_lang})
+    user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == message.from_user.id)
     if not user:
-        user, _ = User.get_or_create(user_id=message.from_user.id, defaults={"language": user_lang})
+        user, _ = UsersPersonalTrackings.get_or_create(user_id=message.from_user.id, defaults={"language": user_lang})
 
     payment_info = message.successful_payment
     payload = payment_info.invoice_payload
