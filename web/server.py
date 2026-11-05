@@ -86,9 +86,9 @@ from database.database import (
 
 from database.users_groups import UsersGroups, get_group_count
 
-from database.users_keywords import get_keywords_count, get_user_keywords_with_id, Keywords
+from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords
 
-from database.users_personal_trackings import get_session_count, get_user_accounts, PersonalTracking
+from database.users_personal_trackings import get_session_count, get_user_accounts, UsersPersonalTrackings
 
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 
@@ -370,7 +370,7 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
         keywords_count = get_keywords_count(user_id=user_data["id"])
 
         # Получите целевую группу (группу уведомлений) пользователя
-        pt = PersonalTracking.get_or_none(PersonalTracking.user_id == user_data["id"])
+        pt = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
         target_group = pt.created_group_link if pt else None
 
         tracking_active = str(user_data["id"]) in active_clients
@@ -460,7 +460,7 @@ async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_cu
     keyword = keyword.strip()
     if not keyword:
         raise HTTPException(status_code=400, detail="Keyword cannot be empty")
-    kw_obj, _ = Keywords.get_or_create(
+    kw_obj, _ = UsersKeywords.get_or_create(
         user_id=user_data["id"],
         user_keyword=keyword
     )
@@ -471,10 +471,10 @@ async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_cu
 async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):
     """Удаляет ключевое слово пользователя по его идентификатору"""
     deleted = (
-        Keywords.delete()
+        UsersKeywords.delete()
         .where(
-            (Keywords.id == kw_id) &
-            (Keywords.user_id == user_data["id"])
+            (UsersKeywords.id == kw_id) &
+            (UsersKeywords.user_id == user_data["id"])
         )
         .execute()
     )
@@ -553,7 +553,7 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
 @app.get("/api/target-group")
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает текущую целевую группу пользователя для пересылки сообщений"""
-    pt = PersonalTracking.get_or_none(PersonalTracking.user_id == user_data["id"])
+    pt = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if pt and pt.created_group_link:
         return {"username": pt.created_group_link}
     return {"username": None}
@@ -565,7 +565,7 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
     username = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
-    pt, _ = PersonalTracking.get_or_create(user_id=user_data["id"])
+    pt, _ = UsersPersonalTrackings.get_or_create(user_id=user_data["id"])
     pt.created_group_link = username
     pt.save()
     return {"status": "ok", "username": username}
@@ -1312,7 +1312,7 @@ async def admin_export_questions():
         output,
         fieldnames=[
             "question_number", "user_id", "user_username", "user_firstname",
-            "user_question", "answer", "status", "date_added"
+            "user_question", "answer_ai", "status_question", "date_added"
         ],
         extrasaction="ignore"
     )
