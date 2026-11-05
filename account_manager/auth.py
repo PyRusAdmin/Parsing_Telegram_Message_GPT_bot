@@ -14,7 +14,7 @@ from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH, mobile_device
 from database.database import getting_account
-from database.personal_tracking import delete_account_from_user_table
+from database.users_personal_trackings import delete_account_from_user_table
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
 

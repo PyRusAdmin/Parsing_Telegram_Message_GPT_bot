@@ -26,8 +26,8 @@ from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
     getting_account, write_account_to_db_free, write_account_to_user_table
 )
-from database.keywords_user_database import add_user_keywords
-from database.personal_tracking import get_user_accounts, PersonalTracking, write_account_to_db
+from database.users_keywords import add_user_keywords
+from database.users_personal_trackings import get_user_accounts, PersonalTracking, write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
 from system.dispatcher import bot

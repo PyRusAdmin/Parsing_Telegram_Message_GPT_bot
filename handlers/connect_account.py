@@ -13,7 +13,7 @@ from telethon.sessions import StringSession
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
 from database.database import User, AccountFree, write_account_to_user_table
-from database.personal_tracking import write_account_to_db
+from database.users_personal_trackings import write_account_to_db
 from handlers.user.personal_tracking import PersonalTrackingState, execute_sign_in
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard, connect_account_keyboard, emoji_code_keypad_kb

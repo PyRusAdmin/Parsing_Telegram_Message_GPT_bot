@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, Message
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.utilit import normalize_telegram_link
-from database.group_user_database import add_user_group
+from database.users_groups import add_user_group
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t

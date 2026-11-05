@@ -4,11 +4,11 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from database.group_user_database import (
+from database.users_groups import (
     dell_group, clear_all_user_groups, get_user_groups_paginated, get_user_channel_usernames,
 )
-from database.keywords_user_database import get_user_keywords_paginated, get_keywords_count
-from database.personal_tracking import PersonalTracking
+from database.users_keywords import get_user_keywords_paginated, get_keywords_count
+from database.users_personal_trackings import PersonalTracking
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     settings_keyboard, settings_menu_tracking_channels, settings_keywords_submenu_kb, settings_notification_group_kb,
@@ -217,7 +217,7 @@ async def _show_keywords_page(callback: CallbackQuery, page: int):
 @router.callback_query(F.data.startswith("kw_del:"))
 async def handle_keyword_delete(callback: CallbackQuery, state: FSMContext):
     """Удаление одного ключевого слова по нажатию ❌"""
-    from database.keywords_user_database import Keywords
+    from database.users_keywords import Keywords
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     kw_id = int(callback.data.split(":")[1])
 

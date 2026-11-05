@@ -13,9 +13,9 @@ from account_manager.subscription import subscription_telegram
 from account_manager.utilit import detect_language
 from core.config import forwarded_messages, active_clients, stop_flags
 from database.database import TelegramGroup
-from database.group_user_database import get_user_channel_usernames, dell_group, get_user_channels_or_notify
-from database.keywords_user_database import get_keywords_count, get_user_keywords
-from database.personal_tracking import get_group_id_with_personal_tracking, PersonalTracking
+from database.users_groups import get_user_channel_usernames, dell_group, get_user_channels_or_notify
+from database.users_keywords import get_keywords_count, get_user_keywords
+from database.users_personal_trackings import get_group_id_with_personal_tracking, PersonalTracking
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t

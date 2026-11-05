@@ -84,11 +84,11 @@ from database.database import (
 
 )
 
-from database.group_user_database import Group, get_group_count
+from database.users_groups import Group, get_group_count
 
-from database.keywords_user_database import get_keywords_count, get_user_keywords_with_id, Keywords
+from database.users_keywords import get_keywords_count, get_user_keywords_with_id, Keywords
 
-from database.personal_tracking import get_session_count, get_user_accounts, PersonalTracking
+from database.users_personal_trackings import get_session_count, get_user_accounts, PersonalTracking
 
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 

@@ -1,7 +1,7 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
-from database.personal_tracking import get_user_accounts
+from database.users_personal_trackings import get_user_accounts
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t

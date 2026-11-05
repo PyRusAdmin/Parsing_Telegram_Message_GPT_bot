@@ -1,10 +1,10 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.database import database, Account, AccountFree, TelegramGroup, User
-from database.group_user_database import Group
-from database.keywords_user_database import Keywords
-from database.personal_tracking import PersonalTracking
-from database.question_database import Question
+from database.users_groups import Group
+from database.users_keywords import Keywords
+from database.users_personal_trackings import PersonalTracking
+from database.users_questions import Question
 
 """Создает таблицы для базы данных, если ранее не были созданы"""
 

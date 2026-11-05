@@ -35,7 +35,7 @@
 - [x] **[02.01.2026] Управление отслеживанием**: Динамическое скрытие кнопки «🛑 Остановить отслеживание», если аккаунт
   не подключен.
 - [x] **[19.02.2026] Авторизация через StringSession**: Подключение аккаунтов пользователей через `.session` файлы с
-  конвертацией и записью в БД в виде `StringSession` (`database/personal_tracking.py`,
+  конвертацией и записью в БД в виде `StringSession` (`database/users_personal_trackings.py`,
   `handlers/connect_account.py`).
 - [x] **[17.02.2026] Массовый AI поиск**: Реализован поиск и парсинг групп через ИИ (`handlers/user/pars_ai.py`).
 - [x] **[13.10.2026] Переход на инлайн-клавиатуру**: Полный рефакторинг главного меню — все кнопки переведены с
@@ -55,12 +55,12 @@
 - [x] **[18.10.2026] Разбивка БД на модули**:
     - `database/database.py` — общие таблицы и подключение (`User`, `Account`, `AccountFree`, `TelegramGroup`,
       `Question`).
-    - `database/group_user_database.py` — модель `Group` (таблица `user_groups`) и функции работы с каналами
+    - `database/users_groups.py` — модель `Group` (таблица `user_groups`) и функции работы с каналами
       пользователя.
-    - `database/keywords_user_database.py` — модель `Keywords` (таблица `keywords`) и функции работы с ключевыми
+    - `database/users_keywords.py` — модель `Keywords` (таблица `keywords`) и функции работы с ключевыми
       словами.
 - [x] **[25.10.2026] Вынос модуля `PersonalTracking` (`0f64820`)**:
-    - Модель `PersonalTracking` и вспомогательные функции вынесены в отдельный файл `database/personal_tracking.py`.
+    - Модель `PersonalTracking` и вспомогательные функции вынесены в отдельный файл `database/users_personal_trackings.py`.
     - Удалён дублирующий код из `database/database.py`, обновлены импорты во всём проекте.
 - [x] **[25.10.2026] Централизованная инициализация таблиц (`8e125c9`, `create_tables_database.py`)**:
     - Все таблицы (`Account`, `AccountFree`, `TelegramGroup`, `Question`, `User`, `PersonalTracking`,
@@ -287,7 +287,7 @@
 - **Что сделать**:
     1. Удалить закомментированные фрагменты и неиспользуемые импорты.
     2. Заменить закомментированные счётчики в эндпоинтах на актуальные функции `get_group_count(user_id)` из
-       `database/group_user_database.py`.
+       `database/users_groups.py`.
 
 ---
 

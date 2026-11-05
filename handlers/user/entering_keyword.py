@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.keywords_user_database import add_user_keywords, get_keywords_count
+from database.users_keywords import add_user_keywords, get_keywords_count
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from locales.locales import t

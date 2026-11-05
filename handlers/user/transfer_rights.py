@@ -4,8 +4,8 @@ from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
 from database.database import User
-from database.group_user_database import Group
-from database.keywords_user_database import Keywords
+from database.users_groups import Group
+from database.users_keywords import Keywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from states.states import MyStates

@@ -13,7 +13,7 @@ from account_manager.auth import CheckingAccountsValidity
 from core.config import ADMIN_USER_ID
 from database.database import User
 from database.database import getting_account
-from database.question_database import get_all_questions
+from database.users_questions import get_all_questions
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import admin_keyboard, broadcast_preview_keyboard, back_keyboard
 from locales.locales import t
