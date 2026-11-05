@@ -1,109 +1,60 @@
 import asyncio
-
 import csv
-
 import hashlib
-
 import hmac
-
 import io
-
 import json
-
 import os
-
 import random
-
 import re
-
 import urllib.parse
-
 import urllib.request
-
 from datetime import datetime
-
 from pathlib import Path
-
 from typing import Optional
 
 from aiogram.client import bot
-
 from aiogram.types import BufferedInputFile, LabeledPrice
-
 from asgiref.sync import sync_to_async
-
 from fastapi import (
-
     APIRouter, BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-
 )
-
 from fastapi.middleware.cors import CORSMiddleware
-
 from fastapi.responses import FileResponse, Response, StreamingResponse
-
 from g4f.client import Client
-
 from groq import AsyncGroq
-
 from loguru import logger  # https://github.com/Delgan/loguru
-
 from openai import AsyncOpenAI
-
 from telethon.errors import (
-
     AuthKeyUnregisteredError, FloodWaitError, UsernameInvalidError
-
 )
-
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-
-from account_manager.utilit import detect_language
-
 from account_manager.parser import (
-
     active_clients, filter_messages, get_full_info_group, stop_flags, stop_tracking, update_group_channels_data_base
-
 )
-
+from account_manager.utilit import detect_language
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
-
 from core.config import (
-
-    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, ISO_639_1_CODES
-
+    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 )
-
 from database.database import (
-
-    Account, TelegramGroups, User, get_all_data_telegram_groups, get_all_questions, get_groups_without_category,
-
-    getting_account, getting_number_records_database, database, write_account_to_user_table
-
+    TelegramGroups, User, get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
+    database
 )
-
+from database.users_accounts import write_account_to_user_table, Account, getting_account
 from database.users_groups import UsersGroups, get_group_count
-
 from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords
-
 from database.users_personal_trackings import get_session_count, get_user_accounts, UsersPersonalTrackings
-
+from database.users_questions import get_all_questions
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
-
 from handlers.admin.language_detection import ai_llama_fri
-
 from handlers.user.pars_ai import (
-
     can_user_download_free, create_excel_file, parse_ai_group_names, save_group_to_db, parse_search_input
-
 )
-
 from handlers.user_language import determines_user_language
-
 from locales.locales import t
-
 from system.dispatcher import bot
 
 # Инициализировать FastAPI
@@ -113,17 +64,11 @@ app = FastAPI(title="AutoParseAlertBot Web API", version="0.1.0")
 # Добавьте промежуточное ПО CORS
 
 app.add_middleware(
-
     CORSMiddleware,
-
     allow_origins=["*"],
-
     allow_credentials=True,
-
     allow_methods=["*"],
-
     allow_headers=["*"],
-
 )
 
 
@@ -488,7 +433,8 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     """Возвращает список отслеживаемых каналов пользователя"""
     # Управление отслеживаемыми каналами
     # user_id = user_data["id"]
-    records = list(UsersGroups.select().where(UsersGroups.user_id == user_data["id"]).order_by(UsersGroups.date_added.desc()))
+    records = list(
+        UsersGroups.select().where(UsersGroups.user_id == user_data["id"]).order_by(UsersGroups.date_added.desc()))
     return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
             records]
 

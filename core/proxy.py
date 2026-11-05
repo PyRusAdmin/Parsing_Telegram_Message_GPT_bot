@@ -24,7 +24,6 @@ def setup_proxy():
         - PROXY_PORT: порт прокси
 
     :raise Exception: В случае ошибки устанавливается логирование с помощью `logger.exception`.
-
     """
     try:
         # Указываем прокси для HTTP и HTTPS

@@ -162,7 +162,8 @@ def migrate_old_table_names():
 
         # Заполняем question_number и status_question для существующих строк при необходимости
         database.execute_sql("UPDATE users_questions SET question_number = id WHERE question_number IS NULL;")
-        database.execute_sql("UPDATE users_questions SET status_question = 'Не проверен' WHERE status_question IS NULL OR status_question = 'Новый';")
+        database.execute_sql(
+            "UPDATE users_questions SET status_question = 'Не проверен' WHERE status_question IS NULL OR status_question = 'Новый';")
 
 
 def init_database():

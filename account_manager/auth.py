@@ -13,7 +13,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH, mobile_device
-from database.database import getting_account
+from database.users_accounts import getting_account
 from database.users_personal_trackings import delete_account_from_user_table
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -217,8 +217,8 @@ class CheckingAccountsValidity:
         :return: Авторизованный TelegramClient или None
         """
         try:
-            records = getting_account()
-            chosen_session_name = random.choice(records)
+            # records = getting_account()
+            chosen_session_name = random.choice(getting_account())
 
             if not chosen_session_name or not isinstance(chosen_session_name, str):
                 logger.error(f"❌ Неверный формат сессии: {type(chosen_session_name)}")
