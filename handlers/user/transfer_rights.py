@@ -5,7 +5,7 @@ from loguru import logger
 
 from database.database import User
 from database.users_groups import UsersGroups
-from database.users_keywords import Keywords
+from database.users_keywords import UsersKeywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
 from states.states import MyStates
@@ -29,9 +29,9 @@ def transfer_user_settings(from_user_id: int, to_user_id: int) -> tuple[int, int
             added_groups += 1
 
     # 2. Перенос ключевых слов
-    existing_kw = list(Keywords.select(Keywords.user_keyword).where(Keywords.user_id == from_user_id))
+    existing_kw = list(UsersKeywords.select(UsersKeywords.user_keyword).where(UsersKeywords.user_id == from_user_id))
     for kw in existing_kw:
-        _, created = Keywords.get_or_create(user_id=to_user_id, user_keyword=kw.user_keyword)
+        _, created = UsersKeywords.get_or_create(user_id=to_user_id, user_keyword=kw.user_keyword)
         if created:
             added_keywords += 1
 

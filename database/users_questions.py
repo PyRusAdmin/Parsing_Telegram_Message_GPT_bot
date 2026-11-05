@@ -1,7 +1,7 @@
 from datetime import datetime
 from loguru import logger  # https://github.com/Delgan/loguru
 from peewee import (
-    IntegerField, AutoField, TextField, CharField, DateTimeField, fn
+    BigIntegerField, AutoField, TextField, CharField, DateTimeField, IntegerField, fn
 )
 
 from database.database import database
@@ -9,6 +9,10 @@ from database.database import database
 """
 Запись в базу данных вопросов пользователей, чтобы расширить базу знаний.
 Таблица: users_questions
+
+В таблице users_questions будут храниться вопросы от пользователей, которые они задавали боту по поводу работы с ботом.
+Отвечать на вопросы будет бот с помощью ИИ и на основе базы знаний.
+Работа с таблицей users_questions находится в файле users_questions.py для быстрого ориентирования в проекте.
 """
 
 
@@ -16,38 +20,75 @@ class UsersQuestions(database.Model):
     """
     Модель для хранения вопросов пользователей и ответов базы знаний.
     Таблица users_questions.
+
+    Структура users_questions:
+    - id - ID записи в базе данных
+    - question_number - Номер вопроса, для удобной обработки администратором
+    - user_id - id пользователя Telegram
+    - user_username - username пользователя Telegram
+    - user_firstname - firstname пользователя Telegram
+    - user_question - Вопрос пользователя
+    - answer_ai - Ответ пользователю от ИИ
+    - status_question - статус обработки вопроса администратором ('Соответствует', 'Не соответствует')
+    - date_added - Дата добавления в базу данных
     """
     id = AutoField()  # ID записи в базе данных
-    question_number = IntegerField(null=True)  # Номер вопроса для удобной обработки администратором
-    user_id = IntegerField()  # ID пользователя Telegram
+    question_number = IntegerField(null=True)  # Номер вопроса, для удобной обработки администратором
+    user_id = BigIntegerField()  # id пользователя Telegram
     user_username = CharField(max_length=255, null=True)  # username пользователя Telegram
     user_firstname = CharField(max_length=255, null=True)  # firstname пользователя Telegram
     user_question = TextField()  # Вопрос пользователя
-    answer = TextField(null=True)  # Ответ пользователю от ИИ
-    status = CharField(max_length=100, default="Новый")  # Статус обработки вопроса администратором
+    answer_ai = TextField(null=True)  # Ответ пользователю от ИИ.
+    status_question = CharField(max_length=100, default="Не проверен")  # статус обработки вопроса администратором
     date_added = DateTimeField(default=datetime.now)  # Дата добавления в базу данных
 
     class Meta:
         """Метаданные таблицы с вопросами от пользователей"""
         table_name = 'users_questions'
 
+    # Свойства для обратной совместимости
+    @property
+    def answer(self):
+        """Алиас для обратной совместимости с кодом, обращающимся к answer."""
+        return self.answer_ai
 
-def add_question(user_id: int, question: str = None, answer: str = None, user_question: str = None,
-                 user_username: str = None, user_firstname: str = None, status: str = "Новый"):
+    @answer.setter
+    def answer(self, value):
+        self.answer_ai = value
+
+    @property
+    def status(self):
+        """Алиас для обратной совместимости с кодом, обращающимся к status."""
+        return self.status_question
+
+    @status.setter
+    def status(self, value):
+        self.status_question = value
+
+
+def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
+                 user_username: str = None, user_firstname: str = None,
+                 status_question: str = "Не проверен",
+                 question: str = None, answer: str = None, status: str = None):
     """
     Добавляет вопрос пользователя и ответ ИИ в базу данных users_questions.
 
     :param user_id: Telegram ID пользователя
-    :param question: Вопрос пользователя (обратная совместимость)
-    :param answer: Ответ на вопрос от ИИ
     :param user_question: Вопрос пользователя
+    :param answer_ai: Ответ пользователю от ИИ
     :param user_username: username пользователя в Telegram
     :param user_firstname: firstname пользователя в Telegram
-    :param status: Статус обработки вопроса администратором
-    :return: Созданный объект Question или None при ошибке
+    :param status_question: статус обработки вопроса администратором ('Соответствует', 'Не соответствует' и др.)
+    :param question: Алиас для обратной совместимости (user_question)
+    :param answer: Алиас для обратной совместимости (answer_ai)
+    :param status: Алиас для обратной совместимости (status_question)
+    :return: Созданный объект UsersQuestions или None при ошибке
     """
     try:
         final_question = user_question or question or ""
+        final_answer = answer_ai if answer_ai is not None else answer
+        final_status = status_question if status_question != "Не проверен" or status is None else status
+
         # Определяем следующий порядковый номер вопроса
         max_num = UsersQuestions.select(fn.MAX(UsersQuestions.question_number)).scalar()
         next_num = (max_num or 0) + 1
@@ -58,14 +99,36 @@ def add_question(user_id: int, question: str = None, answer: str = None, user_qu
             user_username=user_username,
             user_firstname=user_firstname,
             user_question=final_question,
-            answer=answer,
-            status=status,
+            answer_ai=final_answer,
+            status_question=final_status,
             date_added=datetime.now()
         )
+        logger.info(f"Вопрос №{next_num} от user_id={user_id} сохранён в users_questions")
         return rec
     except Exception as e:
         logger.exception(f"❌ Ошибка добавления вопроса в users_questions: {e}")
         return None
+
+
+def update_question_status(question_id: int, status_question: str) -> bool:
+    """
+    Обновляет статус обработки вопроса администратором ('Соответствует', 'Не соответствует').
+
+    :param question_id: ID записи в базе данных (или question_number)
+    :param status_question: Статус проверки ('Соответствует', 'Не соответствует')
+    :return: True, если обновлено успешно, иначе False
+    """
+    try:
+        updated = (
+            UsersQuestions.update(status_question=status_question)
+            .where((UsersQuestions.id == question_id) | (UsersQuestions.question_number == question_id))
+            .execute()
+        )
+        logger.info(f"Статус вопроса #{question_id} изменен на '{status_question}' (обновлено строк: {updated})")
+        return updated > 0
+    except Exception as e:
+        logger.exception(f"❌ Ошибка обновления статуса вопроса #{question_id}: {e}")
+        return False
 
 
 def get_all_questions():
@@ -84,9 +147,12 @@ def get_all_questions():
                 'user_username': q.user_username or "",
                 'user_firstname': q.user_firstname or "",
                 'user_question': q.user_question,
-                'question': q.user_question,  # Алиас для обратной совместимости
-                'answer': q.answer or "",
-                'status': q.status or "Новый",
+                'answer_ai': q.answer_ai or "",
+                'status_question': q.status_question or "Не проверен",
+                # Алиасы для обратной совместимости
+                'answer': q.answer_ai or "",
+                'status': q.status_question or "Не проверен",
+                'question': q.user_question,
                 'date_added': q.date_added.strftime("%Y-%m-%d %H:%M:%S") if q.date_added else ""
             }
             for q in questions

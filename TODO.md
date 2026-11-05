@@ -57,18 +57,18 @@
       `UsersQuestions`).
     - `database/users_groups.py` — модель `UsersGroups` (таблица `user_groups`) и функции работы с каналами
       пользователя.
-    - `database/users_keywords.py` — модель `Keywords` (таблица `keywords`) и функции работы с ключевыми
+    - `database/users_keywords.py` — модель `UsersKeywords` (таблица `keywords`) и функции работы с ключевыми
       словами.
-- [x] **[25.10.2026] Вынос модуля `PersonalTracking` (`0f64820`)**:
-    - Модель `PersonalTracking` и вспомогательные функции вынесены в отдельный файл `database/users_personal_trackings.py`.
+- [x] **[25.10.2026] Вынос модуля `UsersPersonalTrackings` (`0f64820`)**:
+    - Модель `UsersPersonalTrackings` и вспомогательные функции вынесены в отдельный файл `database/users_personal_trackings.py`.
     - Удалён дублирующий код из `database/database.py`, обновлены импорты во всём проекте.
 - [x] **[25.10.2026] Централизованная инициализация таблиц (`8e125c9`, `create_tables.py`)**:
-    - Все таблицы (`Account`, `AccountFree`, `TelegramGroups`, `UsersQuestions`, `User`, `PersonalTracking`,
-      `Keywords`, `UsersGroups`) инициализируются единым вызовом `create_tables(safe=True)`.
+    - Все таблицы (`Account`, `AccountFree`, `TelegramGroups`, `UsersQuestions`, `User`, `UsersPersonalTrackings`,
+      `UsersKeywords`, `UsersGroups`) инициализируются единым вызовом `create_tables(safe=True)`.
     - Добавлено детальное и понятное логирование каждой таблицы при старте приложения.
 - [x] **[25.10.2026] Документирование моделей и функций**:
     - Полный docstring для функции `delete_account_from_user_table` с описанием параметров и назначения.
-- [x] **[18.10.2026] Переход на единую таблицу `Keywords`**: Удалена динамическая схема таблиц, все ключевые слова
+- [x] **[18.10.2026] Переход на единую таблицу `UsersKeywords`**: Удалена динамическая схема таблиц, все ключевые слова
   пользователей хранятся в общей таблице `keywords` с полем `user_id` (`7ae7654`).
 - [x] **[18.10.2026] Переход на единую таблицу `UsersGroups`**: Удалена функция `create_group_model`, переход на прямые
   запросы через единую таблицу `user_groups` (`8f4b5a1`, `fb0c4e1`).
@@ -178,8 +178,8 @@
     - Актуализированы версии `openai`, `fastapi`, `g4f`, `asgiref`, `python-multipart`.
 - [x] **[04.11.2026] Исправление NameError (tracked_channels) и устаревших эндпоинтов в `web/server.py`**:
     - В эндпоинте `/api/status` восстановлен подсчёт каналов: `tracked_channels = get_group_count(user_id)`.
-    - Получение имени целевой группы переведено на актуальную модель `PersonalTracking` (`created_group_link`).
-    - В эндпоинтах `/api/target-group` (GET и POST) удалены обращения к несуществующей функции `create_group_model`, логика переведена на `PersonalTracking`.
+    - Получение имени целевой группы переведено на актуальную модель `UsersPersonalTrackings` (`created_group_link`).
+    - В эндпоинтах `/api/target-group` (GET и POST) удалены обращения к несуществующей функции `create_group_model`, логика переведена на `UsersPersonalTrackings`.
 
 ---
 

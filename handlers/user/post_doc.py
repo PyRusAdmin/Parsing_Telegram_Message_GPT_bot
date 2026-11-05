@@ -135,10 +135,10 @@ async def handle_instruction_question(message: Message, state: FSMContext):
         add_question(
             user_id=message.from_user.id,
             user_question=message.text,
-            answer=answer,
+            answer_ai=answer,
             user_username=message.from_user.username,
             user_firstname=message.from_user.first_name,
-            status="Новый"
+            status_question="Не проверен"
         )
 
         # Отправляем очищенный простой текст пользователю без разметки

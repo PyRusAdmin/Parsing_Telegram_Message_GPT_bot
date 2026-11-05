@@ -13,7 +13,7 @@ from database.database import database
 """
 
 
-class PersonalTracking(database.Model):
+class UsersPersonalTrackings(database.Model):
     """Модель базы данных для хранения настроек персонального отслеживания для пользователя"""
 
     id = AutoField()  # ID записи в базе данных
@@ -27,7 +27,7 @@ class PersonalTracking(database.Model):
 
     class Meta:
         """Метаданные таблицы персонального отслеживания"""
-        table_name = "users_personal_tracking"  # В таблице users_personal_tracking хранятся данные о пользователе, бота
+        table_name = "users_personal_trackings"  # В таблице users_personal_trackings хранятся данные о пользователе, бота
 
 
 def delete_account_from_user_table(user_id: int, personal_account: str) -> None:
@@ -43,8 +43,8 @@ def delete_account_from_user_table(user_id: int, personal_account: str) -> None:
     :param personal_account: (str) Строка сессии Telethon (StringSession), подлежащая удалению.
     :return: None
     """
-    query = PersonalTracking.delete().where(
-        (PersonalTracking.user_id == user_id) & (PersonalTracking.personal_account == personal_account)
+    query = UsersPersonalTrackings.delete().where(
+        (UsersPersonalTrackings.user_id == user_id) & (UsersPersonalTrackings.personal_account == personal_account)
     )
     deleted_count = query.execute()
     logger.info(f"🗑️ Удалено {deleted_count} невалидных записей из PersonalTracking для user_id={user_id}")
@@ -55,7 +55,7 @@ def get_user_accounts(user_id: int):
     Получает аккаунты пользователя из таблицы PersonalTracking.
     Возвращает список словарей для обратной совместимости.
     """
-    rec = PersonalTracking.get_or_none(PersonalTracking.user_id == user_id)
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
     if rec and rec.personal_account:
         return [{
             'session_string': rec.personal_account,
@@ -70,10 +70,10 @@ def get_session_count(user_id: int) -> int:
     :param user_id: (int) ID пользователя Telegram.
     :return int: Количество сессий (0, если аккаунты отсутствуют).
     """
-    return PersonalTracking.select().where(
-        (PersonalTracking.user_id == user_id) &
-        (PersonalTracking.personal_account.is_null(False)) &
-        (PersonalTracking.personal_account != '')
+    return UsersPersonalTrackings.select().where(
+        (UsersPersonalTrackings.user_id == user_id) &
+        (UsersPersonalTrackings.personal_account.is_null(False)) &
+        (UsersPersonalTrackings.personal_account != '')
     ).count()
 
 
@@ -83,8 +83,8 @@ def get_group_id_with_personal_tracking(user_id):
     :param user_id: ID пользователя Telegram.
     :return Any: ID группы, в которую будут отправляться сообщения, которые были найдены по ключевым словам.
     """
-    return PersonalTracking.select(PersonalTracking.created_group_id).where(
-        PersonalTracking.user_id == user_id).scalar()
+    return UsersPersonalTrackings.select(UsersPersonalTrackings.created_group_id).where(
+        UsersPersonalTrackings.user_id == user_id).scalar()
 
 
 def write_account_to_db(session_string: str, user_id: int) -> None:
@@ -94,14 +94,14 @@ def write_account_to_db(session_string: str, user_id: int) -> None:
     :param user_id: ID пользователя Telegram
     """
 
-    PersonalTracking.insert(
+    UsersPersonalTrackings.insert(
         user_id=user_id,
         personal_account=session_string,
     ).on_conflict(
-        conflict_target=[PersonalTracking.user_id],
+        conflict_target=[UsersPersonalTrackings.user_id],
         update={
-            PersonalTracking.personal_account: session_string,
-            PersonalTracking.last_changed_at: datetime.now(),
+            UsersPersonalTrackings.personal_account: session_string,
+            UsersPersonalTrackings.last_changed_at: datetime.now(),
         }
     ).execute()
 

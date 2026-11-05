@@ -8,7 +8,7 @@ from database.users_groups import (
     dell_group, clear_all_user_groups, get_user_groups_paginated, get_user_channel_usernames,
 )
 from database.users_keywords import get_user_keywords_paginated, get_keywords_count
-from database.users_personal_trackings import PersonalTracking
+from database.users_personal_trackings import UsersPersonalTrackings
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     settings_keyboard, settings_menu_tracking_channels, settings_keywords_submenu_kb, settings_notification_group_kb,
@@ -217,12 +217,12 @@ async def _show_keywords_page(callback: CallbackQuery, page: int):
 @router.callback_query(F.data.startswith("kw_del:"))
 async def handle_keyword_delete(callback: CallbackQuery, state: FSMContext):
     """Удаление одного ключевого слова по нажатию ❌"""
-    from database.users_keywords import Keywords
+    from database.users_keywords import UsersKeywords
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     kw_id = int(callback.data.split(":")[1])
 
     try:
-        kw_obj = Keywords.get_by_id(kw_id)
+        kw_obj = UsersKeywords.get_by_id(kw_id)
         kw_text = kw_obj.user_keyword
         kw_obj.delete_instance()
         await callback.answer(f"✅ Удалено: {kw_text}", show_alert=False)
@@ -264,7 +264,7 @@ async def handle_notification_section(callback: CallbackQuery, state: FSMContext
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     user_id = callback.from_user.id
 
-    rec = PersonalTracking.get_or_none(PersonalTracking.user_id == user_id)
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
     group_link = str(rec.created_group_link or "") if rec else ""
 
     if group_link:

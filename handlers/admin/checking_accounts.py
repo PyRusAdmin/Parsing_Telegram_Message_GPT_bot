@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.auth import CheckingAccountsValidity
-from database.database import getting_account
+from database.users_accounts import getting_account
 from handlers.user_language import determines_user_language
 from locales.locales import t
 

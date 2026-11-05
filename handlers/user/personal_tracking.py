@@ -24,10 +24,11 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
-    getting_account, write_account_to_db_free, write_account_to_user_table
+    write_account_to_db_free
 )
+from database.users_accounts import getting_account
 from database.users_keywords import add_user_keywords
-from database.users_personal_trackings import get_user_accounts, PersonalTracking, write_account_to_db
+from database.users_personal_trackings import get_user_accounts, UsersPersonalTrackings, write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
 from system.dispatcher import bot
@@ -169,10 +170,10 @@ def get_user_allowed_slots(user_id: int) -> int:
 
 def get_user_used_slots(user_id: int) -> int:
     """Возвращает количество задействованных слотов пользователя"""
-    return PersonalTracking.select().where(PersonalTracking.user_id == user_id).count()
+    return UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id).count()
 
 
-def can_user_change_tracking(tracking_record: PersonalTracking) -> tuple[bool, float]:
+def can_user_change_tracking(tracking_record: UsersPersonalTrackings) -> tuple[bool, float]:
     """
     Проверяет ограничение на смену группы/ключевых слов (не чаще 1 раза в 24ч)
     :param tracking_record: Регистрация трекинга
@@ -449,7 +450,7 @@ async def process_keywords_input(message: Message, state: FSMContext):
     add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
     # Сохраняем запись в таблицу personal_tracking
-    rec = PersonalTracking.create(
+    rec = UsersPersonalTrackings.create(
         user_id=message.from_user.id,
         target_link=target_link,
         created_group_link=invite_link,
@@ -523,7 +524,7 @@ async def cb_list_tracking(callback: CallbackQuery):
     """Отображает список групп персонального отслеживания пользователя"""
     user_id = callback.from_user.id
     records = list(
-        PersonalTracking.select().where(PersonalTracking.user_id == user_id)
+        UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
     )
 
     if not records:
@@ -565,7 +566,7 @@ async def cb_list_tracking(callback: CallbackQuery):
 async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает выбор группы персонального отслеживания для редактирования"""
     rec_id = int(callback.data.split("_")[2])
-    rec = PersonalTracking.get_or_none(PersonalTracking.id == rec_id)
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
 
     if not rec:
         await callback.answer("Ошибка: Запись не найдена", show_alert=True)
@@ -596,7 +597,7 @@ async def process_edit_link(message: Message, state: FSMContext):
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
 
-    rec = PersonalTracking.get_or_none(PersonalTracking.id == rec_id)
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
     if not rec:
         await message.answer("Ошибка записи.")
         await state.clear()
@@ -627,7 +628,7 @@ async def process_edit_keywords(message: Message, state: FSMContext):
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
 
-    rec = PersonalTracking.get_or_none(PersonalTracking.id == rec_id)
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
     if rec:
         rec.keywords = new_keywords
         rec.last_changed_at = datetime.now()
@@ -640,8 +641,8 @@ async def process_edit_keywords(message: Message, state: FSMContext):
 @router.callback_query(F.data == "pt_stats")
 async def cb_stats(callback: CallbackQuery):
     """Отображает административную статистику персонального отслеживания"""
-    total_tracking_users = PersonalTracking.select(PersonalTracking.user_id).distinct().count()
-    total_active_slots = PersonalTracking.select().count()
+    total_tracking_users = UsersPersonalTrackings.select(UsersPersonalTrackings.user_id).distinct().count()
+    total_active_slots = UsersPersonalTrackings.select().count()
 
     text = (
         "📊 <b>Статистика персонального отслеживания:</b>\n\n"
@@ -659,7 +660,7 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
     """
     Отправляет уведомление бота в персональную группу пользователя.
     """
-    records = PersonalTracking.select().where(PersonalTracking.user_id == user_id)
+    records = UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
     for r in records:
         keywords_list = [k.strip().lower() for k in r.keywords.split(",") if k.strip()]
         if matched_keyword.lower() in keywords_list:

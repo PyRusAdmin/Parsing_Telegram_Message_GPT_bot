@@ -15,7 +15,7 @@ from locales.locales import t
 """
 
 
-class Group(database.Model):
+class UsersGroups(database.Model):
     """
     Модель для хранения групп для отслеживания ключевых слов.
     В таблице users_groups хранятся группы для отслеживания ключевых слов.
@@ -43,6 +43,10 @@ class Group(database.Model):
         )
 
 
+# Алиас для обратной совместимости
+Group = UsersGroups
+
+
 def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     """
     Получает все username каналов/групп пользователя по user_id.
@@ -50,10 +54,10 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     :param user_id: Telegram ID пользователя
     :return: Кортеж (список username, общее количество)
     """
-    records = (Group
-               .select(Group.username_group)
-               .where(Group.user_id == user_id)
-               .order_by(Group.date_added.desc()))
+    records = (UsersGroups
+               .select(UsersGroups.username_group)
+               .where(UsersGroups.user_id == user_id)
+               .order_by(UsersGroups.date_added.desc()))
 
     usernames = [row.username_group for row in records]
     return usernames, len(usernames)
@@ -65,18 +69,11 @@ def get_group_count(user_id: int):
     :param user_id: Telegram ID пользователя
     :return int: Количество записей (обычно 0 или 1, так как группа одна).
     """
-    return Group.select().where(Group.user_id == user_id).count()
+    return UsersGroups.select().where(UsersGroups.user_id == user_id).count()
 
 
-def add_user_group(
-        user_id: int,
-        group: list[str],
-        user_username: str = "",
-        user_firstname: str = "",
-        id_group: int | None = None,
-        name_group: str = "",
-        user_session_string: str = ""
-) -> None:
+def add_user_group(user_id: int, group: list[str], user_username: str = "", user_firstname: str = "",
+                   id_group: int | None = None, name_group: str = "", user_session_string: str = "") -> None:
     """
     Безопасно добавляет список групп/каналов в базу данных data/bot.db, пропуская дубликаты, если они есть.
     В базе данных могут быть одинаковые username групп, но не у одного пользователя. Например, @python_jobs
@@ -94,7 +91,7 @@ def add_user_group(
         gr_clean = gr.strip()
         if not gr_clean:
             continue
-        Group.get_or_create(
+        UsersGroups.get_or_create(
             user_id=user_id,
             username_group=gr_clean,
             defaults={
@@ -117,7 +114,8 @@ def dell_group(user_id: int, username_group: str):
     """
     try:
         (
-            Group.delete().where(Group.user_id == user_id, Group.username_group == username_group).execute()
+            UsersGroups.delete().where(UsersGroups.user_id == user_id,
+                                       UsersGroups.username_group == username_group).execute()
         )
         return True
     except Exception as e:
@@ -132,7 +130,7 @@ def clear_all_user_groups(user_id: int) -> int:
     :return: Количество удалённых записей
     """
     try:
-        deleted = Group.delete().where(Group.user_id == user_id).execute()
+        deleted = UsersGroups.delete().where(UsersGroups.user_id == user_id).execute()
         logger.info(f"Удалено {deleted} каналов для пользователя {user_id}")
         return deleted
     except Exception as e:
@@ -149,11 +147,11 @@ def get_user_groups_paginated(user_id: int, page: int = 0, page_size: int = 5) -
     :param page_size: Количество записей на странице
     :return: Кортеж (список объектов Group, общее количество)
     """
-    total = Group.select().where(Group.user_id == user_id).count()
+    total = UsersGroups.select().where(UsersGroups.user_id == user_id).count()
     records = (
-        Group.select()
-        .where(Group.user_id == user_id)
-        .order_by(Group.date_added.desc())
+        UsersGroups.select()
+        .where(UsersGroups.user_id == user_id)
+        .order_by(UsersGroups.date_added.desc())
         .offset(page * page_size)
         .limit(page_size)
     )
@@ -168,7 +166,7 @@ async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
     :param message:
     :param client:
     """
-    channels = [group.username_group for group in Group.select().where(Group.user_id == user_id)]
+    channels = [group.username_group for group in UsersGroups.select().where(UsersGroups.user_id == user_id)]
 
     if not channels:
         logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")

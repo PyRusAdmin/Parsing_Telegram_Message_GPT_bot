@@ -7,7 +7,18 @@ from peewee import (
 
 from database.database import database
 
-"""Работа с аккаунтами"""
+"""
+В таблице users_accounts будут храниться аккаунты пользователя.
+
+Структура users_accounts:
+- id - ID записи в базе данных
+- user_id - id пользователя Telegram 
+- user_username - username пользователя Telegram
+- user_firstname - firstname пользователя Telegram
+- user_session_string - стринг сессия аккаунта, который подключил аккаунт для дальнейшего поиска ключевых слов в группах 
+- phone_number_session_string - номер телефона аккаунта
+- date_added - Дата добавления в базу данных
+"""
 
 
 class UsersAccounts(database.Model):
@@ -27,6 +38,10 @@ class UsersAccounts(database.Model):
     class Meta:
         """Метаданные таблицы аккаунтов пользователей"""
         table_name = 'users_accounts'
+
+
+# Алиас для обратной совместимости
+Account = UsersAccounts
 
 
 def write_account_to_user_table(user_id: int, session_string: str, phone_number: str = "", user_username: str = "",

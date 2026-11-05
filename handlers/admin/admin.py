@@ -12,7 +12,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.auth import CheckingAccountsValidity
 from core.config import ADMIN_USER_ID
 from database.database import User
-from database.database import getting_account
+from database.users_accounts import getting_account
 from database.users_questions import get_all_questions
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import admin_keyboard, broadcast_preview_keyboard, back_keyboard
@@ -46,7 +46,7 @@ async def export_questions_cb(callback: CallbackQuery):
         with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
             fieldnames = [
                 "question_number", "user_id", "user_username", "user_firstname",
-                "user_question", "answer", "status", "date_added"
+                "user_question", "answer_ai", "status_question", "date_added"
             ]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
 

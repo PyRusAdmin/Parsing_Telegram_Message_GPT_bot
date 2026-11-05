@@ -15,7 +15,7 @@ from core.config import forwarded_messages, active_clients, stop_flags
 from database.database import TelegramGroups
 from database.users_groups import get_user_channel_usernames, dell_group, get_user_channels_or_notify
 from database.users_keywords import get_keywords_count, get_user_keywords
-from database.users_personal_trackings import get_group_id_with_personal_tracking, PersonalTracking
+from database.users_personal_trackings import get_group_id_with_personal_tracking, UsersPersonalTrackings
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -847,7 +847,7 @@ async def filter_messages(message, user_id):
 
         # === Проверка аккаунтов ===
 
-        pt_rec = PersonalTracking.get_or_none(PersonalTracking.user_id == user_id)
+        pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
 
         session_string = pt_rec.personal_account if pt_rec else None
 
