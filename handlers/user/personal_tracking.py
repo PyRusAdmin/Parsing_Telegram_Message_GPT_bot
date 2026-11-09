@@ -31,6 +31,7 @@ from database.users_keywords import add_user_keywords
 from database.users_personal_trackings import get_user_accounts, UsersPersonalTrackings, write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
+from locales.locales import t
 from system.dispatcher import bot
 
 router = Router(name="personal_tracking")
@@ -161,23 +162,30 @@ class PersonalTrackingState(StatesGroup):
 
 def get_user_allowed_slots(user_id: int) -> int:
     """
-    Возвращает количество доступных слотов пользователя
-    :param user_id: ID пользователя в Telegram
-    :return: Количество разрешённых слотов
+    Возвращает количество доступных слотов пользователя.
+
+    :param user_id: (int) ID пользователя в Telegram.
+    :return: (int) Количество разрешённых слотов.
     """
     return 1
 
 
 def get_user_used_slots(user_id: int) -> int:
-    """Возвращает количество задействованных слотов пользователя"""
+    """
+    Возвращает количество задействованных слотов пользователя.
+
+    :param user_id: (int) ID пользователя в Telegram.
+    :return: (int) Количество занятых слотов.
+    """
     return UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id).count()
 
 
 def can_user_change_tracking(tracking_record: UsersPersonalTrackings) -> tuple[bool, float]:
     """
-    Проверяет ограничение на смену группы/ключевых слов (не чаще 1 раза в 24ч)
-    :param tracking_record: Регистрация трекинга
-    :return: Tuple(bool, Часы до следующей возможности изменения), где bool
+    Проверяет ограничение на смену группы/ключевых слов (не чаще 1 раза в 24ч).
+
+    :param tracking_record: (UsersPersonalTrackings) Экземпляр записи отслеживания.
+    :return: (tuple[bool, float]) Кортеж (разрешено_ли_изменение, часов_до_следующей_возможности).
     """
     if not tracking_record or not tracking_record.last_changed_at:
         return True, 0.0
@@ -192,14 +200,15 @@ def can_user_change_tracking(tracking_record: UsersPersonalTrackings) -> tuple[b
 
 async def connect_target_and_create_group(target_input: str, user_id: int):
     """
-    1. Подключает рабочую сессию Telethon (личный аккаунт пользователя или из пула общих).
+    Подключает целевую группу и создает приватную группу для уведомлений.
+
+    1. Подключает рабочую сессию Telethon (личную или из пула общих).
     2. Проверяет подписку на целевую группу/канал (подписывается при необходимости).
     3. Создает приватную группу для сообщений и выгружает ссылку-приглашение.
-    Если у выбранного аккаунта временные ограничения Telegram (спам-репорт/лимит на создание каналов),
-    автоматически пробует другие доступные аккаунты из пула.
 
-    :param target_input: Текстовое представление ссылки или идентификатора канала
-    :param user_id: Айди юзера, для подключения персонального аккаунта или для подключения бесплатного аккаунта от администратора
+    :param target_input: (str) Текстовое представление ссылки или юзернейма канала.
+    :param user_id: (int) ID пользователя Telegram для привязки аккаунта.
+    :return: (tuple[bool, str, str | None, int | None]) Кортеж (успех, сообщение, инвайт_ссылка, id_группы).
     """
     clean_target = target_input.strip()
     checker = CheckingAccountsValidity()
@@ -338,7 +347,12 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
 @router.callback_query(F.data == "menu_personal_tracking")
 async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext):
-    """Главный экран 🎯 Персональное отслеживание"""
+    """
+    Главный экран "Персональное отслеживание ключевых слов".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     try:
         logger.info(
             f"Пользователь {callback.from_user.last_name} {callback.from_user.first_name} {callback.from_user.username} {callback.from_user.id} перешел в меню 🎯 Персональное отслеживание")
@@ -350,12 +364,20 @@ async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext)
         )  # Возвращает количество доступных слотов пользователя (1 бесплатный + купленные)
         used = get_user_used_slots(callback.from_user.id)  # Возвращает количество задействованных слотов пользователя
         # Текст для пользователя в меню 🎯 Персональное отслеживание
-        text = (
-            "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
-            "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
-            f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
-            "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars. Или подключите свой аккаунт для отслеживания ключевых сообщений.</i>"
-        )
+        if user_lang == "ru":
+            text = (
+                "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
+                "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
+                f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
+                "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars. Или подключите свой аккаунт для отслеживания ключевых сообщений.</i>"
+            )
+        else:
+            text = (
+                "🎯 <b>Personal Keyword Tracking</b>\n\n"
+                "You can link a group or channel to track signals based on your keywords.\n\n"
+                f"📊 <b>Your slots:</b> {used} of {allowed} used.\n"
+                "💡 <i>1 slot is provided for free. An extra slot costs only 2 Telegram Stars. Or connect your account to track key messages.</i>"
+            )
         await callback.message.edit_text(
             text=text,
             reply_markup=personal_tracking_menu_kb(user_id=callback.from_user.id, lang=user_lang),
@@ -369,22 +391,25 @@ async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext)
 @router.callback_query(F.data == "pt_add_tracking")
 async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
     """
-    Обрабатывает добавление новой группы для персонального отслеживания (Кнопка (InlineKey): ➕ Добавить отслеживание группы)
+    Обрабатывает добавление новой группы для персонального отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     allowed = get_user_allowed_slots(callback.from_user.id)  #
     used = get_user_used_slots(callback.from_user.id)  # 
 
     # Если все слоты уже использовались, то предлагаем пользователю купить дополнительные слоты для групп
     if used >= allowed:
-        await callback.answer("⚠️ Все слоты задействованы! Докупите дополнительный слот.", show_alert=True)
+        await callback.answer(t("pt_no_slots_alert", lang=user_lang), show_alert=True)
         return
 
     # Сначала устанавливаем состояние
     await state.set_state(PersonalTrackingState.waiting_for_target_link)
     # Потом отправляем инструкцию
     await callback.message.edit_text(
-        "🔗 <b>Отправьте ссылку или username группы/канала для отслеживания</b>\n\n"
-        "Например: <code>https://t.me/python_jobs</code> или <code>@python_jobs</code>",
+        t("pt_ask_link", lang=user_lang),
         parse_mode="HTML"
     )
     # И только потом подтверждаем callback (чтобы убрать «часики»)
@@ -393,15 +418,21 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
 
 @router.message(PersonalTrackingState.waiting_for_target_link)
 async def process_target_link_input(message: Message, state: FSMContext):
-    """Обрабатывает ввод ссылки или юзернейма группы для персонального отслеживания"""
+    """
+    Обрабатывает ввод ссылки или юзернейма группы для персонального отслеживания.
+
+    :param message: (Message) Объект входящего сообщения Telegram со ссылкой.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     target_input = message.text.strip()
     # Проверяем формат ввода (ссылки либо начинается на http(s))
     if not target_input.startswith("http") and not target_input.startswith("@"):
-        await message.answer("⚠️ Пожалуйста, введите корректную ссылку (https://t.me/...) или @username группы/канала.")
+        await message.answer(t("pt_invalid_link", lang=user_lang))
         return
 
     status_msg = await message.answer(
-        text="🔄 <i>Подключаем рабочую сессию и создаем персональную группу...</i>",
+        text=t("pt_checking_group", lang=user_lang),
         parse_mode="HTML"
     )
 
@@ -418,12 +449,21 @@ async def process_target_link_input(message: Message, state: FSMContext):
     )
 
     await state.set_state(PersonalTrackingState.waiting_for_keywords)
-    await status_msg.edit_text(
+    step2_text = (
         f"✅ <b>Группа создана!</b>\n\n"
         f"1. Перейдите по ссылке и вступите в созданную группу: <a href='{invite_link}'>{invite_link}</a>\n"
         f"<i>(Бот {username_bot} уже назначен администратором группы)</i>\n\n"
         f"<b>Шаг 2:</b> Введите ключевые слова для отслеживания в этой группе (через запятую):\n"
-        f"<i>Пример: python, вакансия, удаленка</i>",
+        f"<i>Пример: python, вакансия, удаленка</i>"
+    ) if user_lang == "ru" else (
+        f"✅ <b>Group created!</b>\n\n"
+        f"1. Follow the link and join the created group: <a href='{invite_link}'>{invite_link}</a>\n"
+        f"<i>(Bot {username_bot} is already an admin of the group)</i>\n\n"
+        f"<b>Step 2:</b> Enter keywords to track in this group (separated by commas):\n"
+        f"<i>Example: python, job, remote</i>"
+    )
+    await status_msg.edit_text(
+        step2_text,
         parse_mode="HTML",
         disable_web_page_preview=True
     )
@@ -431,8 +471,13 @@ async def process_target_link_input(message: Message, state: FSMContext):
 
 @router.message(PersonalTrackingState.waiting_for_keywords)
 async def process_keywords_input(message: Message, state: FSMContext):
-    """Обрабатывает ввод ключевых слов и сохраняет персональное отслеживание"""
+    """
+    Обрабатывает ввод ключевых слов и сохраняет персональное отслеживание.
 
+    :param message: (Message) Объект входящего сообщения Telegram с ключевыми словами.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     data = await state.get_data()
 
     target_link = data.get("target_link")
@@ -463,12 +508,21 @@ async def process_keywords_input(message: Message, state: FSMContext):
 
     await state.clear()
 
-    await message.answer(
+    saved_text = (
         f"🎉 <b>Персональное отслеживание успешно настроено!</b>\n\n"
         f"📌 <b>Отслеживаемый объект:</b> {target_link}\n"
         f"🔑 <b>Ключевые слова:</b> {keywords_text}\n"
         f"🔗 <b>Группа для результатов:</b> <a href='{invite_link}'>Перейти в группу</a>\n\n"
-        f"<i>Уведомления о найденных совпадениях будут приходить прямо в Вашу созданную группу!</i>",
+        f"<i>Уведомления о найденных совпадениях будут приходить прямо в Вашу созданную группу!</i>"
+    ) if user_lang == "ru" else (
+        f"🎉 <b>Personal tracking configured successfully!</b>\n\n"
+        f"📌 <b>Monitored target:</b> {target_link}\n"
+        f"🔑 <b>Keywords:</b> {keywords_text}\n"
+        f"🔗 <b>Group for results:</b> <a href='{invite_link}'>Go to group</a>\n\n"
+        f"<i>Alerts about matches will be sent directly to your created group!</i>"
+    )
+    await message.answer(
+        saved_text,
         parse_mode="HTML"
     )
 
@@ -477,14 +531,22 @@ async def process_keywords_input(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "pt_buy_slot")
 async def cb_buy_slot(callback: CallbackQuery):
-    """Отправляет инвойс для покупки дополнительного слота отслеживания за Telegram Stars"""
+    """
+    Отправляет инвойс для покупки дополнительного слота отслеживания за Telegram Stars.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    """
     user_id = callback.from_user.id
-    prices = [LabeledPrice(label="Дополнительный слот отслеживания", amount=2)]
+    user_lang = determines_user_language(message_or_callback=user_id)
+    title = "⭐ +1 Слот отслеживания" if user_lang == "ru" else "⭐ +1 Tracking Slot"
+    description = "Позволяет отслеживать еще 1 группу/канал персонально" if user_lang == "ru" else "Allows tracking 1 more group/channel personally"
+    label = "Дополнительный слот отслеживания" if user_lang == "ru" else "Extra tracking slot"
+    prices = [LabeledPrice(label=label, amount=2)]
 
     await bot.send_invoice(
         chat_id=user_id,
-        title="⭐ +1 Слот отслеживания",
-        description="Позволяет отслеживать еще 1 группу/канал персонально",
+        title=title,
+        description=description,
         payload=f"personal_tracking_slot_{user_id}",
         currency="XTR",
         prices=prices
@@ -494,13 +556,21 @@ async def cb_buy_slot(callback: CallbackQuery):
 
 @router.pre_checkout_query(F.invoice_payload.startswith("personal_tracking_slot_"))
 async def process_pre_checkout(pre_checkout_query: PreCheckoutQuery):
-    """Подтверждает предварительный платеж за покупку слота персонального отслеживания"""
+    """
+    Подтверждает предварительный платеж за покупку слота персонального отслеживания.
+
+    :param pre_checkout_query: (PreCheckoutQuery) Объект предварительного запроса платежа.
+    """
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
-    """Обрабатывает успешную оплату слота персонального отслеживания"""
+    """
+    Обрабатывает успешную оплату слота персонального отслеживания.
+
+    :param message: (Message) Входящее сообщение Telegram с информацией об оплате.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
@@ -509,9 +579,15 @@ async def process_successful_payment(message: Message):
         user_id = message.from_user.id
 
         allowed = get_user_allowed_slots(user_id)
-        await message.answer(
+        paid_text = (
             f"🎉 <b>Оплата 2 Telegram Stars прошла успешно!</b>\n\n"
-            f"Вам добавлен +1 слот отслеживания. Теперь доступно слотов: <b>{allowed}</b>.",
+            f"Вам добавлен +1 слот отслеживания. Теперь доступно слотов: <b>{allowed}</b>."
+        ) if user_lang == "ru" else (
+            f"🎉 <b>Payment of 2 Telegram Stars was successful!</b>\n\n"
+            f"+1 tracking slot added to your account. Slots now available: <b>{allowed}</b>."
+        )
+        await message.answer(
+            paid_text,
             reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
             parse_mode="HTML"
         )
@@ -521,27 +597,47 @@ async def process_successful_payment(message: Message):
 
 @router.callback_query(F.data == "pt_list_tracking")
 async def cb_list_tracking(callback: CallbackQuery):
-    """Отображает список групп персонального отслеживания пользователя"""
+    """
+    Отображает список групп персонального отслеживания пользователя.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    """
     user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
     records = list(
         UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
     )
 
     if not records:
-        await callback.message.answer("ℹ️ У Вас пока нет активных персональных отслеживаний.")
+        await callback.message.answer(t("pt_no_active_trackings", lang=user_lang))
         await callback.answer()
         return
 
-    text = "📋 <b>Ваши персональные отслеживания:</b>\n\n"
+    text = "📋 <b>Ваши персональные отслеживания:</b>\n\n" if user_lang == "ru" else "📋 <b>Your personal trackings:</b>\n\n"
 
     for idx, r in enumerate(records, start=1):
         can_change, hours_left = can_user_change_tracking(r)
 
-        status_limit = (
-            "✅ Доступно изменение"
-            if can_change
-            else f"⏳ Изменение через {hours_left} ч."
-        )
+        if user_lang == "ru":
+            status_limit = (
+                "✅ Доступно изменение"
+                if can_change
+                else f"⏳ Изменение через {hours_left} ч."
+            )
+            kw_label = "Ключевые слова"
+            grp_label = "Группа"
+            link_label = "Ссылка"
+            stat_label = "Статус"
+        else:
+            status_limit = (
+                "✅ Modification available"
+                if can_change
+                else f"⏳ Modification in {hours_left} h."
+            )
+            kw_label = "Keywords"
+            grp_label = "Group"
+            link_label = "Link"
+            stat_label = "Status"
 
         keywords = escape(str(r.keywords or ""))
         target_link = escape(str(r.target_link or ""))
@@ -549,14 +645,14 @@ async def cb_list_tracking(callback: CallbackQuery):
 
         text += (
             f"<b>{idx}. {target_link}</b>\n"
-            f"🔑 Ключевые слова: <code>{keywords}</code>\n"
-            f"🔗 Группа: <a href='{group_link}'>Ссылка</a>\n"
-            f"Статус: {status_limit}\n\n"
+            f"🔑 {kw_label}: <code>{keywords}</code>\n"
+            f"🔗 {grp_label}: <a href='{group_link}'>{link_label}</a>\n"
+            f"{stat_label}: {status_limit}\n\n"
         )
 
     await callback.message.answer(
         text,
-        reply_markup=tracking_list_keyboard(records),
+        reply_markup=tracking_list_keyboard(records, lang=user_lang),
         parse_mode="HTML"
     )
     await callback.answer()
@@ -564,27 +660,40 @@ async def cb_list_tracking(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("pt_edit_"))
 async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает выбор группы персонального отслеживания для редактирования"""
+    """
+    Обрабатывает выбор группы персонального отслеживания для редактирования.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     rec_id = int(callback.data.split("_")[2])
     rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
 
     if not rec:
-        await callback.answer("Ошибка: Запись не найдена", show_alert=True)
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
         return
 
     can_change, hours_left = can_user_change_tracking(rec)
     if not can_change:
+        cooldown_msg = f"⚠️ Изменение запрещено! Вы можете изменять отслеживание не чаще 1 раза в 24 часа. Осталось: {hours_left} ч." if user_lang == "ru" else f"⚠️ Editing cooldown! You can modify tracking once every 24 hours. Remaining: {hours_left} h."
         await callback.answer(
-            f"⚠️ Изменение запрещено! Вы можете изменять отслеживание не чаще 1 раза в 24 часа. Осталось: {hours_left} ч.",
+            cooldown_msg,
             show_alert=True
         )
         return
 
     await state.set_state(PersonalTrackingState.editing_slot_link)
     await state.update_data(edit_rec_id=rec_id)
-    await callback.message.answer(
+    edit_header = (
         f"⚙️ <b>Редактирование отслеживания #{rec_id}</b>\n\n"
-        f"Отправьте НОВУЮ ссылку на группу/канал (или текущую: <code>{rec.target_link}</code>):",
+        f"Отправьте НОВУЮ ссылку на группу/канал (или текущую: <code>{rec.target_link}</code>):"
+    ) if user_lang == "ru" else (
+        f"⚙️ <b>Edit Tracking #{rec_id}</b>\n\n"
+        f"Send a NEW link to group/channel (or current: <code>{rec.target_link}</code>):"
+    )
+    await callback.message.answer(
+        edit_header,
         parse_mode="HTML"
     )
     await callback.answer()
@@ -592,18 +701,24 @@ async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
 
 @router.message(PersonalTrackingState.editing_slot_link)
 async def process_edit_link(message: Message, state: FSMContext):
-    """Обрабатывает изменение ссылки целевой группы персонального отслеживания"""
+    """
+    Обрабатывает изменение ссылки целевой группы персонального отслеживания.
+
+    :param message: (Message) Объект входящего сообщения Telegram со ссылкой.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     new_target = message.text.strip()
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
 
     rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
     if not rec:
-        await message.answer("Ошибка записи.")
+        await message.answer(t("pt_record_error", lang=user_lang))
         await state.clear()
         return
 
-    status_msg = await message.answer("🔄 <i>Обновляем подписку и группу...</i>", parse_mode="HTML")
+    status_msg = await message.answer(t("pt_updating_group", lang=user_lang), parse_mode="HTML")
     success, err_msg, invite_link, chat_id = await connect_target_and_create_group(new_target, message.from_user.id)
 
     if not success:
@@ -618,12 +733,18 @@ async def process_edit_link(message: Message, state: FSMContext):
     rec.save()
 
     await state.set_state(PersonalTrackingState.editing_slot_keywords)
-    await status_msg.edit_text("🔑 Введите новые ключевые слова через запятую:")
+    await status_msg.edit_text(t("pt_ask_keywords", lang=user_lang))
 
 
 @router.message(PersonalTrackingState.editing_slot_keywords)
 async def process_edit_keywords(message: Message, state: FSMContext):
-    """Обрабатывает изменение ключевых слов персонального отслеживания"""
+    """
+    Обрабатывает изменение ключевых слов персонального отслеживания.
+
+    :param message: (Message) Объект входящего сообщения Telegram с ключевыми словами.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     new_keywords = message.text.strip()
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
@@ -635,22 +756,24 @@ async def process_edit_keywords(message: Message, state: FSMContext):
         rec.save()
 
     await state.clear()
-    await message.answer("✅ <b>Настройки отслеживания успешно обновлены!</b>", parse_mode="HTML")
+    await message.answer(t("pt_updated_success", lang=user_lang), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "pt_stats")
 async def cb_stats(callback: CallbackQuery):
-    """Отображает административную статистику персонального отслеживания"""
+    """
+    Отображает административную статистику персонального отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     total_tracking_users = UsersPersonalTrackings.select(UsersPersonalTrackings.user_id).distinct().count()
     total_active_slots = UsersPersonalTrackings.select().count()
 
-    text = (
-        "📊 <b>Статистика персонального отслеживания:</b>\n\n"
-        f"👥 Пользователей настроили трекинг: <b>{total_tracking_users}</b>\n"
-        f"📌 Всего активных отслеживаний: <b>{total_active_slots}</b>"
+    await callback.message.answer(
+        t("pt_stats_msg", lang=user_lang, users=total_tracking_users, trackings=total_active_slots),
+        parse_mode="HTML"
     )
-
-    await callback.message.answer(text, parse_mode="HTML")
     await callback.answer()
 
 
@@ -658,7 +781,12 @@ async def cb_stats(callback: CallbackQuery):
 
 async def send_personal_tracking_alert(user_id: int, matched_keyword: str, message_text: str, message_link: str):
     """
-    Отправляет уведомление бота в персональную группу пользователя.
+    Отправляет уведомление бота в персональную группу пользователя при нахождении ключевого слова.
+
+    :param user_id: (int) ID пользователя Telegram.
+    :param matched_keyword: (str) Найденное ключевое слово.
+    :param message_text: (str) Текст сообщения из отслеживаемой группы.
+    :param message_link: (str) Прямая ссылка на сообщение в Telegram.
     """
     records = UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
     for r in records:
@@ -682,7 +810,15 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
 
 
 async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str):
-    """Выполнение входа Telethon по коду"""
+    """
+    Выполнение входа Telethon по коду подтверждения.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :param code: (str) 5-значный код подтверждения авторизации.
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
     data = await state.get_data()
     phone = data.get("phone_number")
     phone_code_hash = data.get("phone_code_hash")
@@ -712,7 +848,7 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         что бы пользовались бесплатно или расширяли свой пакет)
         """
 
-        if message.from_user.id == ADMIN_USER_ID:
+        if user_id in ADMIN_USER_ID:
             # Сохраняем аккаунт в общую базу бесплатных аккаунтов
             write_account_to_db_free(
                 session_string=final_session,  # Стринг сессия Telegram
@@ -721,42 +857,59 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         else:
             # Сохраняем аккаунт в персональную базу пользователя
             write_account_to_user_table(
-                user_id=message.from_user.id,
+                user_id=user_id,
                 session_string=final_session,
                 phone_number=account_info.get("phone") or "",
-                user_username=message.from_user.username or "",
-                user_firstname=message.from_user.first_name or ""
+                user_username=callback.from_user.username or "",
+                user_firstname=callback.from_user.first_name or ""
             )
             write_account_to_db(
                 session_string=final_session,  # Стринг сессия Telegram
-                user_id=message.from_user.id,  # ID пользователя Telegram
+                user_id=user_id,  # ID пользователя Telegram
             )
 
         await state.clear()
-        await callback.message.edit_text(
+        auth_success_msg = (
             f"🎉 <b>Аккаунт успешно авторизован и подключен!</b>\n\n"
             f"👤 <b>Имя:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
             f"📱 <b>Телефон:</b> +{account_info.get('phone') or ''}\n"
             f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
-            f"✅ Сессия сохранена в базе и готова к отслеживанию.",
+            f"✅ Сессия сохранена в базе и готова к отслеживанию."
+        ) if user_lang == "ru" else (
+            f"🎉 <b>Account successfully authorized and connected!</b>\n\n"
+            f"👤 <b>Name:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
+            f"📱 <b>Phone:</b> +{account_info.get('phone') or ''}\n"
+            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
+            f"✅ Session saved in database and ready for tracking."
+        )
+        await callback.message.edit_text(
+            auth_success_msg,
             parse_mode="HTML"
         )
     except PhoneCodeInvalidError:
-        await callback.answer("❌ Неверный код подтверждения! Попробуйте еще раз.", show_alert=True)
+        await callback.answer(t("pt_invalid_code_alert", lang=user_lang), show_alert=True)
         await state.update_data(current_code="")
         try:
-            await callback.message.edit_text(
+            err_code_text = (
                 f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
                 f"📱 <b>Номер:</b> <code>{phone}</code>\n"
                 f"🔢 <b>Введенный код:</b> <code>_ _ _ _ _</code>\n\n"
-                f"❌ <b>Ошибка: Неверный код. Попробуйте выбрать цифры заново:</b>",
-                reply_markup=emoji_code_keypad_kb(),
+                f"❌ <b>Ошибка: Неверный код. Попробуйте выбрать цифры заново:</b>"
+            ) if user_lang == "ru" else (
+                f"📩 <b>Verification code sent to your Telegram!</b>\n\n"
+                f"📱 <b>Number:</b> <code>{phone}</code>\n"
+                f"🔢 <b>Entered code:</b> <code>_ _ _ _ _</code>\n\n"
+                f"❌ <b>Error: Invalid code. Please try selecting digits again:</b>"
+            )
+            await callback.message.edit_text(
+                err_code_text,
+                reply_markup=emoji_code_keypad_kb(lang=user_lang),
                 parse_mode="HTML"
             )
         except Exception:
             pass
     except PhoneCodeExpiredError:
-        await callback.answer("❌ Срок действия кода истек! Запросите код заново.", show_alert=True)
+        await callback.answer(t("pt_code_expired_alert", lang=user_lang), show_alert=True)
         await state.clear()
     except SessionPasswordNeededError:
         # У пользователя включен 2FA пароль!
@@ -775,16 +928,22 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             pass
 
         try:
-            await callback.message.edit_text(
+            two_fa_prompt = (
                 "🔐 <b>На Вашем аккаунте включена двухэтапная аутентификация (2FA)!</b>\n\n"
-                "Пожалуйста, введите Ваш облачный пароль текстом в ответном сообщении:",
+                "Пожалуйста, введите Ваш облачный пароль текстом в ответном сообщении:"
+            ) if user_lang == "ru" else (
+                "🔐 <b>Two-Step Verification (2FA) is enabled on your account!</b>\n\n"
+                "Please enter your cloud password as text in response:"
+            )
+            await callback.message.edit_text(
+                two_fa_prompt,
                 parse_mode="HTML"
             )
         except Exception:
             pass
     except Exception as e:
         logger.exception(f"❌ Ошибка входа Telethon по коду: {e}")
-        await callback.answer(f"❌ Ошибка входа: {e}", show_alert=True)
+        await callback.answer(t("pt_login_error_alert", lang=user_lang, error=str(e)), show_alert=True)
         try:
             await client.disconnect()
         except Exception:
@@ -793,12 +952,18 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
 
 @router.message(PersonalTrackingState.waiting_for_2fa_password)
 async def process_2fa_password_input(message: Message, state: FSMContext):
-    """Обработка ввода 2FA облачного пароля"""
+    """
+    Обработка ввода облачного пароля двухфакторной аутентификации (2FA).
+
+    :param message: (Message) Входящее текстовое сообщение с 2FA паролем.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     password = message.text.strip()
     data = await state.get_data()
     session_str = data.get("session_str")
 
-    status_msg = await message.answer("🔄 <i>Проверяем 2FA пароль...</i>", parse_mode="HTML")
+    status_msg = await message.answer(t("pt_checking_2fa", lang=user_lang), parse_mode="HTML")
 
     client = TelegramClient(
         StringSession(session_str),
@@ -819,7 +984,7 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         final_session = client.session.save()
         await client.disconnect()
 
-        if message.from_user.id == ADMIN_USER_ID:
+        if message.from_user.id in ADMIN_USER_ID:
             # Сохраняем аккаунт в общую базу бесплатных аккаунтов
             write_account_to_db_free(
                 session_string=final_session,  # Стринг сессия Telegram
@@ -840,20 +1005,29 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
             )
 
         await state.clear()
-        await status_msg.edit_text(
+        auth_2fa_done = (
             f"🎉 <b>Аккаунт успешно авторизован с 2FA паролем!</b>\n\n"
             f"👤 <b>Имя:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
             f"📱 <b>Телефон:</b> +{account_info.get('phone') or ''}\n"
             f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
-            f"✅ Сессия успешно сохранена в базе данных.",
+            f"✅ Сессия успешно сохранена в базе данных."
+        ) if user_lang == "ru" else (
+            f"🎉 <b>Account successfully authorized with 2FA password!</b>\n\n"
+            f"👤 <b>Name:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
+            f"📱 <b>Phone:</b> +{account_info.get('phone') or ''}\n"
+            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
+            f"✅ Session successfully saved in database."
+        )
+        await status_msg.edit_text(
+            auth_2fa_done,
             parse_mode="HTML"
         )
     except PasswordHashInvalidError:
-        await status_msg.edit_text(
-            "❌ <b>Неверный 2FA пароль!</b>\n\nПожалуйста, введите корректный облачный пароль текстом:")
+        inv_2fa = "❌ <b>Неверный 2FA пароль!</b>\n\nПожалуйста, введите корректный облачный пароль текстом:" if user_lang == "ru" else "❌ <b>Invalid 2FA password!</b>\n\nPlease enter the correct cloud password as text:"
+        await status_msg.edit_text(inv_2fa, parse_mode="HTML")
     except Exception as e:
         logger.exception(f"❌ Ошибка 2FA авторизации: {e}")
-        await status_msg.edit_text(f"❌ Ошибка авторизации: {e}")
+        await status_msg.edit_text(t("pt_auth_error", lang=user_lang, error=str(e)))
         try:
             await client.disconnect()
         except Exception:
@@ -862,7 +1036,13 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "pt_cancel_auth")
 async def cb_cancel_auth(callback: CallbackQuery, state: FSMContext):
-    """Отмена процедуры авторизации"""
+    """
+    Отмена процедуры авторизации Telegram-аккаунта.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text("🚫 Авторизация отменена.")
+    await callback.message.edit_text(t("pt_auth_cancelled", lang=user_lang))
     await callback.answer()

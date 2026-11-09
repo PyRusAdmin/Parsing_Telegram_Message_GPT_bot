@@ -25,7 +25,12 @@ PAGE_SIZE = 5  # Количество элементов на странице
 
 @router.callback_query(F.data == "menu_settings")
 async def handle_settings_menu_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик инлайн-кнопки ⚙️ Настройки"""
+    """
+    Обработчик инлайн-кнопки перехода в меню "Настройки".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
@@ -41,12 +46,17 @@ async def handle_settings_menu_cb(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "settings_section_channels")
 async def handle_channels_section(callback: CallbackQuery, state: FSMContext):
-    """Подменю 🌐 Каналы отслеживания"""
+    """
+    Отображает подменю управления каналами отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     _, total = get_user_channel_usernames(callback.from_user.id)
     await callback.message.edit_text(
-        text=f"🌐 <b>Каналы отслеживания</b>\n\n📊 Всего каналов: <b>{total}</b>\n\nВыберите действие:",
+        text=t("settings_channels_title", lang=user_lang, total=total),
         reply_markup=settings_menu_tracking_channels(lang=user_lang),
         parse_mode="HTML"
     )
@@ -55,34 +65,49 @@ async def handle_channels_section(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "settings_channels_list")
 async def handle_channels_list(callback: CallbackQuery, state: FSMContext):
-    """Список каналов с пагинацией — страница 0"""
+    """
+    Отображает первую страницу списка каналов отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await _show_channels_page(callback, page=0)
 
 
 @router.callback_query(F.data.startswith("ch_page:"))
 async def handle_channels_page(callback: CallbackQuery, state: FSMContext):
-    """Переключение страниц списка каналов"""
+    """
+    Обработчик пагинации списка каналов отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса с номером страницы.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     page = int(callback.data.split(":")[1])
     await _show_channels_page(callback, page=page)
 
 
 async def _show_channels_page(callback: CallbackQuery, page: int):
-    """Вспомогательная функция: показывает страницу списка каналов."""
+    """
+    Вспомогательная функция: отображает страницу со списком каналов отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса.
+    :param page: (int) Номер текущей страницы (начиная с 0).
+    """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     records, total = get_user_groups_paginated(
         user_id=callback.from_user.id, page=page, page_size=PAGE_SIZE
     )
 
     if total == 0:
-        await callback.answer("📭 Список каналов пуст.", show_alert=True)
+        await callback.answer(t("settings_channels_empty", lang=user_lang), show_alert=True)
         return
 
     total_pages = math.ceil(total / PAGE_SIZE)
 
-    lines = [f"📋 <b>Список каналов</b> (стр. {page + 1}/{total_pages}) · всего: {total}\n"]
+    lines = [t("settings_channels_list_title", lang=user_lang, page=page + 1, total_pages=total_pages, total=total)]
     for i, rec in enumerate(records, start=page * PAGE_SIZE + 1):
         lines.append(f"{i}. <code>{rec.username_group}</code>")
-    lines.append("\n<i>Нажмите ❌ на канале, чтобы удалить его.</i>")
+    lines.append(t("settings_channels_list_hint", lang=user_lang))
 
     await callback.message.edit_text(
         text="\n".join(lines),
@@ -94,15 +119,20 @@ async def _show_channels_page(callback: CallbackQuery, page: int):
 
 @router.callback_query(F.data.startswith("ch_del:"))
 async def handle_channel_delete(callback: CallbackQuery, state: FSMContext):
-    """Удаление одного канала по нажатию на кнопку ❌"""
+    """
+    Удаление выбранного канала отслеживания по кнопке.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса с username канала.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     username_group = callback.data[len("ch_del:"):]
 
     result = dell_group(user_id=callback.from_user.id, username_group=username_group)
     if result:
-        await callback.answer(f"✅ Канал удалён: {username_group}", show_alert=False)
+        await callback.answer(t("settings_channel_deleted", lang=user_lang, channel=username_group), show_alert=False)
     else:
-        await callback.answer("⚠️ Канал не найден.", show_alert=True)
+        await callback.answer(t("settings_channel_not_found", lang=user_lang), show_alert=True)
         return
 
     # Обновляем список (возвращаемся на страницу 0)
@@ -111,17 +141,17 @@ async def handle_channel_delete(callback: CallbackQuery, state: FSMContext):
     )
     if total == 0:
         await callback.message.edit_text(
-            text="🌐 <b>Каналы отслеживания</b>\n\n📭 Список каналов пуст.",
+            text=f"{t('settings_channels_title', lang=user_lang, total=0)}\n\n{t('settings_channels_empty', lang=user_lang)}",
             reply_markup=settings_menu_tracking_channels(lang=user_lang),
             parse_mode="HTML"
         )
         return
 
     total_pages = math.ceil(total / PAGE_SIZE)
-    lines = [f"📋 <b>Список каналов</b> (стр. 1/{total_pages}) · всего: {total}\n"]
+    lines = [t("settings_channels_list_title", lang=user_lang, page=1, total_pages=total_pages, total=total)]
     for i, rec in enumerate(records, start=1):
         lines.append(f"{i}. <code>{rec.username_group}</code>")
-    lines.append("\n<i>Нажмите ❌ на канале, чтобы удалить его.</i>")
+    lines.append(t("settings_channels_list_hint", lang=user_lang))
 
     await callback.message.edit_text(
         text="\n".join(lines),
@@ -132,14 +162,20 @@ async def handle_channel_delete(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "settings_channels_clear_confirm")
 async def handle_channels_clear_confirm(callback: CallbackQuery, state: FSMContext):
-    """Запрос подтверждения очистки списка каналов"""
+    """
+    Запрос подтверждения пользователя на полную очистку списка каналов.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     _, total = get_user_channel_usernames(callback.from_user.id)
     await callback.message.edit_text(
-        text=f"🧹 <b>Очистить весь список каналов?</b>\n\n"
-             f"Будет удалено <b>{total}</b> канал(ов). Это действие нельзя отменить.",
+        text=t("settings_channels_clear_confirm", lang=user_lang, total=total),
         reply_markup=confirm_clear_keyboard(
             confirm_cb="settings_channels_clear_do",
-            cancel_cb="settings_section_channels"
+            cancel_cb="settings_section_channels",
+            lang=user_lang
         ),
         parse_mode="HTML"
     )
@@ -148,11 +184,16 @@ async def handle_channels_clear_confirm(callback: CallbackQuery, state: FSMConte
 
 @router.callback_query(F.data == "settings_channels_clear_do")
 async def handle_channels_clear_do(callback: CallbackQuery, state: FSMContext):
-    """Выполняет очистку всех каналов"""
+    """
+    Выполняет полную очистку всех каналов отслеживания пользователя.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     deleted = clear_all_user_groups(user_id=callback.from_user.id)
     await callback.message.edit_text(
-        text=f"✅ <b>Список каналов очищен.</b>\n\nУдалено каналов: <b>{deleted}</b>",
+        text=t("settings_channels_cleared", lang=user_lang, count=deleted),
         reply_markup=settings_menu_tracking_channels(lang=user_lang),
         parse_mode="HTML"
     )
@@ -163,12 +204,17 @@ async def handle_channels_clear_do(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "settings_section_keywords")
 async def handle_keywords_section(callback: CallbackQuery, state: FSMContext):
-    """Подменю 🔍 Ключевые слова"""
+    """
+    Отображает подменю управления ключевыми словами.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     count = get_keywords_count(user_id=callback.from_user.id)
     await callback.message.edit_text(
-        text=f"🔍 <b>Ключевые слова</b>\n\n📊 Всего слов: <b>{count}</b>\n\nВыберите действие:",
+        text=t("settings_keywords_title", lang=user_lang, total=count),
         reply_markup=settings_keywords_submenu_kb(lang=user_lang),
         parse_mode="HTML"
     )
@@ -177,34 +223,49 @@ async def handle_keywords_section(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "settings_keywords_list_inline")
 async def handle_keywords_list_inline(callback: CallbackQuery, state: FSMContext):
-    """Список ключевых слов с пагинацией — страница 0"""
+    """
+    Отображает первую страницу списка ключевых слов.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await _show_keywords_page(callback, page=0)
 
 
 @router.callback_query(F.data.startswith("kw_page:"))
 async def handle_keywords_page(callback: CallbackQuery, state: FSMContext):
-    """Переключение страниц списка ключевых слов"""
+    """
+    Обработчик пагинации списка ключевых слов.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса с номером страницы.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     page = int(callback.data.split(":")[1])
     await _show_keywords_page(callback, page=page)
 
 
 async def _show_keywords_page(callback: CallbackQuery, page: int):
-    """Вспомогательная функция: показывает страницу ключевых слов."""
+    """
+    Вспомогательная функция: отображает страницу списка ключевых слов пользователя.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса.
+    :param page: (int) Номер страницы (начиная с 0).
+    """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     records, total = get_user_keywords_paginated(
         user_id=callback.from_user.id, page=page, page_size=PAGE_SIZE
     )
 
     if total == 0:
-        await callback.answer("📭 Список ключевых слов пуст.", show_alert=True)
+        await callback.answer(t("settings_keywords_empty", lang=user_lang), show_alert=True)
         return
 
     total_pages = math.ceil(total / PAGE_SIZE)
 
-    lines = [f"🔍 <b>Ключевые слова</b> (стр. {page + 1}/{total_pages}) · всего: {total}\n"]
+    lines = [t("settings_keywords_list_title", lang=user_lang, page=page + 1, total_pages=total_pages, total=total)]
     for i, rec in enumerate(records, start=page * PAGE_SIZE + 1):
         lines.append(f"{i}. <code>{rec.user_keyword}</code>")
-    lines.append("\n<i>Нажмите ❌ на слове, чтобы удалить его.</i>")
+    lines.append(t("settings_keywords_list_hint", lang=user_lang))
 
     await callback.message.edit_text(
         text="\n".join(lines),
@@ -216,7 +277,12 @@ async def _show_keywords_page(callback: CallbackQuery, page: int):
 
 @router.callback_query(F.data.startswith("kw_del:"))
 async def handle_keyword_delete(callback: CallbackQuery, state: FSMContext):
-    """Удаление одного ключевого слова по нажатию ❌"""
+    """
+    Удаление выбранного ключевого слова по кнопке ❌.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса с ID ключевого слова.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     from database.users_keywords import UsersKeywords
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     kw_id = int(callback.data.split(":")[1])
@@ -225,9 +291,9 @@ async def handle_keyword_delete(callback: CallbackQuery, state: FSMContext):
         kw_obj = UsersKeywords.get_by_id(kw_id)
         kw_text = kw_obj.user_keyword
         kw_obj.delete_instance()
-        await callback.answer(f"✅ Удалено: {kw_text}", show_alert=False)
+        await callback.answer(t("settings_keyword_deleted", lang=user_lang, keyword=kw_text), show_alert=False)
     except Exception:
-        await callback.answer("⚠️ Слово не найдено.", show_alert=True)
+        await callback.answer(t("settings_keyword_not_found", lang=user_lang), show_alert=True)
         return
 
     # Обновляем список
@@ -236,17 +302,17 @@ async def handle_keyword_delete(callback: CallbackQuery, state: FSMContext):
     )
     if total == 0:
         await callback.message.edit_text(
-            text="🔍 <b>Ключевые слова</b>\n\n📭 Список пуст.",
+            text=f"{t('settings_keywords_title', lang=user_lang, total=0)}\n\n{t('settings_keywords_empty', lang=user_lang)}",
             reply_markup=settings_keywords_submenu_kb(lang=user_lang),
             parse_mode="HTML"
         )
         return
 
     total_pages = math.ceil(total / PAGE_SIZE)
-    lines = [f"🔍 <b>Ключевые слова</b> (стр. 1/{total_pages}) · всего: {total}\n"]
+    lines = [t("settings_keywords_list_title", lang=user_lang, page=1, total_pages=total_pages, total=total)]
     for i, rec in enumerate(records, start=1):
         lines.append(f"{i}. <code>{rec.user_keyword}</code>")
-    lines.append("\n<i>Нажмите ❌ на слове, чтобы удалить его.</i>")
+    lines.append(t("settings_keywords_list_hint", lang=user_lang))
 
     await callback.message.edit_text(
         text="\n".join(lines),
@@ -259,7 +325,12 @@ async def handle_keyword_delete(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "settings_section_notification")
 async def handle_notification_section(callback: CallbackQuery, state: FSMContext):
-    """Подменю 📢 Группа уведомлений"""
+    """
+    Отображает подменю управления группой уведомлений.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     user_id = callback.from_user.id
@@ -268,17 +339,9 @@ async def handle_notification_section(callback: CallbackQuery, state: FSMContext
     group_link = str(rec.created_group_link or "") if rec else ""
 
     if group_link:
-        info_text = (
-            f"📢 <b>Группа уведомлений</b>\n\n"
-            f"✅ Группа создана.\n"
-            f"🔗 <a href='{group_link}'>Перейти в группу</a>"
-        )
+        info_text = t("settings_notification_created", lang=user_lang, link=group_link)
     else:
-        info_text = (
-            "📢 <b>Группа уведомлений</b>\n\n"
-            "❌ Группа ещё не создана.\n\n"
-            "<i>Создайте группу через раздел «🎯 Персональное отслеживание».</i>"
-        )
+        info_text = t("settings_notification_not_created", lang=user_lang)
 
     await callback.message.edit_text(
         text=info_text,
@@ -291,24 +354,29 @@ async def handle_notification_section(callback: CallbackQuery, state: FSMContext
 
 @router.callback_query(F.data == "settings_notification_no_group")
 async def handle_notification_no_group(callback: CallbackQuery):
-    """Уведомление когда группа не создана"""
+    """
+    Уведомление во всплывающем окне, если группа ещё не была создана.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.answer(
-        "❌ Группа не создана. Перейдите в «🎯 Персональное отслеживание» для её создания.",
+        t("settings_notification_alert_no_group", lang=user_lang),
         show_alert=True
     )
 
 
 @router.callback_query(F.data == "settings_notification_recreate")
 async def handle_notification_recreate(callback: CallbackQuery, state: FSMContext):
-    """Пересоздание группы уведомлений — переход в персональное отслеживание"""
+    """
+    Отображает инструкцию по пересозданию группы уведомлений.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.message.edit_text(
-        text=(
-            "🔄 <b>Пересоздать группу уведомлений</b>\n\n"
-            "Для пересоздания группы перейдите в раздел "
-            "«🎯 Персональное отслеживание» → «➕ Добавить отслеживание группы».\n\n"
-            "<i>Новая группа будет создана автоматически при добавлении нового отслеживания.</i>"
-        ),
+        text=t("settings_notification_recreate_text", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_notification"),
         parse_mode="HTML"
     )

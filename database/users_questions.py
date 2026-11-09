@@ -53,16 +53,16 @@ def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
     """
     Добавляет вопрос пользователя и ответ ИИ в базу данных users_questions.
 
-    :param user_id: Telegram ID пользователя
-    :param user_question: Вопрос пользователя
-    :param answer_ai: Ответ пользователю от ИИ
-    :param user_username: username пользователя в Telegram
-    :param user_firstname: firstname пользователя в Telegram
-    :param status_question: статус обработки вопроса администратором ('Соответствует', 'Не соответствует' и др.)
-    :param question: Алиас для обратной совместимости (user_question)
-    :param answer: Алиас для обратной совместимости (answer_ai)
-    :param status: Алиас для обратной совместимости (status_question)
-    :return: Созданный объект UsersQuestions или None при ошибке
+    :param user_id: (int) Telegram ID пользователя.
+    :param user_question: (str | None) Вопрос пользователя.
+    :param answer_ai: (str | None) Ответ пользователю от ИИ.
+    :param user_username: (str | None) Username пользователя в Telegram.
+    :param user_firstname: (str | None) Имя пользователя в Telegram.
+    :param status_question: (str) Статус обработки вопроса администратором ('Соответствует', 'Не соответствует' и др.).
+    :param question: (str | None) Алиас для параметра user_question.
+    :param answer: (str | None) Алиас для параметра answer_ai.
+    :param status: (str | None) Алиас для параметра status_question.
+    :return: (UsersQuestions | None) Созданный объект UsersQuestions или None при ошибке.
     """
     try:
         # Определяем следующий порядковый номер вопроса
@@ -90,9 +90,9 @@ def update_question_status(question_id: int, status_question: str) -> bool:
     """
     Обновляет статус обработки вопроса администратором ('Соответствует', 'Не соответствует').
 
-    :param question_id: ID записи в базе данных (или question_number)
-    :param status_question: Статус проверки ('Соответствует', 'Не соответствует')
-    :return: True, если обновлено успешно, иначе False
+    :param question_id: (int) ID записи в базе данных или номер вопроса.
+    :param status_question: (str) Статус проверки ('Соответствует', 'Не соответствует').
+    :return: (bool) True, если обновлено успешно, иначе False.
     """
     try:
         updated = (
@@ -111,7 +111,7 @@ def get_all_questions():
     """
     Получает все вопросы и ответы из таблицы users_questions.
 
-    :return: Список словарей с подробной информацией о вопросах
+    :return: (list[dict]) Список словарей с подробной информацией о вопросах.
     """
     try:
         questions = UsersQuestions.select().order_by(UsersQuestions.id.asc())

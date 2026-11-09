@@ -586,7 +586,7 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
                 await client.disconnect()
                 # Отправьте уведомление через бота
                 # Определяем язык пользователя, который пользователь выбрал при старте бота
-                user_lang = determines_user_language(message_or_callback=message.from_user.id)
+                user_lang = determines_user_language(message_or_callback=user_data["id"])
                 await mock_msg.answer(
                     text=t("session_connected_success",
                            lang=user_lang,
@@ -748,11 +748,11 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
             # user = User.get_or_none(User.user_id == user_data["id"])
             user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
             # Определяем язык пользователя, который пользователь выбрал при старте бота
-            user_lang = determines_user_language(message_or_callback=message.from_user.id)
+            user_lang = determines_user_language(message_or_callback=user_data["id"])
             excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
             filename = f"telegram_groups_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             excel_file = BufferedInputFile(excel_bytes, filename=filename)
-            caption_text = f"📊 Найдено {len(all_saved_groups)} групп/каналов" if user_lang == "ru" else f"📊 Found {len(all_saved_groups)} groups/channels"
+            caption_text = t("found_groups_caption", lang=user_lang, count=len(all_saved_groups))
             # Отправка итогового файла через бота
             await bot.send_document(chat_id=user_data["id"], document=excel_file, caption=caption_text)
             logger.info(f"✅ Итоговый Excel-файл отправлен пользователю {user_data['id']}")
@@ -836,13 +836,13 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
         (TelegramGroups.id.in_(ids)) | (TelegramGroups.telegram_id.in_(ids))
     ))
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=user_data["id"])
     excel_bytes = create_excel_file(groups, lang=user_lang)
     filename = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     # Отправляем документ также напрямую в чат Telegram пользователю
     try:
         doc = BufferedInputFile(excel_bytes, filename=filename)
-        caption_text = "📊 Результаты поиска групп в Excel" if user_lang == "ru" else "📊 Group search results in Excel"
+        caption_text = t("excel_export_caption", lang=user_lang)
         await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)
         logger.info(f"Excel-файл с результатами поиска отправлен в чат Telegram {user_data["id"]}")
     except Exception as e:
@@ -911,13 +911,13 @@ async def download_database(
     groups = list(query)
     # Создать Excel в памяти
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=user_data["id"])
     excel_bytes = create_excel_file(groups, lang=user_lang)
     filename = f"db_export_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     # Отправляем документ также напрямую в чат Telegram пользователю
     try:
         doc = BufferedInputFile(excel_bytes, filename=filename)
-        caption_text = "📊 Экспорт базы данных в Excel" if user_lang == "ru" else "📊 Database export in Excel"
+        caption_text = t("db_export_caption", lang=user_lang)
         await bot.send_document(chat_id=user_data["id"], document=doc, caption=caption_text)
         logger.info(f"Excel-файл базы данных отправлен в чат Telegram {user_data["id"]}")
     except Exception as e:
@@ -1369,3 +1369,4 @@ async def serve_static(file_path: str):
 
 
 app.include_router(static_router)
+     

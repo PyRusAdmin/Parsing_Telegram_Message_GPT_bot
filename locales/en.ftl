@@ -663,4 +663,136 @@ excel_filename_category_db = category_database.xlsx
 export_category_caption = 📂 Database by category "{ $category }". Total records: { $total_records }.
 generating_database_wait = ⏳ Generating database file, this might take some time. Please wait...
 
+# === New localization keys ===
+# Keyboards & navigation
+btn_add_channels_tracking = ➕ Add Channels (text or .txt)
+btn_channels_list = 📋 Channels List
+btn_export_excel = 📥 Export to Excel
+btn_clear_all_channels = 🧹 Clear All Channels
+btn_tracking_channels = 🌐 Monitored Channels
+btn_keywords = 🔍 Keywords
+btn_notification_group = 📢 Notification Group
+btn_transfer_settings = 🔄 Transfer Settings to User
+btn_personal_tracking = 🎯 Personal Tracking
+btn_connect_account_session = Connect account via Telegram session
+btn_connect_account_phone = 📱 Connect account (by phone)
+btn_add_keywords = ➕ Add Keywords
+btn_keywords_list = 📋 Keywords List
+btn_export_keywords = 📥 Export Keywords
+btn_goto_notification_group = 🔗 Open Notification Group
+btn_notification_group_not_created = 🔗 Group not created yet
+btn_recreate_notification_group = 🔄 Recreate Group
+btn_nav_prev = ◀️ Back
+btn_nav_next = Next ▶️
+btn_confirm_clear = ✅ Yes, clear
+btn_cancel = ❌ Cancel
+btn_broadcast_users = 📢 Broadcast to users
+btn_broadcast_send = 🚀 Launch Broadcast
+btn_broadcast_cancel = ❌ Cancel Broadcast
+btn_pt_add_tracking = ➕ Add Group Tracking
+btn_pt_buy_slot = ⭐ Buy +1 Slot (2 Stars)
+btn_pt_my_groups = 📋 My Monitored Groups
+btn_pt_stats = 📊 Statistics
+btn_keypad_clear = ❌ Clear
+btn_keypad_submit = ✅ Submit
+btn_keypad_cancel = 🚫 Cancel
+btn_pt_edit_record = ⚙️ Edit #{ $idx } ({ $title })
+btn_pt_buy_stars_slots = ⭐ Buy slots (Telegram Stars)
+btn_pt_connect_personal = 📱 Connect personal account
+btn_pt_create_notification_group = 📢 Create Notification Group
+
+# Settings (settings.py)
+settings_channels_title = 🌐 <b>Monitored Channels</b>\n\n📊 Total channels: <b>{ $total }</b>\n\nChoose an action:
+settings_channels_empty = 📭 Channels list is empty.
+settings_channels_list_title = 📋 <b>Channels List</b> (page { $page }/{ $total_pages }) · total: { $total }\n
+settings_channels_list_hint = \n<i>Click ❌ on a channel to remove it.</i>
+settings_channel_deleted = ✅ Channel removed: { $channel }
+settings_channel_not_found = ⚠️ Channel not found.
+settings_channels_clear_confirm = 🧹 <b>Clear entire channels list?</b>\n\n<b>{ $total }</b> channel(s) will be deleted. This action cannot be undone.
+settings_channels_cleared = ✅ <b>Channels list cleared.</b>\n\nDeleted channels: <b>{ $count }</b>
+settings_keywords_title = 🔍 <b>Keywords</b>\n\n📊 Total keywords: <b>{ $total }</b>\n\nChoose an action:
+settings_keywords_empty = 📭 Keywords list is empty.
+settings_keywords_list_title = 🔍 <b>Keywords</b> (page { $page }/{ $total_pages }) · total: { $total }\n
+settings_keywords_list_hint = \n<i>Click ❌ on a word to remove it.</i>
+settings_keyword_deleted = ✅ Removed: { $keyword }
+settings_keyword_not_found = ⚠️ Word not found.
+settings_notification_created = 📢 <b>Notification Group</b>\n\n✅ Group created.\n🔗 <a href='{ $link }'>Go to group</a>
+settings_notification_not_created = 📢 <b>Notification Group</b>\n\n❌ Group not created yet.\n\n<i>Create a group via «🎯 Personal Tracking».</i>
+settings_notification_alert_no_group = ❌ Group is not created. Go to «🎯 Personal Tracking» to create it.
+settings_notification_recreate_text = 🔄 <b>Recreate Notification Group</b>\n\nTo recreate the group, go to «🎯 Personal Tracking» → «➕ Add Group Tracking».\n\n<i>A new group will be created automatically when adding tracking.</i>
+
+# Adding channels (connect_group.py)
+connect_group_prompt = 🔗 <b>Send a link or username of group/channel to track</b>\n\nFor example:\n<code>https://t.me/python_jobs</code>\nor <code>@python_jobs</code>\n\nYou can send multiple links, one per line.
+connect_group_no_links = ⚠️ Please send at least one link or username.
+connect_group_invalid_links = ⚠️ Please check if the links are valid.
+connect_group_saved = ✅ Group(s) saved to the database.
+connect_group_text_required = ⚠️ Please send a link or username as a text message.
+connect_group_file_invalid_links = ⚠️ Please check if the links in the file are valid.
+connect_group_file_required = ⚠️ Please send a TXT file containing links or usernames.
+
+# Transfer rights (transfer_rights.py)
+transfer_rights_prompt = 🔄 <b>Transfer settings to another user</b>\n\nSend the Telegram ID of the user you want to copy your channels and keywords to.\n\n<i>Example: <code>1234567890</code></i>
+transfer_rights_invalid_id = ⚠️ Invalid ID. ID must contain digits only.\n\nTry again from the settings menu.
+transfer_rights_self = ⚠️ You cannot transfer settings to yourself.
+transfer_rights_not_found = ⚠️ User with ID <code>{ $target_user_id }</code> has not started this bot yet.
+transfer_rights_success = ✅ <b>Settings successfully transferred to user { $target_user_id }!</b>\n\n📋 Channels added: <b>{ $groups }</b>\n🔑 Keywords added: <b>{ $keywords }</b>
+
+# Deletion & keyword entry
+delete_group_invalid_format = ⚠️ <b>Could not recognize link format.</b>\n\nSupported formats:\n• <code>@channel_name</code>\n• <code>https://t.me/channel_name</code>\n• <code>https://t.me/+PrivateHash</code>\n• <code>https://t.me/joinchat/Hash</code>
+keywords_added_success = ✅ Keywords added.\n\n📊 Total keywords: <b>{ $count }</b>
+
+# Personal tracking (personal_tracking.py)
+pt_no_slots_alert = ⚠️ All slots in use! Purchase an extra slot.
+pt_ask_link = 🔗 <b>Enter link to group or channel to track</b>\n\n<i>Example: <code>https://t.me/python_jobs</code> or <code>@python_jobs</code></i>
+pt_invalid_link = ⚠️ Please enter a valid link (https://t.me/...) or @username.
+pt_checking_group = 🔄 <i>Checking group and retrieving info...</i>
+pt_ask_keywords = 🔑 Enter keywords to track separated by commas:
+pt_saved_success = ✅ <b>Tracking settings saved!</b>
+pt_no_active_trackings = ℹ️ You do not have active personal trackings yet.
+pt_record_not_found = Error: Record not found
+pt_edit_prompt = ⚙️ <b>Edit Tracking</b>\n\n🔗 Current link: { $link }\n🔑 Keywords: { $keywords }\n\nSend a new group/channel link:
+pt_updating_group = 🔄 <i>Updating subscription and group...</i>
+pt_updated_success = ✅ <b>Tracking settings successfully updated!</b>
+pt_stats_msg = 📊 <b>Personal Tracking Statistics</b>\n\n👥 Total users: <b>{ $users }</b>\n🎯 Total trackings: <b>{ $trackings }</b>
+pt_code_prompt = 🔢 Enter 5-digit verification code:
+pt_invalid_code_alert = ❌ Invalid verification code! Try again.
+pt_code_expired_alert = ❌ Verification code expired! Request code again.
+pt_login_error_alert = ❌ Login error: { $error }
+pt_checking_2fa = 🔄 <i>Verifying 2FA password...</i>
+pt_auth_success = ✅ <b>Authorization successful!</b>\n\nAccount successfully connected.
+pt_auth_error = ❌ Authorization error: { $error }
+pt_auth_cancelled = 🚫 Authorization cancelled.
+pt_phone_prompt = 📱 <b>Connect Telegram Account</b>\n\nEnter your phone number in international format (e.g., <code>+79991234567</code>):
+pt_phone_invalid = ❌ Invalid phone number entered. Try again.
+pt_phone_flood = ⏳ Too many attempts. Please wait { $seconds } seconds.
+pt_code_request_error = ❌ Error requesting code: { $error }
+pt_code_need_5_digits = ⚠️ Enter all 5 digits of the verification code!
+pt_sending_code_status = ⏳ Sending verification code to { $phone }...
+pt_enter_code_keypad = 📱 <b>Verification code sent in Telegram</b>\n\nEnter the digits on the keypad below:\n\nEntered: <b>{ $code }</b>
+pt_enter_2fa_prompt = 🔐 <b>Two-Step Verification (2FA) Required</b>\n\nEnter your 2FA cloud password:
+pt_no_account_connected = ⚠️ No connected account. Please connect an account.
+pt_record_error = Record error.
+
+# Admin & broadcast (admin.py)
+admin_access_denied = ⛔ Access denied. Admins only.
+admin_broadcast_prompt = 📢 <b>Broadcast to Users</b>\n\nSend the message you want to broadcast to all users of the bot.\n\n• Supports <b>HTML</b> formatting (bold, italic, links).\n• You can attach photos, videos, animations, or documents.\n\n<i>To cancel, click «Back» below.</i>
+admin_broadcast_preview_title = 👁️ <b>Broadcast message preview:</b>
+admin_broadcast_preview_params = 📊 <b>Broadcast Parameters:</b>\n\n👥 Total recipients in database: <b>{ $total }</b>\n\nConfirm sending or cancel:
+admin_broadcast_cancelled = ❌ <b>Broadcast cancelled.</b>
+admin_broadcast_not_found = ⚠️ Error: broadcast message not found.
+admin_broadcast_started = 🚀 <b>Broadcast started... Please wait.</b>
+admin_broadcast_progress = 🚀 <b>Broadcasting...</b>\n\nProgress: <b>{ $current }/{ $total }</b>\n✅ Sent: { $sent }\n🚫 Blocked: { $blocked }\n⚠️ Errors: { $errors }
+admin_broadcast_report = 🏁 <b>Broadcast finished!</b>\n\n📊 <b>Final report:</b>\n• Total recipients: <b>{ $total }</b>\n• ✅ Successfully delivered: <b>{ $sent }</b>\n• 🚫 Bot blocked by user: <b>{ $blocked }</b>\n• ⚠️ Other errors: <b>{ $errors }</b>
+
+# Parser & limits (parser.py)
+parser_notification_group_missing = ⚠️ <b>Notification group not found!</b>\n\nBefore starting tracking, you must create a target group to receive alerts.\nClick the button below to set it up:
+parser_free_account_limit = ⚠️ <b>Tracking limit exceeded!</b>\n\nYou are using a <b>shared free account</b>, which allows tracking only <b>1 channel</b>.\n\nTo track more channels:\n• Connect your personal Telegram account (unlimited)\n• Or purchase extra slots with Telegram Stars.
+
+# General messages
+welcome_choose_lang = 👋 Hello! Please choose your language / Привет! Пожалуйста, выберите язык:
+no_connected_account = No connected account. Please connect an account.
+excel_export_caption = 📊 Group search results in Excel
+db_export_caption = 📊 Database export in Excel
+found_groups_caption = 📊 Found { $count } groups/channels
+
 

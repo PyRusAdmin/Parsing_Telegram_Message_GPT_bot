@@ -58,9 +58,9 @@ class UsersPersonalTrackings(database.Model):
 def delete_account_from_user_table(user_id: int, personal_account: str) -> None:
     """
     Удаляет невалидную или отозванную сессию Telegram-аккаунта пользователя.
+
     :param user_id: (int) Уникальный Telegram ID пользователя — владельца сессии.
     :param personal_account: (str) Строка сессии Telethon (StringSession), подлежащая удалению.
-    :return: None
     """
     query = UsersPersonalTrackings.delete().where(
         (UsersPersonalTrackings.user_id == user_id) & (UsersPersonalTrackings.personal_account == personal_account)
@@ -71,8 +71,10 @@ def delete_account_from_user_table(user_id: int, personal_account: str) -> None:
 
 def get_user_accounts(user_id: int):
     """
-    Получает аккаунты пользователя из таблицы UsersPersonalTrackings.
-    Возвращает список словарей для обратной совместимости.
+    Получает аккаунты пользователя из таблицы users_personal_trackings.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (list[dict]) Список словарей с данными сессий пользователя.
     """
     rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
     if rec and rec.personal_account:
@@ -86,8 +88,8 @@ def get_session_count(user_id: int) -> int:
     """
     Подсчитывает количество подключенных персональных аккаунтов пользователя в базе данных.
 
-    :param user_id: (int) ID пользователя Telegram.
-    :return int: Количество сессий (0, если аккаунты отсутствуют).
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (int) Количество сессий (0, если аккаунты отсутствуют).
     """
     return UsersPersonalTrackings.select().where(
         (UsersPersonalTrackings.user_id == user_id) &
@@ -98,9 +100,10 @@ def get_session_count(user_id: int) -> int:
 
 def get_group_id_with_personal_tracking(user_id: int):
     """
-    Получает created_group_id (ID группы, в которую пересылаются найденные сообщения по ключевым словам)
-    :param user_id: ID пользователя Telegram.
-    :return Any: ID группы, в которую будут отправляться сообщения, которые были найдены по ключевым словам.
+    Получает ID группы, созданной пользователем для пересылки найденных сообщений.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (int | None) Telegram ID группы для уведомлений или None.
     """
     return UsersPersonalTrackings.select(UsersPersonalTrackings.created_group_id).where(
         UsersPersonalTrackings.user_id == user_id).scalar()
@@ -108,9 +111,10 @@ def get_group_id_with_personal_tracking(user_id: int):
 
 def write_account_to_db(session_string: str, user_id: int) -> None:
     """
-    Запись аккаунта в базу данных в таблицу users_personal_trackings.
-    :param session_string: Строка сессии
-    :param user_id: ID пользователя Telegram
+    Запись персонального аккаунта в базу данных в таблицу users_personal_trackings.
+
+    :param session_string: (str) Строка сессии Telethon.
+    :param user_id: (int) Telegram ID пользователя.
     """
     UsersPersonalTrackings.insert(
         user_id=user_id,

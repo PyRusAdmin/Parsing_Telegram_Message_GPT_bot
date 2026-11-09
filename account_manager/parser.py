@@ -549,16 +549,14 @@ async def filter_messages(message, user_id):
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="📢 Создать группу уведомлений",
+                            text=t("btn_pt_create_notification_group", lang=user_lang),
                             callback_data="menu_personal_tracking"
                         )
                     ]
                 ]
             )
             await message.answer(
-                "⚠️ <b>Группа уведомлений не найдена!</b>\n\n"
-                "Перед запуском отслеживания необходимо создать целевую группу для получения уведомлений.\n"
-                "Нажмите кнопку ниже, чтобы настроить её:",
+                t("parser_notification_group_missing", lang=user_lang),
                 parse_mode="HTML",
                 reply_markup=create_group_kb
             )
@@ -570,7 +568,7 @@ async def filter_messages(message, user_id):
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённого аккаунта в БД")
             await message.answer(
                 t("no_accounts", lang=user_lang),
-                reply_markup=menu_launch_tracking_keyboard()
+                reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
             )
             return None
         # === Подключаем клиент ===
@@ -597,24 +595,20 @@ async def filter_messages(message, user_id):
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="⭐ Докупить слоты (Telegram Stars)",
+                            text=t("btn_pt_buy_stars_slots", lang=user_lang),
                             callback_data="settings_topup_stars"
                         )
                     ],
                     [
                         InlineKeyboardButton(
-                            text="📱 Подключить личный аккаунт",
+                            text=t("btn_pt_connect_personal", lang=user_lang),
                             callback_data="menu_personal_tracking"
                         )
                     ]
                 ]
             )
             await message.answer(
-                "⚠️ <b>Превышен лимит отслеживания!</b>\n\n"
-                "Вы используете <b>общий бесплатный аккаунт</b>, на котором разрешено отслеживать только <b>1 канал</b>.\n\n"
-                "Для отслеживания большего количества каналов:\n"
-                "• Подключите собственный личный Telegram-аккаунт (без ограничений)\n"
-                "• Или оплатите дополнительные слоты через Telegram Stars.",
+                t("parser_free_account_limit", lang=user_lang),
                 parse_mode="HTML",
                 reply_markup=buy_stars_kb
             )
@@ -650,7 +644,7 @@ async def filter_messages(message, user_id):
             logger.info("👂 Бот слушает новые сообщения...")
             await message.answer(
                 text=t("bot_listening", lang=user_lang),
-                reply_markup=menu_launch_tracking_keyboard()
+                reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
             )
             # Держим клиент живым до флага остановки
             await stop_event.wait()
@@ -711,7 +705,7 @@ async def stop_tracking(user_id, message):
         logger.warning(f"⚠️ Отслеживание для user_id={user_id} не активно или уже остановлено.")
         await message.answer(
             t("tracking_not_active", lang=user_lang),
-            reply_markup=menu_launch_tracking_keyboard()
+            reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
         )
         return
     # ✅ Устанавливаем флаг остановки
@@ -720,5 +714,5 @@ async def stop_tracking(user_id, message):
     logger.info(f"✅ Флаг остановки установлен для user_id={user_id}")
     await message.answer(
         t("tracking_stop_requested", lang=user_lang),
-        reply_markup=menu_launch_tracking_keyboard()
+        reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
     )

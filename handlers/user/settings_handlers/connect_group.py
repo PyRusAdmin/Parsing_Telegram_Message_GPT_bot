@@ -23,18 +23,18 @@ router = Router(name=__name__)
 
 @router.callback_query(F.data == "group_input")
 async def process_target_link_input_group_input(callback: CallbackQuery, state: FSMContext):
-    """Обработчик инлайн-кнопки Ввод группы, для отслеживания"""
+    """
+    Обработчик инлайн-кнопки "Ввод группы" для отслеживания ключевых слов.
 
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()  # Очищаем состояние, что бы не получить случайное срабатывание
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.set_state(PersonalTrackingStateGroupInput.waiting_for_target_link_group_input)
     await callback.message.edit_text(
-        text="🔗 <b>Отправьте ссылку или username группы/канала для отслеживания</b>\n\n"
-             "Например:\n"
-             "<code>https://t.me/python_jobs</code>\n"
-             "или <code>@python_jobs</code>\n\n"
-             "Можно отправить несколько ссылок, каждую с новой строки.",
+        text=t("connect_group_prompt", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
     )
@@ -43,7 +43,12 @@ async def process_target_link_input_group_input(callback: CallbackQuery, state: 
 
 @router.message(PersonalTrackingStateGroupInput.waiting_for_target_link_group_input, F.text)
 async def process_target_link_input_group_input(message: Message, state: FSMContext):
-    """Проверяет и сохраняет ссылки на группы и каналы. (F.text - принимает только текст от пользователя)"""
+    """
+    Проверяет и сохраняет текстовые ссылки на группы и каналы от пользователя.
+
+    :param message: (Message) Входящее сообщение Telegram с ссылками на группы.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
@@ -53,7 +58,7 @@ async def process_target_link_input_group_input(message: Message, state: FSMCont
 
     if not group_list:  # Если нет списка, то присылаем пользователю сообщение, что нет ссылки
         await message.answer(
-            text="⚠️ Отправьте хотя бы одну ссылку или username.",
+            text=t("connect_group_no_links", lang=user_lang),
             parse_mode="HTML",
             reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
         )
@@ -66,7 +71,7 @@ async def process_target_link_input_group_input(message: Message, state: FSMCont
 
         if normalized_link is None:
             await message.answer(
-                text="⚠️ Проверьте правильность ссылок.",
+                text=t("connect_group_invalid_links", lang=user_lang),
                 parse_mode="HTML",
                 reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
             )
@@ -81,7 +86,7 @@ async def process_target_link_input_group_input(message: Message, state: FSMCont
     )
 
     await message.answer(
-        text="✅ Группа / группы записаны в базу данных.",
+        text=t("connect_group_saved", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
     )
@@ -90,11 +95,16 @@ async def process_target_link_input_group_input(message: Message, state: FSMCont
 
 @router.message(PersonalTrackingStateGroupInput.waiting_for_target_link_group_input, ~F.text)
 async def process_non_text_group_input(message: Message, state: FSMContext):
-    """Обрабатывает сообщения, которые не содержат текст."""
+    """
+    Обрабатывает нетекстовые сообщения при ожидании ввода ссылок на группы.
+
+    :param message: (Message) Объект входящего нетекстового сообщения.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
-        text="⚠️ Отправьте ссылку или username группы/канала текстовым сообщением.",
+        text=t("connect_group_text_required", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
     )
@@ -112,7 +122,12 @@ username или ссылку на группу/канал. Бот проверя
 
 @router.callback_query(F.data == "settings_update_list")
 async def handle_refresh_groups_list_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик команды Обновить список (инлайн)"""
+    """
+    Обработчик инлайн-кнопки "Обновить список" через загрузку TXT-файла.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
 
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -132,7 +147,11 @@ async def handle_refresh_groups_list_cb(callback: CallbackQuery, state: FSMConte
 @router.message(MyStates.waiting_username_group, F.document)
 async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
     """
-    Принимает TXT-файл со списком групп и каналов.
+    Принимает и обрабатывает TXT-файл со списком групп и каналов.
+
+    :param message: (Message) Входящее сообщение Telegram с TXT-документом.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :param bot: Экземпляр бота Aiogram для скачивания файла.
     """
 
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -169,7 +188,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
 
         if normalized_link is None:
             await message.answer(
-                text="⚠️ Проверьте правильность ссылок в файле.",
+                text=t("connect_group_file_invalid_links", lang=user_lang),
                 parse_mode="HTML",
                 reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
             )
@@ -184,7 +203,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
     )
 
     await message.answer(
-        text="✅ Группа / группы записаны в базу данных.",
+        text=t("connect_group_saved", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
     )
@@ -193,11 +212,16 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
 
 @router.message(MyStates.waiting_username_group, ~F.document)
 async def process_non_text_group_input(message: Message, state: FSMContext):
-    """Просит пользователя отправить TXT-файл."""
+    """
+    Просит пользователя отправить именно TXT-файл, если прислан другой тип сообщения.
+
+    :param message: (Message) Объект входящего не-документного сообщения.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     await message.answer(
-        text="⚠️ Отправьте TXT-файл со ссылками или username групп и каналов.",
+        text=t("connect_group_file_required", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang)  # Кнопка назад
     )

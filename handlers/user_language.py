@@ -4,13 +4,9 @@ from database.users_personal_trackings import UsersPersonalTrackings
 def determines_user_language(message_or_callback) -> str:
     """
     Определяет язык пользователя, выбранный при первом запуске бота.
-    Поддерживает:
-      - user_id (int или str)
-      - CallbackQuery (извлекает callback.from_user.id)
-      - Message (извлекает message.from_user.id)
 
-    :param message_or_callback: ID пользователя или объект сообщения/коллбэка
-    :return: код языка пользователя ("ru" по умолчанию)
+    :param message_or_callback: (int | str | Message | CallbackQuery) ID пользователя или объект сообщения/коллбэка.
+    :return: (str) Код языка пользователя ("ru" по умолчанию).
     """
     user_id = None
     if isinstance(message_or_callback, int):

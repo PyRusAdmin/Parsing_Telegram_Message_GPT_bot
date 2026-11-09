@@ -18,24 +18,11 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
     """
     Создаёт Excel-файл с заданными данными, оформлением и автоматической подгонкой ширины столбцов.
 
-    Функция формирует .xlsx файл с синей шапкой заголовков, центрированным жирным белым шрифтом,
-    подгоняет ширину столбцов под содержимое и сохраняет файл в директорию 'exports/'.
-
-    Используется для экспорта данных пользователей (ключевые слова, ссылки).
-
-    - Используется библиотека `openpyxl`.
-    - Максимальная ширина столбца ограничена 50 символами.
-    - Папка 'exports/' создаётся автоматически при необходимости.
-
-    :param data: (list) Список кортежей, представляющих строки таблицы (например, [(1, 'слово'), ...]).
-    :param headers: (list) Список строк, представляющих заголовки столбцов (например, ['№', 'Ключевое слово']).
-    :param filename: (str) Имя создаваемого файла (например, "keywords_12345_20250420.xlsx").
+    :param data: (list) Список кортежей, представляющих строки таблицы.
+    :param headers: (list) Список заголовков столбцов.
+    :param filename: (str) Имя создаваемого файла в папке exports/.
     :param sheet_name: (str) Название листа в Excel-файле.
     :return: (str) Абсолютный путь к созданному Excel-файлу.
-
-    Raises:
-        Exception: Может быть выброшено при ошибках записи файла (например, нет доступа к папке).
-            Ожидается обработка вызывающей стороной.
     """
     # Создаём новый Excel-файл (рабочую книгу)
     workbook = Workbook()
@@ -90,7 +77,10 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
 @router.callback_query(F.data == "settings_keywords_list")
 async def get_keywords_list_cb(callback: types.CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки "🔍 Список ключевых слов".
+    Обработчик инлайн-кнопки экспорта списка ключевых слов в Excel.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await callback.answer()
     await state.clear()
@@ -136,7 +126,10 @@ async def get_keywords_list_cb(callback: types.CallbackQuery, state: FSMContext)
 @router.callback_query(F.data == "settings_tracking_links")
 async def get_tracking_links_list_cb(callback: types.CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки "🌐 Ссылки для отслеживания".
+    Обработчик инлайн-кнопки экспорта ссылок отслеживания в Excel.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     # await callback.answer()
 

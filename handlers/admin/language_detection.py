@@ -14,7 +14,13 @@ router = Router(name=__name__)
 
 
 def ai_llama_fri(group_data: dict, lang: str = 'ru'):
-    """Определение языка (ТОЛЬКО AI-запрос через OpenRouter Free, БЕЗ записи в БД)"""
+    """
+    Определение языка через OpenRouter Free (AI-запрос без записи в БД).
+
+    :param group_data: (dict) Словарь с данными группы (name, username, description, group_hash).
+    :param lang: (str) Код языка для локализации промпта (по умолчанию 'ru').
+    :return: (dict) Словарь с ключами group_hash, name, language, success, error.
+    """
     try:
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -71,7 +77,13 @@ def ai_llama_fri(group_data: dict, lang: str = 'ru'):
 
 
 def ai_llama(group_data: dict, lang: str = 'ru') -> dict:
-    """Определение языка (ТОЛЬКО AI-запрос, БЕЗ записи в БД)"""
+    """
+    Определение языка через сторонний API (AI-запрос без записи в БД).
+
+    :param group_data: (dict) Словарь с данными группы (name, username, description, group_hash).
+    :param lang: (str) Код языка интерфейса для локализации промпта.
+    :return: (dict) Словарь с ключами group_hash, name, language, success, error.
+    """
     api_key = os.getenv("POLZA_AI_API_KEY")
     try:
         client = OpenAI(
@@ -156,10 +168,19 @@ def ai_llama(group_data: dict, lang: str = 'ru') -> dict:
 
 
 async def batch_update_languages(updates: list[dict]) -> tuple[int, int]:
-    """Массовое обновление языков в БД (в основном потоке)"""
+    """
+    Массовое обновление языков в БД в одной транзакции.
+
+    :param updates: (list[dict]) Список словарей с полями group_hash, name, language.
+    :return: (tuple[int, int]) Кортеж из количества успешно обновленных и ошибочных записей.
+    """
 
     def _batch_update():
-        """Выполняет пакетное обновление языков групп в транзакции базы данных"""
+        """
+        Выполняет пакетное обновление языков групп в транзакции базы данных.
+
+        :return: (tuple[int, int]) Количество обновленных и пропущенных записей.
+        """
         if database.is_closed():
             database.connect(reuse_if_open=True)
 

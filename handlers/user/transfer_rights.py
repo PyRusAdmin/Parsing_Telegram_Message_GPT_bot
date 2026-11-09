@@ -8,6 +8,7 @@ from database.users_groups import UsersGroups
 from database.users_keywords import UsersKeywords
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard
+from locales.locales import t
 from states.states import MyStates
 
 router = Router(name=__name__)
@@ -16,7 +17,10 @@ router = Router(name=__name__)
 def transfer_user_settings(from_user_id: int, to_user_id: int) -> tuple[int, int]:
     """
     Копирует каналы и ключевые слова от одного пользователя к другому в единых таблицах БД.
-    Возвращает (добавлено_каналов, добавлено_ключевых_слов).
+
+    :param from_user_id: (int) ID пользователя-источника в Telegram.
+    :param to_user_id: (int) ID пользователя-получателя в Telegram.
+    :return: (tuple[int, int]) Кортеж из количества добавленных каналов и ключевых слов.
     """
     added_groups = 0
     added_keywords = 0
@@ -41,15 +45,17 @@ def transfer_user_settings(from_user_id: int, to_user_id: int) -> tuple[int, int
 
 @router.callback_query(F.data == "settings_transfer_rights")
 async def transfer_settings_cb(callback: CallbackQuery, state: FSMContext) -> None:
-    """Запрашивает ID пользователя для передачи настроек"""
+    """
+    Запрашивает ID пользователя для передачи настроек отслеживания.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :return: (None)
+    """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.message.edit_text(
-        text=(
-            "🔄 <b>Передача настроек другому пользователю</b>\n\n"
-            "Отправьте Telegram ID пользователя, которому хотите скопировать свои каналы и ключевые слова.\n\n"
-            "<i>Пример: <code>1234567890</code></i>"
-        ),
+        text=t("transfer_rights_prompt", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )
@@ -59,14 +65,19 @@ async def transfer_settings_cb(callback: CallbackQuery, state: FSMContext) -> No
 
 @router.message(MyStates.get_id_user_transfer)
 async def get_id_for_transferring(message: Message, state: FSMContext):
-    """Принимает ID пользователя и выполняет копирование настроек"""
+    """
+    Принимает ID целевого пользователя и выполняет копирование настроек отслеживания.
+
+    :param message: (Message) Входящее сообщение Telegram с целевым ID.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     raw_id = message.text.strip()
     await state.clear()
 
     if not raw_id.isdigit():
         await message.answer(
-            "⚠️ Некорректный ID. ID должен содержать только цифры.\n\nПопробуйте снова через меню настроек.",
+            t("transfer_rights_invalid_id", lang=user_lang),
             reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
         )
         return
@@ -75,7 +86,7 @@ async def get_id_for_transferring(message: Message, state: FSMContext):
 
     if target_user_id == message.from_user.id:
         await message.answer(
-            "⚠️ Нельзя передать настройки самому себе.",
+            t("transfer_rights_self", lang=user_lang),
             reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
         )
         return
@@ -84,7 +95,7 @@ async def get_id_for_transferring(message: Message, state: FSMContext):
     target_user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == target_user_id)
     if not target_user:
         await message.answer(
-            f"⚠️ Пользователь с ID <code>{target_user_id}</code> ещё не запускал этого бота.",
+            t("transfer_rights_not_found", lang=user_lang, target_user_id=target_user_id),
             parse_mode="HTML",
             reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
         )
@@ -96,11 +107,7 @@ async def get_id_for_transferring(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        text=(
-            f"✅ <b>Настройки успешно переданы пользователю {target_user_id}!</b>\n\n"
-            f"• Скопировано каналов: <b>{added_groups}</b>\n"
-            f"• Скопировано ключевых слов: <b>{added_keywords}</b>"
-        ),
+        text=t("transfer_rights_success", lang=user_lang, target_user_id=target_user_id, groups=added_groups, keywords=added_keywords),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )

@@ -20,7 +20,10 @@ router = Router(name=__name__)
 @router.callback_query(F.data == "settings_delete_group")
 async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Удаление группы из базы данных (инлайн-кнопка)
+    Обработчик инлайн-кнопки удаления группы из базы данных.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -35,11 +38,15 @@ async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMConte
 @router.message(MyStates.del_username_groups)
 async def del_user_in_db(message: Message, state: FSMContext) -> None:
     """
-    Удаляем группу из отслеживания.
+    Удаляет группу из отслеживания в базе данных и отписывается от неё через Telethon.
 
     Перед поиском в БД нормализует ввод пользователя через normalize_telegram_link,
     чтобы формат совпадал с форматом хранения (https://t.me/<username>).
     Приватные инвайт-ссылки (joinchat/+hash) также поддерживаются.
+
+    :param message: (Message) Входящее сообщение Telegram со ссылкой/юзернеймом группы.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :return: (None)
     """
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
@@ -53,14 +60,7 @@ async def del_user_in_db(message: Message, state: FSMContext) -> None:
     if normalized is None:
         # Ввод не распознан — сообщаем об ошибке формата
         await message.answer(
-            text=(
-                "⚠️ <b>Не удалось распознать ссылку.</b>\n\n"
-                "Допустимые форматы:\n"
-                "• <code>@channel_name</code>\n"
-                "• <code>https://t.me/channel_name</code>\n"
-                "• <code>https://t.me/+PrivateHash</code>\n"
-                "• <code>https://t.me/joinchat/Hash</code>"
-            ),
+            text=t("delete_group_invalid_format", lang=user_lang),
             reply_markup=main_menu_keyboard(lang=user_lang),
             parse_mode="HTML"
         )

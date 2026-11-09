@@ -15,7 +15,10 @@ router = Router(name=__name__)
 @router.callback_query(F.data == "settings_enter_keyword")
 async def handle_enter_keyword_menu_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки "🔍 Ввод ключевого слова".
+    Обработчик инлайн-кнопки "Ввод ключевого слова".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await state.clear()  # Завершаем текущее состояние машины состояния
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -75,7 +78,7 @@ async def handle_keywords_submission(message: Message, state: FSMContext):
     add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
     await message.answer(
-        text=f"✅ Ключевые слова добавлены.\n\n📊 Всего ключевых слов: <b>{get_keywords_count(user_id=message.from_user.id)}</b>",
+        text=t("keywords_added_success", lang=user_lang, count=get_keywords_count(user_id=message.from_user.id)),
         reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_keywords"),
         parse_mode="HTML"
     )

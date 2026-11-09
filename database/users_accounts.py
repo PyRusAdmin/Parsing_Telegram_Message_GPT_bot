@@ -44,6 +44,13 @@ def write_account_to_user_table(user_id: int, session_string: str, phone_number:
                                 user_firstname: str = ""):
     """
     Записывает или обновляет аккаунт пользователя в таблице users_accounts.
+
+    :param user_id: (int) ID пользователя в Telegram.
+    :param session_string: (str) Строка сессии Telegram.
+    :param phone_number: (str) Номер телефона аккаунта (по умолчанию "").
+    :param user_username: (str) Юзернейм пользователя в Telegram (по умолчанию "").
+    :param user_firstname: (str) Имя пользователя в Telegram (по умолчанию "").
+    :return: (UsersAccounts | None) Созданный или обновленный объект аккаунта или None при ошибке.
     """
     try:
         account, created = UsersAccounts.get_or_create(
@@ -70,8 +77,9 @@ def write_account_to_user_table(user_id: int, session_string: str, phone_number:
 
 def getting_account():
     """
-    Получение аккаунтов из базы данных
-    :return: Список аккаунтов из базы данных
+    Получение списка сессий всех аккаунтов пользователей из базы данных.
+
+    :return: (list[str]) Список строк сессий пользователей.
     """
     records = []
     for record in UsersAccounts.select(UsersAccounts.user_session_string):
@@ -82,11 +90,9 @@ def getting_account():
 
 async def delete_account_from_db(session_string: str) -> None:
     """
-    Удаляет аккаунт из таблицы 'users_accounts' по session_string.
-    Перед удалением извлекает и логирует номер телефона.
+    Удаляет аккаунт из таблицы users_accounts по session_string.
 
-    :param session_string: Строка сессии аккаунта
-    :return: None
+    :param session_string: (str) Строка сессии удаляемого аккаунта.
     """
     try:
         # Ищем аккаунт по user_session_string

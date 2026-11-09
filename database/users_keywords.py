@@ -49,7 +49,12 @@ class UsersKeywords(database.Model):
 
 
 def get_user_keywords_with_id(user_id: int) -> list:
-    """Возвращает список словарей [{'id': 1, 'keyword': 'слово'}, ...] для API. (Для ВЕБ АПП)"""
+    """
+    Возвращает список словарей ключевых слов пользователя с их идентификаторами.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (list[dict]) Список словарей вида [{'id': 1, 'keyword': 'слово'}, ...].
+    """
     query = (
         UsersKeywords.select(UsersKeywords.id, UsersKeywords.user_keyword.alias("keyword"))
         .where(UsersKeywords.user_id == user_id)
@@ -61,16 +66,13 @@ def get_user_keywords_with_id(user_id: int) -> list:
 def add_user_keywords(user_id: int, keywords: list[str], user_username: str = "", user_firstname: str = "",
                       user_session_string: str = "") -> None:
     """
-    Безопасно добавляет список ключевых слов в базу данных data/bot.db, пропуская дубликаты, если они есть.
-    В базе данных могут быть одинаковые ключевые слова, но не у одного пользователя. Например, 1 пользователь ввел слово
-    'Ищу' и у второго пользователя может быть 'Ищу', но не может быть у 1 пользователя 2 слова 'Ищу' в базе данных
-    data/bot.db в таблице users_keywords.
-    :param user_id: ID пользователя Telegram.
-    :param keywords: Список ключевых слов, которые будут отслеживаться в Группе / канале Telegram.
-    :param user_username: username пользователя Telegram.
-    :param user_firstname: firstname пользователя Telegram.
-    :param user_session_string: стринг сессия аккаунта для отслеживания ключевых слов в группе.
-    :return None: Ничего не возвращаем, так как записываем в базу данных
+    Безопасно добавляет список ключевых слов пользователя в базу данных.
+
+    :param user_id: (int) ID пользователя в Telegram.
+    :param keywords: (list[str]) Список ключевых слов для отслеживания.
+    :param user_username: (str) Username пользователя в Telegram.
+    :param user_firstname: (str) Имя пользователя в Telegram.
+    :param user_session_string: (str) Строка сессии для отслеживания.
     """
     for kw in keywords:
         kw_clean = kw.strip()
@@ -88,22 +90,33 @@ def add_user_keywords(user_id: int, keywords: list[str], user_username: str = ""
 
 
 def get_user_keywords(user_id: int) -> list[str]:
-    """Возвращает список ключевых слов (строк) для пользователя."""
+    """
+    Возвращает список ключевых слов пользователя в виде строк.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (list[str]) Список ключевых слов.
+    """
     query = UsersKeywords.select(UsersKeywords.user_keyword).where(UsersKeywords.user_id == user_id)
     return [row.user_keyword for row in query]
 
 
 def get_keywords_count(user_id: int) -> int:
     """
-    Получение количества ключевых слов для отслеживания
-    :param user_id: Telegram ID пользователя
-    :return int: Количество записей.
+    Получение количества ключевых слов пользователя для отслеживания.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (int) Количество ключевых слов.
     """
     return UsersKeywords.select().where(UsersKeywords.user_id == user_id).count()
 
 
 def clear_all_user_keywords(user_id: int) -> int:
-    """Удаляет все ключевые слова пользователя."""
+    """
+    Удаляет все ключевые слова пользователя из базы данных.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (int) Количество удалённых записей.
+    """
     try:
         deleted = UsersKeywords.delete().where(UsersKeywords.user_id == user_id).execute()
         logger.info(f'Deleted {deleted} keywords for user {user_id}')
@@ -114,7 +127,14 @@ def clear_all_user_keywords(user_id: int) -> int:
 
 
 def get_user_keywords_paginated(user_id: int, page: int = 0, page_size: int = 5) -> tuple:
-    """Возвращает страницу ключевых слов с пагинацией."""
+    """
+    Возвращает страницу ключевых слов пользователя с пагинацией.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :param page: (int) Номер страницы (начиная с 0).
+    :param page_size: (int) Количество записей на странице.
+    :return: (tuple[list, int]) Кортеж из списка записей ключевых слов и общего количества.
+    """
     total = UsersKeywords.select().where(UsersKeywords.user_id == user_id).count()
     records = (
         UsersKeywords.select()

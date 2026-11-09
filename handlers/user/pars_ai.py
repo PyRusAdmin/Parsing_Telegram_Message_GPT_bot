@@ -28,13 +28,8 @@ def clean_group_name(name):
     """
     Очищает название группы от начальных номеров, символов и лишних пробелов.
 
-    Удаляет с начала строки последовательности из цифр, точек, тире, звёздочек,
-    скобок и пробелов, которые часто присутствуют в перечисленных списках.
-
-    Например, преобразует "1. Группа разработчиков" в "Группа разработчиков".
-
-    :param name : (str) Исходное название группы.
-    :return str: Очищенное название группы без префиксов.
+    :param name: (str) Исходное название группы.
+    :return: (str) Очищенное название группы без префиксов.
     """
     cleaned = re.sub(r'^[\d\.\-\*\s\)\(\[\]]+', '', name).strip()
     return cleaned
@@ -43,7 +38,9 @@ def clean_group_name(name):
 def parse_ai_group_names(answer: str) -> list[str]:
     """
     Извлекает список очищенных названий/ключевых слов из ответа ИИ.
-    Корректно обрабатывает разделение как переносом строки (\n), так и запятыми (,).
+
+    :param answer: (str) Сырой текст ответа нейросети.
+    :return: (list[str]) Список уникальных очищенных названий.
     """
     if not answer:
         return []
@@ -71,14 +68,8 @@ def save_group_to_db(group_data: dict):
     """
     Сохраняет или обновляет информацию о группе в централизованной базе данных.
 
-    Приоритет проверки:
-    1. telegram_id (уникальное поле)
-    2. group_hash (fallback, если telegram_id = None)
-
-    При наличии записи — обновляет все поля (включая participants, description и т.д.).
-    При отсутствии — создаёт новую запись.
-
-    :param group_data: (dict) Словарь с данными группы
+    :param group_data: (dict) Словарь с данными группы (telegram_id, name, username, description и т.д.).
+    :return: (TelegramGroups | None) Экземпляр сохраненной группы или None при ошибке.
     """
     try:
         telegram_id = group_data.get('telegram_id')
@@ -150,13 +141,9 @@ def format_summary_message(groups_count, lang="ru"):
     """
     Форматирует HTML-сообщение с краткой сводкой о результатах поиска.
 
-    Включает статус выполнения, количество найденных групп и уведомление о файле.
-
-    Сообщение отправляется перед XLSX-файлом.
-
     :param groups_count: (int) Количество успешно сохранённых и отправленных групп.
-    :param lang: (str) Язык пользователя
-    :return: (str) Сообщение с HTML-разметкой (теги <b>).
+    :param lang: (str) Код языка интерфейса.
+    :return: (str) Сообщение с HTML-разметкой.
     """
     return t(
         "search_summary",
@@ -167,14 +154,11 @@ def format_summary_message(groups_count, lang="ru"):
 
 def create_excel_file(groups, lang='ru'):
     """
-    Создаёт байтовый Excel-файл (.xlsx) с данными о найденных группах для отправки пользователю.
+    Создаёт байтовый Excel-файл (.xlsx) с данными о найденных группах.
 
-    Содержит колонки: ID (Hash), Название, Username, Описание, Участников,
-    Категория, Тип, Язык, Активность, Ссылка, Дата добавления.
-    Username приводится к формату '@username'.
-
-    :param groups: (list[TelegramGroup]) Список экземпляров модели TelegramGroup.
-    :return: bytes — содержимое .xlsx файла в памяти.
+    :param groups: (list[TelegramGroups]) Список записей найденных групп.
+    :param lang: (str) Код языка для заголовков таблицы.
+    :return: (bytes) Содержимое .xlsx файла в памяти.
     """
     wb = Workbook()
     ws = wb.active
@@ -239,7 +223,9 @@ from datetime import timedelta
 def can_user_download_free(user: UsersPersonalTrackings) -> tuple[bool, int]:
     """
     Проверяет, может ли пользователь скачать базу бесплатно (1 раз в 24 часа).
-    Возвращает (True, 0) или (False, оставшееся_время_в_секундах).
+
+    :param user: (UsersPersonalTrackings) Экземпляр пользователя из БД.
+    :return: (tuple[bool, int]) Кортеж (доступно_ли_скачивание, оставшееся_время_в_секундах).
     """
     if user.last_free_download_at is None:
         return True, 0
@@ -252,7 +238,15 @@ def can_user_download_free(user: UsersPersonalTrackings) -> tuple[bool, int]:
 
 async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None,
                                    user_id: int = None):
-    """Проверяет лимиты бесплатной выгрузки базы и запускает скачивание или запрос оплаты"""
+    """
+    Проверяет лимиты бесплатной выгрузки базы и запускает скачивание или запрос оплаты.
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :param download_type: (str) Тип выгрузки ('all', 'channels', 'groups', 'category').
+    :param category: (str | None) Выбранная категория групп при соответствующем типе.
+    :param user_id: (int | None) ID пользователя Telegram (если инициировано из callback).
+    """
     effective_user_id = user_id if user_id is not None else message.from_user.id
     logger.info(
         f"Checking download limits for user={effective_user_id}, download_type={download_type}, category={category}")
@@ -292,7 +286,14 @@ async def check_and_start_download(message: Message, state: FSMContext, download
 
 
 async def perform_download(message: Message, user_id: int, download_type: str, category: str = None):
-    """Формирует и отправляет пользователю файл выгрузки базы данных"""
+    """
+    Формирует и отправляет пользователю файл выгрузки базы данных в формате CSV.
+
+    :param message: (Message) Объект сообщения для ответа пользователю.
+    :param user_id: (int) Telegram ID пользователя-получателя.
+    :param download_type: (str) Тип выгрузки ('all', 'channels', 'groups', 'category').
+    :param category: (str | None) Название категории для фильтрации.
+    """
     logger.info(f"📥 Начало perform_download для user_id={user_id}, download_type={download_type}, category={category}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=user_id)
@@ -476,14 +477,24 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
 
 @router.message((F.text == t('all_database_button', 'ru')) | (F.text == t('all_database_button', 'en')))
 async def export_all_groups(message: Message, state: FSMContext):
-    """Выдаёт CSV-файл со всей базой данных групп и каналов."""
+    """
+    Выдаёт CSV-файл со всей базой данных групп и каналов (текстовая команда).
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     await check_and_start_download(message, state, download_type="all")
 
 
 @router.callback_query(F.data == "db_export_all")
 async def cb_export_all(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает запрос на скачивание всей базы данных (инлайн)"""
+    """
+    Обрабатывает запрос на скачивание всей базы данных (инлайн-кнопка).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
     await state.clear()
     await check_and_start_download(callback.message, state, download_type="all", user_id=callback.from_user.id)
@@ -491,14 +502,24 @@ async def cb_export_all(callback: CallbackQuery, state: FSMContext):
 
 @router.message((F.text == t('channels_database_button', 'ru')) | (F.text == t('channels_database_button', 'en')))
 async def export_channels(message: Message, state: FSMContext):
-    """Выдаёт CSV-файл со всей базой данных групп и каналов."""
+    """
+    Выдаёт CSV-файл с базой данных каналов (текстовая команда).
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     await check_and_start_download(message, state, download_type="channels")
 
 
 @router.callback_query(F.data == "db_export_channels")
 async def cb_export_channels(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает запрос на скачивание базы каналов (инлайн)"""
+    """
+    Обрабатывает запрос на скачивание базы каналов (инлайн-кнопка).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
     await state.clear()
     await check_and_start_download(callback.message, state, download_type="channels", user_id=callback.from_user.id)
@@ -506,14 +527,24 @@ async def cb_export_channels(callback: CallbackQuery, state: FSMContext):
 
 @router.message((F.text == t('groups_database_button', 'ru')) | (F.text == t('groups_database_button', 'en')))
 async def export_supergroups(message: Message, state: FSMContext):
-    """Выдаёт CSV-файл со всей базой данных групп и каналов."""
+    """
+    Выдаёт CSV-файл с базой супергрупп/чатов (текстовая команда).
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     await check_and_start_download(message, state, download_type="groups")
 
 
 @router.callback_query(F.data == "db_export_groups")
 async def cb_export_groups(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает запрос на скачивание базы групп (инлайн)"""
+    """
+    Обрабатывает запрос на скачивание базы групп (инлайн-кнопка).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
     await state.clear()
     await check_and_start_download(callback.message, state, download_type="groups", user_id=callback.from_user.id)
@@ -522,7 +553,10 @@ async def cb_export_groups(callback: CallbackQuery, state: FSMContext):
 @router.message((F.text == t('get_database_button', 'ru')) | (F.text == t('get_database_button', 'en')))
 async def handle_enter_keyword_menu(message: Message, state: FSMContext):
     """
-    Обрабатывает запрос пользователя на получение базы Telegram-групп и каналов.
+    Обрабатывает запрос пользователя на открытие меню базы Telegram-групп и каналов.
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -537,7 +571,12 @@ async def handle_enter_keyword_menu(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "menu_get_database")
 async def handle_get_database_menu_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик инлайн-кнопки Получить базу"""
+    """
+    Обработчик инлайн-кнопки "Получить базу".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -560,7 +599,10 @@ async def handle_get_database_menu_cb(callback: CallbackQuery, state: FSMContext
 @router.message((F.text == t('select_category_button', 'ru')) | (F.text == t('select_category_button', 'en')))
 async def start_category_export(message: Message, state: FSMContext):
     """
-    Запускает процесс выбора категории для экспорта.
+    Запускает процесс выбора категории для экспорта (текстовая кнопка).
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -573,7 +615,12 @@ async def start_category_export(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "db_export_category_menu")
 async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
-    """Запускает выбор категории через инлайн-кнопку"""
+    """
+    Запускает выбор категории через инлайн-кнопку.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     try:
@@ -592,7 +639,12 @@ async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("cat_sel:"))
 async def handle_category_callback(callback: CallbackQuery, state: FSMContext):
-    """Обработчик нажатия на инлайн-кнопку категории"""
+    """
+    Обработчик нажатия на инлайн-кнопку выбранной категории.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     cat_code = callback.data.split(":", 1)[1]
@@ -632,7 +684,10 @@ async def handle_category_callback(callback: CallbackQuery, state: FSMContext):
 @router.message(ExportStates.waiting_for_category)
 async def handle_category_selection(message: Message, state: FSMContext):
     """
-    Обрабатывает выбор категории и запускает проверку лимита/скачивание (текст).
+    Обрабатывает выбор категории и запускает проверку лимита/скачивание (текстовый ввод).
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -660,7 +715,12 @@ async def handle_category_selection(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "pay_db_balance", ExportStates.waiting_for_payment_choice)
 async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает списание звезд с баланса для оплаты выгрузки базы"""
+    """
+    Обрабатывает списание звезд с баланса для оплаты выгрузки базы данных.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     logger.info(f"🪙 Пользователь {callback.from_user.id} выбрал списание 5 звезд с баланса")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -692,7 +752,12 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "pay_db_direct", ExportStates.waiting_for_payment_choice)
 async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
-    """Формирует инвойс на прямую оплату выгрузки базы звездами Telegram Stars"""
+    """
+    Формирует инвойс на прямую оплату выгрузки базы звёздами Telegram Stars.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     logger.info(f"⭐ Пользователь {callback.from_user.id} выбрал прямую оплату 5 звезд")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -710,7 +775,12 @@ async def handle_pay_db_direct(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "pay_db_cancel", ExportStates.waiting_for_payment_choice)
 async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
-    """Отменяет выбор оплаты выгрузки базы данных"""
+    """
+    Отменяет процедуру оплаты выгрузки базы данных.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     logger.info(f"❌ Пользователь {callback.from_user.id} отменил оплату")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -722,7 +792,11 @@ async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
-    """Подтверждает предварительный запрос на проведение платежа Telegram Stars"""
+    """
+    Подтверждает предварительный запрос на проведение платежа Telegram Stars.
+
+    :param pre_checkout_query: (PreCheckoutQuery) Объект запроса подтверждения платежа.
+    """
     logger.info(f"💰 PreCheckoutQuery от {pre_checkout_query.from_user.id}, ID={pre_checkout_query.id}")
     await pre_checkout_query.answer(ok=True)
     logger.info(f"✅ PreCheckoutQuery одобрен")
@@ -730,7 +804,12 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
 
 @router.message(F.successful_payment, StateFilter("*"))
 async def process_successful_payment(message: Message, state: FSMContext):
-    """Обрабатывает успешный платеж за выгрузку базы данных или покупку звезд"""
+    """
+    Обрабатывает успешный платёж за выгрузку базы данных или покупку звёзд.
+
+    :param message: (Message) Входящее сообщение Telegram с объектом успешного платежа.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     logger.info(f"⭐ Получен successful_payment от {message.from_user.id}")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -1109,8 +1188,9 @@ async def process_successful_payment(message: Message, state: FSMContext):
 def parse_search_input(user_input: str) -> list[str]:
     """
     Преобразует пользовательский ввод в список поисковых запросов.
-    Поддерживает разделители: \n, \r\n, ',', ';'
-    Убирает пустые строки и дубликаты, сохраняя порядок.
+
+    :param user_input: (str) Исходная строка с разделителями (\\n, ',', ';').
+    :return: (list[str]) Список уникальных непустых поисковых запросов.
     """
     if not user_input or not user_input.strip():
         return []

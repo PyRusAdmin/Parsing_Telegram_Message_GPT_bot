@@ -654,6 +654,138 @@ excel_filename_category_db = category_database.xlsx
 export_category_caption = 📂 База по категории "{ $category }". Всего записей: { $total_records }.
 generating_database_wait = ⏳ Формируем файл базы данных, это может занять некоторое время. Пожалуйста, подождите...
 
+# === Новые ключи локализации ===
+# Клавиатуры и навигация
+btn_add_channels_tracking = ➕ Добавить каналы (текстом или .txt)
+btn_channels_list = 📋 Список каналов
+btn_export_excel = 📥 Экспорт в Excel
+btn_clear_all_channels = 🧹 Очистить весь список
+btn_tracking_channels = 🌐 Каналы отслеживания
+btn_keywords = 🔍 Ключевые слова
+btn_notification_group = 📢 Группа уведомлений
+btn_transfer_settings = 🔄 Передать настройки пользователю
+btn_personal_tracking = 🎯 Персональное отслеживание
+btn_connect_account_session = Подключить аккаунт через сессию Telegram
+btn_connect_account_phone = 📱 Подключить свой аккаунт (по телефону)
+btn_add_keywords = ➕ Добавить ключевые слова
+btn_keywords_list = 📋 Список ключевых слов
+btn_export_keywords = 📥 Экспорт ключевых слов
+btn_goto_notification_group = 🔗 Перейти в группу уведомлений
+btn_notification_group_not_created = 🔗 Группа ещё не создана
+btn_recreate_notification_group = 🔄 Пересоздать группу
+btn_nav_prev = ◀️ Назад
+btn_nav_next = Вперёд ▶️
+btn_confirm_clear = ✅ Да, очистить
+btn_cancel = ❌ Отмена
+btn_broadcast_users = 📢 Рассылка пользователям
+btn_broadcast_send = 🚀 Запустить рассылку
+btn_broadcast_cancel = ❌ Отменить рассылку
+btn_pt_add_tracking = ➕ Добавить отслеживание группы
+btn_pt_buy_slot = ⭐ Докупить +1 слот (2 Stars)
+btn_pt_my_groups = 📋 Мои отслеживаемые группы
+btn_pt_stats = 📊 Статистика
+btn_keypad_clear = ❌ Стереть
+btn_keypad_submit = ✅ Отправить
+btn_keypad_cancel = 🚫 Отмена
+btn_pt_edit_record = ⚙️ Изменить #{ $idx } ({ $title })
+btn_pt_buy_stars_slots = ⭐ Докупить слоты (Telegram Stars)
+btn_pt_connect_personal = 📱 Подключить личный аккаунт
+btn_pt_create_notification_group = 📢 Создать группу уведомлений
+
+# Настройки (settings.py)
+settings_channels_title = 🌐 <b>Каналы отслеживания</b>\n\n📊 Всего каналов: <b>{ $total }</b>\n\nВыберите действие:
+settings_channels_empty = 📭 Список каналов пуст.
+settings_channels_list_title = 📋 <b>Список каналов</b> (стр. { $page }/{ $total_pages }) · всего: { $total }\n
+settings_channels_list_hint = \n<i>Нажмите ❌ на канале, чтобы удалить его.</i>
+settings_channel_deleted = ✅ Канал удалён: { $channel }
+settings_channel_not_found = ⚠️ Канал не найден.
+settings_channels_clear_confirm = 🧹 <b>Очистить весь список каналов?</b>\n\nБудет удалено <b>{ $total }</b> канал(ов). Это действие нельзя отменить.
+settings_channels_cleared = ✅ <b>Список каналов очищен.</b>\n\nУдалено каналов: <b>{ $count }</b>
+settings_keywords_title = 🔍 <b>Ключевые слова</b>\n\n📊 Всего слов: <b>{ $total }</b>\n\nВыберите действие:
+settings_keywords_empty = 📭 Список ключевых слов пуст.
+settings_keywords_list_title = 🔍 <b>Ключевые слова</b> (стр. { $page }/{ $total_pages }) · всего: { $total }\n
+settings_keywords_list_hint = \n<i>Нажмите ❌ на слове, чтобы удалить его.</i>
+settings_keyword_deleted = ✅ Удалено: { $keyword }
+settings_keyword_not_found = ⚠️ Слово не найдено.
+settings_notification_created = 📢 <b>Группа уведомлений</b>\n\n✅ Группа создана.\n🔗 <a href='{ $link }'>Перейти в группу</a>
+settings_notification_not_created = 📢 <b>Группа уведомлений</b>\n\n❌ Группа ещё не создана.\n\n<i>Создайте группу через раздел «🎯 Персональное отслеживание».</i>
+settings_notification_alert_no_group = ❌ Группа не создана. Перейдите в «🎯 Персональное отслеживание» для её создания.
+settings_notification_recreate_text = 🔄 <b>Пересоздать группу уведомлений</b>\n\nДля пересоздания группы перейдите в раздел «🎯 Персональное отслеживание» → «➕ Добавить отслеживание группы».\n\n<i>Новая группа будет создана автоматически при добавлении нового отслеживания.</i>
+
+# Добавление каналов (connect_group.py)
+connect_group_prompt = 🔗 <b>Отправьте ссылку или username группы/канала для отслеживания</b>\n\nНапример:\n<code>https://t.me/python_jobs</code>\nили <code>@python_jobs</code>\n\nМожно отправить несколько ссылок, каждую с новой строки.
+connect_group_no_links = ⚠️ Отправьте хотя бы одну ссылку или username.
+connect_group_invalid_links = ⚠️ Проверьте правильность ссылок.
+connect_group_saved = ✅ Группа / группы записаны в базу данных.
+connect_group_text_required = ⚠️ Отправьте ссылку или username группы/канала текстовым сообщением.
+connect_group_file_invalid_links = ⚠️ Проверьте правильность ссылок в файле.
+connect_group_file_required = ⚠️ Отправьте TXT-файл со ссылками или username групп и каналов.
+
+# Передача прав (transfer_rights.py)
+transfer_rights_prompt = 🔄 <b>Передача настроек другому пользователю</b>\n\nОтправьте Telegram ID пользователя, которому хотите скопировать свои каналы и ключевые слова.\n\n<i>Пример: <code>1234567890</code></i>
+transfer_rights_invalid_id = ⚠️ Некорректный ID. ID должен содержать только цифры.\n\nПопробуйте снова через меню настроек.
+transfer_rights_self = ⚠️ Нельзя передать настройки самому себе.
+transfer_rights_not_found = ⚠️ Пользователь с ID <code>{ $target_user_id }</code> ещё не запускал этого бота.
+transfer_rights_success = ✅ <b>Настройки успешно переданы пользователю { $target_user_id }!</b>\n\n📋 Добавлено каналов: <b>{ $groups }</b>\n🔑 Добавлено ключевых слов: <b>{ $keywords }</b>
+
+# Удаление и ввод ключевых слов
+delete_group_invalid_format = ⚠️ <b>Не удалось распознать ссылку.</b>\n\nДопустимые форматы:\n• <code>@channel_name</code>\n• <code>https://t.me/channel_name</code>\n• <code>https://t.me/+PrivateHash</code>\n• <code>https://t.me/joinchat/Hash</code>
+keywords_added_success = ✅ Ключевые слова добавлены.\n\n📊 Всего ключевых слов: <b>{ $count }</b>
+
+# Персональное отслеживание (personal_tracking.py)
+pt_no_slots_alert = ⚠️ Все слоты задействованы! Докупите дополнительный слот.
+pt_ask_link = 🔗 <b>Введите ссылку на целевую группу или канал</b>\n\n<i>Например: <code>https://t.me/python_jobs</code> или <code>@python_jobs</code></i>
+pt_invalid_link = ⚠️ Пожалуйста, введите корректную ссылку (https://t.me/...) или @username группы/канала.
+pt_checking_group = 🔄 <i>Проверяем группу и получаем информацию...</i>
+pt_ask_keywords = 🔑 Введите ключевые слова для отслеживания через запятую:
+pt_saved_success = ✅ <b>Настройки отслеживания сохранены!</b>
+pt_no_active_trackings = ℹ️ У Вас пока нет активных персональных отслеживаний.
+pt_record_not_found = Ошибка: Запись не найдена
+pt_edit_prompt = ⚙️ <b>Редактирование отслеживания</b>\n\n🔗 Текущая ссылка: { $link }\n🔑 Ключевые слова: { $keywords }\n\nОтправьте новую ссылку на группу/канал:
+pt_updating_group = 🔄 <i>Обновляем подписку и группу...</i>
+pt_updated_success = ✅ <b>Настройки отслеживания успешно обновлены!</b>
+pt_stats_msg = 📊 <b>Статистика персональных отслеживаний</b>\n\n👥 Всего пользователей: <b>{ $users }</b>\n🎯 Всего отслеживаний: <b>{ $trackings }</b>
+pt_code_prompt = 🔢 Введите 5-значный код подтверждения:
+pt_invalid_code_alert = ❌ Неверный код подтверждения! Попробуйте еще раз.
+pt_code_expired_alert = ❌ Срок действия кода истек! Запросите код заново.
+pt_login_error_alert = ❌ Ошибка входа: { $error }
+pt_checking_2fa = 🔄 <i>Проверяем 2FA пароль...</i>
+pt_auth_success = ✅ <b>Авторизация успешна!</b>\n\nАккаунт успешно подключен.
+pt_auth_error = ❌ Ошибка авторизации: { $error }
+pt_auth_cancelled = 🚫 Авторизация отменена.
+pt_phone_prompt = 📱 <b>Подключение Telegram-аккаунта</b>\n\nВведите ваш номер телефона в международном формате (например, <code>+79991234567</code>):
+pt_phone_invalid = ❌ Введен недействительный номер телефона. Попробуйте еще раз.
+pt_phone_flood = ⏳ Слишком много попыток. Пожалуйста, подождите { $seconds } секунд.
+pt_code_request_error = ❌ Ошибка при запросе кода: { $error }
+pt_code_need_5_digits = ⚠️ Введите все 5 цифр кода подтверждения!
+pt_sending_code_status = ⏳ Отправляем код подтверждения на номер { $phone }...
+pt_enter_code_keypad = 📱 <b>Код подтверждения отправлен в Telegram</b>\n\nНажмите цифры кода на клавиатуре ниже:\n\nВведено: <b>{ $code }</b>
+pt_enter_2fa_prompt = 🔐 <b>Требуется облачный пароль (2FA)</b>\n\nВведите пароль двухфакторной аутентификации:
+pt_no_account_connected = ⚠️ Нет подключенного аккаунта. Подключите аккаунт.
+pt_record_error = Ошибка записи.
+
+# Администратор и рассылка (admin.py)
+admin_access_denied = ⛔ Доступ только для администраторов
+admin_broadcast_prompt = 📢 <b>Рассылка сообщений пользователям</b>\n\nОтправьте сообщение, которое хотите разослать всем пользователям бота.\n\n• Поддерживается форматирование <b>HTML</b> (жирный, курсив, ссылки).\n• Можно прикрепить фото, видео, анимацию или документ с подписью.\n\n<i>Для отмены нажмите кнопку «Назад» ниже.</i>
+admin_broadcast_preview_title = 👁️ <b>Предпросмотр сообщения для рассылки:</b>
+admin_broadcast_preview_params = 📊 <b>Параметры рассылки:</b>\n\n👥 Всего получателей в базе данных: <b>{ $total }</b>\n\nПодтвердите отправку или отмените действие:
+admin_broadcast_cancelled = ❌ <b>Рассылка отменена.</b>
+admin_broadcast_not_found = ⚠️ Ошибка: сообщение для рассылки не найдено.
+admin_broadcast_started = 🚀 <b>Рассылка запущена... Пожалуйста, подождите.</b>
+admin_broadcast_progress = 🚀 <b>Выполняется рассылка...</b>\n\nПрогресс: <b>{ $current }/{ $total }</b>\n✅ Отправлено: { $sent }\n🚫 Заблокировали бота: { $blocked }\n⚠️ Ошибок: { $errors }
+admin_broadcast_report = 🏁 <b>Рассылка завершена!</b>\n\n📊 <b>Итоговый отчёт:</b>\n• Всего получателей: <b>{ $total }</b>\n• ✅ Успешно доставлено: <b>{ $sent }</b>\n• 🚫 Бот заблокирован пользователем: <b>{ $blocked }</b>\n• ⚠️ Другие ошибки: <b>{ $errors }</b>
+
+# Парсер и лимиты (parser.py)
+parser_notification_group_missing = ⚠️ <b>Группа уведомлений не найдена!</b>\n\nПеред запуском отслеживания необходимо создать целевую группу для получения уведомлений.\nНажмите кнопку ниже, чтобы настроить её:
+parser_free_account_limit = ⚠️ <b>Превышен лимит отслеживания!</b>\n\nВы используете <b>общий бесплатный аккаунт</b>, на котором разрешено отслеживать только <b>1 канал</b>.\n\nДля отслеживания большего количества каналов:\n• Подключите собственный личный Telegram-аккаунт (без ограничений)\n• Или оплатите дополнительные слоты через Telegram Stars.
+
+# Общие сообщения
+welcome_choose_lang = 👋 Привет! Пожалуйста, выберите язык / Please choose your language:
+no_connected_account = Нет подключенного аккаунта. Подключите аккаунт.
+excel_export_caption = 📊 Результаты поиска групп в Excel
+db_export_caption = 📊 Экспорт базы данных в Excel
+found_groups_caption = 📊 Найдено { $count } групп/каналов
+
 
 
 

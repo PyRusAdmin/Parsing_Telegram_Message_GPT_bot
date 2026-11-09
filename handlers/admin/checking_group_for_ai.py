@@ -23,7 +23,13 @@ router = Router(name=__name__)
 
 
 async def show_category_method_menu(message: Message, state: FSMContext, edit: bool = False):
-    """Отображает меню выбора метода присвоения категорий"""
+    """
+    Отображает меню выбора метода присвоения категорий.
+
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :param edit: (bool) Флаг редактирования текущего сообщения вместо отправки нового.
+    """
     await state.set_state(CategoryMethod.waiting_for_method)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -42,13 +48,23 @@ async def show_category_method_menu(message: Message, state: FSMContext, edit: b
 
 @router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
 async def checking_group_for_ai_db(message: Message, state: FSMContext):
-    """Предлагает выбор метода присвоения категорий (текст)"""
+    """
+    Предлагает выбор метода присвоения категорий по текстовой кнопке.
+
+    :param message: (Message) Объект входящего сообщения от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await show_category_method_menu(message, state, edit=False)
 
 
 @router.callback_query(F.data == "admin_assign_category")
 async def checking_group_for_ai_db_cb(callback: CallbackQuery, state: FSMContext):
-    """Предлагает выбор метода присвоения категорий (инлайн)"""
+    """
+    Предлагает выбор метода присвоения категорий через инлайн-кнопку.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await show_category_method_menu(callback.message, state, edit=True)
     await callback.answer()
 
@@ -56,7 +72,9 @@ async def checking_group_for_ai_db_cb(callback: CallbackQuery, state: FSMContext
 async def get_best_g4f_model(client: Client) -> str:
     """
     Проверяет доступность моделей g4f и возвращает первую рабочую.
-    Приоритет: llama-3.1-8b-instant → gpt-4o-mini → llama-3.2-3b → mistral-7b
+
+    :param client: (Client) Экземпляр клиента g4f.
+    :return: (str) Идентификатор доступной модели (например, 'gpt-4o-mini').
     """
     # Список моделей по приоритету (от быстрой к медленной)
     # TODO список моделей сделать в отдельном в файле, а не в коде, что бы можно было бы легко удалить не действительную модель
@@ -96,7 +114,12 @@ async def get_best_g4f_model(client: Client) -> str:
 
 @router.message(StateFilter(CategoryMethod.waiting_for_method))
 async def process_category_method_choice(message: Message, state: FSMContext):
-    """Обрабатывает выбор метода присвоения категорий"""
+    """
+    Обрабатывает выбор метода присвоения категорий из обычного меню.
+
+    :param message: (Message) Объект входящего текстового сообщения от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
@@ -155,10 +178,15 @@ async def process_category_method_choice(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith("cat_method_"))
 async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает выбор метода присвоения категорий (инлайн)"""
+    """
+    Обрабатывает выбор метода присвоения категорий из инлайн-меню.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     method = callback.data.split("_", 2)[2]
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.answer()
 
     if method == "back":
@@ -204,7 +232,13 @@ async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMC
 
 
 async def assign_categories(message: Message, client, model):
-    """Универсальная функция присвоения категорий (любой AI клиент)"""
+    """
+    Универсальная функция присвоения категорий для групп через любой AI-клиент.
+
+    :param message: (Message) Объект сообщения для отправки статуса и обновлений.
+    :param client: Экземпляр AI-клиента (Client, AsyncOpenAI или AsyncGroq).
+    :param model: (str) Имя используемой модели нейросети.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
@@ -258,12 +292,20 @@ async def assign_categories(message: Message, client, model):
 
 @router.message((F.text == t('get_database_button', 'ru')) | (F.text == t('get_database_button', 'en')))
 async def get_groups_without_category_message(message: Message):
-    """Информация о группах без категории"""
+    """
+    Информация о количестве групп без категории в базе данных.
+
+    :param message: (Message) Объект входящего сообщения от пользователя.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
     def _count():
-        """Подсчитывает количество групп без присвоенной категории в БД"""
+        """
+        Подсчитывает количество групп без присвоенной категории в БД.
+
+        :return: (int) Количество групп без категории.
+        """
         if database.is_closed():
             database.connect(reuse_if_open=True)
         return TelegramGroups.select().where(

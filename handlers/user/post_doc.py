@@ -24,8 +24,10 @@ router = Router(name=__name__)
 
 def clean_ai_response(text: str) -> str:
     """
-    Очищает ответ ИИ от блоков рассуждений <think>...</think>, Markdown-разметки (###, **, *, `, _)
-    и HTML-тегов, чтобы пользователь получал чистый простой текст без разметки.
+    Очищает ответ ИИ от блоков рассуждений <think>...</think>, Markdown-разметки и HTML-тегов.
+
+    :param text: (str) Исходный ответ модели нейросети.
+    :return: (str) Очищенный простой текст без разметки.
     """
     if not text:
         return ""
@@ -60,7 +62,11 @@ def clean_ai_response(text: str) -> str:
 
 # Чтение базы знаний
 def load_knowledge_base():
-    """Загружает содержимое файла базы знаний."""
+    """
+    Загружает содержимое файла базы знаний из doc/doc.md.
+
+    :return: (str) Текст документации базы знаний или сообщение об отсутствии файла.
+    """
     if os.path.exists("doc/doc.md"):
         with open("doc/doc.md", "r", encoding="utf-8") as file:
             return file.read()
@@ -72,6 +78,9 @@ def load_knowledge_base():
 async def send_instruction_cb(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик инлайн-кнопки "Инструкция по использованию".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -97,6 +106,9 @@ async def send_instruction_cb(callback: CallbackQuery, state: FSMContext):
 async def handle_instruction_question(message: Message, state: FSMContext):
     """
     Обрабатывает вопросы пользователя по инструкции с использованием Groq AI.
+
+    :param message: (Message) Объект входящего сообщения Telegram с вопросом.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)

@@ -29,8 +29,10 @@ router = Router(name=__name__)
 @router.callback_query(F.data == "account_connect_free")
 async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки "🔐 Подключить свободный аккаунт".
-    Подключает случайный свободный аккаунт пользователю
+    Обработчик инлайн-кнопки "Подключить свободный аккаунт".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await callback.answer()
     # await connect_account_free_internal(callback.message, callback.from_user, state)
@@ -50,7 +52,7 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     free_accounts = list(AccountFree.select())
     if not free_accounts:
         logger.warning(f"Нет доступных свободных аккаунтов для пользователя {user.user_id}")
-        await message.answer(
+        await callback.message.answer(
             text=t("no_free_accounts", lang=user_lang),
             reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
         )
@@ -64,7 +66,7 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         user_id=user.user_id
     )
     selected_account.delete_instance()
-    await message.answer(
+    await callback.message.answer(
         text=t("account_connected_free", lang=user_lang),
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )
@@ -72,10 +74,11 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
 
 def sanitization_file_name(document, account_id):
     """
-    Очистка имени файла от недопустимых символов (файлов сессии).
-    :param document: Файл сессии Telegram в формате Telethon
-    :param account_id: ID аккаунта пользователя
-    :return: local_file_path - Путь к файлу сессии. safe_file_name - Имя файла сессии.
+    Очистка имени файла сессии от недопустимых символов и генерация безопасного пути.
+
+    :param document: Объект входящего документа Telegram с файлом сессии.
+    :param account_id: (int | str) ID аккаунта пользователя для формирования директории.
+    :return: (tuple[Path, str] | tuple[None, None]) Кортеж (путь к локальному файлу, безопасное имя файла).
     """
     try:
         folder_path = Path(f"accounts/{account_id}")
@@ -91,7 +94,11 @@ def sanitization_file_name(document, account_id):
 
 
 def delete_directory(folder_path):
-    """Удаляет папку и все файлы в ней (рекурсивно)"""
+    """
+    Удаляет директорию и всё её содержимое рекурсивно.
+
+    :param folder_path: (str | Path) Путь к удаляемой папке или файлу.
+    """
     if not folder_path:
         return
     path = Path(folder_path)
@@ -113,7 +120,12 @@ def delete_directory(folder_path):
 
 @router.callback_query(F.data == "account_connect_menu")
 async def handle_account_connect_menu(callback: CallbackQuery, state: FSMContext):
-    """Меню подключения аккаунтов с выбором способов подключения аккаунтов"""
+    """
+    Отображает меню выбора способа подключения Telegram-аккаунта.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()  # Очищаем состояние
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -129,7 +141,12 @@ async def handle_account_connect_menu(callback: CallbackQuery, state: FSMContext
 
 @router.callback_query(F.data == "settings_section_channels")
 async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает команду подключения аккаунта (инлайн) (Подключение аккаунта через сессию Telethon)"""
+    """
+    Инициирует подключение аккаунта через файл .session Telethon.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
@@ -145,7 +162,12 @@ async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
 # ✅ Фильтр: только документы И только в нужном состоянии
 @router.message(MyStates.waiting_for_session_file_user, F.document)
 async def handle_account_file(message: Message, state: FSMContext):
-    """Обработчик приёма файла сессии (.session) от пользователя"""
+    """
+    Обработчик приёма и валидации файла сессии (.session) от пользователя.
+
+    :param message: (Message) Входящее сообщение Telegram с прикрепленным документом сессии.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
 
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -206,7 +228,12 @@ async def handle_account_file(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "admin_connect_account")
 async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext):
-    """Админ нажимает кнопку → бот просит .session файл(ы) (инлайн). Инициирует процесс добавления сессий администратором"""
+    """
+    Инициирует процесс добавления сессий администратором (инлайн).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -223,7 +250,12 @@ async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext
 
 @router.message(MyStates.waiting_for_session_file, F.document)
 async def receive_session_file(message: Message, state: FSMContext):
-    """Получаем .session файл(ы) от админа и обрабатываем по очереди"""
+    """
+    Получает файл(ы) сессий от администратора и обрабатывает их последовательно.
+
+    :param message: (Message) Входящее сообщение Telegram с прикрепленным .session файлом.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     document = message.document  # получаем файл сессии
@@ -319,10 +351,11 @@ async def receive_session_file(message: Message, state: FSMContext):
 
 def cleanup_session_files(parsing_dir: str, root_dirs: list[str] | None = None):
     """
-    Полная очистка временных .session файлов
-    :param parsing_dir: Папка с временными сессиями (будет удалена полностью)
-    :param root_dirs: Список корневых папок для поиска "забытых" .session файлов
-    :return: dict со статистикой очистки
+    Полная очистка временных .session файлов.
+
+    :param parsing_dir: (str) Папка с временными сессиями (удаляется полностью).
+    :param root_dirs: (list[str] | None) Список корневых папок для поиска "забытых" файлов сессий.
+    :return: (dict) Словарь со статистикой очистки (parsing_dir_deleted, root_files_deleted, errors).
     """
     result = {
         "parsing_dir_deleted": False,
@@ -372,13 +405,15 @@ def cleanup_session_files(parsing_dir: str, root_dirs: list[str] | None = None):
 @router.callback_query(F.data == "pt_auth_phone")
 async def cb_start_phone_auth(callback: CallbackQuery, state: FSMContext):
     """
-    Начало шага ввода номера телефона. Если аккаунт подключает Администратор, то данные будут записываться в общую папку с аккаунтами
+    Начало шага авторизации Telegram-аккаунта по номеру телефона.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.set_state(PersonalTrackingState.waiting_for_phone_number)
     await callback.message.answer(
-        "📱 <b>Подключение Telegram-аккаунта по номеру телефона</b>\n\n"
-        "Пожалуйста, введите Ваш номер телефона в международном формате.\n"
-        "<i>Пример: <code>+79991234567</code> или <code>+380991234567</code></i>",
+        t("pt_phone_prompt", lang=user_lang),
         parse_mode="HTML"
     )
     await callback.answer()
@@ -386,19 +421,25 @@ async def cb_start_phone_auth(callback: CallbackQuery, state: FSMContext):
 
 @router.message(PersonalTrackingState.waiting_for_phone_number)
 async def process_phone_number_input(message: Message, state: FSMContext):
-    """Обработка ввода номера телефона и запрос 5-значного кода через Telethon"""
+    """
+    Обработка ввода номера телефона и запрос кода подтверждения через Telethon.
+
+    :param message: (Message) Объект входящего сообщения Telegram с номером телефона.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=message.from_user.id)
     phone = message.text.strip().replace(" ", "").replace("-", "")
     if not phone.startswith("+"):
         phone = "+" + phone
 
     if len(phone) < 10 or not phone[1:].isdigit():
         await message.answer(
-            "⚠️ Некорректный формат номера. Введите номер начиная со знака + (например, <code>+79991234567</code>):",
+            t("pt_phone_invalid", lang=user_lang),
             parse_mode="HTML")
         return
 
     status_msg = await message.answer(
-        "🔄 <i>Запрашиваем код подтверждения у Telegram... Пожалуйста, подождите до прихода кода. Если код не пришел, попробуйте позже.</i>",
+        t("pt_sending_code_status", lang=user_lang, phone=phone),
         parse_mode="HTML")
 
     client = TelegramClient(
@@ -426,29 +467,44 @@ async def process_phone_number_input(message: Message, state: FSMContext):
         )
         await state.set_state(PersonalTrackingState.waiting_for_auth_code)
 
-        await status_msg.edit_text(
+        msg_body = (
             f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
             f"📱 <b>Номер:</b> <code>{phone}</code>\n"
             f"🔢 <b>Введенный код:</b> <code>_ _ _ _ _</code>\n\n"
-            f"⚠️ <i>Используйте эмодзи-клавиатуру ниже для выбора цифр кода, чтобы избежать блокировки от Telegram:</i>",
-            reply_markup=emoji_code_keypad_kb(),
+            f"⚠️ <i>Используйте эмодзи-клавиатуру ниже для выбора цифр кода, чтобы избежать блокировки от Telegram:</i>"
+        ) if user_lang == "ru" else (
+            f"📩 <b>Verification code sent to your Telegram!</b>\n\n"
+            f"📱 <b>Number:</b> <code>{phone}</code>\n"
+            f"🔢 <b>Entered code:</b> <code>_ _ _ _ _</code>\n\n"
+            f"⚠️ <i>Use the emoji keypad below to select code digits:</i>"
+        )
+
+        await status_msg.edit_text(
+            msg_body,
+            reply_markup=emoji_code_keypad_kb(lang=user_lang),
             parse_mode="HTML"
         )
     except PhoneNumberInvalidError:
-        await status_msg.edit_text("❌ Введен недействительный номер телефона. Попробуйте еще раз.")
+        await status_msg.edit_text(t("pt_phone_invalid", lang=user_lang))
         await state.clear()
     except FloodWaitError as fwe:
-        await status_msg.edit_text(f"⏳ Слишком много попыток. Пожалуйста, подождите {fwe.seconds} секунд.")
+        await status_msg.edit_text(t("pt_phone_flood", lang=user_lang, seconds=fwe.seconds))
         await state.clear()
     except Exception as e:
         logger.exception(f"❌ Ошибка отправки кода на номер {phone}: {e}")
-        await status_msg.edit_text(f"❌ Ошибка при запросе кода: {e}")
+        await status_msg.edit_text(t("pt_code_request_error", lang=user_lang, error=str(e)))
         await state.clear()
 
 
 @router.callback_query(F.data.startswith("pt_digit_"), PersonalTrackingState.waiting_for_auth_code)
 async def cb_handle_emoji_digit(callback: CallbackQuery, state: FSMContext):
-    """Обработка ввода цифр кода с помощью эмодзи-клавиатуры"""
+    """
+    Обработка ввода цифр кода подтверждения с помощью защищённой эмодзи-клавиатуры.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса с нажатой кнопкой.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     action = callback.data.replace("pt_digit_", "")
     data = await state.get_data()
     current_code = data.get("current_code", "")
@@ -457,7 +513,7 @@ async def cb_handle_emoji_digit(callback: CallbackQuery, state: FSMContext):
         current_code = current_code[:-1]
     elif action == "submit":
         if len(current_code) < 5:
-            await callback.answer("⚠️ Введите все 5 цифр кода подтверждения!", show_alert=True)
+            await callback.answer(t("pt_code_need_5_digits", lang=user_lang), show_alert=True)
             return
         await execute_sign_in(callback, state, current_code)
         return
@@ -470,13 +526,22 @@ async def cb_handle_emoji_digit(callback: CallbackQuery, state: FSMContext):
     digits_display = " ".join(list(current_code) + ["_"] * (5 - len(current_code)))
     phone = data.get("phone_number", "")
 
+    code_disp_text = (
+        f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
+        f"📱 <b>Номер:</b> <code>{phone}</code>\n"
+        f"🔢 <b>Введенный код:</b> <code>{digits_display}</code>\n\n"
+        f"⚠️ <i>Используйте эмодзи-клавиатуру ниже для выбора цифр кода:</i>"
+    ) if user_lang == "ru" else (
+        f"📩 <b>Verification code sent to your Telegram!</b>\n\n"
+        f"📱 <b>Number:</b> <code>{phone}</code>\n"
+        f"🔢 <b>Entered code:</b> <code>{digits_display}</code>\n\n"
+        f"⚠️ <i>Use the emoji keypad below to select code digits:</i>"
+    )
+
     try:
         await callback.message.edit_text(
-            f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
-            f"📱 <b>Номер:</b> <code>{phone}</code>\n"
-            f"🔢 <b>Введенный код:</b> <code>{digits_display}</code>\n\n"
-            f"⚠️ <i>Используйте эмодзи-клавиатуру ниже для выбора цифр кода:</i>",
-            reply_markup=emoji_code_keypad_kb(),
+            code_disp_text,
+            reply_markup=emoji_code_keypad_kb(lang=user_lang),
             parse_mode="HTML"
         )
     except Exception:

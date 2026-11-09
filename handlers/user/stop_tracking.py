@@ -13,7 +13,12 @@ router = Router(name=__name__)
 
 @router.callback_query(F.data == "tracking_stop")
 async def handle_stop_tracking_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик команды Остановить отслеживание (инлайн)"""
+    """
+    Обработчик инлайн-команды "Остановить отслеживание".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
     # await stop_tracking_internal(callback.message, callback.from_user.id, state)
     await state.clear()
@@ -21,9 +26,9 @@ async def handle_stop_tracking_cb(callback: CallbackQuery, state: FSMContext):
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
     logger.info(f"Пользователь {callback.from_user.id} нажал кнопку остановки отслеживания")
-    await stop_tracking(user_id=callback.from_user.id, message=message)
+    await stop_tracking(user_id=callback.from_user.id, message=callback.message)
 
-    await message.answer(
+    await callback.message.answer(
         text=t("tracking_stopped", lang=user_lang),
         reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
     )

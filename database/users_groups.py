@@ -45,10 +45,10 @@ class UsersGroups(database.Model):
 
 def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     """
-    Получает все username каналов/групп пользователя по user_id.
+    Получает все username каналов и групп пользователя по его user_id.
 
-    :param user_id: Telegram ID пользователя
-    :return: Кортеж (список username, общее количество)
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (tuple[list[str], int]) Кортеж (список username, общее количество).
     """
     records = (UsersGroups
                .select(UsersGroups.username_group)
@@ -61,9 +61,10 @@ def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
 
 def get_group_count(user_id: int):
     """
-    Получение количества групп для отслеживания
-    :param user_id: Telegram ID пользователя
-    :return int: Количество записей (обычно 0 или 1, так как группа одна).
+    Получение количества групп для отслеживания у пользователя.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (int) Количество отслеживаемых групп.
     """
     return UsersGroups.select().where(UsersGroups.user_id == user_id).count()
 
@@ -71,17 +72,15 @@ def get_group_count(user_id: int):
 def add_user_group(user_id: int, group: list[str], user_username: str = "", user_firstname: str = "",
                    id_group: int | None = None, name_group: str = "", user_session_string: str = "") -> None:
     """
-    Безопасно добавляет список групп/каналов в базу данных data/bot.db, пропуская дубликаты, если они есть.
-    В базе данных могут быть одинаковые username групп, но не у одного пользователя. Например, @python_jobs
-    может быть добавлен несколькими пользователями, но не может быть дважды у одного пользователя в таблице Groups.
-    :param user_id: ID пользователя Telegram.
-    :param group: Список username групп/каналов, которые будут отслеживаться.
-    :param user_username: username пользователя Telegram.
-    :param user_firstname: firstname пользователя Telegram.
-    :param id_group: ID группы Telegram (для закрытых групп).
-    :param name_group: Название группы Telegram.
-    :param user_session_string: Стринг сессия аккаунта для отслеживания.
-    :return None: Нечего не возвращаем, так как записываем в базу данных
+    Безопасно добавляет список групп и каналов пользователя в базу данных.
+
+    :param user_id: (int) ID пользователя в Telegram.
+    :param group: (list[str]) Список username групп/каналов для отслеживания.
+    :param user_username: (str) Username пользователя в Telegram.
+    :param user_firstname: (str) Имя пользователя в Telegram.
+    :param id_group: (int | None) ID группы в Telegram (для закрытых чатов).
+    :param name_group: (str) Название группы Telegram.
+    :param user_session_string: (str) Строка сессии для отслеживания.
     """
     for gr in group:
         gr_clean = gr.strip()
@@ -102,11 +101,11 @@ def add_user_group(user_id: int, group: list[str], user_username: str = "", user
 
 def dell_group(user_id: int, username_group: str):
     """
-    Удаляет группу из отслеживания ключевых слов.
+    Удаляет группу из отслеживания пользователя.
 
-    :param user_id: Telegram ID пользователя
-    :param username_group: Username группы
-    :return: True, если группа удалена, иначе False
+    :param user_id: (int) Telegram ID пользователя.
+    :param username_group: (str) Username группы.
+    :return: (bool) True, если группа успешно удалена, иначе False.
     """
     try:
         (
@@ -120,10 +119,10 @@ def dell_group(user_id: int, username_group: str):
 
 def clear_all_user_groups(user_id: int) -> int:
     """
-    Удаляет все группы/каналы пользователя из отслеживания.
+    Удаляет все группы и каналы пользователя из отслеживания.
 
-    :param user_id: Telegram ID пользователя
-    :return: Количество удалённых записей
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (int) Количество удалённых записей.
     """
     try:
         deleted = UsersGroups.delete().where(UsersGroups.user_id == user_id).execute()
@@ -136,12 +135,12 @@ def clear_all_user_groups(user_id: int) -> int:
 
 def get_user_groups_paginated(user_id: int, page: int = 0, page_size: int = 5) -> tuple[list, int]:
     """
-    Возвращает страницу каналов пользователя с пагинацией.
+    Возвращает страницу групп пользователя с пагинацией.
 
-    :param user_id: Telegram ID пользователя
-    :param page: Номер страницы (0-based)
-    :param page_size: Количество записей на странице
-    :return: Кортеж (список объектов Group, общее количество)
+    :param user_id: (int) Telegram ID пользователя.
+    :param page: (int) Номер страницы (начиная с 0).
+    :param page_size: (int) Количество записей на странице.
+    :return: (tuple[list, int]) Кортеж из списка записей групп и общего количества.
     """
     total = UsersGroups.select().where(UsersGroups.user_id == user_id).count()
     records = (
@@ -156,11 +155,13 @@ def get_user_groups_paginated(user_id: int, page: int = 0, page_size: int = 5) -
 
 async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
     """
-    Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии
-    :param user_id: Telegram ID пользователя
-    :param user_lang: Используемый язык пользователя
-    :param message: объект сообщения
-    :param client: клиент Telegram
+    Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :param user_lang: (str) Языковой код интерфейса пользователя.
+    :param message: (Message) Объект входящего сообщения Telegram.
+    :param client: (TelegramClient) Клиент Telethon.
+    :return: (list[str] | None) Список username групп или None, если список пуст.
     """
     channels = [group.username_group for group in UsersGroups.select().where(UsersGroups.user_id == user_id)]
 

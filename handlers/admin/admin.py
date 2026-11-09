@@ -27,6 +27,8 @@ router = Router(name=__name__)
 async def export_questions_cb(callback: CallbackQuery):
     """
     Экспортирует вопросы и ответы из базы данных в CSV файл (инлайн).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
     """
     await callback.answer()
 
@@ -36,7 +38,7 @@ async def export_questions_cb(callback: CallbackQuery):
     try:
         questions = get_all_questions()
         if not questions:
-            await message.answer(t("no_questions_in_db", lang=user_lang))
+            await callback.message.answer(t("no_questions_in_db", lang=user_lang))
             return
 
         if not os.path.exists("exports"):
@@ -55,17 +57,22 @@ async def export_questions_cb(callback: CallbackQuery):
             for question_data in questions:
                 writer.writerow(question_data)
 
-        await message.answer_document(FSInputFile(file_path), caption=t("questions_export_caption", lang=user_lang))
+        await callback.message.answer_document(FSInputFile(file_path), caption=t("questions_export_caption", lang=user_lang))
         os.remove(file_path)
 
     except Exception as e:
         logger.exception(e)
-        await message.answer(t("export_error", lang=user_lang, error=str(e)))
+        await callback.message.answer(t("export_error", lang=user_lang, error=str(e)))
 
 
 @router.callback_query(F.data == "menu_admin_panel")
 async def admin_panel_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик команды Панель администратора (инлайн)"""
+    """
+    Обработчик команды "Панель администратора" (инлайн).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.clear()
@@ -76,7 +83,12 @@ async def admin_panel_cb(callback: CallbackQuery, state: FSMContext):
 
 @router.message((F.text == t('check_accounts_button', 'ru')) | (F.text == t('check_accounts_button', 'en')))
 async def checking_accounts_handler(message: Message, state: FSMContext):
-    """✅ Проверка аккаунтов на валидность"""
+    """
+    Проверка аккаунтов на валидность по текстовой команде администратора.
+
+    :param message: (Message) Объект входящего сообщения от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     try:
         await state.clear()  # Сбрасываем текущее состояние FSM
         # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -102,23 +114,20 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
 async def broadcast_start_cb(callback: CallbackQuery, state: FSMContext):
     """
     Старт процесса рассылки: запрос текста/медиа сообщения от администратора.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     if callback.from_user.id not in ADMIN_USER_ID:
-        await callback.answer("⛔ Доступ только для администраторов", show_alert=True)
+        await callback.answer(t("admin_access_denied", lang=user_lang), show_alert=True)
         return
 
     await state.clear()
-    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.set_state(BroadcastState.waiting_for_broadcast_message)
 
     await callback.message.edit_text(
-        text=(
-            "📢 <b>Рассылка сообщений пользователям</b>\n\n"
-            "Отправьте сообщение, которое хотите разослать всем пользователям бота.\n\n"
-            "• Поддерживается форматирование <b>HTML</b> (жирный, курсив, ссылки).\n"
-            "• Можно прикрепить фото, видео, анимацию или документ с подписью.\n\n"
-            "<i>Для отмены нажмите кнопку «Назад» ниже.</i>"
-        ),
+        text=t("admin_broadcast_prompt", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_admin_panel")
     )
@@ -129,6 +138,9 @@ async def broadcast_start_cb(callback: CallbackQuery, state: FSMContext):
 async def broadcast_message_received(message: Message, state: FSMContext):
     """
     Принимает сообщение для рассылки, сохраняет его параметры и отображает предпросмотр.
+
+    :param message: (Message) Объект входящего сообщения от администратора с контентом рассылки.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     if message.from_user.id not in ADMIN_USER_ID:
         return
@@ -146,16 +158,12 @@ async def broadcast_message_received(message: Message, state: FSMContext):
     await state.set_state(BroadcastState.waiting_for_broadcast_confirmation)
 
     # Отправляем предпросмотр (копию сообщения администратора)
-    await message.answer("👁️ <b>Предпросмотр сообщения для рассылки:</b>", parse_mode="HTML")
+    await message.answer(t("admin_broadcast_preview_title", lang=user_lang), parse_mode="HTML")
     await message.copy_to(chat_id=message.chat.id)
 
     # Клавиатура подтверждения
     await message.answer(
-        text=(
-            f"📊 <b>Параметры рассылки:</b>\n\n"
-            f"👥 Всего получателей в базе данных: <b>{total_users}</b>\n\n"
-            f"Подтвердите отправку или отмените действие:"
-        ),
+        text=t("admin_broadcast_preview_params", lang=user_lang, total=total_users),
         parse_mode="HTML",
         reply_markup=broadcast_preview_keyboard(lang=user_lang)
     )
@@ -164,12 +172,15 @@ async def broadcast_message_received(message: Message, state: FSMContext):
 @router.callback_query(BroadcastState.waiting_for_broadcast_confirmation, F.data == "admin_broadcast_cancel")
 async def broadcast_cancel_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Отмена рассылки
+    Отмена рассылки администратором.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await state.clear()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.message.edit_text(
-        text="❌ <b>Рассылка отменена.</b>",
+        text=t("admin_broadcast_cancelled", lang=user_lang),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_admin_panel")
     )
@@ -179,10 +190,15 @@ async def broadcast_cancel_cb(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(BroadcastState.waiting_for_broadcast_confirmation, F.data == "admin_broadcast_send")
 async def broadcast_send_cb(callback: CallbackQuery, state: FSMContext, bot):
     """
-    Запуск цикла рассылки по всем зарегистрированным пользователям таблицы User.
+    Запуск цикла рассылки по всем зарегистрированным пользователям таблицы User/UsersPersonalTrackings.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    :param bot: Экземпляр бота Aiogram для отправки сообщений.
     """
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     if callback.from_user.id not in ADMIN_USER_ID:
-        await callback.answer("⛔ Доступ только для администраторов", show_alert=True)
+        await callback.answer(t("admin_access_denied", lang=user_lang), show_alert=True)
         return
 
     data = await state.get_data()
@@ -191,11 +207,11 @@ async def broadcast_send_cb(callback: CallbackQuery, state: FSMContext, bot):
     await state.clear()
 
     if not source_chat_id or not source_message_id:
-        await callback.answer("⚠️ Ошибка: сообщение для рассылки не найдено.", show_alert=True)
+        await callback.answer(t("admin_broadcast_not_found", lang=user_lang), show_alert=True)
         return
 
     status_msg = await callback.message.edit_text(
-        text="🚀 <b>Рассылка запущена... Пожалуйста, подождите.</b>",
+        text=t("admin_broadcast_started", lang=user_lang),
         parse_mode="HTML"
     )
     await callback.answer()
@@ -251,27 +267,14 @@ async def broadcast_send_cb(callback: CallbackQuery, state: FSMContext, bot):
         if idx % 25 == 0 or idx == total:
             try:
                 await status_msg.edit_text(
-                    text=(
-                        f"🚀 <b>Выполняется рассылка...</b>\n\n"
-                        f"Прогресс: <b>{idx}/{total}</b>\n"
-                        f"✅ Отправлено: {sent_count}\n"
-                        f"🚫 Заблокировали бота: {blocked_count}\n"
-                        f"⚠️ Ошибок: {error_count}"
-                    ),
+                    text=t("admin_broadcast_progress", lang=user_lang, current=idx, total=total, sent=sent_count, blocked=blocked_count, errors=error_count),
                     parse_mode="HTML"
                 )
             except Exception:
                 pass
 
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    report_text = (
-        f"🏁 <b>Рассылка завершена!</b>\n\n"
-        f"📊 <b>Итоговый отчёт:</b>\n"
-        f"• Всего получателей: <b>{total}</b>\n"
-        f"• ✅ Успешно доставлено: <b>{sent_count}</b>\n"
-        f"• 🚫 Бот заблокирован пользователем: <b>{blocked_count}</b>\n"
-        f"• ⚠️ Другие ошибки: <b>{error_count}</b>"
-    )
+    report_text = t("admin_broadcast_report", lang=user_lang, total=total, sent=sent_count, blocked=blocked_count, errors=error_count)
 
     try:
         await status_msg.edit_text(

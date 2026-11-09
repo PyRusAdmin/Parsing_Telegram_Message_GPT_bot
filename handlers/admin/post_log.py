@@ -11,7 +11,12 @@ router = Router(name=__name__)
 
 @router.callback_query(F.data == "admin_get_log")
 async def log_cb(callback: CallbackQuery, state: FSMContext):
-    """Обработчик команды Получить лог файл (инлайн), отправляет лог файл администратору"""
+    """
+    Обработчик команды "Получить лог файл" (инлайн), отправляет лог-файл администратору.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
 
     await state.clear()
@@ -19,7 +24,7 @@ async def log_cb(callback: CallbackQuery, state: FSMContext):
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     document = FSInputFile("logs/log.log")
 
-    await message.answer_document(
+    await callback.message.answer_document(
         document=document,
         caption=t("log_file_caption", lang=user_lang),
         parse_mode="HTML",

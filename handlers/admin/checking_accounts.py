@@ -13,7 +13,12 @@ router = Router(name=__name__)
 
 @router.callback_query(F.data == "admin_check_accounts")
 async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
-    """✅ Проверка аккаунтов на валидность (инлайн)"""
+    """
+    Проверка аккаунтов на валидность (инлайн-обработчик).
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
     await callback.answer()
 
     try:
@@ -23,14 +28,14 @@ async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
         records = getting_account()
         logger.info(f"Получено аккаунтов: {len(records)}")
 
-        await message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
+        await callback.message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
 
         for session_name in records:
             logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
             checker = CheckingAccountsValidity()
             await checker.verify_account(session_name)
 
-        await message.answer(
+        await callback.message.answer(
             t("checking_accounts_complete", lang=user_lang)
         )
 
