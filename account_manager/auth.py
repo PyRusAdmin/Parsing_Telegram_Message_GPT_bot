@@ -23,10 +23,8 @@ async def get_account_info(client: TelegramClient) -> dict:
     """
     Получает информацию о пользователе Telegram через client.get_me().
 
-    :param client: Авторизованный клиент Telethon.
-    :return: dict с полями: id - Идентификатор пользователя Telegram, phone - Номер телефона пользователя Telegram,
-    first_name - Имя пользователя Telegram, last_name - Фамилия пользователя Telegram, username - Никнейм пользователя
-    Telegram
+    :param client: (TelegramClient) Авторизованный клиент Telethon.
+    :return: (dict) Словарь с данными аккаунта: id, phone, first_name, last_name, username.
     """
     me = await client.get_me()
     phone = me.phone or ""
@@ -49,17 +47,18 @@ class CheckingAccountsValidity:
 
     def __init__(self, path: str | None = None):
         """
-        :param message: Сообщение для отправки уведомлений (опционально)
-        :param path: Путь к папке с .session файлами (опционально)
+        Инициализирует валидатор аккаунтов.
+
+        :param path: (str | None) Путь к файлу сессии или папке с сессиями (опционально).
         """
         self.path = Path(path) if path else None
 
     async def client_connect_string_session(self, session_name) -> TelegramClient | None:
         """
-        Подключение к Telegram аккаунту через StringSession
+        Подключение к Telegram аккаунту через StringSession.
 
-        :param session_name: Имя аккаунта для подключения (файл .session)
-        :return: Клиент Telegram или None, если подключение не удалось
+        :param session_name: (str) Строка сессии (StringSession) для подключения.
+        :return: (TelegramClient | None) Клиент Telegram или None, если подключение не удалось.
         """
         client = TelegramClient(
             StringSession(session_name),
@@ -102,14 +101,19 @@ class CheckingAccountsValidity:
     async def write_csv(self, data):
         """
         Запись данных в CSV файл.
-        :param data: Список значений (например, список аккаунтов)
+
+        :param data: (Any) Данные для записи в файл (например, строка сессии).
         """
         with open('file.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([data])
 
     async def read_invalid_sessions(self) -> list[str]:
-        """Чтение всех невалидных сессий из CSV"""
+        """
+        Чтение всех невалидных сессий из CSV файла.
+
+        :return: (list[str]) Список строк невалидных сессий.
+        """
         invalid_sessions = []
         if os.path.exists('file.csv'):
             with open('file.csv', encoding='utf-8') as f:
@@ -122,10 +126,11 @@ class CheckingAccountsValidity:
     # TODO 25.10.2026 Сделать универсальную функцию проверки сессий для всего проекта. Добавить в общий туду лист
     async def verify_account(self, session_name, user_id, user_lang) -> None:
         """
-        Проверяет и сортирует аккаунты.
-        :param user_lang: Язык пользователя
-        :param session_name: Имя аккаунта для проверки
-        :param user_id: ID пользователя
+        Проверяет валидность аккаунта и удаляет невалидные сессии из базы данных пользователя.
+
+        :param session_name: (str) Строка сессии для проверки.
+        :param user_id: (int) Telegram ID пользователя.
+        :param user_lang: (str) Языковой код интерфейса пользователя.
         """
         try:
             logger.info(f"Проверка аккаунта {session_name}")
@@ -173,8 +178,9 @@ class CheckingAccountsValidity:
 
     async def connect_client(self) -> TelegramClient | None:
         """
-        Подключение клиента Telethon и проверка сессии.
-        :return: client или None, если сессия невалидна
+        Подключение клиента Telethon по пути файла сессии и проверка авторизации.
+
+        :return: (TelegramClient | None) Авторизованный клиент Telegram или None, если сессия невалидна.
         """
         client = TelegramClient(
             self.path,
@@ -211,10 +217,9 @@ class CheckingAccountsValidity:
     #  аккаунт, который подключил администратор бота, для поиска групп и аккаунтов
     async def start_random_client(self):
         """
-        Запускает клиент Telethon или из подключенного пользователем аккаунта или берется случайным образом 
-        из подключенных аккаунтов администратором бота.
+        Запускает клиент Telethon, выбирая случайную сессию из подключенных аккаунтов администратора.
 
-        :return: Авторизованный TelegramClient или None
+        :return: (TelegramClient | None) Авторизованный TelegramClient или None при ошибке.
         """
         try:
             # records = getting_account()

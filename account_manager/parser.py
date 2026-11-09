@@ -23,8 +23,11 @@ from locales.locales import t
 
 async def get_full_info_group(client, entity):
     """
-    Получение полной информации о группе или канале Telegram
-    :return: Объект с полной информацией о группе или канале Telegram
+    Получение полной информации о группе или канале Telegram.
+
+    :param client: (TelegramClient) Активный клиент Telethon.
+    :param entity: (Channel | Chat) Сущность группы или канала из Telethon.
+    :return: (dict | None) Словарь с данными группы (description, participants, link, group_type, actual_username, title) или None при ошибке.
     """
     try:
 
@@ -162,8 +165,8 @@ def determine_telegram_chat_type(entity):
     - 'Канал' — если это канал (broadcast)
     - 'Обычный чат (группа старого типа)' — обычные группы без username
 
-    :param entity: (Channel, Chat) Объект сущности из Telethon.
-    :return: str Тип чата как строка.
+    :param entity: (Channel | Chat) Объект сущности из Telethon.
+    :return: (str) Тип чата в виде строки.
     """
 
     if entity.megagroup:
@@ -182,13 +185,9 @@ def determine_telegram_chat_type(entity):
 async def sync_account_channels(client):
     """
     Собирает и обновляет данные о группах и каналах из аккаунта пользователя.
-    Проходит по всем диалогам, фильтрует супергруппы и каналы, получает полную информацию
-    (участники, описание, ссылка), определяет тип чата и сохраняет/обновляет запись в базе данных.
-    Пропускает личные чаты и обычные группы без username.
-    Добавлена защита от ошибок и ограничений Telegram API.
 
     :param client: (TelegramClient) Активный клиент Telethon.
-    :return: set — множество username (@username), на которые подписан аккаунт
+    :return: (set[str]) Множество username (@username), на которые подписан аккаунт.
     """
     subscribed_usernames = set()
     try:
@@ -244,13 +243,10 @@ async def sync_account_channels(client):
 
 async def ensure_group_category(group_data: dict) -> str | None:
     """
-    Проверяет наличие категории у группы в базе данных (TelegramGroup).
-    - Если категория УЖЕ УКАЗАНА (и не пустая строка), оставляет её без изменений.
-    - Если категории НЕТ (None или ''), определяет категорию с помощью AI (Groq / category_assignment)
-      и сохраняет результат в нижнем регистре в таблицу TelegramGroup.
+    Проверяет наличие категории у группы в базе данных и определяет её через AI при отсутствии.
 
-    :param group_data: dict с ключами (telegram_id, name, description, username, group_type)
-    :return: Категория в нижнем регистре или None
+    :param group_data: (dict) Словарь с данными группы (telegram_id, name, description, username, group_type).
+    :return: (str | None) Название категории в нижнем регистре или None.
     """
     from ai.ai import category_assignment
     from core.config import GROQ_API_KEY
@@ -294,7 +290,9 @@ async def ensure_group_category(group_data: dict) -> str | None:
             # 4. Сохранение категории в БД (в нижнем регистре)
             if tg_group:
                 def _update_tg_group():
-                    """Обновляет категорию группы в базе данных"""
+                    """
+                    Обновляет категорию группы в базе данных.
+                    """
                     tg_group.category = category_lower
                     tg_group.save()
 
@@ -328,15 +326,13 @@ async def ensure_group_category(group_data: dict) -> str | None:
 def ensure_group_language(telegram_id: int = None, name: str = None, description: str = None,
                           username: str = None) -> str | None:
     """
-    Проверяет наличие языка группы в базе данных (TelegramGroup).
-    - Если язык в БД уже указан (и не пустая строка), оставляет его без изменений.
-    - Если языка нет (None, '' или отсутствует запись), определяет язык с помощью Lingua по названию/описанию и сохраняет результат в таблицу TelegramGroup.
+    Проверяет наличие языка группы в базе данных и определяет его через lingua-py при отсутствии.
 
-    :param telegram_id: Telegram ID группы/канала
-    :param name: Название группы/канала
-    :param description: Описание группы/канала (опционально)
-    :param username: Юзернейм группы/канала (опционально)
-    :return: Код языка (например, 'ru', 'en') или None
+    :param telegram_id: (int | None) Telegram ID группы или канала.
+    :param name: (str | None) Название группы или канала.
+    :param description: (str | None) Описание группы или канала (опционально).
+    :param username: (str | None) Юзернейм группы или канала (опционально).
+    :return: (str | None) Код языка (например, 'ru', 'en') или None.
     """
 
     if not telegram_id and not username:
@@ -398,9 +394,10 @@ def ensure_group_language(telegram_id: int = None, name: str = None, description
 def update_group_channels_data_base(data, entity, group=None):
     """
     Обновляет данные в базе данных для каналов и групп.
-    :param data: Данные для сохранения или обновления в базе данных
-    :param entity: Сущность Telegram (User или Channel)
-    :param group: Группа / канал Telegram (объект или словарь, опционально)
+
+    :param data: (dict) Данные для сохранения или обновления в базе данных.
+    :param entity: (types.TypeChat | types.TypeUser) Сущность Telegram (User или Channel).
+    :param group: (dict | Any | None) Группа или канал Telegram (объект или словарь, опционально).
     """
     if not data or not entity:
         return
@@ -628,10 +625,17 @@ async def filter_messages(message, user_id):
 
         # === Функция прослушивания — стартует сразу ===
         async def listen():
+            """
+            Запускает прослушивание входящих сообщений в отслеживаемых чатах до срабатывания флага остановки.
+            """
 
             @client.on(events.NewMessage(chats=already_subscribed))
             async def handle_new_message(event: events.NewMessage.Event):
-                """Обрабатывает новое входящее сообщение из отслеживаемого чата"""
+                """
+                Обрабатывает новое входящее сообщение из отслеживаемого чата.
+
+                :param event: (events.NewMessage.Event) Событие входящего сообщения Telethon.
+                """
                 try:
                     await process_message(
                         client=client,
@@ -656,7 +660,9 @@ async def filter_messages(message, user_id):
         # === Функция подписки — работает параллельно в фоне ===
 
         async def subscribe():
-            """Выполняет подписку на целевую группу и отслеживаемые каналы в фоне"""
+            """
+            Выполняет подписку на целевую группу и отслеживаемые каналы в фоне.
+            """
             # await ensure_joined_target_group(client=client, message=message, user_id=int(user_id))
             await join_required_channels(
                 client=client,

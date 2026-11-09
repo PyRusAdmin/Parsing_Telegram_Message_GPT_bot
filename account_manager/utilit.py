@@ -17,7 +17,8 @@ def normalize_telegram_link(input_link: str) -> Optional[str]:
       - https://t.me/joinchat/<hash>   — приватная инвайт-ссылка (старый формат)
       - https://t.me/+<hash>           — приватная инвайт-ссылка (новый формат)
 
-    Возвращает нормализованную ссылку или None, если формат не распознан.
+    :param input_link: (str) Исходная ссылка или username для нормализации.
+    :return: (Optional[str]) Нормализованная ссылка в формате https://t.me/... или None, если формат не распознан.
     """
     if not isinstance(input_link, str) or not input_link:
         return None
@@ -76,13 +77,22 @@ def normalize_telegram_link(input_link: str) -> Optional[str]:
 
 
 def read_json(file_name):
-    """Читаем json файл"""
+    """
+    Чтение данных из JSON файла.
+
+    :param file_name: (str) Путь к файлу JSON.
+    :return: (Any) Данные, распарсенные из JSON.
+    """
     with open(file_name, "r") as f:
         return json.load(f)
 
 
 def choosing_random_ai_model():
-    """Выбираем рандомную модель AI из файла model.json"""
+    """
+    Выбирает случайную модель AI из конфигурационного файла data/model.json.
+
+    :return: (str) Название выбранной AI модели.
+    """
     data = read_json(file_name="data/model.json")
     models = data["model"]
     model = random.choice(models)
@@ -95,8 +105,9 @@ _language_detector = None
 def detect_language(text: str) -> Optional[str]:
     """
     Ленивая детекция языка текста с помощью lingua-py.
-    Детектор создаётся один раз (singleton) только при первом реальном вызове,
-    что предотвращает тяжелые импорты и зависание при старте бота.
+
+    :param text: (str) Анализируемый текст.
+    :return: (Optional[str]) Двухбуквенный ISO 639-1 код языка (например, 'ru', 'en') или None.
     """
     global _language_detector
     if not text or not isinstance(text, str) or not text.strip():

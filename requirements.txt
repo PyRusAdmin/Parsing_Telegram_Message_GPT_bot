@@ -5,7 +5,7 @@ peewee==4.5.3
 Telethon==1.45.0
 openpyxl==3.1.5
 groq==1.7.0
-openai==3.46.0
+openai==3.48.0
 asgiref==3.13.0
 g4f==8.9.2
 pysocks==1.7.1

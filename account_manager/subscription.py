@@ -14,9 +14,9 @@ async def subscription_telegram(client, target_username) -> bool:
     """
     Подписка на группу или канал Telegram.
 
-    :param client: Telethon Client
-    :param target_username: Имя пользователя или ссылка на канал/группу Telegram
-    :return: True если успешно подписались или уже являемся участником, False если канал не найден или произошла ошибка
+    :param client: (TelegramClient) Клиент Telethon для выполнения запроса.
+    :param target_username: (str) Имя пользователя (@username) или ссылка на канал/группу Telegram.
+    :return: (bool) True, если успешно подписались или уже являемся участником, иначе False.
     """
     if client is None:
         logger.error(f"❌ client is None при попытке подписаться на {target_username}")

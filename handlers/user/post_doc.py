@@ -98,9 +98,6 @@ async def handle_instruction_question(message: Message, state: FSMContext):
     """
     Обрабатывает вопросы пользователя по инструкции с использованием Groq AI.
     """
-    # text_question = message.text  # Получаем вопрос пользователя
-    # user_db = User.get(User.user_id == message.from_user.id)
-    # user_lang = user_db.language if user_db.language != "unset" else "ru"
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
 

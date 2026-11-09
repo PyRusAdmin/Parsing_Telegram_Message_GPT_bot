@@ -30,10 +30,10 @@ class AccountFree(database.Model):
 
 def write_account_to_db_free(session_string: str, phone_number: str):
     """
-    Запись аккаунта в базу данных. Если аккаунт подключает обычный пользователь, то пишет в свою таблицу с аккаунтами,
-    если это администратор, то записывается в общую таблицу с общими бесплатными аккаунтами. Админа определяем по ID Telegram
-    :param session_string: Строка сессии
-    :param phone_number: номер телефона Telegram
+    Запись сессии бесплатного аккаунта администратора в базу данных.
+
+    :param session_string: (str) Строка сессии Telethon.
+    :param phone_number: (str) Номер телефона подключаемого аккаунта Telegram.
     """
 
     AccountFree.insert(
@@ -53,8 +53,9 @@ def write_account_to_db_free(session_string: str, phone_number: str):
 
 def getting_free_account():
     """
-    Получение свободных аккаунтов для подключения
-    :return: Список аккаунтов
+    Получение списка свободных сессий аккаунтов из базы данных.
+
+    :return: (list[str]) Список строк сессий свободных аккаунтов.
     """
     records = []
     for record in AccountFree.select(AccountFree.session_string):
@@ -112,12 +113,20 @@ class TelegramGroups(database.Model):
 
 
 def get_all_data_telegram_groups():
-    """Возвращает все записи из таблицы telegram_groups в виде списка словарей."""
+    """
+    Возвращает все записи из таблицы telegram_groups в виде списка словарей.
+
+    :return: (list[dict]) Список словарей с данными всех групп и каналов.
+    """
     return list(TelegramGroups.select().dicts())
 
 
 def clean_telegram_id_duplicates():
-    """Удаляет все дубликаты по telegram_id, оставляя самую свежую запись"""
+    """
+    Удаляет все дубликаты по telegram_id, оставляя самую свежую запись.
+
+    :return: (int) Количество удалённых записей-дубликатов.
+    """
     deleted_count = 0
 
     # Находим все telegram_id с дублями
@@ -162,10 +171,18 @@ def clean_telegram_id_duplicates():
 
 
 async def get_groups_without_category() -> list[dict]:
-    """Получает группы без категории (в отдельном потоке для БД)"""
+    """
+    Асинхронно получает список групп без категории из базы данных.
+
+    :return: (list[dict]) Список групп без присвоенной категории.
+    """
 
     def _fetch():
-        """Извлекает из базы данных список групп без присвоенной категории"""
+        """
+        Извлекает из базы данных список групп без присвоенной категории.
+
+        :return: (list[dict]) Список словарей с данными групп.
+        """
         if database.is_closed():
             database.connect(reuse_if_open=True)
 
@@ -194,8 +211,9 @@ async def get_groups_without_category() -> list[dict]:
 
 def migrate_categories_to_lowercase():
     """
-    Миграция: приводит все существующие категории к нижнему регистру.
-    Запускать один раз после обновления логики.
+    Приводит все существующие категории в базе данных к нижнему регистру.
+
+    :return: (int) Количество обновлённых записей.
     """
     if database.is_closed():
         database.connect(reuse_if_open=True)
@@ -221,5 +239,9 @@ def migrate_categories_to_lowercase():
 
 
 def getting_number_records_database():
-    """Получает количество записей в базе данных о найденных группах пользователями"""
+    """
+    Получает общее количество записей о группах и каналах в базе данных.
+
+    :return: (int) Количество записей в таблице telegram_groups.
+    """
     return TelegramGroups.select().count()

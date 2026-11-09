@@ -11,9 +11,9 @@ async def find_session_file(user_id: int, message):
     """
     Получает валидную StringSession из базы данных пользователя.
 
-    :param user_id: (int) ID пользователя Telegram
-    :param message: (aiogram.types.Message) Для отправки ответа
-    :return: dict с данными аккаунта {"session_string": str, "phone": str} или None
+    :param user_id: (int) ID пользователя в Telegram.
+    :param message: (Message) Объект входящего сообщения для отправки ответа.
+    :return: (dict | None) Словарь с данными сессии {"session_string": str} или None, если аккаунты отсутствуют.
     """
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)

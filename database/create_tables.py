@@ -11,7 +11,9 @@ from database.users_questions import UsersQuestions
 
 
 def init_database():
-    """Инициализация БД и создание таблиц"""
+    """
+    Инициализация базы данных и создание таблиц, если они не существуют.
+    """
     database.connect(reuse_if_open=True)
 
     # Создание таблиц для базы данных

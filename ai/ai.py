@@ -31,7 +31,9 @@ class CategoryAssignment:
     """Определение категории через AI g4f.client.Client AsyncGroq OpenAI"""
 
     def __init__(self):
-        """Инициализирует клиент и модель для присвоения категорий через нейросеть"""
+        """
+        Инициализирует клиент и модель для присвоения категорий через нейросеть.
+        """
         self.client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=OPENROUTER_API_KEY,
@@ -39,13 +41,22 @@ class CategoryAssignment:
         self.model = ["deepseek/deepseek-v4-flash"]  # название модели. Например: "deepseek/deepseek-v4-flash"
 
     async def get_random_ai_model(self) -> str:
-        """Возвращает случайную или установленную модель AI"""
+        """
+        Возвращает случайную или установленную модель AI.
+
+        :return: (str) Имя модели AI.
+        """
         if isinstance(self.model, (list, tuple)):
             return random.choice(self.model)
         return str(self.model)
 
     def build_group_context(self, group_data: dict) -> str:
-        """Формирует текстовый контекст группы для передачи в запрос нейросети"""
+        """
+        Формирует текстовый контекст группы для передачи в запрос нейросети.
+
+        :param group_data: (dict) Словарь с данными группы (name, description, username, group_type).
+        :return: (str) Сформированный текстовый контекст.
+        """
         # 🧩 Формируем контекст
         data_parts = []
         if group_data.get('name'):
@@ -61,13 +72,12 @@ class CategoryAssignment:
 
     async def category_assignment(self, group_data: dict, client=None, model=None) -> dict:
         """
-        Универсальная функция для определения категории через любой AI клиент.
-        Работает с g4f (синхронный), Groq, OpenAI (асинхронные).
+        Определение категории группы или канала через AI.
 
-        :param group_data: dict с полями name, description, username, group_type, telegram_id
-        :param client: g4f.client.Client | AsyncGroq | OpenAI (опционально)
-        :param model: название модели (опционально)
-        :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
+        :param group_data: (dict) Словарь с данными группы (name, description, username, group_type, telegram_id).
+        :param client: Клиент API (g4f.client.Client | AsyncGroq | AsyncOpenAI | None).
+        :param model: (str | list | None) Название модели или список моделей.
+        :return: (dict) Результат вида {"telegram_id": ..., "category": ..., "success": bool}.
         """
         setup_proxy()
 
@@ -188,13 +198,12 @@ class CategoryAssignment:
 
 async def category_assignment(group_data: dict, client=None, model=None) -> dict:
     """
-    Универсальная функция для определения категории через любой AI клиент.
-    Работает с g4f (синхронный), Groq, OpenAI (асинхронные).
+    Определение категории группы или канала через AI.
 
-    :param group_data: dict с полями name, description, username, group_type, telegram_id
-    :param client: g4f.client.Client | AsyncGroq | OpenAI (опционально)
-    :param model: название модели (опционально)
-    :return: dict с результатом: {"telegram_id": ..., "category": ..., "success": bool}
+    :param group_data: (dict) Словарь с данными группы (name, description, username, group_type, telegram_id).
+    :param client: Клиент API (g4f.client.Client | AsyncGroq | AsyncOpenAI | None).
+    :param model: (str | list | None) Название модели или список моделей.
+    :return: (dict) Результат вида {"telegram_id": ..., "category": ..., "success": bool}.
     """
     ca = CategoryAssignment()
     return await ca.category_assignment(group_data, client=client, model=model)
@@ -202,17 +211,10 @@ async def category_assignment(group_data: dict, client=None, model=None) -> dict
 
 async def get_groq_response(user_input):
     """
-    Асинхронно отправляет запрос к модели Llama 4 Scout через Groq API для генерации вариантов названий групп.
+    Асинхронно генерирует вариации названий групп и ключевых слов через Groq API.
 
-    - Используется модель "meta-llama/llama-4-scout-17b-16e-instruct".
-    - Ответ должен содержать только названия, без нумерации и пояснений.
-    - Перед выполнением устанавливается прокси с помощью `setup_proxy()`.
-
-    :param user_input: (str) Тема или ключевое слово, на основе которого нужно придумать названия групп.
-    :return: str: Строка с 10 вариациями названий групп, разделёнными переносами строк. Возвращает пустую строку при
-                  ошибке аутентификации или других исключениях.
-    :raise groq.AuthenticationError: Если ключ API недействителен или не установлен.
-    :raise Exception: Логируется при других ошибках (сетевые ошибки, таймауты и т.д.).
+    :param user_input: (str) Тема или ключевое слово для поиска.
+    :return: (str) Строка с вариациями названий, разделенными переводами строк, либо пустая строка при ошибке.
     """
     setup_proxy()  # Установка прокси
     client_groq = AsyncGroq(api_key=GROQ_API_KEY)
@@ -262,12 +264,10 @@ async def get_groq_response(user_input):
 async def search_groups_in_telegram(client, group_names):
     """
     Асинхронно ищет публичные группы и каналы в Telegram по списку названий.
-    При заморозке аккаунта сразу прекращает весь поиск.
-    Проверяет дату последнего сообщения и обновляет поле availability в БД.
 
-    :param client: Объект клиента Telethon.
-    :param group_names: Список названий групп.
-    :return: Список найденных групп.
+    :param client: (TelegramClient) Объект клиента Telethon.
+    :param group_names: (list[str]) Список названий групп для поиска.
+    :return: (list[dict]) Список словарей с данными найденных групп.
     """
 
     Category_Assignment = CategoryAssignment()
