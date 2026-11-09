@@ -43,10 +43,6 @@ class UsersGroups(database.Model):
         )
 
 
-# Алиас для обратной совместимости
-Group = UsersGroups
-
-
 def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
     """
     Получает все username каналов/групп пользователя по user_id.
@@ -161,10 +157,10 @@ def get_user_groups_paginated(user_id: int, page: int = 0, page_size: int = 5) -
 async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
     """
     Получает список каналов пользователя из БД или отправляет уведомление об их отсутствии
-    :param user_id:
-    :param user_lang:
-    :param message:
-    :param client:
+    :param user_id: Telegram ID пользователя
+    :param user_lang: Используемый язык пользователя
+    :param message: объект сообщения
+    :param client: клиент Telegram
     """
     channels = [group.username_group for group in UsersGroups.select().where(UsersGroups.user_id == user_id)]
 

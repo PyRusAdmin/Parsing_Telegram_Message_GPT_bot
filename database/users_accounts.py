@@ -40,10 +40,6 @@ class UsersAccounts(database.Model):
         table_name = 'users_accounts'
 
 
-# Алиас для обратной совместимости
-Account = UsersAccounts
-
-
 def write_account_to_user_table(user_id: int, session_string: str, phone_number: str = "", user_username: str = "",
                                 user_firstname: str = ""):
     """

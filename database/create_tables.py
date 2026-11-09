@@ -3,7 +3,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from database.database import database, AccountFree, TelegramGroups
 from database.users_accounts import UsersAccounts
 from database.users_groups import UsersGroups
-from database.users_keywords import Keywords
+from database.users_keywords import UsersKeywords
 from database.users_personal_trackings import UsersPersonalTrackings
 from database.users_questions import UsersQuestions
 
@@ -22,7 +22,7 @@ def init_database():
             TelegramGroups,  # Таблица общей базы Telegram-групп и каналов по категориям
             UsersQuestions,  # Таблица вопросов и ответов пользователей для расширения базы знаний
             UsersPersonalTrackings,  # Данные о пользователях настройки персонального отслеживания
-            Keywords,  # Ключевые слова пользователей
+            UsersKeywords,  # Ключевые слова пользователей
             UsersGroups  # Целевые каналы и группы пользователей для мониторинга
         ],
         safe=True

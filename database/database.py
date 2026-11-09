@@ -51,35 +51,6 @@ def write_account_to_db_free(session_string: str, phone_number: str):
     )
 
 
-# class UserAccountsTable(database.Model):
-#     """Модель для хранения сессий подключенных Telegram-аккаунтов пользователей"""
-#     id = AutoField()  # ✅ Первичный ключ (обязательно!)
-#     user_id = IntegerField(index=True)  # ID пользователя Telegram
-#     session_string = CharField(unique=True, max_length=500, index=True)
-#     phone_number = CharField(max_length=20, index=True)
-#     created_at = DateTimeField(default=datetime.now)  # ✅ Полезно для отладки
-#
-#     class Meta:
-#         """Метаданные таблицы аккаунтов пользователей"""
-#
-#         table_name = f"user_accounts_table"  # Динамическое имя таблицы
-
-
-# def write_account_to_user_table(user_id: int, session_string: str, phone_number: str):
-#     """
-#     Записывает аккаунт в персональную таблицу пользователя: {user_id}_accounts
-#     """
-#     try:
-#         user_accounts = UserAccountsTable.create(
-#             user_id=user_id,  # ID пользователя Telegram
-#             session_string=session_string,  # Строка сессии Telegram аккаунта
-#             phone_number=phone_number  # Номер телефона аккаунта
-#         )
-#         user_accounts.save()
-#     except Exception as e:
-#         logger.exception(e)
-
-
 def getting_free_account():
     """
     Получение свободных аккаунтов для подключения
@@ -90,32 +61,6 @@ def getting_free_account():
         records.append(record.session_string)
 
     return records
-
-
-# class User(database.Model):
-#     """
-#     Модель для хранения основных данных пользователя Telegram.
-#
-#     Используется для регистрации пользователей при первом запуске бота (/start)
-#     и хранения их профиля и языка интерфейса. Таблица общая для всех пользователей.
-#
-#     Attributes:
-#         user_id (IntegerField): Уникальный идентификатор пользователя Telegram (первичный ключ).
-#         username (CharField, optional): Telegram-ник пользователя (может быть None).
-#         first_name (CharField, optional): Имя пользователя.
-#         last_name (CharField, optional): Фамилия пользователя.
-#         language (CharField): Язык интерфейса бота ('ru', 'en' или 'unset' при первом запуске).
-#
-#     Meta:
-#         table_name (str): Имя таблицы в базе данных — 'user' (по умолчанию от имени класса).
-#     """
-#     user_id = IntegerField(unique=True)
-#     username = CharField(null=True)
-#     first_name = CharField(null=True)
-#     last_name = CharField(null=True)
-#     language = CharField(default="ru")  # "ru" или "en"
-#     stars = IntegerField(default=0)
-#     last_free_download_at = DateTimeField(null=True)
 
 
 """
@@ -278,25 +223,3 @@ def migrate_categories_to_lowercase():
 def getting_number_records_database():
     """Получает количество записей в базе данных о найденных группах пользователями"""
     return TelegramGroups.select().count()
-
-
-# Реэкспорт моделей и функций для обратной совместимости со старыми модулями
-# from database.users_accounts import (
-#     UsersAccounts, Account, getting_account, write_account_to_user_table, delete_account_from_db
-# )
-# from database.users_questions import (
-#     UsersQuestions, Question, add_question, get_all_questions, update_question_status
-# )
-# from database.users_keywords import (
-#     Keywords, UsersKeywords, add_user_keywords, get_user_keywords, get_keywords_count
-# )
-# from database.users_groups import (
-#     UsersGroups, Group, get_group_count, add_user_group
-# )
-# from database.users_personal_trackings import (
-#     UsersPersonalTrackings, PersonalTracking, get_session_count, get_user_accounts,
-#     write_account_to_db, delete_account_from_user_table, get_group_id_with_personal_tracking
-# )
-
-# Модель User объединена с UsersPersonalTrackings. Для совместимости:
-# User = UsersPersonalTrackings

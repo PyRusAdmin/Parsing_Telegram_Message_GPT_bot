@@ -48,10 +48,6 @@ class UsersKeywords(database.Model):
         )
 
 
-# Алиас для обратной совместимости
-Keywords = UsersKeywords
-
-
 def get_user_keywords_with_id(user_id: int) -> list:
     """Возвращает список словарей [{'id': 1, 'keyword': 'слово'}, ...] для API. (Для ВЕБ АПП)"""
     query = (

@@ -1,9 +1,7 @@
 from datetime import datetime
 
 from loguru import logger  # https://github.com/Delgan/loguru
-from peewee import (
-    BigIntegerField, AutoField, DateTimeField, CharField, IntegerField
-)
+from peewee import BigIntegerField, AutoField, DateTimeField, CharField, IntegerField
 
 from database.database import database
 
@@ -55,38 +53,6 @@ class UsersPersonalTrackings(database.Model):
     class Meta:
         """Метаданные таблицы пользователей и персонального отслеживания"""
         table_name = "users_personal_trackings"
-
-    # Свойства для обратной совместимости с кодом, использовавшим поля модели User
-    @property
-    def username(self):
-        """Алиас для username (обратная совместимость с User.username)."""
-        return self.user_username
-
-    @username.setter
-    def username(self, value):
-        self.user_username = value
-
-    @property
-    def first_name(self):
-        """Алиас для first_name (обратная совместимость с User.first_name)."""
-        return self.user_firstname
-
-    @first_name.setter
-    def first_name(self, value):
-        self.user_firstname = value
-
-    @property
-    def last_name(self):
-        """Алиас для last_name (обратная совместимость с User.last_name)."""
-        return self.user_last_name
-
-    @last_name.setter
-    def last_name(self, value):
-        self.user_last_name = value
-
-
-# Алиас для обратной совместимости
-PersonalTracking = UsersPersonalTrackings
 
 
 def delete_account_from_user_table(user_id: int, personal_account: str) -> None:
