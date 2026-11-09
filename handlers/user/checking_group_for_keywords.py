@@ -19,6 +19,9 @@ router = Router(name=__name__)
 async def checking_group_for_keywords_cb(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик инлайн-кнопки "Проверка группы на наличие ключевых слов".
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
     """
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -36,6 +39,7 @@ async def checking_group_for_keywords_cb(callback: CallbackQuery, state: FSMCont
 async def get_url(message: Message, state: FSMContext):
     """
     Обработчик команды "Получить URL".
+
     :param message: (Message) Объект входящего сообщения от пользователя.
     :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
@@ -53,6 +57,7 @@ async def get_url(message: Message, state: FSMContext):
 async def get_keyword(message: Message, state: FSMContext):
     """
     Обработчик команды "Получить ключевое слово".
+
     :param message: (Message) Объект входящего сообщения от пользователя.
     :param state: (FSMContext) Контекст машины состояний, используется для получения данных и сброса текущего состояния.
     """
@@ -72,9 +77,10 @@ async def get_keyword(message: Message, state: FSMContext):
 async def parse_group_for_keywords(url, keyword, message: Message):
     """
     Парсит группу на наличие ключевых слов.
+
     :param url: (str) Ссылка на группу в Telegram.
     :param keyword: (str) Ключевое слово для поиска.
-    :param message: (telegram.Message) Объект сообщения, отправленный пользователем.
+    :param message: (Message) Объект сообщения, отправленный пользователем.
     """
     try:
         user_id = message.from_user.id  # Получаем ID пользователя

@@ -458,8 +458,10 @@ def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
 
 def settings_menu_tracking_channels(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Инлайн-клавиатура подраздела 🌐 Каналы отслеживания
-    :return: InlineKeyboardMarkup
+    Инлайн-клавиатура подраздела "Каналы отслеживания".
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -496,8 +498,10 @@ def settings_menu_tracking_channels(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def settings_keywords_submenu_kb(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Инлайн-клавиатура подраздела 🔍 Ключевые слова
-    :return: InlineKeyboardMarkup
+    Инлайн-клавиатура подраздела "Ключевые слова".
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -528,8 +532,11 @@ def settings_keywords_submenu_kb(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def settings_notification_group_kb(lang: str = 'ru', group_link: str = '') -> InlineKeyboardMarkup:
     """
-    Инлайн-клавиатура подраздела 📢 Группа уведомлений
-    :return: InlineKeyboardMarkup
+    Инлайн-клавиатура подраздела "Группа уведомлений".
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :param group_link: (str) Ссылка на созданную группу уведомлений.
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     buttons = []
     if group_link:
@@ -561,10 +568,12 @@ def settings_notification_group_kb(lang: str = 'ru', group_link: str = '') -> In
 def channels_list_keyboard(records: list, page: int, total_pages: int, lang: str = 'ru') -> InlineKeyboardMarkup:
     """
     Инлайн-клавиатура списка каналов с пагинацией и кнопками удаления.
-    :param records: Список объектов Group для текущей страницы
-    :param page: Текущая страница (0-based)
-    :param total_pages: Всего страниц
-    :return: InlineKeyboardMarkup
+
+    :param records: (list) Список объектов каналов для текущей страницы.
+    :param page: (int) Текущая страница (начиная с 0).
+    :param total_pages: (int) Общее количество страниц.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     buttons = []
     for rec in records:
@@ -593,10 +602,12 @@ def channels_list_keyboard(records: list, page: int, total_pages: int, lang: str
 def keywords_list_inline_kb(records: list, page: int, total_pages: int, lang: str = 'ru') -> InlineKeyboardMarkup:
     """
     Инлайн-клавиатура списка ключевых слов с пагинацией и кнопками удаления.
-    :param records: Список объектов Keywords для текущей страницы
-    :param page: Текущая страница (0-based)
-    :param total_pages: Всего страниц
-    :return: InlineKeyboardMarkup
+
+    :param records: (list) Список объектов ключевых слов для текущей страницы.
+    :param page: (int) Текущая страница (начиная с 0).
+    :param total_pages: (int) Общее количество страниц.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     buttons = []
     for rec in records:
@@ -623,10 +634,12 @@ def keywords_list_inline_kb(records: list, page: int, total_pages: int, lang: st
 
 def confirm_clear_keyboard(confirm_cb: str, cancel_cb: str, lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура подтверждения очистки.
-    :param confirm_cb: callback_data для подтверждения
-    :param cancel_cb: callback_data для отмены
-    :return: InlineKeyboardMarkup
+    Клавиатура подтверждения очистки списка.
+
+    :param confirm_cb: (str) Callback data для подтверждения действия.
+    :param cancel_cb: (str) Callback data для отмены действия.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры подтверждения.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -643,8 +656,10 @@ def confirm_clear_keyboard(confirm_cb: str, cancel_cb: str, lang: str = 'ru') ->
 
 def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Инлайн-клавиатура панели администратора
-    :return: InlineKeyboardMarkup
+    Инлайн-клавиатура панели администратора.
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры админ-панели.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -673,7 +688,10 @@ def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def broadcast_preview_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура предпросмотра и подтверждения рассылки
+    Клавиатура предпросмотра и подтверждения рассылки сообщений.
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -689,8 +707,10 @@ def broadcast_preview_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Инлайн-клавиатура для выбора метода присвоения категорий
-    :return: InlineKeyboardMarkup
+    Инлайн-клавиатура для выбора метода присвоения категорий.
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -713,9 +733,11 @@ def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def personal_tracking_menu_kb(user_id: int, lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура меню 🎯 Персональное отслеживание ключевых слов
-    :param user_id:
-    :return InlineKeyboardMarkup:
+    Клавиатура меню "Персональное отслеживание ключевых слов".
+
+    :param user_id: (int) ID пользователя Telegram.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     buttons = [
         [
@@ -746,6 +768,9 @@ def personal_tracking_menu_kb(user_id: int, lang: str = 'ru') -> InlineKeyboardM
 def emoji_code_keypad_kb(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
     Клавиатура с цифрами-эмодзи для безопасного выбора цифр кода авторизации (предотвращает спам-блокировку от Telegram).
+
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры ввода кода.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -780,8 +805,13 @@ def emoji_code_keypad_kb(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 
 def tracking_list_keyboard(records, lang: str = 'ru'):
-    """Клавиатура для списка персональных отслеживаний"""
+    """
+    Клавиатура для списка персональных отслеживаний пользователя.
 
+    :param records: Список записей отслеживаний пользователя.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
+    """
     buttons = []
 
     for idx, record in enumerate(records, start=1):
@@ -805,10 +835,11 @@ def tracking_list_keyboard(records, lang: str = 'ru'):
 
 def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardMarkup:
     """
-    Клавиатура покупки звезд
-    :param stars: Количество звезд
-    :param lang:
-    :return: клавиатура
+    Клавиатура выбора способа оплаты выгрузки базы данных.
+
+    :param stars: (int) Текущий баланс звёзд пользователя.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     buttons = []
     if stars >= 5:
@@ -821,4 +852,13 @@ def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardM
     buttons.append([
         InlineKeyboardButton(
             text=t("pay_direct_btn", lang=lang),
-            callback_d
+            callback_data="pay_db_direct"
+        )
+    ])
+    buttons.append([
+        InlineKeyboardButton(
+            text=t("cancel_btn", lang=lang),
+            callback_data="pay_db_cancel"
+        )
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

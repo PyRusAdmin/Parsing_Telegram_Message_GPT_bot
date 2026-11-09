@@ -82,7 +82,12 @@ class MockMessage:
     # Mock Message для совместимости с обработчиками ботов
 
     def __init__(self, user_id: int, username: Optional[str] = "web_user"):
-        """Инициализирует объект MockMessage для имитации Telegram-сообщения"""
+        """
+        Инициализирует объект MockMessage для имитации Telegram-сообщения.
+
+        :param user_id: (int) Идентификатор пользователя в Telegram.
+        :param username: (Optional[str]) Имя пользователя в Telegram.
+        """
         self.from_user = type('User', (), {
             'id': user_id,
             'username': username or 'web_user',
@@ -95,7 +100,15 @@ class MockMessage:
         self.bot = bot
 
     async def answer(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует отправку текстового ответа пользователю через Telegram-бота"""
+        """
+        Имитирует отправку текстового ответа пользователю через Telegram-бота.
+
+        :param text: (str) Текст отправляемого сообщения.
+        :param parse_mode: Режим форматирования текста (HTML, Markdown и др.).
+        :param reply_markup: Клавиатура или разметка сообщения.
+        :param kwargs: Дополнительные параметры отправки сообщения.
+        :return: Объект отправленного сообщения Telegram или None при ошибке.
+        """
         from system.dispatcher import bot
         try:
             return await bot.send_message(
@@ -109,11 +122,28 @@ class MockMessage:
             logger.exception(f"Failed to send mock answer to {self.from_user.id}: {e}")
 
     async def reply(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует ответ на сообщение пользователю через Telegram-бота"""
+        """
+        Имитирует ответ на сообщение пользователю через Telegram-бота.
+
+        :param text: (str) Текст отправляемого ответа.
+        :param parse_mode: Режим форматирования текста.
+        :param reply_markup: Клавиатура или разметка сообщения.
+        :param kwargs: Дополнительные параметры отправки сообщения.
+        :return: Объект отправленного сообщения Telegram или None при ошибке.
+        """
         return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
 
     async def answer_document(self, document, caption=None, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует отправку документа пользователю через Telegram-бота"""
+        """
+        Имитирует отправку документа пользователю через Telegram-бота.
+
+        :param document: Отправляемый документ (файл или BufferedInputFile).
+        :param caption: Подпись к документу.
+        :param parse_mode: Режим форматирования подписи.
+        :param reply_markup: Клавиатура или разметка сообщения.
+        :param kwargs: Дополнительные параметры отправки сообщения.
+        :return: Объект отправленного сообщения Telegram или None при ошибке.
+        """
         from system.dispatcher import bot
         try:
             return await bot.send_document(
@@ -128,7 +158,16 @@ class MockMessage:
             logger.exception(f"Failed to send mock document to {self.from_user.id}: {e}")
 
     async def answer_photo(self, photo, caption=None, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует отправку фотографии пользователю через Telegram-бота"""
+        """
+        Имитирует отправку фотографии пользователю через Telegram-бота.
+
+        :param photo: Отправляемая фотография.
+        :param caption: Подпись к фотографии.
+        :param parse_mode: Режим форматирования подписи.
+        :param reply_markup: Клавиатура или разметка сообщения.
+        :param kwargs: Дополнительные параметры отправки сообщения.
+        :return: Объект отправленного сообщения Telegram или None при ошибке.
+        """
         from system.dispatcher import bot
         try:
             return await bot.send_photo(
@@ -143,13 +182,27 @@ class MockMessage:
             logger.exception(f"Failed to send mock photo to {self.from_user.id}: {e}")
 
     async def edit_text(self, text: str, parse_mode=None, reply_markup=None, **kwargs):
-        """Имитирует редактирование текста сообщения через Telegram-бота"""
+        """
+        Имитирует редактирование текста сообщения через Telegram-бота.
+
+        :param text: (str) Новый текст сообщения.
+        :param parse_mode: Режим форматирования текста.
+        :param reply_markup: Клавиатура или разметка сообщения.
+        :param kwargs: Дополнительные параметры отправки сообщения.
+        :return: Результат вызова метода answer.
+        """
         return await self.answer(text, parse_mode=parse_mode, reply_markup=reply_markup, **kwargs)
 
 
 @app.middleware("http")
 async def db_session_middleware(request, call_next):
-    """Обеспечивает активное подключение к базе данных для каждого HTTP-запроса"""
+    """
+    Обеспечивает активное подключение к базе данных для каждого HTTP-запроса.
+
+    :param request: Входящий HTTP-запрос.
+    :param call_next: Функция для передачи запроса следующему обработчику.
+    :return: HTTP-ответ сервера.
+    """
     # Промежуточное программное обеспечение для подключения к базе данных
     if database.is_closed():
         database.connect(reuse_if_open=True)
@@ -158,7 +211,12 @@ async def db_session_middleware(request, call_next):
 
 
 def get_client_ip(request: Request) -> str:
-    """Извлекает реальный IP пользователя с учетом прокси (X-Forwarded-For, X-Real-IP, CF-Connecting-IP)"""
+    """
+    Извлекает реальный IP пользователя с учетом прокси (X-Forwarded-For, X-Real-IP, CF-Connecting-IP).
+
+    :param request: (Request) Объект HTTP-запроса FastAPI.
+    :return: (str) IP-адрес клиента.
+    """
     x_forwarded_for = request.headers.get("x-forwarded-for")
     if x_forwarded_for:
         return x_forwarded_for.split(",")[0].strip()
@@ -174,12 +232,21 @@ def get_client_ip(request: Request) -> str:
 
 
 async def get_country_by_ip(ip: str) -> Optional[str]:
-    """Определяет двухбуквенный код страны (RU, US и т.д.) по IP через ip-api.com"""
+    """
+    Определяет двухбуквенный код страны (RU, US и т.д.) по IP через ip-api.com.
+
+    :param ip: (str) IP-адрес пользователя.
+    :return: (Optional[str]) Двухбуквенный код страны или None.
+    """
     if ip.startswith(("127.", "192.168.", "10.", "172.16.", "localhost")):
         return None
     try:
         def _fetch():
-            """Выполняет запрос к внешнему сервису гео-IP для определения кода страны"""
+            """
+            Выполняет запрос к внешнему сервису гео-IP для определения кода страны.
+
+            :return: (Optional[str]) Двухбуквенный код страны или None.
+            """
             url = f"http://ip-api.com/json/{ip}?fields=countryCode,status"
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=3) as resp:
@@ -197,6 +264,10 @@ async def get_country_by_ip(ip: str) -> Optional[str]:
 async def detect_language_by_ip(ip: str, accept_language_header: Optional[str] = None) -> str:
     """
     Определяет предпочтительный язык ('ru' или 'en') на основе IP пользователя и заголовка Accept-Language.
+
+    :param ip: (str) IP-адрес пользователя.
+    :param accept_language_header: (Optional[str]) Заголовок Accept-Language из HTTP-запроса.
+    :return: (str) Двухбуквенный код языка ('ru' или 'en').
     """
     country_code = await get_country_by_ip(ip)
     if country_code:
@@ -213,7 +284,12 @@ async def detect_language_by_ip(ip: str, accept_language_header: Optional[str] =
 
 
 def get_current_tg_user(authorization: Optional[str] = Header(None)) -> dict:
-    """Проверяет авторизацию пользователя Telegram по токену initData"""
+    """
+    Проверяет авторизацию пользователя Telegram по токену initData.
+
+    :param authorization: (Optional[str]) Заголовок авторизации с токеном initData Telegram WebApp.
+    :return: (dict) Словарь с данными авторизованного пользователя Telegram.
+    """
     # Зависимость для проверки аутентификации из initData
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
@@ -271,7 +347,11 @@ logged_user_sessions = set()
 
 
 def init_web_directories():
-    """Создает необходимые директории для статических файлов веб-сервера"""
+    """
+    Создает необходимые директории для статических файлов веб-сервера.
+
+    :return: None
+    """
     # Убедитесь, что каталоги существуют
     os.makedirs("web/static", exist_ok=True)
     os.makedirs("web/static/css", exist_ok=True)
@@ -286,7 +366,13 @@ init_web_directories()
 
 @app.get("/api/status")
 async def get_status(request: Request, user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает статус пользователя, настройки языка и статистику системы"""
+    """
+    Возвращает статус пользователя, настройки языка и статистику системы.
+
+    :param request: (Request) Объект HTTP-запроса.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Словарь со статистикой, статусом отслеживания и настройками пользователя.
+    """
     try:
         client_ip = get_client_ip(request)
         logger.info(f"User {user_data['id']} connected from {client_ip}")
@@ -361,7 +447,13 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
 
 @app.post("/api/settings/language")
 async def update_language(lang: str, user_data: dict = Depends(get_current_tg_user)):
-    """Обновляет языковые настройки текущего пользователя"""
+    """
+    Обновляет языковые настройки текущего пользователя.
+
+    :param lang: (str) Код выбранного языка ('ru' или 'en').
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Результат операции и установленный язык.
+    """
     if lang not in ["ru", "en"]:
         raise HTTPException(status_code=400, detail="Invalid language code")
     # user_id = user_data["id"]
@@ -376,7 +468,13 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/tracking/start")
 async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):
-    """Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
+    """
+    Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс.
+
+    :param background_tasks: (BackgroundTasks) Менеджер фоновых задач FastAPI.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус запуска отслеживания.
+    """
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
@@ -392,7 +490,12 @@ async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict
 
 @app.post("/api/tracking/stop")
 async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
-    """Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс"""
+    """
+    Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус остановки отслеживания.
+    """
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
@@ -407,13 +510,24 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
 
 @app.get("/api/keywords")
 async def list_keywords(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает список ключевых слов текущего пользователя"""
+    """
+    Возвращает список ключевых слов текущего пользователя.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: Список словарей с идентификаторами и ключевыми словами пользователя.
+    """
     return get_user_keywords_with_id(user_id=user_data["id"])
 
 
 @app.post("/api/keywords")
 async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Добавляет новое ключевое слово для отслеживания"""
+    """
+    Добавляет новое ключевое слово для отслеживания.
+
+    :param keyword: (str) Добавляемое ключевое слово.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус добавления, идентификатор записи и ключевое слово.
+    """
     keyword = keyword.strip()
     if not keyword:
         raise HTTPException(status_code=400, detail="Keyword cannot be empty")
@@ -426,7 +540,13 @@ async def add_keyword(keyword: str = Form(...), user_data: dict = Depends(get_cu
 
 @app.delete("/api/keywords/{kw_id}")
 async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_user)):
-    """Удаляет ключевое слово пользователя по его идентификатору"""
+    """
+    Удаляет ключевое слово пользователя по его идентификатору.
+
+    :param kw_id: (int) Идентификатор ключевого слова в базе данных.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус выполнения операции.
+    """
     deleted = (
         UsersKeywords.delete()
         .where(
@@ -442,7 +562,12 @@ async def delete_keyword(kw_id: int, user_data: dict = Depends(get_current_tg_us
 
 @app.get("/api/channels")
 async def list_channels(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает список отслеживаемых каналов пользователя"""
+    """
+    Возвращает список отслеживаемых каналов пользователя.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: Список словарей с информацией об отслеживаемых каналах.
+    """
     # Управление отслеживаемыми каналами
     # user_id = user_data["id"]
     records = list(
@@ -453,7 +578,13 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/channels")
 async def add_channel(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Добавляет новый канал в список отслеживаемых"""
+    """
+    Добавляет новый канал в список отслеживаемых.
+
+    :param username: (str) Юзернейм добавляемого канала.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус добавления и юзернейм канала.
+    """
     username_group = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
@@ -470,7 +601,13 @@ async def add_channel(username: str = Form(...), user_data: dict = Depends(get_c
 
 @app.delete("/api/channels/{ch_id}")
 async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_user)):
-    """Удаляет канал из списка отслеживаемых по идентификатору"""
+    """
+    Удаляет канал из списка отслеживаемых по идентификатору.
+
+    :param ch_id: (int) Идентификатор записи канала в базе данных.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус выполнения операции.
+    """
     # user_id = user_data["id"]
     deleted = UsersGroups.delete().where(UsersGroups.user_id == user_data["id"], UsersGroups.id == ch_id).execute()
     if deleted:
@@ -480,7 +617,13 @@ async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/channels/upload")
 async def upload_channels_file(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
-    """Загружает список каналов из текстового файла"""
+    """
+    Загружает список каналов из текстового файла.
+
+    :param file: (UploadFile) Текстовый файл со списком каналов.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статистика добавленных, пропущенных каналов и ошибок.
+    """
     if not file.filename.endswith(".txt"):
         raise HTTPException(status_code=400, detail="Only .txt files are supported")
     contents = await file.read()
@@ -510,7 +653,12 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
 
 @app.get("/api/target-group")
 async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает текущую целевую группу пользователя для пересылки сообщений"""
+    """
+    Возвращает текущую целевую группу пользователя для пересылки сообщений.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Словарь с юзернеймом или ссылкой на целевую группу.
+    """
     pt = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if pt and pt.created_group_link:
         return {"username": pt.created_group_link}
@@ -519,7 +667,13 @@ async def get_target_group(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/target-group")
 async def set_target_group(username: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Устанавливает целевую группу пользователя для пересылки сообщений"""
+    """
+    Устанавливает целевую группу пользователя для пересылки сообщений.
+
+    :param username: (str) Юзернейм или ссылка целевой группы.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус обновления и установленный юзернейм группы.
+    """
     username = username.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
@@ -531,7 +685,12 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
 
 @app.get("/api/accounts")
 async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
-    """Возвращает список подключенных Telegram-аккаунтов пользователя"""
+    """
+    Возвращает список подключенных Telegram-аккаунтов пользователя.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: Список словарей с номерами телефонов и датами добавления аккаунтов.
+    """
     # Управление аккаунтами Telegram
     # user_id = user_data["id"]
     # accounts = get_user_accounts(user_data["id"])
@@ -547,7 +706,13 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/accounts/upload")
 async def upload_account_session(file: UploadFile = File(...), user_data: dict = Depends(get_current_tg_user)):
-    """Загружает и подключает новый файл сессии Telegram-аккаунта"""
+    """
+    Загружает и подключает новый файл сессии Telegram-аккаунта.
+
+    :param file: (UploadFile) Загружаемый файл сессии (.session).
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус подключения и информация об аккаунте.
+    """
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
@@ -617,7 +782,13 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
 
 @app.delete("/api/accounts/{phone}")
 async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_user)):
-    """Удаляет подключенный аккаунт пользователя по номеру телефона"""
+    """
+    Удаляет подключенный аккаунт пользователя по номеру телефона.
+
+    :param phone: (str) Номер телефона удаляемого аккаунта.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус выполнения операции.
+    """
     user_id = user_data["id"]
     # Получите список пользовательских аккаунтов, чтобы найти сессионную строку, соответствующую этому телефону
     accounts = get_user_accounts(user_id)
@@ -650,7 +821,13 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/payment/stars-topup")
 async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depends(get_current_tg_user)):
-    """Создает инвойс-ссылку на пополнение баланса звездами Telegram Stars"""
+    """
+    Создает инвойс-ссылку на пополнение баланса звездами Telegram Stars.
+
+    :param amount: (int) Количество покупаемых звезд Telegram Stars.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Словарь со ссылкой на оплату инвойса.
+    """
     # Ссылка на счет пополнения Stars
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
@@ -658,7 +835,7 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=user_data["id"])
     try:
         # TODO Сделать проверку на валидность ссылки
         invoice_link = await bot.create_invoice_link(
@@ -678,10 +855,11 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
 @app.post("/api/searchs/ai")
 async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """
-    Массовый поиск групп в Telegram по запросу пользователя с помощью AI
-    :param query: Запрос пользователя для поиска групп / каналов в Telegram
-    :param user_data: Данные пользователя
-    :return: Список найденных групп
+    Массовый поиск групп в Telegram по запросу пользователя с помощью AI.
+
+    :param query: (str) Запрос пользователя для поиска групп или каналов в Telegram.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус выполнения и список найденных групп.
     """
     logger.info(
         f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]} {user_data["username"]}: {query}")
@@ -767,10 +945,11 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
 @app.post("/api/search/ai")
 async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
     """
-    Ищет группы в Telegram по запросу пользователя с помощью AI
-    :param query: Запрос пользователя
-    :param user_data: Данные пользователя
-    :return: Список найденных групп
+    Ищет группы в Telegram по запросу пользователя с помощью AI.
+
+    :param query: (str) Запрос пользователя для генерации названий и поиска групп.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Статус выполнения и список найденных групп.
     """
     logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
     # user = User.get_or_none(User.user_id == user_data["id"])
@@ -817,7 +996,13 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
 
 @app.post("/api/search/export_excel")
 async def export_search_results_excel(telegram_ids: str = Form(...), user_data: dict = Depends(get_current_tg_user)):
-    """Экспортирует результаты поиска групп в файл Excel"""
+    """
+    Экспортирует результаты поиска групп в файл Excel.
+
+    :param telegram_ids: (str) Строка с разделенными запятыми идентификаторами групп.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (Response) HTTP-ответ с файлом таблицы Excel.
+    """
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
@@ -856,7 +1041,12 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
 
 @app.get("/api/export/check")
 async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
-    """Проверяет возможность бесплатной выгрузки базы данных и баланс звезд"""
+    """
+    Проверяет возможность бесплатной выгрузки базы данных и баланс звезд.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (dict) Данные о бесплатной выгрузке, оставшемся времени и балансе звезд.
+    """
     # Получить базу данных / Экспортировать XLSX Endpoint
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
@@ -877,7 +1067,14 @@ async def download_database(
         category: Optional[str] = Form(None),  # e.g. "investments"
         user_data: dict = Depends(get_current_tg_user)
 ):
-    """Выполняет выгрузку базы данных Telegram-групп в файл Excel"""
+    """
+    Выполняет выгрузку базы данных Telegram-групп в файл Excel.
+
+    :param export_type: (str) Тип выгрузки ("all", "channels" или "groups").
+    :param category: (Optional[str]) Фильтр по категории групп.
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (Response) HTTP-ответ с файлом выгрузки Excel.
+    """
     # user_id = user_data["id"]
     # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
@@ -930,7 +1127,12 @@ async def download_database(
 
 
 def io_bytes_stream(data: bytes):
-    """Генерирует поток байтов из буфера в памяти для передачи файла"""
+    """
+    Генерирует поток байтов из буфера в памяти для передачи файла.
+
+    :param data: (bytes) Байтовые данные для генерации потока.
+    :yield: Части байтового потока.
+    """
     stream = io.BytesIO(data)
     yield from stream
 
@@ -939,7 +1141,12 @@ def io_bytes_stream(data: bytes):
 
 
 def require_admin(user_data: dict = Depends(get_current_tg_user)):
-    """Проверяет наличие прав администратора у текущего пользователя"""
+    """
+    Проверяет наличие прав администратора у текущего пользователя.
+
+    :param user_data: (dict) Данные авторизованного пользователя Telegram.
+    :return: (int) Идентификатор администратора.
+    """
     # user_id = user_data["id"]
     is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
                                                                   (list, set, tuple)) else user_data[
@@ -951,7 +1158,11 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
 
 @app.get("/api/admin/status")
 async def get_admin_status():
-    """Возвращает статус фоновых административных задач и системную статистику"""
+    """
+    Возвращает статус фоновых административных задач и системную статистику.
+
+    :return: (dict) Статистика по группам без категории, аккаунтам и состоянию фоновой задачи.
+    """
     # Рассчитать группы без категории
     uncategorized_count = TelegramGroups.select().where(
         (TelegramGroups.username.is_null(False)) &
@@ -971,7 +1182,9 @@ async def get_admin_status():
 
 async def bg_check_accounts():
     """
-    Проверка аккаунтов на валидность
+    Фоновая задача проверки аккаунтов на валидность.
+
+    :return: None
     """
     logger.info("Начинаем проверку аккаунтов...")
     global admin_task_status
@@ -999,7 +1212,8 @@ async def bg_check_accounts():
 
 async def bg_actualize_db():
     """
-    Актуализирует базу с группами и каналами
+    Фоновая задача актуализации базы данных групп и каналов.
+
     :return: None
     """
     admin_task_status["action"] = "actualize"
@@ -1127,7 +1341,12 @@ async def bg_actualize_db():
 
 
 async def bg_categorize_db(method: str):
-    """Выполняет фоновую классификацию групп по категориям с помощью нейросетей"""
+    """
+    Выполняет фоновую классификацию групп по категориям с помощью нейросетей.
+
+    :param method: (str) Выбранный метод классификации ("fast", "openrouter" или "groq").
+    :return: None
+    """
     global admin_task_status
     admin_task_status["action"] = "categorize"
     admin_task_status["status"] = "running"
@@ -1187,7 +1406,11 @@ async def bg_categorize_db(method: str):
 
 
 async def bg_detect_language():
-    """Выполняет фоновое определение языка групп с помощью нейросетей"""
+    """
+    Выполняет фоновое определение языка групп с помощью нейросетей.
+
+    :return: None
+    """
     global admin_task_status
     admin_task_status["action"] = "lang_detect"
     admin_task_status["status"] = "running"
@@ -1232,7 +1455,12 @@ async def bg_detect_language():
 
 @app.post("/api/admin/check-accounts")
 async def admin_check_accounts(background_tasks: BackgroundTasks):
-    """Запускает административную задачу проверки валидности всех аккаунтов"""
+    """
+    Запускает административную задачу проверки валидности всех аккаунтов.
+
+    :param background_tasks: (BackgroundTasks) Менеджер фоновых задач FastAPI.
+    :return: (dict) Статус запуска задачи.
+    """
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_check_accounts)
@@ -1241,7 +1469,12 @@ async def admin_check_accounts(background_tasks: BackgroundTasks):
 
 @app.post("/api/admin/actualize")
 async def admin_actualize_db(background_tasks: BackgroundTasks):
-    """Запускает административную задачу актуализации базы групп через Telegram"""
+    """
+    Запускает административную задачу актуализации базы групп через Telegram.
+
+    :param background_tasks: (BackgroundTasks) Менеджер фоновых задач FastAPI.
+    :return: (dict) Статус запуска задачи.
+    """
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_actualize_db)
@@ -1250,7 +1483,13 @@ async def admin_actualize_db(background_tasks: BackgroundTasks):
 
 @app.post("/api/admin/categorize")
 async def admin_categorize_db(method: str = Query("fast"), background_tasks: BackgroundTasks = None):
-    """Запускает административную задачу категоризации групп с помощью AI"""
+    """
+    Запускает административную задачу категоризации групп с помощью AI.
+
+    :param method: (str) Метод категоризации ("fast", "openrouter", "groq").
+    :param background_tasks: (BackgroundTasks) Менеджер фоновых задач FastAPI.
+    :return: (dict) Статус запуска задачи.
+    """
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_categorize_db, method=method)
@@ -1259,7 +1498,12 @@ async def admin_categorize_db(method: str = Query("fast"), background_tasks: Bac
 
 @app.post("/api/admin/detect-language")
 async def admin_detect_language(background_tasks: BackgroundTasks):
-    """Запускает административную задачу определения языков групп через AI"""
+    """
+    Запускает административную задачу определения языков групп через AI.
+
+    :param background_tasks: (BackgroundTasks) Менеджер фоновых задач FastAPI.
+    :return: (dict) Статус запуска задачи.
+    """
     if admin_task_status["status"] == "running":
         return {"status": "busy", "task": admin_task_status}
     background_tasks.add_task(bg_detect_language)
@@ -1268,7 +1512,11 @@ async def admin_detect_language(background_tasks: BackgroundTasks):
 
 @app.get("/api/admin/export-questions")
 async def admin_export_questions():
-    """Экспортирует вопросы пользователей из базы данных в CSV-файл"""
+    """
+    Экспортирует вопросы пользователей из базы данных в CSV-файл.
+
+    :return: (StreamingResponse) Потоковый ответ с CSV-файлом вопросов.
+    """
     questions = get_all_questions()
     if not questions:
         raise HTTPException(status_code=404, detail="No questions found in database")
@@ -1294,7 +1542,11 @@ async def admin_export_questions():
 
 @app.get("/api/admin/logs")
 async def admin_download_logs():
-    """Отдает файл логов бота администратору"""
+    """
+    Отдает файл логов бота администратору.
+
+    :return: (FileResponse) Файл логов приложения.
+    """
     log_path = "logs/log.log"
     if not os.path.exists(log_path):
         raise HTTPException(status_code=404, detail="Log file not found")
@@ -1369,4 +1621,3 @@ async def serve_static(file_path: str):
 
 
 app.include_router(static_router)
-     

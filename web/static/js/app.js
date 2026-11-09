@@ -3,6 +3,7 @@ const tg = window.Telegram?.WebApp;
 let authToken = "";
 let userLanguage = "ru"; // резерв по умолчанию
 let isAdmin = false;
+let isTrackingActive = false;
 let statusInterval = null;
 let currentSearchResults = [];
 
@@ -20,47 +21,182 @@ if (tg && tg.initData) {
 // Словарь переводов
 const translations = {
     ru: {
-        title: "AutoParse Панель",
-        tracking_active: "Отслеживание Активно",
-        tracking_inactive: "Отслеживание Неактивно",
-        start_tracking: "Запустить отслеживание",
+        title: "AutoParse Alert Monitor",
+        hero_title: "AutoParse Alert Monitor",
+        hero_desc: "Отслеживание ключевых слов в режиме реального времени в группах и каналах Telegram",
+        tracking_active: "Отслеживание активно",
+        tracking_inactive: "Отслеживание неактивно",
+        start_tracking: "Начать отслеживание",
         stop_tracking: "Остановить отслеживание",
-        monitored_channels: "Каналы отслеживания",
-        active_keywords: "Ключевые слова",
-        connected_sessions: "Подключено аккаунтов",
-        groups_db: "Групп в базе",
-        target_group_title: "Группа для пересылки",
+        monitored_channels: "Контролируемые каналы",
+        active_keywords: "Активные ключевые слова",
+        connected_sessions: "Связанные сеансы",
+        groups_db: "База данных групп Telegram",
+        target_group_title: "Настройки переадресации",
+        target_channel_subtitle: "Целевой канал оповещения",
+        target_channel_desc: "Сообщения с ключевыми словами будут пересылаться сюда",
+        placeholder_target_group: "@your_channel",
         save: "Сохранить",
+        balance_title: "Баланс и утилиты",
+        balance_desc: "Покупайте Stars, чтобы обойти 24-часовое ограничение на экспорт баз данных.",
+        buy_stars: "Купить Stars",
+        add_channels_title: "Добавить каналы для отслеживания",
+        placeholder_channel: "@channel_username",
         add: "Добавить",
-        upload_txt:
-            "Перетащите файл <strong>.txt</strong> со списком или <span>выберите</span>",
-        upload_session:
-            "Перетащите файл <strong>.session</strong> или <span>выберите</span>",
-        search_results: "Результаты поиска",
-        all_records: "Вся база",
-        channels_only: "Только каналы",
-        groups_only: "Только группы",
-        all_categories: "Все категории",
-        export_excel: "Скачать базу Excel",
+        drag_drop_txt: "Перетащите <strong>.txt</strong> файл со списком или <span class=\"browse-link\">выберите</span>",
+        placeholder_search_channels: "Поиск каналов...",
+        no_channels: "Пока не добавлены каналы.",
+        loading_channels: "Загрузка каналов...",
+        add_keyword_title: "Добавить ключевое слово",
+        placeholder_keyword: "например, фриланс, python, разработка",
+        add_keyword_btn: "Добавить ключевое слово",
+        active_keywords_title: "Активные ключевые слова",
+        no_keywords: "Ключевые слова не определены.",
+        loading_keywords: "Загрузка ключевых слов...",
+        connect_account_title: "Подключить аккаунт Telegram",
+        connect_account_desc: "Загрузите файл сессии <strong>.session</strong> (Telethon / Pyrogram) рабочего аккаунта Telegram для автопоиска и мониторинга.",
+        drag_drop_session: "Перетащите <strong>.session</strong> файл сюда или <span class=\"browse-link\">выберите на устройстве</span>",
+        active_sessions_title: "Активные сессии",
+        no_accounts: "Нет подключенных аккаунтов.",
+        loading_sessions: "Загрузка сессий...",
+        ai_search_title: "Поиск целевой группы с помощью искусственного интеллекта",
+        ai_search_desc: "Используйте искусственный интеллект (Groq Llama 3) для генерации поисковых запросов, а затем найдите активные группы Telegram по вашей теме.",
+        placeholder_ai_search: "например, Python Developer Jobs, Crypto Trades",
         find_groups: "Найти группы",
-        admin_panel: "Панель администратора",
-        check_accounts: "Проверить сессии",
-        actualize_db: "Актуализация БД",
-        classify_ai: "AI поиск групп / каналов",
-        classify_ais: "Массовый AI поиск групп / каналов",
-
-        detect_lang: "Определить языки",
-        download: "Скачать",
-        stars_invoice_desc: "Пополнение баланса на {amount} звезд",
+        ai_mass_search_title: "Массовый поиск целевых групп с помощью искусственного интеллекта",
+        ai_mass_search_desc: "Массовый поиск групп и каналов на основе искусственного интеллекта. Используйте искусственный интеллект (Groq Llama 3) для генерации поисковых запросов, а затем найдите активные группы Telegram по вашей теме.",
+        export_db_title: "База данных экспортных групп",
+        export_db_desc: "Загрузите отфильтрованную таблицу Excel со всеми обнаруженными группами и каналами Telegram.",
+        export_format_label: "Формат экспорта:",
+        opt_all_records: "Все записи",
+        opt_channels_only: "Только каналы",
+        opt_groups_only: "Только для групп",
+        filter_category_label: "Категория фильтров:",
+        cat_all: "Все категории",
+        cat_investments: "Инвестиции",
+        cat_finance: "Финансы и личный бюджет",
+        cat_crypto: "Криптовалюты и блокчейн",
+        cat_business: "Бизнес и предпринимательство",
+        cat_marketing: "Маркетинг и продвижение",
+        cat_tech: "Технологии и IT",
+        cat_education: "Образование и саморазвитие",
+        cat_jobs: "Работа и карьера",
+        cat_realestate: "Недвижимость",
+        cat_health: "Здоровье и медицина",
+        cat_travel: "Путешествия",
+        cat_auto: "Авто и транспорт",
+        cat_shopping: "Шоппинг и скидки",
+        cat_entertainment: "Развлечения и досуг",
+        cat_politics: "Политика и общество",
+        cat_science: "Наука и исследования",
+        cat_sport: "Спорт и фитнес",
+        cat_cooking: "Кулинария и еда",
+        cat_beauty: "Мода и красота",
+        cat_hobby: "Хобби и творчество",
+        export_limit_warning: "Достигнут лимит бесплатного скачивания (1/24 часа). Следующая загрузка вычитает 5 звёзд.",
+        export_excel: "Экспорт в Excel",
+        search_results: "Результаты поиска",
+        download_results_excel: "Скачать результаты в Excel",
+        th_name: "Название",
+        th_username: "Юзернейм",
+        th_type: "Тип",
+        th_members: "Участники",
+        th_activity: "Активность",
+        admin_panel_title: "Панель управления администратора",
+        admin_panel_desc: "Выполняйте операции технического обслуживания, обновляйте сведения о группах, запускайте классификацию с помощью искусственного интеллекта и извлекайте системные журналы.",
+        admin_task_running: "Запущенный фоновый процесс",
+        admin_task_updating: "Обновление...",
+        admin_task_processing: "Обработка данных...",
+        admin_check_accounts_title: "Проверка подключенных аккаунтов",
+        admin_check_accounts_desc: "Проверка действительности активных сеансов Telegram",
+        admin_actualize_db_title: "Актуализировать базу данных",
+        admin_actualize_db_desc: "Получение последних идентификаторов и названий Telegram",
+        admin_system_files: "Системные файлы",
+        admin_feedback_title: "Вопросы и отзывы пользователей",
+        admin_feedback_desc: "Загрузка запросов пользователей из базы данных (CSV)",
+        admin_logs_title: "Журналы приложений",
+        admin_logs_desc: "Просмотр сырого файла журналирования следов бота (logs/log.log)",
+        download: "Загрузка",
+        nav_home: "Домой",
+        nav_channels: "Каналы",
+        nav_keywords: "Ключевые слова",
+        nav_accounts: "Аккаунты",
+        nav_ai_search: "AI поиск",
+        nav_admin: "Администратор",
+        modal_buy_stars_title: "Купить Telegram Stars",
+        modal_buy_stars_desc: "Выберите количество звездочек, которые вы хотите приобрести для своего баланса:",
+        stars_10: "10 звезд",
+        stars_25: "25 звезд",
+        stars_50: "50 звезд",
+        stars_100: "100 звезд",
+        modal_categorize_title: "Выберите метод классификации",
+        modal_categorize_desc: "Выберите поставщика искусственного интеллекта и модель для выполнения категоризации чата:",
+        cat_method_fast_title: "Быстрый метод (без G4F)",
+        cat_method_fast_desc: "Последовательно использует бесплатные модели (gpt-4o-mini, llama-3)",
+        cat_method_openrouter_title: "Мощный метод (OpenRouter DeepSeek)",
+        cat_method_openrouter_desc: "Использует deepseek-v4-flash через OpenRouter API",
+        cat_method_groq_title: "Мощный метод (Groq Llama)",
+        cat_method_groq_desc: "Использует llama-3.1-8b через Groq API",
+        confirm_delete_channel: "Вы уверены, что хотите прекратить отслеживание этого канала?",
+        confirm_delete_keyword: "Удалить это ключевое слово?",
+        confirm_delete_account: "Вы уверены, что хотите отключить эту учетную запись Telegram?",
+        confirm_admin_action: "Вы уверены, что хотите вызвать действие администратора '{action}'?",
+        channel_added: "Канал успешно добавлен!",
+        keyword_added: "Ключевое слово добавлено!",
+        account_connected: "Аккаунт {phone} успешно подключен!",
+        channel_removed: "Канал удален.",
+        keyword_removed: "Ключевое слово удалено.",
+        account_disconnected: "Аккаунт отключен.",
+        tracking_stop_sent: "Команда остановки отслеживания отправлена.",
+        tracking_start_sent: "Отслеживание запускается в фоновом режиме...",
+        file_sent_to_chat: "Файл отправлен в ваш чат с ботом и скачивается!",
+        download_started: "Скачивание началось!",
+        export_preparing: "Формирование экспорта базы данных...",
+        excel_preparing: "Формирование Excel файла...",
+        ai_searching: "AI Group Finder выполняет поиск в Telegram. Пожалуйста, подождите...",
+        no_results_found: "В Telegram не найдено ни одной подходящей активной группы.",
+        no_results_to_export: "Нет результатов поиска для экспорта",
+        no_ids_to_export: "Не найдено ID результатов для экспорта",
+        search_failed: "Ошибка поиска.",
+        invoice_link_generating: "Создание ссылки на оплату...",
+        stars_topup_success: "Баланс успешно пополнен! Добавлено {amount} звезд.",
+        payment_cancelled: "Оплата отменена или не удалась.",
+        invoice_opened_tab: "Счет открыт в новой вкладке. Пожалуйста, завершите оплату.",
+        failed_stars_invoice: "Не удалось создать счет на оплату звезд.",
+        admin_bg_started: "Начата фоновая операция: {endpoint}",
+        admin_op_failed: "Ошибка операции администратора.",
+        file_downloading: "Загрузка файла...",
+        file_download_failed: "Ошибка скачивания файла",
+        failed_load_dashboard: "Ошибка загрузки данных панели.",
+        failed_update_lang: "Не удалось обновить язык.",
+        only_txt_supported: "Поддерживаются только списки .txt.",
+        uploading_channels: "Загрузка списка каналов...",
+        channels_imported: "Импортировано: добавлено {added}, пропущено {skipped}.",
+        only_session_supported: "Поддерживаются только файлы Telethon .session.",
+        verifying_session: "Проверка и загрузка файла сессии...",
+        network_error: "Сетевая ошибка",
+        operation_failed: "Операция не удалась.",
+        added_on: "Добавлен:",
+        connected_on: "Подключен:",
+        private_channel: "Приватный",
+        limit_warning_text: "Достигнут 24-часовой лимит экспорта (Следующий бесплатно: {hours} ч. {minutes} мин.). Следующая загрузка будет стоить 5 звезд. (Ваш баланс: {balance}).",
+        toggle_theme: "Переключить тему",
+        switch_language: "Переключить язык",
+        loading: "Загрузка...",
         success_saved: "Настройки успешно сохранены!",
         failed_save: "Ошибка сохранения настроек.",
         error_load: "Ошибка загрузки данных.",
         invalid_file: "Неверный формат файла.",
         starting: "Запуск...",
         stopping: "Остановка...",
+        status_active: "Активен",
+        status_inactive: "Неактивен",
+        status_unknown: "Неизвестно"
     },
     en: {
-        title: "AutoParse Panel",
+        title: "AutoParse Alert Monitor",
+        hero_title: "AutoParse Alert Monitor",
+        hero_desc: "Real-time keyword monitoring in Telegram groups and channels",
         tracking_active: "Tracking Active",
         tracking_inactive: "Tracking Inactive",
         start_tracking: "Start Tracking",
@@ -70,35 +206,177 @@ const translations = {
         connected_sessions: "Connected Sessions",
         groups_db: "Telegram Groups DB",
         target_group_title: "Forwarding Settings",
+        target_channel_subtitle: "Target Alert Channel",
+        target_channel_desc: "Keyword messages will be forwarded here",
+        placeholder_target_group: "@your_channel",
         save: "Save",
+        balance_title: "Balance & Utilities",
+        balance_desc: "Buy Stars to bypass the 24-hour database export limit.",
+        buy_stars: "Buy Stars",
+        add_channels_title: "Add Channels to Track",
+        placeholder_channel: "@channel_username",
         add: "Add",
-        upload_txt:
-            "Drag & Drop <strong>.txt</strong> file with channels or <span>browse</span>",
-        upload_session:
-            "Drag & Drop <strong>.session</strong> file or <span>browse</span>",
-        search_results: "Search Results",
-        all_records: "All Records",
-        channels_only: "Channels Only",
-        groups_only: "Groups Only",
-        all_categories: "All Categories",
-        export_excel: "Export to Excel",
+        drag_drop_txt: "Drag & Drop <strong>.txt</strong> file with channels or <span class=\"browse-link\">browse</span>",
+        placeholder_search_channels: "Search channels...",
+        no_channels: "No tracked channels yet.",
+        loading_channels: "Loading channels...",
+        add_keyword_title: "Add Alert Keyword",
+        placeholder_keyword: "e.g. freelance, python, developer",
+        add_keyword_btn: "Add Keyword",
+        active_keywords_title: "Active Keywords",
+        no_keywords: "No keywords defined.",
+        loading_keywords: "Loading keywords...",
+        connect_account_title: "Connect Telegram Account",
+        connect_account_desc: "Upload a <strong>.session</strong> file (Telethon / Pyrogram) of a working Telegram account for automated search and monitoring.",
+        drag_drop_session: "Drag & drop <strong>.session</strong> file here or <span class=\"browse-link\">browse</span>",
+        active_sessions_title: "Active Sessions",
+        no_accounts: "No accounts connected.",
+        loading_sessions: "Loading sessions...",
+        ai_search_title: "AI Target Group Search",
+        ai_search_desc: "Use AI (Groq Llama 3) to generate search queries and find active Telegram groups on your topic.",
+        placeholder_ai_search: "e.g. Python Developer Jobs, Crypto Trades",
         find_groups: "Find Groups",
-        admin_panel: "Admin Control Panel",
-        check_accounts: "Check Sessions",
-        actualize_db: "Actualize DB",
-        classify_ai: "AI search for channel groups",
-        classify_ais: "Mass AI search for channel groups",
-        detect_lang: "Detect Languages",
+        ai_mass_search_title: "Mass AI Target Group Search",
+        ai_mass_search_desc: "Mass search of groups and channels powered by AI. Use AI (Groq Llama 3) to generate queries and find active Telegram groups.",
+        export_db_title: "Export Groups Database",
+        export_db_desc: "Download a filtered Excel spreadsheet with all discovered Telegram groups and channels.",
+        export_format_label: "Export format:",
+        opt_all_records: "All records",
+        opt_channels_only: "Channels only",
+        opt_groups_only: "Groups only",
+        filter_category_label: "Filter category:",
+        cat_all: "All categories",
+        cat_investments: "Investments",
+        cat_finance: "Finance & Personal Budget",
+        cat_crypto: "Cryptocurrency & Blockchain",
+        cat_business: "Business & Entrepreneurship",
+        cat_marketing: "Marketing & Promotion",
+        cat_tech: "Technology & IT",
+        cat_education: "Education & Self-development",
+        cat_jobs: "Jobs & Career",
+        cat_realestate: "Real Estate",
+        cat_health: "Health & Medicine",
+        cat_travel: "Travel",
+        cat_auto: "Auto & Transport",
+        cat_shopping: "Shopping & Discounts",
+        cat_entertainment: "Entertainment & Leisure",
+        cat_politics: "Politics & Society",
+        cat_science: "Science & Research",
+        cat_sport: "Sports & Fitness",
+        cat_cooking: "Cooking & Food",
+        cat_beauty: "Fashion & Beauty",
+        cat_hobby: "Hobbies & Creativity",
+        export_limit_warning: "Free download limit reached (1/24 hours). Next export costs 5 stars.",
+        export_excel: "Export to Excel",
+        search_results: "Search Results",
+        download_results_excel: "Download results in Excel",
+        th_name: "Name",
+        th_username: "Username",
+        th_type: "Type",
+        th_members: "Members",
+        th_activity: "Activity",
+        admin_panel_title: "Admin Control Panel",
+        admin_panel_desc: "Perform maintenance operations, refresh group info, trigger AI classification, and retrieve system logs.",
+        admin_task_running: "Running Background Process",
+        admin_task_updating: "Updating...",
+        admin_task_processing: "Processing data...",
+        admin_check_accounts_title: "Check Connected Accounts",
+        admin_check_accounts_desc: "Check validity of active Telegram sessions",
+        admin_actualize_db_title: "Actualize Database",
+        admin_actualize_db_desc: "Fetch latest Telegram IDs and titles",
+        admin_system_files: "System Files",
+        admin_feedback_title: "User Questions & Feedback",
+        admin_feedback_desc: "Download user queries from database (CSV)",
+        admin_logs_title: "Application Logs",
+        admin_logs_desc: "View raw bot tracing log file (logs/log.log)",
         download: "Download",
-        stars_invoice_desc: "Stars balance top up: {amount} stars",
+        nav_home: "Home",
+        nav_channels: "Channels",
+        nav_keywords: "Keywords",
+        nav_accounts: "Accounts",
+        nav_ai_search: "AI Search",
+        nav_admin: "Admin",
+        modal_buy_stars_title: "Buy Telegram Stars",
+        modal_buy_stars_desc: "Select the number of stars you want to purchase for your balance:",
+        stars_10: "10 Stars",
+        stars_25: "25 Stars",
+        stars_50: "50 Stars",
+        stars_100: "100 Stars",
+        modal_categorize_title: "Select Categorization Method",
+        modal_categorize_desc: "Select an AI provider and model to perform chat categorization:",
+        cat_method_fast_title: "Fast Method (No G4F)",
+        cat_method_fast_desc: "Sequentially uses free models (gpt-4o-mini, llama-3)",
+        cat_method_openrouter_title: "Powerful Method (OpenRouter DeepSeek)",
+        cat_method_openrouter_desc: "Uses deepseek-v4-flash via OpenRouter API",
+        cat_method_groq_title: "Powerful Method (Groq Llama)",
+        cat_method_groq_desc: "Uses llama-3.1-8b via Groq API",
+        confirm_delete_channel: "Are you sure you want to stop tracking this channel?",
+        confirm_delete_keyword: "Delete this keyword?",
+        confirm_delete_account: "Are you sure you want to disconnect this Telegram account?",
+        confirm_admin_action: "Are you sure you want to trigger admin action '{action}'?",
+        channel_added: "Channel added successfully!",
+        keyword_added: "Keyword added successfully!",
+        account_connected: "Account {phone} connected successfully!",
+        channel_removed: "Channel removed.",
+        keyword_removed: "Keyword deleted.",
+        account_disconnected: "Account disconnected.",
+        tracking_stop_sent: "Tracking stop command sent.",
+        tracking_start_sent: "Tracking starting in background...",
+        file_sent_to_chat: "File sent to your bot chat and downloading!",
+        download_started: "Download started!",
+        export_preparing: "Generating database export...",
+        excel_preparing: "Generating Excel file...",
+        ai_searching: "AI Group Finder is searching Telegram. Please wait...",
+        no_results_found: "No matching active groups found in Telegram.",
+        no_results_to_export: "No search results to export",
+        no_ids_to_export: "No result IDs found for export",
+        search_failed: "Search failed.",
+        invoice_link_generating: "Generating invoice link...",
+        stars_topup_success: "Stars top up success! Added {amount} stars.",
+        payment_cancelled: "Payment cancelled or failed.",
+        invoice_opened_tab: "Invoice opened in new tab. Please complete payment.",
+        failed_stars_invoice: "Failed to create stars invoice.",
+        admin_bg_started: "Started background operation: {endpoint}",
+        admin_op_failed: "Admin operation failed.",
+        file_downloading: "Downloading file...",
+        file_download_failed: "File download failed",
+        failed_load_dashboard: "Failed to load dashboard data.",
+        failed_update_lang: "Failed to update language.",
+        only_txt_supported: "Only .txt lists are supported.",
+        uploading_channels: "Uploading channel list...",
+        channels_imported: "Imported: {added} added, {skipped} skipped.",
+        only_session_supported: "Only Telethon .session files are supported.",
+        verifying_session: "Verifying & uploading session file...",
+        network_error: "Network error",
+        operation_failed: "Operation failed.",
+        added_on: "Added:",
+        connected_on: "Connected:",
+        private_channel: "Private",
+        limit_warning_text: "24-hour export limit reached (Next free: {hours}h {minutes}m). Next download will cost 5 stars. (Your balance: {balance}).",
+        toggle_theme: "Toggle theme",
+        switch_language: "Switch language",
+        loading: "Loading...",
         success_saved: "Settings saved successfully!",
         failed_save: "Failed to save settings.",
         error_load: "Error loading data.",
         invalid_file: "Invalid file format.",
         starting: "Starting...",
         stopping: "Stopping...",
-    },
+        status_active: "Active",
+        status_inactive: "Inactive",
+        status_unknown: "Unknown"
+    }
 };
+
+// Функция перевода
+function i18n(key, params = {}) {
+    const langDict = translations[userLanguage] || translations.ru || {};
+    let text = langDict[key] || translations.ru[key] || key;
+    for (const [k, v] of Object.entries(params)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, "g"), v);
+    }
+    return text;
+}
 
 // Помощник по выборке API с заголовком аутентификации
 async function apiRequest(endpoint, options = {}) {
@@ -204,37 +482,42 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // Обновить текстовые значения пользовательского интерфейса в зависимости от активного языка.
 function applyTranslations() {
-    const t = translations[userLanguage] || translations.en || {};
+    // 1. Текстовые элементы по data-i18n
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        const val = i18n(key);
+        if (val) {
+            el.innerHTML = val;
+        }
+    });
 
-    // Элементы всей страницы
-    document.querySelector(".hero-title").innerText = t.title || "Title";
-    document.querySelector(".hero-desc").innerText = t.hero_desc || t.title || "";
+    // 2. Плейсхолдеры по data-i18n-placeholder
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        const key = el.getAttribute("data-i18n-placeholder");
+        const val = i18n(key);
+        if (val) {
+            el.placeholder = val;
+        }
+    });
 
-    // Установить метки блоков статистики
-    document.querySelector("[onclick=\"switchTab('channels')\"] p").innerText =
-        t.monitored_channels || "Monitored Channels";
-    document.querySelector("[onclick=\"switchTab('keywords')\"] p").innerText =
-        t.active_keywords;
-    document.querySelector("[onclick=\"switchTab('accounts')\"] p").innerText =
-        t.connected_sessions;
-    document.querySelector("[onclick=\"switchTab('admin')\"] span").innerText =
-        "Admin";
+    // 3. Подсказки title по data-i18n-title
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+        const key = el.getAttribute("data-i18n-title");
+        const val = i18n(key);
+        if (val) {
+            el.title = val;
+        }
+    });
 
-    // Встроенные заголовки
-    document.querySelector("#tab-dashboard .card h3").innerHTML =
-        `<i class="fa-solid fa-gears icon-inline"></i> ${t.target_group_title}`;
-    document.querySelector("#tab-channels .card h3").innerHTML =
-        `<i class="fa-solid fa-square-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить каналы" : "Add Channels to Track"}`;
-    document.querySelector("#tab-keywords .card h3").innerHTML =
-        `<i class="fa-solid fa-key icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Добавить ключевое слово" : "Add Alert Keyword"}`;
-    document.querySelector("#tab-accounts .card h3").innerHTML =
-        `<i class="fa-solid fa-user-plus icon-inline"></i> ${translations[userLanguage] === translations.ru ? "Подключить аккаунт Telegram" : "Connect Telegram Account"}`;
-    document.querySelector("#tab-search .card h3").innerHTML =
-        `<i class="fa-solid fa-robot icon-inline"></i> ${t.classify_ai}`;
+    // 4. Обновить статус отслеживания
+    setTrackingStatusUI();
 
-    const massSearchH3 = document.querySelector("#ai-mass-search-card h3");
-    if (massSearchH3) {
-        massSearchH3.innerHTML = `<i class="fa-solid fa-robot icon-inline"></i> ${t.classify_ais || "Массовый поиск целевых групп с помощью искусственного интеллекта"}`;
+    // 5. Обновить атрибут lang страницы
+    document.documentElement.lang = userLanguage;
+
+    // 6. Обновить результаты поиска если открыты
+    if (currentSearchResults && currentSearchResults.length > 0) {
+        renderSearchResults(currentSearchResults, false);
     }
 }
 
@@ -257,7 +540,8 @@ function switchTab(tabId) {
     // Выделить кнопку меню
     const navButtons = document.querySelectorAll(".nav-item");
     navButtons.forEach((btn) => {
-        if (btn.getAttribute("onclick").includes(`'${tabId}'`)) {
+        const onclickAttr = btn.getAttribute("onclick") || "";
+        if (onclickAttr.includes(`'${tabId}'`)) {
             btn.classList.add("active");
         }
     });
@@ -336,7 +620,7 @@ async function loadDashboardData() {
             checkExportLimits();
         }
     } catch (e) {
-        showNotification("Failed to load dashboard data.", "danger");
+        showNotification(i18n("failed_load_dashboard"), "danger");
     }
 }
 
@@ -395,23 +679,33 @@ async function refreshStatusAndTasks() {
 
 // Помощник для переключения импульса состояния отслеживания
 function setTrackingStatusUI(isActive) {
-    const t = translations[userLanguage];
+    if (typeof isActive === "boolean") {
+        isTrackingActive = isActive;
+    }
     const pulse = document.getElementById("status-pulse");
     const label = document.getElementById("status-text");
     const toggleBtn = document.getElementById("btn-toggle-tracking");
 
-    if (isActive) {
-        pulse.className = "status-pulse active";
-        label.innerText = t.tracking_active;
-        toggleBtn.className = "btn-danger glow-effect";
-        toggleBtn.querySelector("i").className = "fa-solid fa-stop";
-        toggleBtn.querySelector("span").innerText = t.stop_tracking;
+    if (isTrackingActive) {
+        if (pulse) pulse.className = "status-pulse active";
+        if (label) label.innerText = i18n("tracking_active");
+        if (toggleBtn) {
+            toggleBtn.className = "btn-danger glow-effect";
+            const icon = toggleBtn.querySelector("i");
+            if (icon) icon.className = "fa-solid fa-stop";
+            const span = toggleBtn.querySelector("span");
+            if (span) span.innerText = i18n("stop_tracking");
+        }
     } else {
-        pulse.className = "status-pulse inactive";
-        label.innerText = t.tracking_inactive;
-        toggleBtn.className = "btn-primary glow-effect";
-        toggleBtn.querySelector("i").className = "fa-solid fa-play";
-        toggleBtn.querySelector("span").innerText = t.start_tracking;
+        if (pulse) pulse.className = "status-pulse inactive";
+        if (label) label.innerText = i18n("tracking_inactive");
+        if (toggleBtn) {
+            toggleBtn.className = "btn-primary glow-effect";
+            const icon = toggleBtn.querySelector("i");
+            if (icon) icon.className = "fa-solid fa-play";
+            const span = toggleBtn.querySelector("span");
+            if (span) span.innerText = i18n("start_tracking");
+        }
     }
 }
 
@@ -433,6 +727,50 @@ function setTheme(theme) {
     }
 }
 
+// Рендеринг таблицы результатов поиска
+function renderSearchResults(groups, shouldScroll = true) {
+    currentSearchResults = groups || [];
+    const resultsCard = document.getElementById("search-results-card");
+    const list = document.getElementById("search-results-list");
+
+    list.innerHTML = "";
+    document.getElementById("results-count").innerText = currentSearchResults.length;
+
+    if (currentSearchResults.length > 0) {
+        resultsCard.classList.remove("hidden");
+        currentSearchResults.forEach((g) => {
+            const tr = document.createElement("tr");
+            const statusClass =
+                g.availability === "active"
+                    ? "status-active"
+                    : g.availability === "inactive"
+                        ? "status-inactive"
+                        : "status-unknown";
+            const statusLabel =
+                g.availability === "active"
+                    ? i18n("status_active")
+                    : g.availability === "inactive"
+                        ? i18n("status_inactive")
+                        : i18n("status_unknown");
+
+            tr.innerHTML = `
+                <td><strong>${g.name || ""}</strong></td>
+                <td><a href="${g.link || "#"}" target="_blank">${g.username || i18n("private_channel")}</a></td>
+                <td>${g.group_type || ""}</td>
+                <td>${(g.participants || 0).toLocaleString()}</td>
+                <td><span class="label-status ${statusClass}">${statusLabel}</span></td>
+            `;
+            list.appendChild(tr);
+        });
+        if (shouldScroll) {
+            resultsCard.scrollIntoView({behavior: "smooth"});
+        }
+    } else {
+        resultsCard.classList.add("hidden");
+        showNotification(i18n("no_results_found"), "warning");
+    }
+}
+
 // Кнопки настройки и события ввода
 function setupEventListeners() {
     // Кнопка переключения темы
@@ -444,10 +782,11 @@ function setupEventListeners() {
             setTheme(nextTheme);
         });
     }
+
     // Кнопка переключения языка
-    document
-        .getElementById("lang-toggle-btn")
-        .addEventListener("click", async () => {
+    const langBtn = document.getElementById("lang-toggle-btn");
+    if (langBtn) {
+        langBtn.addEventListener("click", async () => {
             const nextLang = userLanguage === "ru" ? "en" : "ru";
             try {
                 const res = await apiRequest(
@@ -459,21 +798,20 @@ function setupEventListeners() {
                     localStorage.setItem("lang_pref", userLanguage);
                     applyTranslations();
                     loadDashboardData();
-                    showNotification(translations[userLanguage].success_saved, "success");
+                    showNotification(i18n("success_saved"), "success");
                 }
             } catch (e) {
-                showNotification("Failed to update language.", "danger");
+                showNotification(i18n("failed_update_lang"), "danger");
             }
         });
+    }
 
     // Переключение начала/остановки отслеживания
-    document
-        .getElementById("btn-toggle-tracking")
-        .addEventListener("click", async () => {
-            const btn = document.getElementById("btn-toggle-tracking");
-            const currentActive = btn.className.includes("btn-danger");
-
-            btn.disabled = true;
+    const toggleTrackingBtn = document.getElementById("btn-toggle-tracking");
+    if (toggleTrackingBtn) {
+        toggleTrackingBtn.addEventListener("click", async () => {
+            const currentActive = toggleTrackingBtn.className.includes("btn-danger");
+            toggleTrackingBtn.disabled = true;
 
             try {
                 if (currentActive) {
@@ -481,29 +819,29 @@ function setupEventListeners() {
                         method: "POST",
                     });
                     if (res.ok) {
-                        showNotification("Tracking stop command sent.", "success");
+                        showNotification(i18n("tracking_stop_sent"), "success");
                     }
                 } else {
                     const res = await apiRequest("/api/tracking/start", {
                         method: "POST",
                     });
                     if (res.ok) {
-                        showNotification("Tracking starting in background...", "success");
+                        showNotification(i18n("tracking_start_sent"), "success");
                     }
                 }
-                // Подождите 1 секунду, затем перезагрузите
                 setTimeout(loadDashboardData, 1000);
             } catch (e) {
-                showNotification("Operation failed.", "danger");
+                showNotification(i18n("operation_failed"), "danger");
             } finally {
-                btn.disabled = false;
+                toggleTrackingBtn.disabled = false;
             }
         });
+    }
 
     // Сохранить целевую/группу пересылки
-    document
-        .getElementById("btn-save-target-group")
-        .addEventListener("click", async () => {
+    const saveTargetBtn = document.getElementById("btn-save-target-group");
+    if (saveTargetBtn) {
+        saveTargetBtn.addEventListener("click", async () => {
             const input = document.getElementById("target-group-input");
             const username = input.value.trim();
             if (!username) return;
@@ -517,20 +855,21 @@ function setupEventListeners() {
                     body: formData,
                 });
                 if (res.ok) {
-                    showNotification(translations[userLanguage].success_saved, "success");
+                    showNotification(i18n("success_saved"), "success");
                     loadDashboardData();
                 } else {
-                    showNotification(translations[userLanguage].failed_save, "danger");
+                    showNotification(i18n("failed_save"), "danger");
                 }
             } catch (e) {
-                showNotification("Network error", "danger");
+                showNotification(i18n("network_error"), "danger");
             }
         });
+    }
 
     // Добавить канал, отслеживаемый вручную
-    document
-        .getElementById("btn-add-channel")
-        .addEventListener("click", async () => {
+    const addChannelBtn = document.getElementById("btn-add-channel");
+    if (addChannelBtn) {
+        addChannelBtn.addEventListener("click", async () => {
             const input = document.getElementById("channel-username-input");
             const val = input.value.trim();
             if (!val) return;
@@ -546,20 +885,21 @@ function setupEventListeners() {
                 if (res.ok) {
                     input.value = "";
                     loadChannelsList();
-                    showNotification("Channel added successfully!", "success");
+                    showNotification(i18n("channel_added"), "success");
                 } else {
                     const error = await res.json();
-                    showNotification(error.detail || "Error adding channel", "danger");
+                    showNotification(error.detail || i18n("operation_failed"), "danger");
                 }
             } catch (e) {
-                showNotification("Network error", "danger");
+                showNotification(i18n("network_error"), "danger");
             }
         });
+    }
 
     // Добавить ключевое слово
-    document
-        .getElementById("btn-add-keyword")
-        .addEventListener("click", async () => {
+    const addKeywordBtn = document.getElementById("btn-add-keyword");
+    if (addKeywordBtn) {
+        addKeywordBtn.addEventListener("click", async () => {
             const input = document.getElementById("keyword-input");
             const val = input.value.trim();
             if (!val) return;
@@ -575,25 +915,29 @@ function setupEventListeners() {
                 if (res.ok) {
                     input.value = "";
                     loadKeywordsList();
-                    showNotification("Keyword added!", "success");
+                    showNotification(i18n("keyword_added"), "success");
                 } else {
                     const err = await res.json();
-                    showNotification(err.detail || "Error adding keyword", "danger");
+                    showNotification(err.detail || i18n("operation_failed"), "danger");
                 }
             } catch (e) {
-                showNotification("Network error", "danger");
+                showNotification(i18n("network_error"), "danger");
             }
         });
+    }
 
     // Пополнение звезд вызывает модальное окно
-    document.getElementById("btn-topup-modal").addEventListener("click", () => {
-        document.getElementById("topup-modal").classList.remove("hidden");
-    });
+    const topupModalBtn = document.getElementById("btn-topup-modal");
+    if (topupModalBtn) {
+        topupModalBtn.addEventListener("click", () => {
+            document.getElementById("topup-modal").classList.remove("hidden");
+        });
+    }
 
     // Экспорт таблицы БД
-    document
-        .getElementById("btn-export-db")
-        .addEventListener("click", async () => {
+    const exportDbBtn = document.getElementById("btn-export-db");
+    if (exportDbBtn) {
+        exportDbBtn.addEventListener("click", async () => {
             const expType = document.getElementById("export-type").value;
             const category = document.getElementById("export-category").value;
 
@@ -601,7 +945,7 @@ function setupEventListeners() {
             fd.append("export_type", expType);
             fd.append("category", category);
 
-            showNotification("Формирование экспорта базы данных...", "success");
+            showNotification(i18n("export_preparing"), "success");
 
             try {
                 const res = await apiRequest("/api/export/download", {
@@ -614,37 +958,31 @@ function setupEventListeners() {
                     downloadBlob(blob, res, "db_export.xlsx");
 
                     if (window.Telegram?.WebApp) {
-                        showNotification(
-                            "Файл отправлен в ваш чат с ботом и скачивается!",
-                            "success",
-                        );
+                        showNotification(i18n("file_sent_to_chat"), "success");
                     } else {
-                        showNotification("Скачивание началось!", "success");
+                        showNotification(i18n("download_started"), "success");
                     }
-                    loadDashboardData(); // Перезагрузите обновление звезд, если они были вычтены.
+                    loadDashboardData();
                 } else {
                     const err = await res.json();
-                    showNotification(
-                        err.detail || "Не удалось скачать экспорт",
-                        "danger",
-                    );
+                    showNotification(err.detail || i18n("operation_failed"), "danger");
                 }
             } catch (e) {
                 console.error("Export DB error:", e);
-                showNotification("Ошибка скачивания", "danger");
+                showNotification(i18n("network_error"), "danger");
             }
         });
+    }
 
     // Фильтр поиска по списку отслеживаемых каналов
-    document
-        .getElementById("search-channels-filter")
-        .addEventListener("input", (e) => {
+    const filterInput = document.getElementById("search-channels-filter");
+    if (filterInput) {
+        filterInput.addEventListener("input", (e) => {
             const filterText = e.target.value.toLowerCase();
             const items = document.querySelectorAll("#channels-list .list-item");
             items.forEach((item) => {
-                const username = item
-                    .querySelector(".item-title")
-                    .innerText.toLowerCase();
+                const titleEl = item.querySelector(".item-title");
+                const username = titleEl ? titleEl.innerText.toLowerCase() : "";
                 if (username.includes(filterText)) {
                     item.style.display = "flex";
                 } else {
@@ -652,11 +990,12 @@ function setupEventListeners() {
                 }
             });
         });
+    }
 
     // Запустить поиск AI
-    document
-        .getElementById("btn-trigger-ai-search")
-        .addEventListener("click", async () => {
+    const triggerAiSearchBtn = document.getElementById("btn-trigger-ai-search");
+    if (triggerAiSearchBtn) {
+        triggerAiSearchBtn.addEventListener("click", async () => {
             const input = document.getElementById("ai-search-query");
             const query = input.value.trim();
             if (!query) return;
@@ -664,19 +1003,13 @@ function setupEventListeners() {
             const fd = new FormData();
             fd.append("query", query);
 
-            const btn = document.getElementById("btn-trigger-ai-search");
             const spinner = document.getElementById("search-spinner");
+            triggerAiSearchBtn.disabled = true;
+            if (spinner) spinner.classList.remove("hidden");
 
-            btn.disabled = true;
-            spinner.classList.remove("hidden");
-
-            showNotification(
-                "AI Group Finder выполняет поиск в Telegram. Пожалуйста, подождите...",
-                "success",
-            );
+            showNotification(i18n("ai_searching"), "success");
 
             try {
-                // D:\Yandex.Disk\Флешка\19_04_2026_AutoParseAlertBot\web\server.py
                 const res = await apiRequest("/api/search/ai", {
                     method: "POST",
                     body: fd,
@@ -684,75 +1017,79 @@ function setupEventListeners() {
 
                 if (res.ok) {
                     const data = await res.json();
-                    currentSearchResults = data.groups || [];
-
-                    // Отобразить таблицу результатов
-                    const resultsCard = document.getElementById("search-results-card");
-                    const list = document.getElementById("search-results-list");
-
-                    list.innerHTML = "";
-                    document.getElementById("results-count").innerText =
-                        data.groups.length;
-
-                    if (data.groups.length > 0) {
-                        resultsCard.classList.remove("hidden");
-                        data.groups.forEach((g) => {
-                            const tr = document.createElement("tr");
-                            const statusClass =
-                                g.availability === "active"
-                                    ? "status-active"
-                                    : g.availability === "inactive"
-                                        ? "status-inactive"
-                                        : "status-unknown";
-
-                            tr.innerHTML = `
-                            <td><strong>${g.name}</strong></td>
-                            <td><a href="${g.link || "#"}" target="_blank">${g.username || "Private"}</a></td>
-                            <td>${g.group_type}</td>
-                            <td>${g.participants.toLocaleString()}</td>
-                            <td><span class="label-status ${statusClass}">${g.availability}</span></td>
-                        `;
-                            list.appendChild(tr);
-                        });
-                        resultsCard.scrollIntoView({behavior: "smooth"});
-                    } else {
-                        resultsCard.classList.add("hidden");
-                        showNotification(
-                            "В Telegram не найдено ни одной подходящей активной группы.",
-                            "warning",
-                        );
-                    }
+                    renderSearchResults(data.groups || []);
                 } else {
                     const err = await res.json();
-                    showNotification(err.detail || "Search failed.", "danger");
+                    showNotification(err.detail || i18n("search_failed"), "danger");
                 }
             } catch (e) {
-                showNotification("Search failed.", "danger");
+                showNotification(i18n("search_failed"), "danger");
             } finally {
-                btn.disabled = false;
-                spinner.classList.add("hidden");
+                triggerAiSearchBtn.disabled = false;
+                if (spinner) spinner.classList.add("hidden");
             }
         });
+    }
 
+    // Запустить массовый поиск AI
+    const triggerAiSearchsBtn = document.getElementById("btn-trigger-ai-searchs");
+    if (triggerAiSearchsBtn) {
+        triggerAiSearchsBtn.addEventListener("click", async () => {
+            const input = document.getElementById("ai-search-querys");
+            const query = input.value.trim();
+            if (!query) return;
+
+            const fd = new FormData();
+            fd.append("query", query);
+
+            const spinner = document.getElementById("search-spinners");
+            triggerAiSearchsBtn.disabled = true;
+            if (spinner) spinner.classList.remove("hidden");
+
+            showNotification(i18n("ai_searching"), "success");
+
+            try {
+                const res = await apiRequest("/api/searchs/ai", {
+                    method: "POST",
+                    body: fd,
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    renderSearchResults(data.groups || []);
+                } else {
+                    const err = await res.json();
+                    showNotification(err.detail || i18n("search_failed"), "danger");
+                }
+            } catch (e) {
+                showNotification(i18n("search_failed"), "danger");
+            } finally {
+                triggerAiSearchsBtn.disabled = false;
+                if (spinner) spinner.classList.add("hidden");
+            }
+        });
+    }
+
+    // Экспорт результатов поиска в Excel
     const btnExportSearch = document.getElementById("btn-export-search-results");
     if (btnExportSearch) {
         btnExportSearch.addEventListener("click", async () => {
             if (!currentSearchResults || currentSearchResults.length === 0) {
-                showNotification("Нет результатов поиска для экспорта", "warning");
+                showNotification(i18n("no_results_to_export"), "warning");
                 return;
             }
             const ids = currentSearchResults
                 .map((g) => g.telegram_id || g.id)
                 .filter(Boolean);
             if (ids.length === 0) {
-                showNotification("Не найдено ID результатов для экспорта", "warning");
+                showNotification(i18n("no_ids_to_export"), "warning");
                 return;
             }
 
             const fd = new FormData();
             fd.append("telegram_ids", ids.join(","));
 
-            showNotification("Формирование Excel файла...", "success");
+            showNotification(i18n("excel_preparing"), "success");
 
             try {
                 const res = await apiRequest("/api/search/export_excel", {
@@ -765,152 +1102,20 @@ function setupEventListeners() {
                     downloadBlob(blob, res, "search_results.xlsx");
 
                     if (window.Telegram?.WebApp) {
-                        showNotification(
-                            "Файл отправлен в ваш чат с ботом и скачивается!",
-                            "success",
-                        );
+                        showNotification(i18n("file_sent_to_chat"), "success");
                     } else {
-                        showNotification("Скачивание началось!", "success");
+                        showNotification(i18n("download_started"), "success");
                     }
                 } else {
                     const err = await res.json();
-                    showNotification(err.detail || "Не удалось скачать Excel", "danger");
+                    showNotification(err.detail || i18n("operation_failed"), "danger");
                 }
             } catch (e) {
                 console.error("Export search excel error:", e);
-                showNotification("Ошибка при скачивании файла", "danger");
+                showNotification(i18n("network_error"), "danger");
             }
         });
     }
-}
-
-// Запустить поиск AI (массовый поиск групп в Telegram по запросу пользователя)
-document
-    .getElementById("btn-trigger-ai-searchs")
-    .addEventListener("click", async () => {
-        const input = document.getElementById("ai-search-querys");
-        const query = input.value.trim();
-        if (!query) return;
-
-        const fd = new FormData();
-        fd.append("query", query);
-
-        const btn = document.getElementById("btn-trigger-ai-searchs");
-        const spinner = document.getElementById("search-spinners");
-
-        btn.disabled = true;
-        spinner.classList.remove("hidden");
-
-        showNotification(
-            "AI Group Finder выполняет поиск в Telegram. Пожалуйста, подождите...",
-            "success",
-        );
-
-        try {
-            // D:\Yandex.Disk\Флешка\19_04_2026_AutoParseAlertBot\web\server.py
-            const res = await apiRequest("/api/searchs/ai", {
-                method: "POST",
-                body: fd,
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                currentSearchResults = data.groups || [];
-
-                // Отобразить таблицу результатов
-                const resultsCard = document.getElementById("search-results-card");
-                const list = document.getElementById("search-results-list");
-
-                list.innerHTML = "";
-                document.getElementById("results-count").innerText = data.groups.length;
-
-                if (data.groups.length > 0) {
-                    resultsCard.classList.remove("hidden");
-                    data.groups.forEach((g) => {
-                        const tr = document.createElement("tr");
-                        const statusClass =
-                            g.availability === "active"
-                                ? "status-active"
-                                : g.availability === "inactive"
-                                    ? "status-inactive"
-                                    : "status-unknown";
-
-                        tr.innerHTML = `
-                            <td><strong>${g.name}</strong></td>
-                            <td><a href="${g.link || "#"}" target="_blank">${g.username || "Private"}</a></td>
-                            <td>${g.group_type}</td>
-                            <td>${g.participants.toLocaleString()}</td>
-                            <td><span class="label-status ${statusClass}">${g.availability}</span></td>
-                        `;
-                        list.appendChild(tr);
-                    });
-                    resultsCard.scrollIntoView({behavior: "smooth"});
-                } else {
-                    resultsCard.classList.add("hidden");
-                    showNotification(
-                        "В Telegram не найдено ни одной подходящей активной группы.",
-                        "warning",
-                    );
-                }
-            } else {
-                const err = await res.json();
-                showNotification(err.detail || "Search failed.", "danger");
-            }
-        } catch (e) {
-            showNotification("Search failed.", "danger");
-        } finally {
-            btn.disabled = false;
-            spinner.classList.add("hidden");
-        }
-    });
-
-const btnExportSearch = document.getElementById("btn-export-search-results");
-if (btnExportSearch) {
-    btnExportSearch.addEventListener("click", async () => {
-        if (!currentSearchResults || currentSearchResults.length === 0) {
-            showNotification("Нет результатов поиска для экспорта", "warning");
-            return;
-        }
-        const ids = currentSearchResults
-            .map((g) => g.telegram_id || g.id)
-            .filter(Boolean);
-        if (ids.length === 0) {
-            showNotification("Не найдено ID результатов для экспорта", "warning");
-            return;
-        }
-
-        const fd = new FormData();
-        fd.append("telegram_ids", ids.join(","));
-
-        showNotification("Формирование Excel файла...", "success");
-
-        try {
-            const res = await apiRequest("/api/search/export_excel", {
-                method: "POST",
-                body: fd,
-            });
-
-            if (res.ok) {
-                const blob = await res.blob();
-                downloadBlob(blob, res, "search_results.xlsx");
-
-                if (window.Telegram?.WebApp) {
-                    showNotification(
-                        "Файл отправлен в ваш чат с ботом и скачивается!",
-                        "success",
-                    );
-                } else {
-                    showNotification("Скачивание началось!", "success");
-                }
-            } else {
-                const err = await res.json();
-                showNotification(err.detail || "Не удалось скачать Excel", "danger");
-            }
-        } catch (e) {
-            console.error("Export search excel error:", e);
-            showNotification("Ошибка при скачивании файла", "danger");
-        }
-    });
 }
 
 // Перетащите вспомогательные привязки
@@ -919,23 +1124,25 @@ function setupDragAndDrop() {
     const chZone = document.getElementById("channel-drop-zone");
     const chFileInput = document.getElementById("channel-file-input");
 
-    chZone.addEventListener("click", () => chFileInput.click());
-    chFileInput.addEventListener("change", (e) =>
-        handleChannelFileUpload(e.target.files[0]),
-    );
-
-    bindDragEvents(chZone, handleChannelFileUpload);
+    if (chZone && chFileInput) {
+        chZone.addEventListener("click", () => chFileInput.click());
+        chFileInput.addEventListener("change", (e) =>
+            handleChannelFileUpload(e.target.files[0]),
+        );
+        bindDragEvents(chZone, handleChannelFileUpload);
+    }
 
     // Перетаскивание сеанса учетных записей
     const accZone = document.getElementById("session-drop-zone");
     const accFileInput = document.getElementById("session-file-input");
 
-    accZone.addEventListener("click", () => accFileInput.click());
-    accFileInput.addEventListener("change", (e) =>
-        handleSessionFileUpload(e.target.files[0]),
-    );
-
-    bindDragEvents(accZone, handleSessionFileUpload);
+    if (accZone && accFileInput) {
+        accZone.addEventListener("click", () => accFileInput.click());
+        accFileInput.addEventListener("change", (e) =>
+            handleSessionFileUpload(e.target.files[0]),
+        );
+        bindDragEvents(accZone, handleSessionFileUpload);
+    }
 }
 
 function bindDragEvents(zone, uploadCallback) {
@@ -977,14 +1184,14 @@ function bindDragEvents(zone, uploadCallback) {
 // Реализации загрузки файлов
 async function handleChannelFileUpload(file) {
     if (!file || !file.name.endsWith(".txt")) {
-        showNotification("Only .txt lists are supported.", "danger");
+        showNotification(i18n("only_txt_supported"), "danger");
         return;
     }
 
     const fd = new FormData();
     fd.append("file", file);
 
-    showNotification("Uploading channel list...", "success");
+    showNotification(i18n("uploading_channels"), "success");
 
     try {
         const res = await apiRequest("/api/channels/upload", {
@@ -994,28 +1201,28 @@ async function handleChannelFileUpload(file) {
         if (res.ok) {
             const data = await res.json();
             showNotification(
-                `Imported: ${data.added} added, ${data.skipped} skipped.`,
+                i18n("channels_imported", {added: data.added, skipped: data.skipped}),
                 "success",
             );
             loadChannelsList();
         } else {
-            showNotification("File upload failed", "danger");
+            showNotification(i18n("operation_failed"), "danger");
         }
     } catch (e) {
-        showNotification("Network error during file upload", "danger");
+        showNotification(i18n("network_error"), "danger");
     }
 }
 
 async function handleSessionFileUpload(file) {
     if (!file || !file.name.endsWith(".session")) {
-        showNotification("Only Telethon .session files are supported.", "danger");
+        showNotification(i18n("only_session_supported"), "danger");
         return;
     }
 
     const fd = new FormData();
     fd.append("file", file);
 
-    showNotification("Verifying & uploading session file...", "success");
+    showNotification(i18n("verifying_session"), "success");
 
     try {
         const res = await apiRequest("/api/accounts/upload", {
@@ -1025,24 +1232,24 @@ async function handleSessionFileUpload(file) {
         if (res.ok) {
             const data = await res.json();
             showNotification(
-                `Account ${data.phone} connected successfully!`,
+                i18n("account_connected", {phone: data.phone}),
                 "success",
             );
             loadAccountsList();
             loadDashboardData();
         } else {
             const err = await res.json();
-            showNotification(err.detail || "Session validation failed", "danger");
+            showNotification(err.detail || i18n("operation_failed"), "danger");
         }
     } catch (e) {
-        showNotification("Network error during session verification", "danger");
+        showNotification(i18n("network_error"), "danger");
     }
 }
 
 // Загрузчики данных
 async function loadChannelsList() {
     const list = document.getElementById("channels-list");
-    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading channels...</div>`;
+    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> ${i18n("loading_channels")}</div>`;
 
     try {
         const res = await apiRequest("/api/channels");
@@ -1052,7 +1259,7 @@ async function loadChannelsList() {
             list.innerHTML = "";
 
             if (data.length === 0) {
-                list.innerHTML = `<div class="empty-state">No tracked channels yet.</div>`;
+                list.innerHTML = `<div class="empty-state">${i18n("no_channels")}</div>`;
                 return;
             }
 
@@ -1062,7 +1269,7 @@ async function loadChannelsList() {
                 el.innerHTML = `
                     <div class="item-main">
                         <span class="item-title">${item.username}</span>
-                        <span class="item-desc">Added on ${item.date_added}</span>
+                        <span class="item-desc">${i18n("added_on")} ${item.date_added}</span>
                     </div>
                     <button class="delete-btn" onclick="deleteChannel(${item.id})">
                         <i class="fa-solid fa-trash"></i>
@@ -1072,30 +1279,30 @@ async function loadChannelsList() {
             });
         }
     } catch (e) {
-        list.innerHTML = `<div class="empty-state text-danger">Failed to load channels.</div>`;
+        list.innerHTML = `<div class="empty-state text-danger">${i18n("error_load")}</div>`;
     }
 }
 
 async function deleteChannel(id) {
-    if (!confirm("Вы уверены, что хотите прекратить отслеживание этого канала?"))
+    if (!confirm(i18n("confirm_delete_channel")))
         return;
     try {
         const res = await apiRequest(`/api/channels/${id}`, {
             method: "DELETE",
         });
         if (res.ok) {
-            showNotification("Channel removed.", "success");
+            showNotification(i18n("channel_removed"), "success");
             loadChannelsList();
             loadDashboardData();
         }
     } catch (e) {
-        showNotification("Delete failed.", "danger");
+        showNotification(i18n("operation_failed"), "danger");
     }
 }
 
 async function loadKeywordsList() {
     const list = document.getElementById("keywords-list");
-    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading keywords...</div>`;
+    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> ${i18n("loading_keywords")}</div>`;
 
     try {
         const res = await apiRequest("/api/keywords");
@@ -1105,7 +1312,7 @@ async function loadKeywordsList() {
             list.innerHTML = "";
 
             if (data.length === 0) {
-                list.innerHTML = `<div class="empty-state">No active keywords.</div>`;
+                list.innerHTML = `<div class="empty-state">${i18n("no_keywords")}</div>`;
                 return;
             }
 
@@ -1124,28 +1331,30 @@ async function loadKeywordsList() {
             });
         }
     } catch (e) {
-        list.innerHTML = `<div class="empty-state text-danger">Failed to load keywords.</div>`;
+        list.innerHTML = `<div class="empty-state text-danger">${i18n("error_load")}</div>`;
     }
 }
 
 async function deleteKeyword(id) {
+    if (!confirm(i18n("confirm_delete_keyword")))
+        return;
     try {
         const res = await apiRequest(`/api/keywords/${id}`, {
             method: "DELETE",
         });
         if (res.ok) {
-            showNotification("Keyword deleted.", "success");
+            showNotification(i18n("keyword_removed"), "success");
             loadKeywordsList();
             loadDashboardData();
         }
     } catch (e) {
-        showNotification("Delete failed.", "danger");
+        showNotification(i18n("operation_failed"), "danger");
     }
 }
 
 async function loadAccountsList() {
     const list = document.getElementById("accounts-list");
-    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading sessions...</div>`;
+    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> ${i18n("loading_sessions")}</div>`;
 
     try {
         const res = await apiRequest("/api/accounts");
@@ -1155,7 +1364,7 @@ async function loadAccountsList() {
             list.innerHTML = "";
 
             if (data.length === 0) {
-                list.innerHTML = `<div class="empty-state">No accounts connected.</div>`;
+                list.innerHTML = `<div class="empty-state">${i18n("no_accounts")}</div>`;
                 return;
             }
 
@@ -1165,7 +1374,7 @@ async function loadAccountsList() {
                 el.innerHTML = `
                     <div class="item-main">
                         <span class="item-title"><i class="fa-solid fa-phone icon-inline"></i> ${item.phone_number}</span>
-                        <span class="item-desc">Connected: ${item.created_at}</span>
+                        <span class="item-desc">${i18n("connected_on")} ${item.created_at}</span>
                     </div>
                     <button class="delete-btn" onclick="deleteAccount('${item.phone_number}')">
                         <i class="fa-solid fa-unlink"></i>
@@ -1175,31 +1384,31 @@ async function loadAccountsList() {
             });
         }
     } catch (e) {
-        list.innerHTML = `<div class="empty-state text-danger">Failed to load accounts.</div>`;
+        list.innerHTML = `<div class="empty-state text-danger">${i18n("error_load")}</div>`;
     }
 }
 
 async function deleteAccount(phone) {
-    if (!confirm("Вы уверены, что хотите отключить эту учетную запись Telegram?"))
+    if (!confirm(i18n("confirm_delete_account")))
         return;
     try {
         const res = await apiRequest(`/api/accounts/${phone}`, {
             method: "DELETE",
         });
         if (res.ok) {
-            showNotification("Account disconnected.", "success");
+            showNotification(i18n("account_disconnected"), "success");
             loadAccountsList();
             loadDashboardData();
         }
     } catch (e) {
-        showNotification("Disconnect failed.", "danger");
+        showNotification(i18n("operation_failed"), "danger");
     }
 }
 
 // Триггер вариантов оплаты Star
 async function buyStars(amount) {
     closeModal("topup");
-    showNotification("Generating invoice link...", "success");
+    showNotification(i18n("invoice_link_generating"), "success");
 
     try {
         const res = await apiRequest(`/api/payment/stars-topup?amount=${amount}`, {
@@ -1214,25 +1423,25 @@ async function buyStars(amount) {
                 tg.openInvoice(link, (status) => {
                     if (status === "paid") {
                         showNotification(
-                            `Stars top up success! Added ${amount} stars.`,
+                            i18n("stars_topup_success", {amount}),
                             "success",
                         );
                         setTimeout(loadDashboardData, 1000);
                     } else {
-                        showNotification("Payment cancelled or failed.", "warning");
+                        showNotification(i18n("payment_cancelled"), "warning");
                     }
                 });
             } else {
                 // Обычный резервный браузер, открыть URL-адрес в новом окне
                 window.open(link, "_blank");
                 showNotification(
-                    "Invoice opened in new tab. Please complete payment.",
+                    i18n("invoice_opened_tab"),
                     "warning",
                 );
             }
         }
     } catch (e) {
-        showNotification("Failed to create stars invoice.", "danger");
+        showNotification(i18n("failed_stars_invoice"), "danger");
     }
 }
 
@@ -1244,10 +1453,9 @@ async function checkExportLimits() {
             const warning = document.getElementById("export-limit-warning");
             if (!data.is_free) {
                 warning.classList.remove("hidden");
-                // Обновить текст предупреждения, добавив информацию об обратном отсчете или балансе
                 const hours = Math.floor(data.remaining_seconds / 3600);
                 const minutes = Math.floor((data.remaining_seconds % 3600) / 60);
-                warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Достигнут 24-часовой лимит экспорта (Следующий бесплатно: ${hours} часов ${minutes} минут). Следующая загрузка будет стоить 5 звезд. (Ваш баланс: ${data.stars_balance}).`;
+                warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${i18n("limit_warning_text", {hours, minutes, balance: data.stars_balance})}`;
             } else {
                 warning.classList.add("hidden");
             }
@@ -1259,25 +1467,20 @@ async function checkExportLimits() {
 
 // Задачи администратора
 async function triggerAdminAction(endpoint) {
-    if (
-        !confirm(
-            `Вы уверены, что хотите вызвать действие администратора? '${endpoint}'?`,
-        )
-    )
+    if (!confirm(i18n("confirm_admin_action", {action: endpoint})))
         return;
     try {
         const res = await apiRequest(`/api/admin/${endpoint}`, {
             method: "POST",
         });
         if (res.ok) {
-            showNotification(`Начал фоновую операцию: ${endpoint}`, "success");
-            // Показывать панель состояния задачи и прогресс загрузки
+            showNotification(i18n("admin_bg_started", {endpoint}), "success");
             refreshStatusAndTasks();
         } else {
-            showNotification("Operation busy or rejected.", "danger");
+            showNotification(i18n("admin_op_failed"), "danger");
         }
     } catch (e) {
-        showNotification("Admin operation failed.", "danger");
+        showNotification(i18n("admin_op_failed"), "danger");
     }
 }
 
@@ -1293,18 +1496,18 @@ async function triggerCategorize(method) {
         });
         if (res.ok) {
             showNotification(
-                `Started AI classification using method: ${method}`,
+                i18n("admin_bg_started", {endpoint: method}),
                 "success",
             );
             refreshStatusAndTasks();
         }
     } catch (e) {
-        showNotification("Failed to trigger classification.", "danger");
+        showNotification(i18n("admin_op_failed"), "danger");
     }
 }
 
 async function downloadAdminFile(endpoint) {
-    showNotification("Downloading file...", "success");
+    showNotification(i18n("file_downloading"), "success");
     try {
         const res = await apiRequest(`/api/admin/${endpoint}`);
         if (res.ok) {
@@ -1326,10 +1529,10 @@ async function downloadAdminFile(endpoint) {
             a.remove();
             window.URL.revokeObjectURL(url);
         } else {
-            showNotification("File download failed", "danger");
+            showNotification(i18n("file_download_failed"), "danger");
         }
     } catch (e) {
-        showNotification("Download failed", "danger");
+        showNotification(i18n("file_download_failed"), "danger");
     }
 }
 
@@ -1345,7 +1548,8 @@ function showNotification(msg, type = "success") {
     const banner = document.getElementById("notification-banner");
     const bannerText = document.getElementById("notification-message");
 
-    // Выбор стиля
+    if (!banner || !bannerText) return;
+
     if (type === "success") {
         banner.style.background = "rgba(16, 185, 129, 0.2)";
         banner.style.borderLeftColor = "var(--color-success)";
@@ -1366,8 +1570,10 @@ function showNotification(msg, type = "success") {
     }, 4500);
 }
 
-document
-    .getElementById("notification-close-btn")
-    .addEventListener("click", () => {
-        document.getElementById("notification-banner").classList.add("hidden");
+const notifCloseBtn = document.getElementById("notification-close-btn");
+if (notifCloseBtn) {
+    notifCloseBtn.addEventListener("click", () => {
+        const banner = document.getElementById("notification-banner");
+        if (banner) banner.classList.add("hidden");
     });
+}
