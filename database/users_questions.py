@@ -46,34 +46,10 @@ class UsersQuestions(database.Model):
         """Метаданные таблицы с вопросами от пользователей"""
         table_name = 'users_questions'
 
-    # Свойства для обратной совместимости
-    @property
-    def answer(self):
-        """Алиас для обратной совместимости с кодом, обращающимся к answer."""
-        return self.answer_ai
 
-    @answer.setter
-    def answer(self, value):
-        self.answer_ai = value
-
-    @property
-    def status(self):
-        """Алиас для обратной совместимости с кодом, обращающимся к status."""
-        return self.status_question
-
-    @status.setter
-    def status(self, value):
-        self.status_question = value
-
-
-# Алиас для обратной совместимости
-Question = UsersQuestions
-
-
-def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
-                 user_username: str = None, user_firstname: str = None,
-                 status_question: str = "Не проверен",
-                 question: str = None, answer: str = None, status: str = None):
+def add_question(user_id: int, user_question: str = None, answer_ai: str = None, user_username: str = None,
+                 user_firstname: str = None, status_question: str = "Не проверен", question: str = None,
+                 answer: str = None, status: str = None):
     """
     Добавляет вопрос пользователя и ответ ИИ в базу данных users_questions.
 
@@ -89,10 +65,6 @@ def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
     :return: Созданный объект UsersQuestions или None при ошибке
     """
     try:
-        final_question = user_question or question or ""
-        final_answer = answer_ai if answer_ai is not None else answer
-        final_status = status_question if status_question != "Не проверен" or status is None else status
-
         # Определяем следующий порядковый номер вопроса
         max_num = UsersQuestions.select(fn.MAX(UsersQuestions.question_number)).scalar()
         next_num = (max_num or 0) + 1
@@ -102,9 +74,9 @@ def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
             user_id=user_id,
             user_username=user_username,
             user_firstname=user_firstname,
-            user_question=final_question,
-            answer_ai=final_answer,
-            status_question=final_status,
+            user_question=user_question or question or "",
+            answer_ai=answer_ai if answer_ai is not None else answer,
+            status_question=status_question if status_question != "Не проверен" or status is None else status,
             date_added=datetime.now()
         )
         logger.info(f"Вопрос №{next_num} от user_id={user_id} сохранён в users_questions")

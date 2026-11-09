@@ -42,7 +42,8 @@ class UsersPersonalTrackings(database.Model):
     user_last_name = CharField(max_length=255, null=True)  # last_name пользователя Telegram
     created_group_link = CharField(max_length=255, null=True)  # Группа в которую будут отправляться сообщения
     created_group_id = BigIntegerField(null=True)  # Telegram-id группы которую сознал аккаунт для пересылки сообщений
-    language = CharField(max_length=10, default="ru")  # Язык интерфейса бота ('ru', 'en' или 'unset' при первом запуске)
+    language = CharField(max_length=10,
+                         default="ru")  # Язык интерфейса бота ('ru', 'en' или 'unset' при первом запуске)
     stars = IntegerField(default=0)  # количество приобретенных звезд, для дальнейших покупок в проекте
     last_free_download_at = DateTimeField(null=True)  # дата последнего скачивания базы данных
     shared_account = CharField(default="", null=True)  # Добавить аккаунт общий, который выдал администратор

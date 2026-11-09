@@ -281,22 +281,22 @@ def getting_number_records_database():
 
 
 # Реэкспорт моделей и функций для обратной совместимости со старыми модулями
-from database.users_accounts import (
-    UsersAccounts, Account, getting_account, write_account_to_user_table, delete_account_from_db
-)
-from database.users_questions import (
-    UsersQuestions, Question, add_question, get_all_questions, update_question_status
-)
-from database.users_keywords import (
-    Keywords, UsersKeywords, add_user_keywords, get_user_keywords, get_keywords_count
-)
-from database.users_groups import (
-    UsersGroups, Group, get_group_count, add_user_group
-)
-from database.users_personal_trackings import (
-    UsersPersonalTrackings, PersonalTracking, get_session_count, get_user_accounts,
-    write_account_to_db, delete_account_from_user_table, get_group_id_with_personal_tracking
-)
+# from database.users_accounts import (
+#     UsersAccounts, Account, getting_account, write_account_to_user_table, delete_account_from_db
+# )
+# from database.users_questions import (
+#     UsersQuestions, Question, add_question, get_all_questions, update_question_status
+# )
+# from database.users_keywords import (
+#     Keywords, UsersKeywords, add_user_keywords, get_user_keywords, get_keywords_count
+# )
+# from database.users_groups import (
+#     UsersGroups, Group, get_group_count, add_user_group
+# )
+# from database.users_personal_trackings import (
+#     UsersPersonalTrackings, PersonalTracking, get_session_count, get_user_accounts,
+#     write_account_to_db, delete_account_from_user_table, get_group_id_with_personal_tracking
+# )
 
 # Модель User объединена с UsersPersonalTrackings. Для совместимости:
-User = UsersPersonalTrackings
+# User = UsersPersonalTrackings
