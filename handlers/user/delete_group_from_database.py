@@ -17,21 +17,6 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
-# @router.message(
-#     (F.text == t('delete_group_from_tracking_button', 'ru')) | (F.text == t('delete_group_from_tracking_button', 'en')))
-# async def delete_group_from_database(message: Message, state: FSMContext):
-#     """
-#     Удаление группы из базы данных (текст-кнопка Reply-клавиатуры)
-#     """
-#     await state.clear()  # Сбрасываем текущее состояние FSM
-#     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-#     await message.answer(
-#         t("delete_group_prompt", lang=user_lang),
-#         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
-#     )
-#     await state.set_state(MyStates.del_username_groups)
-
-
 @router.callback_query(F.data == "settings_delete_group")
 async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMContext):
     """

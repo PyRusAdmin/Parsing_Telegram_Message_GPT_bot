@@ -50,81 +50,6 @@ async def get_full_info_group(client, entity):
         logger.exception(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
 
 
-# async def join_target_group(client, user_id, message):
-
-#     """
-
-#     Подписывает клиента Telethon на целевую группу пользователя для пересылки сообщений.
-
-#
-
-#     Получает username целевой группы из персональной таблицы пользователя в базе данных и пытается присоединиться к ней.
-
-#     Возвращает идентификатор группы для дальнейшей отправки.
-
-#
-
-#     - Использует модель `create_group_model` для доступа к данным пользователя.
-#     - Предполагается, что в таблице всегда одна запись (первый элемент списка).
-#
-#     :param client: (TelegramClient) Активный клиент Telethon для выполнения запросов.
-#     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-#     :param message: (Message) Сообщение, которое вызвало команду (для ответа).
-#     :return: int or None: Идентификатор целевой группы (entity.id) или None при ошибке.
-#
-#     :raises UserAlreadyParticipantError: Если клиент уже участник группы (обрабатывается).
-#     :raises FloodWaitError: Если достигнут лимит запросов (обрабатывается с задержкой).
-#     :raises InviteRequestSentError: Если требуется подтверждение приглашения.
-#     :raises Exception: Логируется при любых других ошибках.
-#     """
-#     # Определяем язык пользователя, который пользователь выбрал при старте бота
-#     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-#     # group_model = create_group_model(user_id=user_id)
-#
-#     logger.info(f"🔍 Проверяю целевую группу... {group_model}")
-#     if not group_model.table_exists():
-#         group_model.create_table()
-#         return None
-#     groups = list(group_model.select())
-#     logger.info(f"🔍 Проверяю целевую группу... {groups}")
-#     if not groups:
-#         logger.warning(f"❌ Не найдена целевая группа для пользователя {user_id}")
-#         # Если группа не найдена, то высылаем сообщение пользователю группы, что такой группы нет и клавиатуру для добавления группы для пересылки
-#         # await message.answer(
-#         #     text=t("target_group_not_found", lang=user_lang),
-#         #     reply_markup=connect_grup_keyboard_tech()
-#         # )
-#         return None  # Возвращаем None, если группа не найдена
-#     target_username = groups[0].username_group
-#     if not target_username:
-#         logger.error(f"❌ Целевая группа имеет пустой username для user_id={user_id}")
-#         # await message.answer(
-#         #     text=t("target_group_not_found", lang=user_lang),
-#         #     reply_markup=connect_grup_keyboard_tech()
-#         # )
-#         return None
-#     try:
-#         # ToDo сделать общую функцию для подписки на канал / группу
-#         await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
-#         # Получаем ID группы
-#         entity = await client.get_entity(target_username)
-#         return entity.id
-#     except FloodWaitError as e:
-#         logger.error(f"⚠️ FloodWait {e.seconds} сек.")
-#         await asyncio.sleep(e.seconds)
-#         try:
-#             # ToDo сделать общую функцию для подписки на канал / группу
-#             await client(JoinChannelRequest(f'https://t.me/{target_username.lstrip("@")}'))
-#         except InviteRequestSentError:
-#             logger.error(f"✉️ Приглашение уже отправлено: {f'https://t.me/{target_username.lstrip("@")}'}")
-#     except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
-#         logger.warning(f"❌ Целевая группа не найдена или неверный юзернейм ({target_username}): {e}")
-#         return None
-#     except Exception as e:
-#         logger.exception(f"❌ Не удалось присоединиться к целевой группе {target_username}: {e}")
-#         return None
-
-
 async def process_message(client, message: Message, chat_id: int, user_id, target_group_id):
     """
     Обрабатывает входящее сообщение, проверяет его на совпадение с ключевыми словами и пересылает в целевую группу с
@@ -166,17 +91,6 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     # Получаем ключевые слова из базы данных для данного пользователя
 
     keywords = get_user_keywords(user_id=user_id)
-
-    # Создаем таблицу, если она не существует
-    # if not keywords.table_exists():
-    #     keywords.create_table()
-    #     logger.info(f"Создана таблица ключевых слов для пользователя {user_id}")
-    #     return  # Таблица только что создана, ключевых слов еще нет
-    # keywords = [keyword.user_keyword for keyword in keywords.select() if keyword.user_keyword]
-    # Если нет ключевых слов, выходим
-    # if not keywords:
-    #     return
-    # Приводим ключевые слова к нижнему регистру для поиска
 
     keywords_lower = [keyword.lower() for keyword in keywords]
     # Используем ключевые слова из базы данных
@@ -294,62 +208,37 @@ async def sync_account_channels(client):
                     subscribed_usernames.add(f"@{entity.username.lower()}")
                 # Получаем полную информацию через GetFullChannelRequest
                 data = await get_full_info_group(client, entity)
-
                 if data:
                     logger.info(
-
                         f"👥 {data.get('participants', 0)} | 📝 {data.get('title', '')} | Тип: {data.get('group_type', '')} | 🔗 {data.get('link', '')} | 💬 {data.get('description', '')}"
 
                     )
-
                     # 1. Сохраняем/обновляем основные данные группы (название, участники, тип) в БД
-
                     update_group_channels_data_base(data, entity)
-
                     # 2. Проверяем и записываем язык группы (если еще не указан в БД)
-
                     await sync_to_async(ensure_group_language, thread_sensitive=True)(
-
                         telegram_id=entity.id,
-
                         name=data.get('title') or getattr(entity, 'title', None),
-
                         description=data.get('description'),
-
                         username=entity.username
 
                     )
-
                     # 3. Проверяем и записываем категорию группы через AI (если еще не указана в БД)
-
                     group_data_for_ai = {
-
                         "telegram_id": entity.id,
-
                         "name": data.get('title') or getattr(entity, 'title', ''),
-
                         "description": data.get('description', ''),
-
                         "username": entity.username or '',
-
                         "group_type": data.get('group_type', '')
-
                     }
-
                     await ensure_group_category(group_data_for_ai)
-
                 await asyncio.sleep(1)
-
             except Exception as e:
-
                 logger.exception(f"⚠️ Ошибка при обработке диалога {getattr(entity, 'id', 'unknown')}: {e}")
-
                 continue
 
     except Exception as error:
-
         logger.exception(f"🔥 Критическая ошибка в get_grup_accaunt: {error}")
-
     return subscribed_usernames
 
 
@@ -372,38 +261,25 @@ async def ensure_group_category(group_data: dict) -> str | None:
         return None
 
     # 1. Поиск группы в БД для проверки имеющейся категории
-
     tg_group = None
-
     if telegram_id:
         tg_group = await sync_to_async(TelegramGroups.get_or_none, thread_sensitive=True)(
-
             TelegramGroups.telegram_id == telegram_id)
-
     if not tg_group and username:
         clean_user = username.lstrip('@')
-
         tg_group = await sync_to_async(TelegramGroups.get_or_none, thread_sensitive=True)(
-
             (TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}")
-
         )
-
     # 2. Если категория уже заполнена в БД — НЕ ТРОГАЕМ
-
     if tg_group and tg_group.category and tg_group.category.strip():
         logger.debug(
             f"ℹ️ Категория для {group_data.get('name') or telegram_id} уже есть в БД ({tg_group.category}), пропускаем AI.")
         return tg_group.category
-
     # 3. Запускаем AI определение категории через AsyncGroq
-
     if not GROQ_API_KEY:
         logger.warning("⚠️ GROQ_API_KEY не установлен, определение категории пропущено.")
         return None
-
     try:
-
         logger.info(f"🔍 Определяем категорию через AI для {group_data.get('name') or username or telegram_id}...")
         groq_client = AsyncGroq(api_key=GROQ_API_KEY)
         models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
@@ -413,11 +289,9 @@ async def ensure_group_category(group_data: dict) -> str | None:
             client=groq_client,
             model=model
         )
-
         if result.get("success") and result.get("category"):
             category_lower = result["category"].lower()
             # 4. Сохранение категории в БД (в нижнем регистре)
-
             if tg_group:
                 def _update_tg_group():
                     """Обновляет категорию группы в базе данных"""
@@ -442,28 +316,13 @@ async def ensure_group_category(group_data: dict) -> str | None:
                         .execute(),
                         thread_sensitive=True
                     )()
-
             logger.info(f"✅ Успешно присвоена категория: {group_data.get('name')} → {category_lower}")
-
             return category_lower
-
         else:
-
             logger.warning(f"❌ AI не смог определить категорию для {group_data.get('name') or telegram_id}")
-
     except Exception as e:
-
         logger.exception(f"❌ Ошибка при автоопределении категории для {group_data.get('name') or telegram_id}: {e}")
-
     return None
-
-
-# _language_detector = None
-# def get_language_detector():
-#     global _language_detector
-#     if _language_detector is None:
-#         _language_detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-#     return _language_detector
 
 
 def ensure_group_language(telegram_id: int = None, name: str = None, description: str = None,
@@ -484,146 +343,80 @@ def ensure_group_language(telegram_id: int = None, name: str = None, description
         return None
 
     # 1. Ищем группу в БД по telegram_id или username
-
     tg_group = None
-
     if telegram_id:
         tg_group = TelegramGroups.get_or_none(TelegramGroups.telegram_id == telegram_id)
-
     if not tg_group and username:
         clean_user = username.lstrip('@')
-
         tg_group = TelegramGroups.get_or_none(
-
             (TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}"))
-
     # 2. Если в БД язык уже заполнен — НЕ ТРОГАЕМ
-
     if tg_group and tg_group.language and tg_group.language.strip():
         logger.debug(f"ℹ️ Язык для {name or telegram_id} уже указан в БД ({tg_group.language}), детекция пропущена.")
-
         return tg_group.language
-
     # 3. Собираем текст для анализа
-
     text_parts = []
-
     if name:
-
         text_parts.append(name)
-
     elif tg_group and tg_group.name:
-
         text_parts.append(tg_group.name)
-
     if description:
-
         text_parts.append(description)
-
     elif tg_group and tg_group.description:
-
         text_parts.append(tg_group.description)
-
     text_to_detect = " ".join(text_parts).strip()
-
     if not text_to_detect:
         logger.warning(f"⚠️ Нет текста для определения языка группы ({name or username or telegram_id})")
-
         return None
-
     # 4. Детекция языка
-
     try:
-
         lang_code = detect_language(text_to_detect)
-
         if lang_code:
-
             logger.info(f"🌐 Определен новый язык '{lang_code}' для группы {name or username or telegram_id}")
-
             # 5. Запись в БД
-
             if tg_group:
-
                 tg_group.language = lang_code
-
                 tg_group.save()
-
             else:
-
                 if telegram_id:
-
                     TelegramGroups.update(language=lang_code).where(
-
                         TelegramGroups.telegram_id == telegram_id).execute()
-
                 elif username:
-
                     clean_user = username.lstrip('@')
-
                     TelegramGroups.update(language=lang_code).where(
-
                         (TelegramGroups.username == clean_user) | (TelegramGroups.username == f"@{clean_user}")
-
                     ).execute()
-
             logger.info(f"✅ Успешно записан язык {lang_code} в БД для {name or telegram_id}")
-
             return lang_code
-
         else:
-
             logger.warning(f"⚠️ Не удалось определить язык для {name or username or telegram_id}")
-
     except Exception as e:
-
         logger.exception(f"❌ Ошибка при автоматическом определении языка ({name or telegram_id}): {e}")
-
     return None
 
 
 def update_group_channels_data_base(data, entity, group=None):
     """
-
     Обновляет данные в базе данных для каналов и групп.
-
     :param data: Данные для сохранения или обновления в базе данных
-
     :param entity: Сущность Telegram (User или Channel)
-
     :param group: Группа / канал Telegram (объект или словарь, опционально)
-
     """
-
     if not data or not entity:
         return
-
     if group is not None:
-
         if isinstance(group, dict):
-
             group_hash = group.get('group_hash')
-
             telegram_id = group.get('telegram_id')
-
         else:
-
             group_hash = getattr(group, 'group_hash', None)
-
             telegram_id = getattr(group, 'telegram_id', None)
-
     else:
-
         group_hash = getattr(entity, 'access_hash', None)
-
         telegram_id = getattr(entity, 'id', None)
-
     target_id = telegram_id or getattr(entity, 'id', None)
-
     target_hash = group_hash or getattr(entity, 'access_hash', None)
-
     try:
-
         query = TelegramGroups.update(
             telegram_id=target_id,
             group_hash=str(target_hash) if target_hash else None,
@@ -634,39 +427,22 @@ def update_group_channels_data_base(data, entity, group=None):
             name=getattr(entity, 'title', None) or data.get("title", ""),
             availability=''  # Группа активна
         )
-
         if target_id:
-
             query = query.where(
-
                 (TelegramGroups.telegram_id == target_id) | (TelegramGroups.username == data.get("actual_username")))
-
         elif target_hash:
-
             query = query.where(TelegramGroups.group_hash == str(target_hash))
-
         elif data.get("actual_username"):
-
             query = query.where(TelegramGroups.username == data.get("actual_username"))
-
         else:
-
             logger.warning(f"⚠️ Не удалось определить фильтр для обновления TelegramGroup ({entity})")
-
             return
-
         query.execute()
-
         logger.info(
-
             f"ID: {target_id} | Тип: {data.get('group_type', '')} | Описание: {data.get('description', '')} | Участники: {data.get('participants', 0)}"
-
         )
-
         logger.debug(f"🔄 Обновлена группа: {data.get('title', '')}")
-
     except Exception as e:
-
         logger.exception(f"❌ Ошибка при обновлении записи TelegramGroup в БД: {e}")
 
 
@@ -748,56 +524,6 @@ async def join_required_channels(client, user_id, message, already_subscribed):
         except Exception as e:
             logger.exception(f"❌ Ошибка в цикле подписки на {channel}: {e}")
 
-        # except ChannelPrivateError:
-        #     logger.error(f"⚠️ Канал {channel} приватный")
-        # except UserAlreadyParticipantError:
-        #     logger.error(f"ℹ️ Уже подписан на {channel}")
-        # except FloodWaitError as e:
-        #     logger.error(f"⚠️ FloodWait {e.seconds} сек.")
-        #     await asyncio.sleep(e.seconds)
-        #     try:
-        #         ToDo сделать общую функцию для подписки на канал / группу
-        #         await client(JoinChannelRequest(channel)) # Подписываемся на канал / группу
-        #     except InviteRequestSentError:
-        #         logger.error(f"✉️ Приглашение уже отправлено: {channel}")
-        # except InviteRequestSentError:
-        #     logger.error(f"✉️ Приглашение уже отправлено: {channel}")
-        # except ValueError:
-        #     logger.error(f"❌ Невалидный username: {channel}")
-        #     delete_group_by_username(user_id, channel)  # Удаляем невалидный канал / группу
-        # except Exception as e:
-        #     logger.exception(f"❌ Ошибка при подписке на {channel}: {e}")
-
-
-# async def ensure_joined_target_group(client, message, user_id: int):
-#     """
-#     Обеспечивает подключение клиента Telethon к целевой группе пользователя.
-#
-#     Обёртка вокруг `join_target_group`, которая проверяет успешность подключения и при необходимости отправляет
-#     пользователю сообщение об ошибке.
-#
-#     - Если подключение не удалось, функция возвращает None (клиент НЕ отключается).
-#     - Используется для упрощения логики в функции `filter_messages`.
-#
-#     :param client: (TelegramClient) Активный клиент для выполнения запросов.
-#     :param message: (Message) Объект сообщения aiogram для отправки уведомления об ошибке.
-#     :param user_id: (int) Уникальный идентификатор пользователя Telegram.
-#     :return: int or None: Идентификатор целевой группы (entity.id) при успехе, иначе None.
-#     """
-#     logger.info("Подключаемся к целевой группе для пересылки")
-#     target_group_id = await join_target_group(client=client, user_id=user_id, message=message)
-#
-#     if not target_group_id:
-#         logger.error(t("target_group_join_error", lang=User.get(User.user_id == message.from_user.id).language))
-#         await message.answer(
-#             text=t("target_group_join_error", lang=User.get(User.user_id == message.from_user.id).language),
-#             reply_markup=connect_grup_keyboard_tech()
-#         )
-#         # НЕ отключаем клиент здесь — это будет сделано в finally блоке filter_messages
-#         return None
-#
-#     return target_group_id
-
 
 async def filter_messages(message, user_id):
     """
@@ -818,11 +544,8 @@ async def filter_messages(message, user_id):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     try:
-
         # === Проверка группы уведомлений ===
-
         target_group_id = get_group_id_with_personal_tracking(user_id)
-
         if not target_group_id:
             logger.warning(f"⚠️ У пользователя {user_id} нет целевой группы уведомлений в БД")
             create_group_kb = InlineKeyboardMarkup(
@@ -835,7 +558,6 @@ async def filter_messages(message, user_id):
                     ]
                 ]
             )
-
             await message.answer(
                 "⚠️ <b>Группа уведомлений не найдена!</b>\n\n"
                 "Перед запуском отслеживания необходимо создать целевую группу для получения уведомлений.\n"
@@ -844,52 +566,30 @@ async def filter_messages(message, user_id):
                 reply_markup=create_group_kb
             )
             return None
-
         # === Проверка аккаунтов ===
-
         pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-
         session_string = pt_rec.personal_account if pt_rec else None
-
         if not session_string:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённого аккаунта в БД")
-
             await message.answer(
-
                 t("no_accounts", lang=user_lang),
-
                 reply_markup=menu_launch_tracking_keyboard()
-
             )
-
             return None
-
         # === Подключаем клиент ===
-
         checker = CheckingAccountsValidity()  # ✅ Сохраняем активный клиент
-
         client = await checker.client_connect_string_session(session_string)
-
         if not client:
             return
-
         active_clients[str(user_id)] = client
-
         already_subscribed = await sync_account_channels(client)  # Получаем список каналов, где аккаунт уже состоит
-
         # === 1️. Читаем каналы из БД — быстро, без запросов к Telegram ===
-
         channels: TelegramClient | None = await get_user_channels_or_notify(user_id=int(user_id), message=message,
-
                                                                             client=client,
-
                                                                             user_lang=user_lang)
-
         # Если каналов нет — выходим
-
         if not channels:
             return
-
         # === 1.1️. Проверка лимитов для общего бесплатного аккаунта (Задача 2.5) ===
         # Если у пользователя используется общий аккаунт, разрешён максимум 1 канал
         is_shared_account = bool(pt_rec.shared_account and not pt_rec.personal_account)
@@ -912,7 +612,6 @@ async def filter_messages(message, user_id):
                     ]
                 ]
             )
-
             await message.answer(
                 "⚠️ <b>Превышен лимит отслеживания!</b>\n\n"
                 "Вы используете <b>общий бесплатный аккаунт</b>, на котором разрешено отслеживать только <b>1 канал</b>.\n\n"
@@ -922,53 +621,13 @@ async def filter_messages(message, user_id):
                 parse_mode="HTML",
                 reply_markup=buy_stars_kb
             )
-
             return None
-
         # === 2️. Инициализируем флаг остановки ===
-
         stop_event = asyncio.Event()
-
         stop_flags[str(user_id)] = stop_event
 
         # === Функция прослушивания — стартует сразу ===
-
         async def listen():
-
-            """Слушает новые входящие сообщения из отслеживаемых каналов"""
-
-            # Получаем target_group_id из БД (без Telegram запроса) для регистрации хендлера
-
-            # GroupModel = create_group_model(user_id=user_id)
-
-            # if not GroupModel.table_exists():
-            #     logger.warning("❌ Таблица целевой группы не найдена")
-            #     return
-            # groups = list(GroupModel.select())
-            # if not groups:
-            #     logger.warning("❌ Целевая группа не задана в БД")
-            #     await message.answer(
-            #         t("target_group_not_configured", lang=user_lang),
-            #         reply_markup=connect_grup_keyboard_tech()
-            #     )
-            #     return
-            # Получаем entity целевой группы через Telegram (быстро — один запрос)
-            # target_username = groups[0].username_group
-            # try:
-            #     entity = await client.get_entity(target_username)
-            #     target_group_id = entity.id
-            # except FloodWaitError as e:
-            #     logger.warning(f"FloodWaitError: {e}")
-            #     await asyncio.sleep(e.value)
-            #     entity = await client.get_entity(target_username)
-            #     target_group_id = entity.id
-            # except Exception as e:
-            #     logger.exception(f"❌ Не удалось получить целевую группу: {e}")
-            #     await message.answer(
-            #         t("target_group_fetch_error", lang=user_lang),
-            #         reply_markup=connect_grup_keyboard_tech()
-            #     )
-            #     return
 
             @client.on(events.NewMessage(chats=already_subscribed))
             async def handle_new_message(event: events.NewMessage.Event):

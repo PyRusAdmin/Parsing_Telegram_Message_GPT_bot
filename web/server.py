@@ -44,7 +44,7 @@ from database.database import (
     get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
 )
-from database.users_accounts import write_account_to_user_table, Account, getting_account
+from database.users_accounts import write_account_to_user_table, getting_account
 from database.users_groups import UsersGroups, get_group_count
 from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords
 from database.users_personal_trackings import get_session_count, get_user_accounts, UsersPersonalTrackings

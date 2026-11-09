@@ -12,7 +12,7 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
-# from database.database import User, AccountFree
+
 from database.database import AccountFree
 from database.users_personal_trackings import UsersPersonalTrackings
 from database.users_accounts import write_account_to_user_table
@@ -37,15 +37,7 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     await state.clear()
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    # user, created = User.get_or_create(
-    #     user_id=callback.from_user.id,
-    #     defaults={
-    #         "username": callback.from_user.username,
-    #         "first_name": callback.from_user.first_name,
-    #         "last_name": callback.from_user.last_name,
-    #         "language": "unset"
-    #     }
-    # )
+
     user, created = UsersPersonalTrackings.get_or_create(
         user_id=callback.from_user.id,
         defaults={
@@ -232,9 +224,6 @@ async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext
 @router.message(MyStates.waiting_for_session_file, F.document)
 async def receive_session_file(message: Message, state: FSMContext):
     """Получаем .session файл(ы) от админа и обрабатываем по очереди"""
-    # user_id = message.from_user.id  # получаем id пользователя
-    # TODO Сделать единое определение языка пользователя во всем проекте
-    # user = User.get(User.user_id == user_id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
     document = message.document  # получаем файл сессии
@@ -265,7 +254,6 @@ async def receive_session_file(message: Message, state: FSMContext):
     local_file_path = None
     try:
         # ✅ Создаём папку для временного хранения
-        # sessions_dir = creates_temporary_folder_for_accounts()
 
         # ✅ Санитизация имени файла
         local_file_path, safe_file_name = sanitization_file_name(document=document, account_id=message.from_user.id)

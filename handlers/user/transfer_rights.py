@@ -3,7 +3,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-# from database.database import User
 from database.users_personal_trackings import UsersPersonalTrackings
 from database.users_groups import UsersGroups
 from database.users_keywords import UsersKeywords
@@ -82,7 +81,6 @@ async def get_id_for_transferring(message: Message, state: FSMContext):
         return
 
     # Проверяем, существует ли целевой пользователь в боте
-    # target_user = User.get_or_none(User.user_id == target_user_id)
     target_user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == target_user_id)
     if not target_user:
         await message.answer(

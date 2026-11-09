@@ -1,4 +1,3 @@
-# from database.database import User
 from database.users_personal_trackings import UsersPersonalTrackings
 
 
@@ -27,7 +26,6 @@ def determines_user_language(message_or_callback) -> str:
         return "ru"
 
     try:
-        # user = User.get_or_none(User.user_id == user_id)
         user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
         if user and user.language and user.language != "unset":
             return user.language

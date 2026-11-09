@@ -22,7 +22,7 @@ from states.states import CategoryMethod
 router = Router(name=__name__)
 
 
-async def show_category_method_menu(message: Message, user_id: int, state: FSMContext, edit: bool = False):
+async def show_category_method_menu(message: Message, state: FSMContext, edit: bool = False):
     """Отображает меню выбора метода присвоения категорий"""
     await state.set_state(CategoryMethod.waiting_for_method)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
@@ -43,13 +43,13 @@ async def show_category_method_menu(message: Message, user_id: int, state: FSMCo
 @router.message((F.text == t('assign_category_button', 'ru')) | (F.text == t('assign_category_button', 'en')))
 async def checking_group_for_ai_db(message: Message, state: FSMContext):
     """Предлагает выбор метода присвоения категорий (текст)"""
-    await show_category_method_menu(message, message.from_user.id, state, edit=False)
+    await show_category_method_menu(message, state, edit=False)
 
 
 @router.callback_query(F.data == "admin_assign_category")
 async def checking_group_for_ai_db_cb(callback: CallbackQuery, state: FSMContext):
     """Предлагает выбор метода присвоения категорий (инлайн)"""
-    await show_category_method_menu(callback.message, callback.from_user.id, state, edit=True)
+    await show_category_method_menu(callback.message, state, edit=True)
     await callback.answer()
 
 
