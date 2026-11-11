@@ -24,7 +24,8 @@ from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.account_free import write_account_to_db_free
 
 from database.users_accounts import getting_account, write_account_to_user_table
-from database.users_keywords import add_user_keywords
+from database.users_groups import UsersGroups, add_user_group
+from database.users_keywords import add_user_keywords, UsersKeywords
 from database.users_personal_trackings import get_user_accounts, UsersPersonalTrackings, write_account_to_db
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb
@@ -159,35 +160,39 @@ class PersonalTrackingState(StatesGroup):
 
 def get_user_allowed_slots(user_id: int) -> int:
     """
-    Возвращает количество доступных слотов пользователя.
+    Возвращает количество доступных слотов пользователя (базовый 1 + купленные за Telegram Stars).
 
     :param user_id: (int) ID пользователя в Telegram.
     :return: (int) Количество разрешённых слотов.
     """
-    return 1
+    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    stars = pt_rec.stars if pt_rec and pt_rec.stars else 0
+    extra = stars // 2
+    return 1 + extra
 
 
 def get_user_used_slots(user_id: int) -> int:
     """
-    Возвращает количество задействованных слотов пользователя.
+    Возвращает количество задействованных слотов (каналов) пользователя.
 
     :param user_id: (int) ID пользователя в Telegram.
     :return: (int) Количество занятых слотов.
     """
-    return UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id).count()
+    return UsersGroups.select().where(UsersGroups.user_id == user_id).count()
 
 
-def can_user_change_tracking(tracking_record: UsersPersonalTrackings) -> tuple[bool, float]:
+def can_user_change_tracking(tracking_record) -> tuple[bool, float]:
     """
     Проверяет ограничение на смену группы/ключевых слов (не чаще 1 раза в 24ч).
 
-    :param tracking_record: (UsersPersonalTrackings) Экземпляр записи отслеживания.
+    :param tracking_record: Экземпляр записи отслеживания.
     :return: (tuple[bool, float]) Кортеж (разрешено_ли_изменение, часов_до_следующей_возможности).
     """
-    if not tracking_record or not tracking_record.last_changed_at:
+    last_changed = getattr(tracking_record, 'last_changed_at', None) or getattr(tracking_record, 'date_added', None)
+    if not tracking_record or not last_changed:
         return True, 0.0
 
-    diff_seconds = (datetime.now() - tracking_record.last_changed_at).total_seconds()
+    diff_seconds = (datetime.now() - last_changed).total_seconds()
     if diff_seconds >= 86400:  # 24 часа
         return True, 0.0
 
@@ -530,24 +535,37 @@ async def process_keywords_input(message: Message, state: FSMContext):
     keywords_text = message.text.strip()
     keywords_list = [
         keyword.strip()
-        for keyword in keywords_text.split('\n')
+        for keyword in keywords_text.replace("\n", ",").split(',')
         if keyword.strip()
     ]
 
     # Безопасно добавляет список ключевых слов, пропуская дубликаты.
     add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
-    # Сохраняем запись в таблицу personal_tracking
-    rec = UsersPersonalTrackings.create(
-        user_id=message.from_user.id,
-        target_link=target_link,
-        created_group_link=invite_link,
-        created_group_id=created_group_id,
+    # Сохраняем целевой канал в UsersGroups
+    if target_link:
+        add_user_group(
+            user_id=message.from_user.id,
+            group=[target_link],
+            user_username=message.from_user.username or "",
+            user_firstname=message.from_user.first_name or ""
+        )
 
-        last_changed_at=datetime.now(),
-        personal_account=data.get("personal_account", ""),
-        shared_account=data.get("shared_account", "")
+    # Обновляем профиль пользователя UsersPersonalTrackings (привязку группы уведомлений)
+    pt_rec, _ = UsersPersonalTrackings.get_or_create(
+        user_id=message.from_user.id,
+        defaults={
+            "user_username": message.from_user.username or "",
+            "user_firstname": message.from_user.first_name or "",
+            "language": user_lang
+        }
     )
+    if invite_link:
+        pt_rec.created_group_link = invite_link
+    if created_group_id:
+        pt_rec.created_group_id = created_group_id
+    pt_rec.last_changed_at = datetime.now()
+    pt_rec.save()
 
     await state.clear()
 
@@ -614,6 +632,9 @@ async def process_successful_payment(message: Message):
     payload = message.successful_payment.invoice_payload
     if payload.startswith("personal_tracking_slot_"):
         user_id = message.from_user.id
+        pt_rec, _ = UsersPersonalTrackings.get_or_create(user_id=user_id)
+        pt_rec.stars = (pt_rec.stars or 0) + 2
+        pt_rec.save()
 
         allowed = get_user_allowed_slots(user_id)
         paid_text = (
@@ -636,20 +657,33 @@ async def process_successful_payment(message: Message):
 @router.callback_query(F.data == "pt_list_tracking")
 async def cb_list_tracking(callback: CallbackQuery):
     """
-    Отображает список групп персонального отслеживания пользователя.
+    Отображает список каналов и групп отслеживания пользователя.
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     """
     user_id = callback.from_user.id
     user_lang = determines_user_language(message_or_callback=user_id)
     records = list(
-        UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
+        UsersGroups.select().where(UsersGroups.user_id == user_id).order_by(UsersGroups.date_added.desc())
     )
 
     if not records:
-        await callback.message.answer(t("pt_no_active_trackings", lang=user_lang))
+        await callback.message.answer(
+            t("pt_no_active_trackings", lang=user_lang),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=t("btn_pt_add_tracking", lang=user_lang), callback_data="pt_add_tracking")],
+                [back_button(user_lang, callback_data="menu_personal_tracking")]
+            ])
+        )
         await callback.answer()
         return
+
+    # Получаем ключевые слова пользователя и ссылку на группу уведомлений
+    user_kws = list(UsersKeywords.select().where(UsersKeywords.user_id == user_id))
+    kw_str = ", ".join([k.user_keyword for k in user_kws]) if user_kws else "—"
+
+    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    group_link = pt_rec.created_group_link if pt_rec and pt_rec.created_group_link else ""
 
     text = "📋 <b>Ваши персональные отслеживания:</b>\n\n" if user_lang == "ru" else "📋 <b>Your personal trackings:</b>\n\n"
 
@@ -677,16 +711,14 @@ async def cb_list_tracking(callback: CallbackQuery):
             link_label = "Link"
             stat_label = "Status"
 
-        keywords = escape(str(r.keywords or ""))
-        target_link = escape(str(r.target_link or ""))
-        group_link = str(r.created_group_link or "")
-
+        channel_name = escape(str(r.username_group or r.name_group or "—"))
         text += (
-            f"<b>{idx}. {target_link}</b>\n"
-            f"🔑 {kw_label}: <code>{keywords}</code>\n"
-            f"🔗 {grp_label}: <a href='{group_link}'>{link_label}</a>\n"
-            f"{stat_label}: {status_limit}\n\n"
+            f"<b>{idx}. {channel_name}</b>\n"
+            f"🔑 {kw_label}: <code>{escape(kw_str)}</code>\n"
         )
+        if group_link:
+            text += f"🔗 {grp_label}: <a href='{group_link}'>{link_label}</a>\n"
+        text += f"{stat_label}: {status_limit}\n\n"
 
     await callback.message.answer(
         text,
@@ -706,7 +738,7 @@ async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
     """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     rec_id = int(callback.data.split("_")[2])
-    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
+    rec = UsersGroups.get_or_none(UsersGroups.id == rec_id)
 
     if not rec:
         await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
@@ -723,12 +755,13 @@ async def cb_edit_tracking_item(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(PersonalTrackingState.editing_slot_link)
     await state.update_data(edit_rec_id=rec_id)
+    channel_name = rec.username_group or ""
     edit_header = (
         f"⚙️ <b>Редактирование отслеживания #{rec_id}</b>\n\n"
-        f"Отправьте НОВУЮ ссылку на группу/канал (или текущую: <code>{rec.target_link}</code>):"
+        f"Отправьте НОВУЮ ссылку на группу/канал (или текущую: <code>{channel_name}</code>):"
     ) if user_lang == "ru" else (
         f"⚙️ <b>Edit Tracking #{rec_id}</b>\n\n"
-        f"Send a NEW link to group/channel (or current: <code>{rec.target_link}</code>):"
+        f"Send a NEW link to group/channel (or current: <code>{channel_name}</code>):"
     )
     await callback.message.answer(
         edit_header,
@@ -750,7 +783,7 @@ async def process_edit_link(message: Message, state: FSMContext):
     data = await state.get_data()
     rec_id = data.get("edit_rec_id")
 
-    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
+    rec = UsersGroups.get_or_none(UsersGroups.id == rec_id)
     if not rec:
         await message.answer(t("pt_record_error", lang=user_lang))
         await state.clear()
@@ -764,11 +797,17 @@ async def process_edit_link(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    rec.target_link = new_target
-    rec.created_group_link = invite_link
-    rec.created_group_id = chat_id
-    rec.last_changed_at = datetime.now()
+    rec.username_group = new_target
+    rec.date_added = datetime.now()
     rec.save()
+
+    # Обновляем профиль пользователя UsersPersonalTrackings, если создана новая группа
+    if invite_link and chat_id:
+        pt_rec, _ = UsersPersonalTrackings.get_or_create(user_id=message.from_user.id)
+        pt_rec.created_group_link = invite_link
+        pt_rec.created_group_id = chat_id
+        pt_rec.last_changed_at = datetime.now()
+        pt_rec.save()
 
     await state.set_state(PersonalTrackingState.editing_slot_keywords)
     await status_msg.edit_text(t("pt_ask_keywords", lang=user_lang))
@@ -783,15 +822,16 @@ async def process_edit_keywords(message: Message, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    new_keywords = message.text.strip()
-    data = await state.get_data()
-    rec_id = data.get("edit_rec_id")
+    new_keywords_raw = message.text.strip()
+    new_keywords = [k.strip() for k in new_keywords_raw.replace("\n", ",").split(",") if k.strip()]
 
-    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.id == rec_id)
-    if rec:
-        rec.keywords = new_keywords
-        rec.last_changed_at = datetime.now()
-        rec.save()
+    if new_keywords:
+        add_user_keywords(user_id=message.from_user.id, keywords=new_keywords)
+
+    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == message.from_user.id)
+    if pt_rec:
+        pt_rec.last_changed_at = datetime.now()
+        pt_rec.save()
 
     await state.clear()
     await message.answer(t("pt_updated_success", lang=user_lang), parse_mode="HTML")
@@ -805,8 +845,8 @@ async def cb_stats(callback: CallbackQuery):
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    total_tracking_users = UsersPersonalTrackings.select(UsersPersonalTrackings.user_id).distinct().count()
-    total_active_slots = UsersPersonalTrackings.select().count()
+    total_tracking_users = UsersGroups.select(UsersGroups.user_id).distinct().count()
+    total_active_slots = UsersGroups.select().count()
 
     await callback.message.answer(
         t("pt_stats_msg", lang=user_lang, users=total_tracking_users, trackings=total_active_slots),
@@ -827,26 +867,24 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
     :param message_link: (str) Прямая ссылка на сообщение в Telegram.
     """
     user_lang = determines_user_language(message_or_callback=user_id)
-    records = UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
-    for r in records:
-        keywords_list = [k.strip().lower() for k in r.keywords.split(",") if k.strip()]
-        if matched_keyword.lower() in keywords_list:
-            if r.created_group_id:
-                alert_text = t(
-                    "pt_alert_message",
-                    lang=user_lang,
-                    keyword=matched_keyword,
-                    text=message_text[:500],
-                    link=message_link
-                )
-                try:
-                    await bot.send_message(
-                        chat_id=r.created_group_id,
-                        text=alert_text,
-                        parse_mode="HTML",
-                        disable_web_page_preview=False
-                    )
-                except Exception as e:
+    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    if pt_rec and pt_rec.created_group_id:
+        alert_text = t(
+            "pt_alert_message",
+            lang=user_lang,
+            keyword=matched_keyword,
+            text=message_text[:500],
+            link=message_link
+        )
+        try:
+            await bot.send_message(
+                chat_id=pt_rec.created_group_id,
+                text=alert_text,
+                parse_mode="HTML",
+                disable_web_page_preview=False
+            )
+        except Exception as e:
+            logger.warning(f"Не удалось отправить алерт в группу {pt_rec.created_group_id}: {e}")
                     logger.warning(f"Не удалось отправить алерт в группу {r.created_group_id}: {e}")
 
 

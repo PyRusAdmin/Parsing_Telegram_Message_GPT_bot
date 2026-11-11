@@ -4,8 +4,9 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions, InlineKeyboardMarkup, \
-    InlineKeyboardButton
+from aiogram.types import (
+    CallbackQuery, LabeledPrice, Message, LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
+)
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.parser import filter_messages, active_clients
@@ -14,13 +15,13 @@ from core.config import version
 from database.database import getting_number_records_database
 from database.users_groups import get_group_count
 from database.users_keywords import get_keywords_count
-from database.users_personal_trackings import get_session_count, UsersPersonalTrackings, \
-    get_group_id_with_personal_tracking
+from database.users_personal_trackings import (
+    get_session_count, UsersPersonalTrackings, get_group_id_with_personal_tracking
+)
 from handlers.user.personal_tracking import get_personal_tracking_text_and_kb
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
-    get_lang_keyboard, connect_keyboard_account,
-    get_stars_topup_inline_keyboard, menu_user_admin_keyboard, back_button
+    get_lang_keyboard, connect_keyboard_account, get_stars_topup_inline_keyboard, menu_user_admin_keyboard, back_button
 )
 from locales.locales import t
 
@@ -186,22 +187,6 @@ async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContex
         logger.exception(e)
 
 
-@router.message((F.text == t('change_language_button', 'ru')) | (F.text == t('change_language_button', 'en')))
-async def handle_change_language(message: Message, state: FSMContext):
-    """
-    Обработчик текстовой команды смены языка интерфейса.
-
-    :param message: (Message) Объект входящего сообщения Telegram.
-    :param state: (FSMContext) Контекст машины состояний FSM.
-    """
-    await state.clear()
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
-    await message.answer(
-        t("welcome_ask_language", lang=user_lang),
-        reply_markup=get_lang_keyboard(lang=user_lang)
-    )
-
-
 @router.callback_query(F.data == "settings_change_language")
 async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
     """
@@ -213,16 +198,16 @@ async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
     try:
         await state.clear()
         user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-        try:
-            await callback.message.edit_text(
-                text=t("welcome_ask_language", lang=user_lang),
-                reply_markup=get_lang_keyboard(lang=user_lang)
-            )
-        except Exception:
-            await callback.message.answer(
-                text=t("welcome_ask_language", lang=user_lang),
-                reply_markup=get_lang_keyboard(lang=user_lang)
-            )
+        # try:
+        await callback.message.edit_text(
+            text=t("welcome_ask_language", lang=user_lang),
+            reply_markup=get_lang_keyboard(lang=user_lang)
+        )
+        # except Exception:
+        #     await callback.message.answer(
+        #         text=t("welcome_ask_language", lang=user_lang),
+        #         reply_markup=get_lang_keyboard(lang=user_lang)
+        #     )
         await callback.answer()
     except Exception as e:
         logger.exception(e)

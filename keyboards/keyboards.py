@@ -850,7 +850,7 @@ def tracking_list_keyboard(records, lang: str = 'ru'):
     buttons = []
 
     for idx, record in enumerate(records, start=1):
-        title = str(record.target_link or "Без ссылки")
+        title = str(getattr(record, 'username_group', None) or getattr(record, 'target_link', None) or "Без ссылки")
 
         # Обрезаем длинное название для кнопки
         if len(title) > 15:
