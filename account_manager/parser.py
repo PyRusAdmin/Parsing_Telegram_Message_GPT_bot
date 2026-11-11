@@ -537,7 +537,7 @@ async def filter_messages(message, user_id):
             return None
         # === Проверка аккаунтов ===
         pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-        session_string = pt_rec.personal_account if pt_rec else None
+        session_string = (pt_rec.personal_account or pt_rec.shared_account) if pt_rec else None
         if not session_string:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённого аккаунта в БД")
             await message.answer(

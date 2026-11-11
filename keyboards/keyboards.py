@@ -236,28 +236,50 @@ def menu_launch_tracking_keyboard(lang: str = 'ru', user_id: int | None = None) 
 """Клавиатура меню подключения аккаунтов"""
 
 
-def connect_account_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+def connect_account_keyboard(lang: str = 'ru', has_account: bool = False, is_shared: bool = False) -> InlineKeyboardMarkup:
     """
-    Создает инлайн-клавиатуру для меню подключения аккаунтов.
+    Создает инлайн-клавиатуру для единого меню подключения аккаунтов.
 
     :param lang: (str) Код языка пользователя ('ru', 'en').
+    :param has_account: (bool) Подключен ли аккаунт у пользователя.
+    :param is_shared: (bool) Подключен ли свободный общий аккаунт.
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры выбора метода подключения.
     """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=t("btn_connect_account_session", lang=lang),  # Подключение аккаунта сессии Telegram
-                    callback_data="settings_section_channels")
-            ],
-            [
-                InlineKeyboardButton(text=t("btn_connect_account_phone", lang=lang), callback_data="pt_auth_phone")
-            ],
-            [
-                back_button(lang)  # Кнопка ⬅️ Назад
-            ],
-        ]
-    )
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=t("btn_connect_account_phone", lang=lang),  # 📱 Подключить личный аккаунт (по телефону)
+                callback_data="pt_auth_phone"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=t("btn_connect_account_session", lang=lang),  # 📄 Подключить аккаунт через сессию (.session)
+                callback_data="connect_account_session"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=t("btn_connect_free_account", lang=lang),  # 🎁 Использовать бесплатный аккаунт (1 группа)
+                callback_data="account_connect_free"
+            )
+        ],
+    ]
+
+    if has_account:
+        buttons.append([
+            InlineKeyboardButton(
+                text=t("btn_disconnect_account", lang=lang),  # ❌ Отключить текущий аккаунт
+                callback_data="account_disconnect"
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(text=t("btn_to_tracking_menu", lang=lang), callback_data="menu_personal_tracking"),
+        InlineKeyboardButton(text=t("btn_to_settings_menu", lang=lang), callback_data="menu_settings")
+    ])
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 """Клавиатура меню настроек"""
@@ -335,10 +357,10 @@ def connect_keyboard_account(lang: str = 'ru') -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="account_connect")
+                InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="account_connect_menu")
             ],
             [
-                InlineKeyboardButton(text=t("connect_free_account_button", lang=lang),
+                InlineKeyboardButton(text=t("btn_connect_free_account", lang=lang),
                                      callback_data="account_connect_free")
             ],
             [
@@ -754,6 +776,12 @@ def personal_tracking_menu_kb(user_id: int, is_active: bool = False, lang: str =
         [
             InlineKeyboardButton(text=t("btn_pt_my_groups", lang=lang), callback_data="pt_list_tracking"),
             InlineKeyboardButton(text=t("btn_pt_buy_slot", lang=lang), callback_data="pt_buy_slot")
+        ],
+        [
+            InlineKeyboardButton(
+                text=t("connect_account_button", lang=lang),  # 🔐 Подключение аккаунта
+                callback_data="account_connect_menu"
+            )
         ]
     ]
 

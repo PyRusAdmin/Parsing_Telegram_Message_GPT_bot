@@ -89,24 +89,33 @@ def get_user_accounts(user_id: int):
     :return: (list[dict]) Список словарей с данными сессий пользователя.
     """
     rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-    if rec and rec.personal_account:
-        return [{
-            'session_string': rec.personal_account,
-        }]
+    if rec:
+        if rec.personal_account:
+            return [{
+                'session_string': rec.personal_account,
+                'is_shared': False
+            }]
+        elif rec.shared_account:
+            return [{
+                'session_string': rec.shared_account,
+                'is_shared': True
+            }]
     return []
 
 
 def get_session_count(user_id: int) -> int:
     """
-    Подсчитывает количество подключенных персональных аккаунтов пользователя в базе данных.
+    Подсчитывает количество подключенных персональных или свободных аккаунтов пользователя.
 
     :param user_id: (int) Telegram ID пользователя.
     :return: (int) Количество сессий (0, если аккаунты отсутствуют).
     """
     return UsersPersonalTrackings.select().where(
         (UsersPersonalTrackings.user_id == user_id) &
-        (UsersPersonalTrackings.personal_account.is_null(False)) &
-        (UsersPersonalTrackings.personal_account != '')
+        (
+            ((UsersPersonalTrackings.personal_account.is_null(False)) & (UsersPersonalTrackings.personal_account != '')) |
+            ((UsersPersonalTrackings.shared_account.is_null(False)) & (UsersPersonalTrackings.shared_account != ''))
+        )
     ).count()
 
 
@@ -124,6 +133,7 @@ def get_group_id_with_personal_tracking(user_id: int):
 def write_account_to_db(session_string: str, user_id: int) -> None:
     """
     Запись персонального аккаунта в базу данных в таблицу users_personal_trackings.
+    Свободный аккаунт при этом очищается.
 
     :param session_string: (str) Строка сессии Telethon.
     :param user_id: (int) Telegram ID пользователя.
@@ -131,12 +141,54 @@ def write_account_to_db(session_string: str, user_id: int) -> None:
     UsersPersonalTrackings.insert(
         user_id=user_id,
         personal_account=session_string,
+        shared_account="",
     ).on_conflict(
         conflict_target=[UsersPersonalTrackings.user_id],
         update={
             UsersPersonalTrackings.personal_account: session_string,
+            UsersPersonalTrackings.shared_account: "",
             UsersPersonalTrackings.last_changed_at: datetime.now(),
         }
     ).execute()
 
-    logger.info(f"Аккаунт успешно записан в базу данных")
+    logger.info(f"Личный аккаунт успешно записан в базу данных для user_id={user_id}")
+
+
+def set_user_shared_account(user_id: int, session_string: str) -> None:
+    """
+    Записывает свободный аккаунт от администратора в таблицу users_personal_trackings.
+    Личный аккаунт при этом очищается.
+
+    :param user_id: (int) Telegram ID пользователя.
+    :param session_string: (str) Строка сессии Telethon свободного аккаунта.
+    """
+    UsersPersonalTrackings.insert(
+        user_id=user_id,
+        shared_account=session_string,
+        personal_account="",
+    ).on_conflict(
+        conflict_target=[UsersPersonalTrackings.user_id],
+        update={
+            UsersPersonalTrackings.shared_account: session_string,
+            UsersPersonalTrackings.personal_account: "",
+            UsersPersonalTrackings.last_changed_at: datetime.now(),
+        }
+    ).execute()
+
+    logger.info(f"Свободный аккаунт администратора успешно назначен пользователю {user_id}")
+
+
+def clear_user_account(user_id: int) -> bool:
+    """
+    Очищает привязанный аккаунт пользователя (как личный, так и свободный).
+
+    :param user_id: (int) Telegram ID пользователя.
+    :return: (bool) True если запись обновлена.
+    """
+    updated = UsersPersonalTrackings.update(
+        personal_account="",
+        shared_account="",
+        last_changed_at=datetime.now()
+    ).where(UsersPersonalTrackings.user_id == user_id).execute()
+    logger.info(f"Аккаунт пользователя {user_id} очищен (personal и shared).")
+    return bool(updated)

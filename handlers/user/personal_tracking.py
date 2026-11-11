@@ -358,6 +358,20 @@ def get_personal_tracking_text_and_kb(user_id: int, lang: str = 'ru'):
     used = get_user_used_slots(user_id)
     is_active = str(user_id) in active_clients
 
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    has_personal = bool(rec and rec.personal_account)
+    has_shared = bool(rec and rec.shared_account and not rec.personal_account)
+
+    if has_personal:
+        acc_text = "📱 <b>Личный аккаунт</b> (без ограничений)"
+        acc_text_en = "📱 <b>Personal account</b> (unlimited)"
+    elif has_shared:
+        acc_text = "🎁 <b>Бесплатный от админа</b> (лимит: 1 группа)"
+        acc_text_en = "🎁 <b>Admin's free</b> (limit: 1 group)"
+    else:
+        acc_text = "⚠️ <b>Не подключен</b>"
+        acc_text_en = "⚠️ <b>Not connected</b>"
+
     status_text = "🟢 <b>Активно</b>" if is_active else "🔴 <b>Остановлено</b>"
     status_text_en = "🟢 <b>Active</b>" if is_active else "🔴 <b>Stopped</b>"
 
@@ -365,6 +379,7 @@ def get_personal_tracking_text_and_kb(user_id: int, lang: str = 'ru'):
         text = (
             "🎯 <b>Отслеживание ключевых слов</b>\n\n"
             f"📡 <b>Статус:</b> {status_text}\n"
+            f"🔐 <b>Аккаунт:</b> {acc_text}\n"
             f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n\n"
             "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам, а также запускать или останавливать процесс мониторинга в любое время.\n\n"
             "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
@@ -373,6 +388,7 @@ def get_personal_tracking_text_and_kb(user_id: int, lang: str = 'ru'):
         text = (
             "🎯 <b>Keyword Tracking</b>\n\n"
             f"📡 <b>Status:</b> {status_text_en}\n"
+            f"🔐 <b>Account:</b> {acc_text_en}\n"
             f"📊 <b>Your slots:</b> {used} of {allowed} used.\n\n"
             "You can link a group or channel to track signals based on your keywords, and start or stop monitoring at any time.\n\n"
             "💡 <i>1 slot is provided for free. An extra slot costs only 2 Telegram Stars.</i>"
@@ -423,8 +439,20 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    allowed = get_user_allowed_slots(callback.from_user.id)  #
-    used = get_user_used_slots(callback.from_user.id)  # 
+    allowed = get_user_allowed_slots(callback.from_user.id)
+    used = get_user_used_slots(callback.from_user.id)
+
+    # Проверка лимита: при использовании бесплатного аккаунта от админа разрешена только 1 группа
+    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == callback.from_user.id)
+    is_shared = bool(pt_rec and pt_rec.shared_account and not pt_rec.personal_account)
+    if is_shared and used >= 1:
+        alert_msg = (
+            "⚠️ Вы используете бесплатный аккаунт от администратора. В этом режиме можно отслеживать только 1 группу. Подключите личный аккаунт для добавления других групп."
+            if user_lang == "ru"
+            else "⚠️ You are using the admin's free account. In this mode, only 1 group can be tracked. Please connect a personal account to track more groups."
+        )
+        await callback.answer(alert_msg, show_alert=True)
+        return
 
     # Если все слоты уже использовались, то предлагаем пользователю купить дополнительные слоты для групп
     if used >= allowed:

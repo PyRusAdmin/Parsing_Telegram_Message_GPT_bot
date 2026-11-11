@@ -13,10 +13,10 @@ from telethon.sessions import StringSession
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
 from database.account_free import AccountFree
-
-from database.users_personal_trackings import UsersPersonalTrackings
+from database.users_personal_trackings import (
+    UsersPersonalTrackings, write_account_to_db, set_user_shared_account, clear_user_account
+)
 from database.users_accounts import write_account_to_user_table
-from database.users_personal_trackings import write_account_to_db
 from handlers.user.personal_tracking import PersonalTrackingState, execute_sign_in
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard, connect_account_keyboard, emoji_code_keypad_kb
@@ -26,50 +26,125 @@ from states.states import MyStates
 router = Router(name=__name__)
 
 
+def render_account_connect_text(user_id: int, lang: str = "ru") -> tuple[str, bool, bool]:
+    """
+    Формирует текст и состояние для экрана подключения аккаунтов.
+
+    :param user_id: (int) ID пользователя Telegram.
+    :param lang: (str) Код языка интерфейса.
+    :return: (tuple[str, bool, bool]) Текст сообщения, has_account, is_shared.
+    """
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    has_personal = bool(rec and rec.personal_account)
+    has_shared = bool(rec and rec.shared_account and not rec.personal_account)
+    has_account = has_personal or has_shared
+
+    if lang == "ru":
+        header = "🔐 <b>Управление Telegram-аккаунтом</b>\n\n"
+        if has_personal:
+            status = (
+                "📱 <b>Текущий аккаунт:</b> ✅ <i>Личный аккаунт</i>\n"
+                "📊 <b>Режим:</b> Без ограничений на количество каналов (в рамках ваших слотов)\n\n"
+                "Вы можете переподключить аккаунт другим способом или отключить его."
+            )
+        elif has_shared:
+            status = (
+                "🎁 <b>Текущий аккаунт:</b> <i>Бесплатный аккаунт от администратора</i>\n"
+                "⚠️ <b>Ограничение:</b> Отслеживание сигналов разрешено только в <b>1 группе</b>.\n\n"
+                "💡 <i>Для отслеживания в нескольких группах одновременно подключите свой личный аккаунт.</i>"
+            )
+        else:
+            status = (
+                "⚠️ <b>Текущий аккаунт:</b> <i>Не подключен</i>\n\n"
+                "Для мониторинга сообщений и сигналов по ключевым словам выберите способ подключения:\n"
+                "• <b>Личный аккаунт</b> — без ограничений по количеству каналов.\n"
+                "• <b>Свободный аккаунт от админа</b> — бесплатный доступ, отслеживание ограничено 1 группой."
+            )
+        text = header + status
+    else:
+        header = "🔐 <b>Telegram Account Management</b>\n\n"
+        if has_personal:
+            status = (
+                "📱 <b>Current account:</b> ✅ <i>Personal account</i>\n"
+                "📊 <b>Mode:</b> Unlimited channels (within your slots)\n\n"
+                "You can reconnect using another method or disconnect it."
+            )
+        elif has_shared:
+            status = (
+                "🎁 <b>Current account:</b> <i>Administrator's free account</i>\n"
+                "⚠️ <b>Limitation:</b> Keyword tracking is allowed in only <b>1 group</b>.\n\n"
+                "💡 <i>To track multiple groups simultaneously, connect your personal account.</i>"
+            )
+        else:
+            status = (
+                "⚠️ <b>Current account:</b> <i>Not connected</i>\n\n"
+                "To monitor messages and keywords, choose a connection method:\n"
+                "• <b>Personal account</b> — no channel limit.\n"
+                "• <b>Admin's free account</b> — free access, limited to 1 group."
+            )
+        text = header + status
+
+    return text, has_account, has_shared
+
+
 @router.callback_query(F.data == "account_connect_free")
 async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки "Подключить свободный аккаунт".
+    Обработчик инлайн-кнопки подключения свободного аккаунта от администратора.
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
-    await callback.answer()
-    # await connect_account_free_internal(callback.message, callback.from_user, state)
     await state.clear()
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
 
-    user, created = UsersPersonalTrackings.get_or_create(
-        user_id=callback.from_user.id,
-        defaults={
-            "user_username": callback.from_user.username,
-            "user_firstname": callback.from_user.first_name,
-            "user_last_name": callback.from_user.last_name,
-            "language": "unset"
-        }
-    )
     free_accounts = list(AccountFree.select())
     if not free_accounts:
-        logger.warning(f"Нет доступных свободных аккаунтов для пользователя {user.user_id}")
-        await callback.message.answer(
-            text=t("no_free_accounts", lang=user_lang),
-            reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
+        logger.warning(f"Нет доступных свободных аккаунтов для пользователя {user_id}")
+        alert_text = (
+            "⚠️ <b>Нет свободных аккаунтов от администратора</b>\n\n"
+            "В данный момент в пуле нет доступных свободных аккаунтов.\n"
+            "Пожалуйста, подключите свой личный аккаунт (по телефону или через сессию)."
+            if user_lang == "ru"
+            else "⚠️ <b>No free accounts available</b>\n\n"
+                 "Currently, no free accounts are available from the administrator.\n"
+                 "Please connect your personal account (by phone or via session file)."
         )
+        kb = connect_account_keyboard(lang=user_lang, has_account=False, is_shared=False)
+        try:
+            await callback.message.edit_text(text=alert_text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(text=alert_text, reply_markup=kb, parse_mode="HTML")
+        await callback.answer()
         return
-    selected_account = random.choice(free_accounts)
+
+    # Назначаем пользователю свободный аккаунт от администратора
+    selected_account = free_accounts[0]
     session_string = selected_account.session_string
     phone_number = selected_account.phone_number
-    logger.info(f"Подключаем свободный аккаунт {phone_number} пользователю {user.user_id}")
-    write_account_to_db(
-        session_string=session_string,
-        user_id=user.user_id
+    logger.info(f"Назначаем свободный аккаунт {phone_number} пользователю {user_id}")
+
+    set_user_shared_account(user_id=user_id, session_string=session_string)
+
+    success_text = (
+        f"🎉 <b>Свободный аккаунт успешно подключен!</b>\n\n"
+        f"📱 <b>Аккаунт:</b> {phone_number}\n"
+        f"⚠️ <b>Внимание:</b> Для бесплатного аккаунта от администратора действует ограничение — "
+        f"отслеживание ключевых слов разрешено <b>только в 1 группе/канале</b>.\n\n"
+        f"💡 <i>Если вам потребуется отслеживать больше каналов, вы в любой момент сможете подключить свой личный аккаунт.</i>"
+        if user_lang == "ru"
+        else f"🎉 <b>Free administrator account connected successfully!</b>\n\n"
+             f"📱 <b>Account:</b> {phone_number}\n"
+             f"⚠️ <b>Notice:</b> A limit of <b>1 group/channel</b> applies to this free account.\n\n"
+             f"💡 <i>If you need to track more channels, you can connect your personal account at any time.</i>"
     )
-    selected_account.delete_instance()
-    await callback.message.answer(
-        text=t("account_connected_free", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
-    )
+    kb = connect_account_keyboard(lang=user_lang, has_account=True, is_shared=True)
+    try:
+        await callback.message.edit_text(text=success_text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        await callback.message.answer(text=success_text, reply_markup=kb, parse_mode="HTML")
+    await callback.answer("✅ Свободный аккаунт подключен!" if user_lang == "ru" else "✅ Free account connected!", show_alert=False)
 
 
 def sanitization_file_name(document, account_id):
@@ -121,25 +196,61 @@ def delete_directory(folder_path):
 @router.callback_query(F.data == "account_connect_menu")
 async def handle_account_connect_menu(callback: CallbackQuery, state: FSMContext):
     """
-    Отображает меню выбора способа подключения Telegram-аккаунта.
+    Отображает единое меню выбора способа подключения Telegram-аккаунта.
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
-    await state.clear()  # Очищаем состояние
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+    await state.clear()
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
 
-    await callback.message.answer(
-        text="Выберите способ подключения аккаунта. По номеру телефона или через сессию Telethon или использования свободного аккаунта.",
-        reply_markup=connect_account_keyboard(lang=user_lang)
+    text, has_account, is_shared = render_account_connect_text(user_id=user_id, lang=user_lang)
+    kb = connect_account_keyboard(lang=user_lang, has_account=has_account, is_shared=is_shared)
+
+    try:
+        await callback.message.edit_text(text=text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        await callback.message.answer(text=text, reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "account_disconnect")
+async def handle_account_disconnect_cb(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик отключения текущего подключенного аккаунта пользователя.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
+    :param state: (FSMContext) Контекст машины состояний FSM.
+    """
+    await state.clear()
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+
+    # Если было активно отслеживание — останавливаем
+    from account_manager.parser import stop_tracking
+    await stop_tracking(user_id=user_id, message=callback.message)
+    clear_user_account(user_id=user_id)
+
+    text = (
+        "✅ <b>Аккаунт успешно отключен.</b>\n\n"
+        "Теперь вы можете подключить другой аккаунт (личный или свободный от администратора)."
+        if user_lang == "ru"
+        else "✅ <b>Account successfully disconnected.</b>\n\n"
+             "You can now connect another account (personal or administrator's free account)."
     )
+    kb = connect_account_keyboard(lang=user_lang, has_account=False, is_shared=False)
+    try:
+        await callback.message.edit_text(text=text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        await callback.message.answer(text=text, reply_markup=kb, parse_mode="HTML")
+    await callback.answer("Аккаунт отключен" if user_lang == "ru" else "Account disconnected", show_alert=False)
 
 
 """Подключение аккаунта через сессию Telethon"""
 
 
-@router.callback_query(F.data == "settings_section_channels")
+@router.callback_query(F.data == "connect_account_session")
 async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
     """
     Инициирует подключение аккаунта через файл .session Telethon.
@@ -154,7 +265,7 @@ async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.answer(
         text=t("connect_account", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
+        reply_markup=back_keyboard(lang=user_lang, callback_data="account_connect_menu")
     )
     await state.set_state(MyStates.waiting_for_session_file_user)
 
