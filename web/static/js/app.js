@@ -1455,7 +1455,11 @@ async function checkExportLimits() {
                 warning.classList.remove("hidden");
                 const hours = Math.floor(data.remaining_seconds / 3600);
                 const minutes = Math.floor((data.remaining_seconds % 3600) / 60);
-                warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${i18n("limit_warning_text", {hours, minutes, balance: data.stars_balance})}`;
+                warning.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${i18n("limit_warning_text", {
+                    hours,
+                    minutes,
+                    balance: data.stars_balance
+                })}`;
             } else {
                 warning.classList.add("hidden");
             }

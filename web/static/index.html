@@ -32,10 +32,12 @@
                 <i class="fa-solid fa-star star-glow"></i>
                 <span id="stars-count">0</span>
             </div>
-            <button id="theme-toggle-btn" class="icon-btn-round" title="Переключить тему" data-i18n-title="toggle_theme">
+            <button id="theme-toggle-btn" class="icon-btn-round" title="Переключить тему"
+                    data-i18n-title="toggle_theme">
                 <i id="theme-toggle-icon" class="fa-solid fa-moon"></i>
             </button>
-            <button id="lang-toggle-btn" class="icon-btn-round" title="Switch Language" data-i18n-title="switch_language">
+            <button id="lang-toggle-btn" class="icon-btn-round" title="Switch Language"
+                    data-i18n-title="switch_language">
                 <i class="fa-solid fa-globe"></i>
             </button>
         </div>
@@ -55,10 +57,12 @@
             <div class="hero-card glass-panel">
                 <div class="status-pulse-container">
                     <div id="status-pulse" class="status-pulse inactive"></div>
-                    <span id="status-text" class="status-label" data-i18n="tracking_inactive">Отслеживание неактивно</span>
+                    <span id="status-text" class="status-label"
+                          data-i18n="tracking_inactive">Отслеживание неактивно</span>
                 </div>
                 <h1 class="hero-title" data-i18n="hero_title">AutoParse Alert Monitor</h1>
-                <p class="hero-desc" data-i18n="hero_desc">Отслеживание ключевых слов в режиме реального времени в группах и каналах
+                <p class="hero-desc" data-i18n="hero_desc">Отслеживание ключевых слов в режиме реального времени в
+                    группах и каналах
                     Telegram</p>
 
                 <div class="hero-actions">
@@ -102,7 +106,8 @@
 
             <!-- Быстрые настройки -->
             <div class="card glass-panel">
-                <h3><i class="fa-solid fa-gears icon-inline"></i> <span data-i18n="target_group_title">Настройки переадресации</span></h3>
+                <h3><i class="fa-solid fa-gears icon-inline"></i> <span data-i18n="target_group_title">Настройки переадресации</span>
+                </h3>
                 <div class="settings-row">
                     <div class="setting-info">
                         <h5 data-i18n="target_channel_subtitle">Целевой канал оповещения</h5>
@@ -110,7 +115,8 @@
                     </div>
                     <div class="setting-action">
                         <div class="input-action-group">
-                            <input type="text" id="target-group-input" placeholder="@your_channel" data-i18n-placeholder="placeholder_target_group" class="glass-input">
+                            <input type="text" id="target-group-input" placeholder="@your_channel"
+                                   data-i18n-placeholder="placeholder_target_group" class="glass-input">
                             <button id="btn-save-target-group" class="btn-secondary" data-i18n="save">Сохранить</button>
                         </div>
                     </div>
@@ -120,11 +126,14 @@
             <!-- Карта пополнения счета Stars -->
             <div class="card glass-panel topup-card">
                 <div class="topup-info">
-                    <h3><i class="fa-solid fa-coins icon-inline icon-orange"></i> <span data-i18n="balance_title">Баланс и утилиты</span></h3>
-                    <p data-i18n="balance_desc">Покупайте Stars, чтобы обойти 24-часовое ограничение на экспорт баз данных.</p>
+                    <h3><i class="fa-solid fa-coins icon-inline icon-orange"></i> <span data-i18n="balance_title">Баланс и утилиты</span>
+                    </h3>
+                    <p data-i18n="balance_desc">Покупайте Stars, чтобы обойти 24-часовое ограничение на экспорт баз
+                        данных.</p>
                 </div>
                 <div class="topup-action">
-                    <button id="btn-topup-modal" class="btn-success"><i class="fa-solid fa-plus"></i> <span data-i18n="buy_stars">Купить Stars</span></button>
+                    <button id="btn-topup-modal" class="btn-success"><i class="fa-solid fa-plus"></i> <span
+                            data-i18n="buy_stars">Купить Stars</span></button>
                 </div>
             </div>
         </section>
@@ -132,16 +141,19 @@
         <!-- ВКЛАДКА 2: КАНАЛЫ -->
         <section id="tab-channels" class="tab-content">
             <div class="card glass-panel">
-                <h3><i class="fa-solid fa-square-plus icon-inline"></i> <span data-i18n="add_channels_title">Добавить каналы для отслеживания</span></h3>
+                <h3><i class="fa-solid fa-square-plus icon-inline"></i> <span data-i18n="add_channels_title">Добавить каналы для отслеживания</span>
+                </h3>
 
                 <div class="input-action-group inline-form">
-                    <input type="text" id="channel-username-input" placeholder="@channel_username" data-i18n-placeholder="placeholder_channel" class="glass-input">
+                    <input type="text" id="channel-username-input" placeholder="@channel_username"
+                           data-i18n-placeholder="placeholder_channel" class="glass-input">
                     <button id="btn-add-channel" class="btn-primary" data-i18n="add">Добавить</button>
                 </div>
 
                 <div class="drag-drop-area" id="channel-drop-zone">
                     <i class="fa-solid fa-file-arrow-up drag-icon"></i>
-                    <p data-i18n="drag_drop_txt">Перетащите <strong>.txt</strong> файл со списком или <span class="browse-link">выберите</span></p>
+                    <p data-i18n="drag_drop_txt">Перетащите <strong>.txt</strong> файл со списком или <span
+                            class="browse-link">выберите</span></p>
                     <input type="file" id="channel-file-input" accept=".txt" class="hidden">
                 </div>
             </div>
@@ -169,18 +181,22 @@
         <!-- ВКЛАДКА 3: КЛЮЧЕВЫЕ СЛОВА -->
         <section id="tab-keywords" class="tab-content">
             <div class="card glass-panel">
-                <h3><i class="fa-solid fa-key icon-inline"></i> <span data-i18n="add_keyword_title">Добавить ключевое слово</span></h3>
+                <h3><i class="fa-solid fa-key icon-inline"></i> <span data-i18n="add_keyword_title">Добавить ключевое слово</span>
+                </h3>
                 <div class="input-action-group inline-form">
                     <input type="text" id="keyword-input" placeholder="например, фриланс, python, разработка"
                            data-i18n-placeholder="placeholder_keyword"
                            class="glass-input">
-                    <button id="btn-add-keyword" class="btn-primary" data-i18n="add_keyword_btn">Добавить ключевое слово</button>
+                    <button id="btn-add-keyword" class="btn-primary" data-i18n="add_keyword_btn">Добавить ключевое
+                        слово
+                    </button>
                 </div>
             </div>
 
             <div class="card glass-panel list-card">
                 <div class="card-header">
-                    <h3><i class="fa-solid fa-tag icon-inline"></i> <span data-i18n="active_keywords_title">Активные ключевые слова</span></h3>
+                    <h3><i class="fa-solid fa-tag icon-inline"></i> <span data-i18n="active_keywords_title">Активные ключевые слова</span>
+                    </h3>
                     <span id="keywords-count" class="badge">0</span>
                 </div>
                 <div class="list-container scrollable" id="keywords-list">
@@ -193,13 +209,16 @@
         <!-- ВКЛАДКА 4: Подключенные аккаунты -->
         <section id="tab-accounts" class="tab-content">
             <div class="card glass-panel">
-                <h3><i class="fa-solid fa-user-plus icon-inline"></i> <span data-i18n="connect_account_title">Подключить аккаунт Telegram</span></h3>
-                <p class="card-desc" data-i18n="connect_account_desc">Загрузите файл сессии <strong>.session</strong> (Telethon / Pyrogram) рабочего
+                <h3><i class="fa-solid fa-user-plus icon-inline"></i> <span data-i18n="connect_account_title">Подключить аккаунт Telegram</span>
+                </h3>
+                <p class="card-desc" data-i18n="connect_account_desc">Загрузите файл сессии <strong>.session</strong>
+                    (Telethon / Pyrogram) рабочего
                     аккаунта Telegram для автопоиска и мониторинга.</p>
 
                 <div class="drag-drop-area" id="session-drop-zone">
                     <i class="fa-solid fa-key drag-icon"></i>
-                    <p data-i18n="drag_drop_session">Перетащите <strong>.session</strong> файл сюда или <span class="browse-link">выберите на устройстве</span>
+                    <p data-i18n="drag_drop_session">Перетащите <strong>.session</strong> файл сюда или <span
+                            class="browse-link">выберите на устройстве</span>
                     </p>
                     <input type="file" id="session-file-input" accept=".session" class="hidden">
                 </div>
@@ -207,7 +226,8 @@
 
             <div class="card glass-panel list-card">
                 <div class="card-header">
-                    <h3><i class="fa-solid fa-circle-user icon-inline"></i> <span data-i18n="active_sessions_title">Активные сессии</span></h3>
+                    <h3><i class="fa-solid fa-circle-user icon-inline"></i> <span data-i18n="active_sessions_title">Активные сессии</span>
+                    </h3>
                     <span id="accounts-count" class="badge">0</span>
                 </div>
                 <div class="list-container scrollable" id="accounts-list">
@@ -220,7 +240,8 @@
         <section id="tab-search" class="tab-content">
             <!-- Панель поиска -->
             <div class="card glass-panel">
-                <h3><i class="fa-solid fa-robot icon-inline"></i> <span data-i18n="ai_search_title">Поиск целевой группы с помощью искусственного интеллекта</span></h3>
+                <h3><i class="fa-solid fa-robot icon-inline"></i> <span data-i18n="ai_search_title">Поиск целевой группы с помощью искусственного интеллекта</span>
+                </h3>
                 <p class="card-desc" data-i18n="ai_search_desc">
                     Используйте искусственный интеллект (Groq Llama 3) для генерации поисковых запросов, а затем найдите
                     активные
@@ -229,7 +250,8 @@
 
                 <div class="search-form">
                     <div class="input-action-group">
-                        <input type="text" id="ai-search-query" placeholder="например, Python Developer Jobs, Crypto Trades"
+                        <input type="text" id="ai-search-query"
+                               placeholder="например, Python Developer Jobs, Crypto Trades"
                                data-i18n-placeholder="placeholder_ai_search"
                                class="glass-input">
                         <button id="btn-trigger-ai-search" class="btn-primary glow-effect">
@@ -254,7 +276,8 @@
 
                 <div class="search-form">
                     <div class="input-action-group">
-                        <input type="text" id="ai-search-querys" placeholder="например, Python Developer Jobs, Crypto Trades"
+                        <input type="text" id="ai-search-querys"
+                               placeholder="например, Python Developer Jobs, Crypto Trades"
                                data-i18n-placeholder="placeholder_ai_search"
                                class="glass-input">
                         <button id="btn-trigger-ai-searchs" class="btn-primary glow-effect">
@@ -268,9 +291,11 @@
             <!-- Экспорт карты базы данных -->
             <div class="card glass-panel">
                 <div class="card-header">
-                    <h3><i class="fa-solid fa-file-excel icon-inline icon-green"></i> <span data-i18n="export_db_title">База данных экспортных групп</span></h3>
+                    <h3><i class="fa-solid fa-file-excel icon-inline icon-green"></i> <span data-i18n="export_db_title">База данных экспортных групп</span>
+                    </h3>
                 </div>
-                <p class="card-desc" data-i18n="export_db_desc">Загрузите отфильтрованную таблицу Excel со всеми обнаруженными группами и каналами
+                <p class="card-desc" data-i18n="export_db_desc">Загрузите отфильтрованную таблицу Excel со всеми
+                    обнаруженными группами и каналами
                     Telegram.</p>
 
                 <div class="export-options">
@@ -287,19 +312,27 @@
                         <select id="export-category" class="glass-select">
                             <option value="all" data-i18n="cat_all">Все категории</option>
                             <option value="инвестиции" data-i18n="cat_investments">Инвестиции</option>
-                            <option value="финансы и личный бюджет" data-i18n="cat_finance">Финансы и личный бюджет</option>
-                            <option value="криптовалюты и блокчейн" data-i18n="cat_crypto">Криптовалюты и блокчейн</option>
-                            <option value="бизнес и предпринимательство" data-i18n="cat_business">Бизнес и предпринимательство</option>
-                            <option value="маркетинг и продвижение" data-i18n="cat_marketing">Маркетинг и продвижение</option>
+                            <option value="финансы и личный бюджет" data-i18n="cat_finance">Финансы и личный бюджет
+                            </option>
+                            <option value="криптовалюты и блокчейн" data-i18n="cat_crypto">Криптовалюты и блокчейн
+                            </option>
+                            <option value="бизнес и предпринимательство" data-i18n="cat_business">Бизнес и
+                                предпринимательство
+                            </option>
+                            <option value="маркетинг и продвижение" data-i18n="cat_marketing">Маркетинг и продвижение
+                            </option>
                             <option value="технологии и it" data-i18n="cat_tech">Технологии и IT</option>
-                            <option value="образование и саморазвитие" data-i18n="cat_education">Образование и саморазвитие</option>
+                            <option value="образование и саморазвитие" data-i18n="cat_education">Образование и
+                                саморазвитие
+                            </option>
                             <option value="работа и карьера" data-i18n="cat_jobs">Работа и карьера</option>
                             <option value="недвижимость" data-i18n="cat_realestate">Недвижимость</option>
                             <option value="здоровье и медицина" data-i18n="cat_health">Здоровье и медицина</option>
                             <option value="путешествия" data-i18n="cat_travel">Путешествия</option>
                             <option value="авто и транспорт" data-i18n="cat_auto">Авто и транспорт</option>
                             <option value="шоппинг и скидки" data-i18n="cat_shopping">Шоппинг и скидки</option>
-                            <option value="развлечения и досуг" data-i18n="cat_entertainment">Развлечения и досуг</option>
+                            <option value="развлечения и досуг" data-i18n="cat_entertainment">Развлечения и досуг
+                            </option>
                             <option value="политика и общество" data-i18n="cat_politics">Политика и общество</option>
                             <option value="наука и исследования" data-i18n="cat_science">Наука и исследования</option>
                             <option value="спорт и фитнес" data-i18n="cat_sport">Спорт и фитнес</option>
@@ -352,8 +385,10 @@
         <!-- ВКЛАДКА 6: ПАНЕЛЬ АДМИНИСТРАТОРА (Условно) -->
         <section id="tab-admin" class="tab-content">
             <div class="card glass-panel">
-                <h3><i class="fa-solid fa-shield-halved icon-inline"></i> <span data-i18n="admin_panel_title">Панель управления администратора</span></h3>
-                <p class="card-desc" data-i18n="admin_panel_desc">Выполняйте операции технического обслуживания, обновляйте сведения о группах,
+                <h3><i class="fa-solid fa-shield-halved icon-inline"></i> <span data-i18n="admin_panel_title">Панель управления администратора</span>
+                </h3>
+                <p class="card-desc" data-i18n="admin_panel_desc">Выполняйте операции технического обслуживания,
+                    обновляйте сведения о группах,
                     запускайте классификацию с помощью искусственного интеллекта и извлекайте системные журналы.</p>
             </div>
 
@@ -399,7 +434,8 @@
                 <div class="admin-download-row border-top">
                     <div class="download-info">
                         <h5 data-i18n="admin_logs_title">Журналы приложений</h5>
-                        <p data-i18n="admin_logs_desc">Просмотр сырого файла журналирования следов бота (logs/log.log)</p>
+                        <p data-i18n="admin_logs_desc">Просмотр сырого файла журналирования следов бота
+                            (logs/log.log)</p>
                     </div>
                     <button class="btn-secondary" onclick="downloadAdminFile('logs')"><i
                             class="fa-solid fa-download"></i> <span data-i18n="download">Загрузка</span>
@@ -446,7 +482,8 @@
             <button class="close-btn" onclick="closeModal('topup')">&times;</button>
         </div>
         <div class="modal-body">
-            <p data-i18n="modal_buy_stars_desc">Выберите количество звездочек, которые вы хотите приобрести для своего баланса:</p>
+            <p data-i18n="modal_buy_stars_desc">Выберите количество звездочек, которые вы хотите приобрести для своего
+                баланса:</p>
             <div class="stars-option-grid">
                 <button class="star-opt-btn" onclick="buyStars(10)">
                     <i class="fa-solid fa-star star-glow"></i>
@@ -477,13 +514,15 @@
             <button class="close-btn" onclick="closeModal('categorize')">&times;</button>
         </div>
         <div class="modal-body">
-            <p data-i18n="modal_categorize_desc">Выберите поставщика искусственного интеллекта и модель для выполнения категоризации чата:</p>
+            <p data-i18n="modal_categorize_desc">Выберите поставщика искусственного интеллекта и модель для выполнения
+                категоризации чата:</p>
             <div class="categorize-methods">
                 <button class="method-btn" onclick="triggerCategorize('fast')">
                     <i class="fa-solid fa-bolt icon-blue"></i>
                     <div class="method-desc">
                         <h5 data-i18n="cat_method_fast_title">Быстрый метод (без G4F)</h5>
-                        <p data-i18n="cat_method_fast_desc">Последовательно использует бесплатные модели (gpt-4o-mini, llama-3)</p>
+                        <p data-i18n="cat_method_fast_desc">Последовательно использует бесплатные модели (gpt-4o-mini,
+                            llama-3)</p>
                     </div>
                 </button>
                 <button class="method-btn" onclick="triggerCategorize('openrouter')">

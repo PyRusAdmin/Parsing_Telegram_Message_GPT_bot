@@ -107,7 +107,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
             chat_username = ""
             try:
                 chat_entity = await client.get_entity(chat_id)
-                chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name", None) or "Неизвестно"
+                chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name",
+                                                                            None) or "Неизвестно"
                 chat_username = getattr(chat_entity, "username", None) or ""
             except Exception as e:
                 logger.warning(f"Не удалось получить информацию о чате {chat_id}: {e}")

@@ -107,7 +107,8 @@ async def get_id_for_transferring(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        text=t("transfer_rights_success", lang=user_lang, target_user_id=target_user_id, groups=added_groups, keywords=added_keywords),
+        text=t("transfer_rights_success", lang=user_lang, target_user_id=target_user_id, groups=added_groups,
+               keywords=added_keywords),
         parse_mode="HTML",
         reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
     )
