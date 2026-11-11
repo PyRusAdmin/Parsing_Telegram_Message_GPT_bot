@@ -6,15 +6,12 @@ import telethon.utils as utils
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import (
-    CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
-)
+from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import (
-    FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError,
-    SessionPasswordNeededError, UsernameNotOccupiedError, UsernameInvalidError,
-    ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError
+    FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError,
+    UsernameNotOccupiedError, UsernameInvalidError, ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError
 )
 from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest, CreateChannelRequest, EditAdminRequest
@@ -502,18 +499,11 @@ async def process_target_link_input(message: Message, state: FSMContext):
     )
 
     await state.set_state(PersonalTrackingState.waiting_for_keywords)
-    step2_text = (
-        f"✅ <b>Группа создана!</b>\n\n"
-        f"1. Перейдите по ссылке и вступите в созданную группу: <a href='{invite_link}'>{invite_link}</a>\n"
-        f"<i>(Бот {username_bot} уже назначен администратором группы)</i>\n\n"
-        f"<b>Шаг 2:</b> Введите ключевые слова для отслеживания в этой группе (через запятую):\n"
-        f"<i>Пример: python, вакансия, удаленка</i>"
-    ) if user_lang == "ru" else (
-        f"✅ <b>Group created!</b>\n\n"
-        f"1. Follow the link and join the created group: <a href='{invite_link}'>{invite_link}</a>\n"
-        f"<i>(Bot {username_bot} is already an admin of the group)</i>\n\n"
-        f"<b>Step 2:</b> Enter keywords to track in this group (separated by commas):\n"
-        f"<i>Example: python, job, remote</i>"
+    step2_text = t(
+        "pt_step2_created",
+        lang=user_lang,
+        link=invite_link,
+        bot_name=username_bot
     )
     await status_msg.edit_text(
         step2_text,
@@ -561,18 +551,12 @@ async def process_keywords_input(message: Message, state: FSMContext):
 
     await state.clear()
 
-    saved_text = (
-        f"🎉 <b>Персональное отслеживание успешно настроено!</b>\n\n"
-        f"📌 <b>Отслеживаемый объект:</b> {target_link}\n"
-        f"🔑 <b>Ключевые слова:</b> {keywords_text}\n"
-        f"🔗 <b>Группа для результатов:</b> <a href='{invite_link}'>Перейти в группу</a>\n\n"
-        f"<i>Уведомления о найденных совпадениях будут приходить прямо в Вашу созданную группу!</i>"
-    ) if user_lang == "ru" else (
-        f"🎉 <b>Personal tracking configured successfully!</b>\n\n"
-        f"📌 <b>Monitored target:</b> {target_link}\n"
-        f"🔑 <b>Keywords:</b> {keywords_text}\n"
-        f"🔗 <b>Group for results:</b> <a href='{invite_link}'>Go to group</a>\n\n"
-        f"<i>Alerts about matches will be sent directly to your created group!</i>"
+    saved_text = t(
+        "pt_configured_success",
+        lang=user_lang,
+        target=target_link,
+        keywords=keywords_text,
+        link=invite_link
     )
     await message.answer(
         saved_text,

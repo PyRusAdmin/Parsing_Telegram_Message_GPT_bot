@@ -758,6 +758,22 @@ pt_invalid_link = ⚠️ Please enter a valid link (https://t.me/...) or @userna
 pt_checking_group = 🔄 <i>Checking group and retrieving info...</i>
 pt_ask_keywords = 🔑 Enter keywords to track separated by commas:
 pt_saved_success = ✅ <b>Tracking settings saved!</b>
+pt_step2_created =
+    ✅ <b>Group created!</b>
+
+    1. Follow the link and join the created group: <a href='{ $link }'>{ $link }</a>
+    <i>(Bot { $bot_name } is already an admin of the group)</i>
+
+    <b>Step 2:</b> Enter keywords to track in this group (separated by commas):
+    <i>Example: python, job, remote</i>
+pt_configured_success =
+    🎉 <b>Personal tracking configured successfully!</b>
+
+    📌 <b>Monitored target:</b> { $target }
+    🔑 <b>Keywords:</b> { $keywords }
+    🔗 <b>Group for results:</b> <a href='{ $link }'>Go to group</a>
+
+    <i>Alerts about matches will be sent directly to your created group!</i>
 pt_alert_message =
     🎯 <b>Keyword matched:</b> <code>{ $keyword }</code>
 
