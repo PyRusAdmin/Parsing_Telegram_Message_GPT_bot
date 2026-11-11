@@ -884,15 +884,20 @@ def emoji_code_keypad_kb(lang: str = 'ru') -> InlineKeyboardMarkup:
 """Клавиатура статистики"""
 
 
-def tracking_list_keyboard(records, lang: str = 'ru'):
+def tracking_list_keyboard(records, lang: str = 'ru', group_link: str = ''):
     """
     Клавиатура для списка персональных отслеживаний пользователя.
 
     :param records: Список записей отслеживаний пользователя.
     :param lang: (str) Код языка пользователя ('ru', 'en').
+    :param group_link: (str) Ссылка на группу результатов (если есть).
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
     buttons = []
+
+    if group_link:
+        btn_label = "🔗 Перейти в группу результатов" if lang == "ru" else "🔗 Go to results group"
+        buttons.append([InlineKeyboardButton(text=btn_label, url=group_link)])
 
     for idx, record in enumerate(records, start=1):
         title = str(getattr(record, 'username_group', None) or getattr(record, 'target_link', None) or "Без ссылки")

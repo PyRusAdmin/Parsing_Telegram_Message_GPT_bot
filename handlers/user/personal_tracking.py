@@ -11,12 +11,13 @@ from aiogram.types import (
     CallbackQuery, LabeledPrice, Message, PreCheckoutQuery,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
+from aiogram.exceptions import TelegramForbiddenError
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import (
     FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError,
     UsernameNotOccupiedError, UsernameInvalidError, ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError,
-    UserAlreadyParticipantError
+    UserAlreadyParticipantError, InviteHashExpiredError, InviteHashInvalidError
 )
 from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest, CreateChannelRequest, EditAdminRequest
@@ -300,9 +301,30 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
             except Exception as admin_err:
                 logger.error(f"❌ Ошибка добавления бота {username_bot} в администраторы: {admin_err}")
 
-            # Экспортируем ссылку-приглашение в созданную группу
-            invite_export = await client(ExportChatInviteRequest(peer=new_chat))
-            invite_link = invite_export.link
+            # Создаем постоянную ссылку-приглашение без ограничений через бота (старшего администратора)
+            invite_link = None
+            try:
+                bot_invite = await bot.create_chat_invite_link(
+                    chat_id=chat_id,
+                    name="PermanentAlertGroup",
+                    expire_date=None,
+                    member_limit=None,
+                    creates_join_request=False
+                )
+                invite_link = bot_invite.invite_link
+                logger.info(f"✅ Создана постоянная ссылка-приглашение без ограничений через бота: {invite_link}")
+            except Exception as bot_inv_err:
+                logger.warning(f"Ошибка создания ссылки через бота ({bot_inv_err}). Пробуем через Telethon с usage_limit=None...")
+                try:
+                    invite_export = await client(ExportChatInviteRequest(
+                        peer=new_chat,
+                        expire_date=None,
+                        usage_limit=None,
+                        request_needed=False
+                    ))
+                    invite_link = invite_export.link
+                except Exception as mt_err:
+                    logger.error(f"Не удалось получить ссылку-приглашение: {mt_err}")
 
             await client.disconnect()
 
@@ -362,6 +384,45 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         )
 
     return False, "⚠️ Не удалось подключиться к группе через доступные аккаунты. Попробуйте позже.", None, None, None, None
+
+
+async def ensure_permanent_group_invite_link(user_id: int) -> str:
+    """
+    Проверяет и возвращает постоянную ссылку-приглашение без ограничений на группу результатов пользователя.
+    Если ссылка отсутствует или устарела, генерирует новую постоянную ссылку через бота и сохраняет в БД.
+
+    :param user_id: (int) ID пользователя Telegram.
+    :return: (str) Постоянная ссылка-приглашение или пустая строка.
+    """
+    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    if not pt_rec or not pt_rec.created_group_id:
+        return ""
+
+    group_id = pt_rec.created_group_id
+    current_link = (pt_rec.created_group_link or "").strip()
+
+    try:
+        new_link_obj = await bot.create_chat_invite_link(
+            chat_id=group_id,
+            name="PermanentAlertLink",
+            expire_date=None,
+            member_limit=None,
+            creates_join_request=False
+        )
+        if new_link_obj and new_link_obj.invite_link:
+            pt_rec.created_group_link = new_link_obj.invite_link
+            pt_rec.save()
+            return new_link_obj.invite_link
+    except TelegramForbiddenError as fe:
+        logger.warning(f"⚠️ Бот был исключен из группы {group_id} ({fe}). Сбрасываем привязку устаревшей группы.")
+        pt_rec.created_group_id = None
+        pt_rec.created_group_link = None
+        pt_rec.save()
+        return ""
+    except Exception as e:
+        logger.debug(f"Не удалось обновить ссылку через бота для группы {group_id}: {e}")
+
+    return current_link
 
 
 async def sync_and_promote_account_for_tracking(user_id: int, session_string: str) -> tuple[bool, bool]:
@@ -429,10 +490,16 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
             is_participant = False
 
         if not is_participant:
-            # Если нет ссылки или она невалидна, бот создает новую
+            # Если нет ссылки или она невалидна, бот создает новую постоянную ссылку без ограничений
             if not invite_link or "t.me/" not in invite_link:
                 try:
-                    new_invite = await bot.create_chat_invite_link(chat_id=group_id, name="SyncReconnect")
+                    new_invite = await bot.create_chat_invite_link(
+                        chat_id=group_id,
+                        name="PermanentAlertLink",
+                        expire_date=None,
+                        member_limit=None,
+                        creates_join_request=False
+                    )
                     if new_invite and new_invite.invite_link:
                         invite_link = new_invite.invite_link
                         pt_rec.created_group_link = invite_link
@@ -449,6 +516,26 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                     logger.info(f"✅ Аккаунт {account_tg_id} вступил в группу результатов {group_id} по инвайт-ссылке")
                 except UserAlreadyParticipantError:
                     is_participant = True
+                except (InviteHashExpiredError, InviteHashInvalidError) as exp_err:
+                    logger.warning(f"⚠️ Ссылка {invite_link} устарела ({exp_err}). Генерируем новую постоянную ссылку без ограничений через бота...")
+                    try:
+                        new_invite = await bot.create_chat_invite_link(
+                            chat_id=group_id,
+                            name="PermanentAlertLink",
+                            expire_date=None,
+                            member_limit=None,
+                            creates_join_request=False
+                        )
+                        if new_invite and new_invite.invite_link:
+                            invite_link = new_invite.invite_link
+                            pt_rec.created_group_link = invite_link
+                            pt_rec.save()
+                            new_clean_hash = invite_link.split("+")[-1].split("/")[-1]
+                            await client(ImportChatInviteRequest(hash=new_clean_hash))
+                            is_participant = True
+                            logger.info(f"✅ Аккаунт {account_tg_id} вступил по новой постоянной ссылке {invite_link}")
+                    except Exception as new_inv_err:
+                        logger.warning(f"Ошибка вступления по новой постоянной ссылке: {new_inv_err}")
                 except Exception as import_err:
                     logger.warning(f"Не удалось вступить в группу {group_id} по хэшу: {import_err}. Пробуем JoinChannelRequest...")
                     try:
@@ -961,8 +1048,7 @@ async def cb_list_tracking(callback: CallbackQuery):
     user_kws = list(UsersKeywords.select().where(UsersKeywords.user_id == user_id))
     kw_str = ", ".join([k.user_keyword for k in user_kws]) if user_kws else "—"
 
-    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-    group_link = pt_rec.created_group_link if pt_rec and pt_rec.created_group_link else ""
+    group_link = await ensure_permanent_group_invite_link(user_id)
 
     text = "📋 <b>Ваши персональные отслеживания:</b>\n\n" if user_lang == "ru" else "📋 <b>Your personal trackings:</b>\n\n"
 
@@ -1001,7 +1087,7 @@ async def cb_list_tracking(callback: CallbackQuery):
 
     await callback.message.answer(
         text,
-        reply_markup=tracking_list_keyboard(records, lang=user_lang),
+        reply_markup=tracking_list_keyboard(records, lang=user_lang, group_link=group_link),
         parse_mode="HTML"
     )
     await callback.answer()
