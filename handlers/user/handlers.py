@@ -196,18 +196,12 @@ async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
     try:
-        await state.clear()
+        await state.clear()  # Сбрасываем состояние пользователя, для не допущения ошибки, если действие не было завершено
         user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-        # try:
         await callback.message.edit_text(
             text=t("welcome_ask_language", lang=user_lang),
             reply_markup=get_lang_keyboard(lang=user_lang)
         )
-        # except Exception:
-        #     await callback.message.answer(
-        #         text=t("welcome_ask_language", lang=user_lang),
-        #         reply_markup=get_lang_keyboard(lang=user_lang)
-        #     )
         await callback.answer()
     except Exception as e:
         logger.exception(e)

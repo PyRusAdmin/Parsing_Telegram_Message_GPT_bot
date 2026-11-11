@@ -113,8 +113,10 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 )
             ],
             [
-                InlineKeyboardButton(text=t("marketing_and_promotion_button", lang=lang),  # маркетинг и продвижение
-                                     callback_data="cat_sel:marketing")
+                InlineKeyboardButton(
+                    text=t("marketing_and_promotion_button", lang=lang),  # маркетинг и продвижение
+                    callback_data="cat_sel:marketing"
+                )
             ],
             [
                 InlineKeyboardButton(
@@ -123,61 +125,89 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 )
             ],
             [
-                InlineKeyboardButton(text=t("education_and_self_development_button", lang=lang),
-                                     # образование и саморазвитие
-                                     callback_data="cat_sel:education")
+                InlineKeyboardButton(
+                    text=t("education_and_self_development_button", lang=lang),
+                    # образование и саморазвитие
+                    callback_data="cat_sel:education"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("work_and_career_button", lang=lang),  # работа и карьера
-                                     callback_data="cat_sel:work")
+                InlineKeyboardButton(
+                    text=t("work_and_career_button", lang=lang),  # работа и карьера
+                    callback_data="cat_sel:work"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("real_estate_button", lang=lang),  # недвижимость
-                                     callback_data="cat_sel:real_estate")
+                InlineKeyboardButton(
+                    text=t("real_estate_button", lang=lang),  # недвижимость
+                    callback_data="cat_sel:real_estate"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("health_and_medicine_button", lang=lang),  # здоровье и медицина
-                                     callback_data="cat_sel:health")
+                InlineKeyboardButton(
+                    text=t("health_and_medicine_button", lang=lang),  # здоровье и медицина
+                    callback_data="cat_sel:health"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("travel_button", lang=lang),  # путешествия
-                                     callback_data="cat_sel:travel")
+                InlineKeyboardButton(
+                    text=t("travel_button", lang=lang),  # путешествия
+                    callback_data="cat_sel:travel"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("auto_and_transport_button", lang=lang),  # авто и транспорт
-                                     callback_data="cat_sel:auto")
+                InlineKeyboardButton(
+                    text=t("auto_and_transport_button", lang=lang),  # авто и транспорт
+                    callback_data="cat_sel:auto"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("shopping_and_discounts_button", lang=lang),  # шоппинг и скидки
-                                     callback_data="cat_sel:shopping")
+                InlineKeyboardButton(
+                    text=t("shopping_and_discounts_button", lang=lang),  # шоппинг и скидки
+                    callback_data="cat_sel:shopping"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("entertainment_and_leisure_button", lang=lang),  # развлечения и досуг
-                                     callback_data="cat_sel:entertainment")
+                InlineKeyboardButton(
+                    text=t("entertainment_and_leisure_button", lang=lang),  # развлечения и досуг
+                    callback_data="cat_sel:entertainment"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("politics_and_society_button", lang=lang),  # олитика и общество
-                                     callback_data="cat_sel:politics")
+                InlineKeyboardButton(
+                    text=t("politics_and_society_button", lang=lang),  # олитика и общество
+                    callback_data="cat_sel:politics"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("science_and_research_button", lang=lang),  # наука и исследования
-                                     callback_data="cat_sel:science")
+                InlineKeyboardButton(
+                    text=t("science_and_research_button", lang=lang),  # наука и исследования
+                    callback_data="cat_sel:science"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("sports_and_fitness_button", lang=lang),  # спорт и фитнес
-                                     callback_data="cat_sel:sports")
+                InlineKeyboardButton(
+                    text=t("sports_and_fitness_button", lang=lang),  # спорт и фитнес
+                    callback_data="cat_sel:sports"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("cooking_and_food_button", lang=lang),  # кулинария и еда
-                                     callback_data="cat_sel:cooking")
+                InlineKeyboardButton(
+                    text=t("cooking_and_food_button", lang=lang),  # кулинария и еда
+                    callback_data="cat_sel:cooking"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("fashion_and_beauty_button", lang=lang),  # мода и красота
-                                     callback_data="cat_sel:fashion")
+                InlineKeyboardButton(
+                    text=t("fashion_and_beauty_button", lang=lang),  # мода и красота
+                    callback_data="cat_sel:fashion"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("hobbies_and_creativity_button", lang=lang),  # хобби и творчество
-                                     callback_data="cat_sel:hobbies")
+                InlineKeyboardButton(
+                    text=t("hobbies_and_creativity_button", lang=lang),  # хобби и творчество
+                    callback_data="cat_sel:hobbies"
+                )
             ],
             [
                 back_button(lang)  # Кнопка ⬅️ Назад
@@ -738,14 +768,20 @@ def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("fast_method_button", lang=lang), callback_data="cat_method_fast")
+                InlineKeyboardButton(
+                    text=t("fast_method_button", lang=lang), callback_data="cat_method_fast"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("powerful_method_openrouter_button", lang=lang),
-                                     callback_data="cat_method_openrouter")
+                InlineKeyboardButton(
+                    text=t("powerful_method_openrouter_button", lang=lang),
+                    callback_data="cat_method_openrouter"
+                )
             ],
             [
-                InlineKeyboardButton(text=t("powerful_method_groq_button", lang=lang), callback_data="cat_method_groq")
+                InlineKeyboardButton(
+                    text=t("powerful_method_groq_button", lang=lang), callback_data="cat_method_groq"
+                )
             ],
             [
                 back_button(lang)  # Кнопка ⬅️ Назад
@@ -879,22 +915,28 @@ def get_payment_inline_keyboard(stars: int, lang: str = "ru") -> InlineKeyboardM
     """
     buttons = []
     if stars >= 5:
-        buttons.append([
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=t("pay_from_balance_btn", lang=lang),
+                    callback_data="pay_db_balance"
+                )
+            ]
+        )
+    buttons.append(
+        [
             InlineKeyboardButton(
-                text=t("pay_from_balance_btn", lang=lang),
-                callback_data="pay_db_balance"
+                text=t("pay_direct_btn", lang=lang),
+                callback_data="pay_db_direct"
             )
-        ])
-    buttons.append([
-        InlineKeyboardButton(
-            text=t("pay_direct_btn", lang=lang),
-            callback_data="pay_db_direct"
-        )
-    ])
-    buttons.append([
-        InlineKeyboardButton(
-            text=t("cancel_btn", lang=lang),
-            callback_data="pay_db_cancel"
-        )
-    ])
+        ]
+    )
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text=t("cancel_btn", lang=lang),
+                callback_data="pay_db_cancel"
+            )
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=buttons)
