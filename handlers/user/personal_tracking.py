@@ -11,7 +11,7 @@ from aiogram.types import (
     CallbackQuery, LabeledPrice, Message, PreCheckoutQuery,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import (
@@ -465,13 +465,104 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
             except Exception as join_err:
                 logger.debug(f"Уведомление при подписке на целевой объект {target_link}: {join_err}")
 
-        # 2. Подписываем аккаунт на группу результатов, куда пересылаются сообщения
-        pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-        if not pt_rec or not pt_rec.created_group_id:
-            logger.info(f"У пользователя {user_id} еще нет созданной группы результатов для синхронизации")
-            return True, False
-
+        # 2. Проверяем наличие и доступность группы результатов
+        pt_rec, _ = UsersPersonalTrackings.get_or_create(user_id=user_id)
         group_id = pt_rec.created_group_id
+        need_recreate = False
+
+        if not group_id:
+            # Если у пользователя уже настроены группы для отслеживания (UsersGroups),
+            # но группа результатов отсутствует — нужно пересоздать её при подключении нового аккаунта!
+            if user_groups:
+                need_recreate = True
+                logger.info(f"ℹ️ У пользователя {user_id} настроено отслеживание, но отсутствует группа результатов. Пересоздаем...")
+            else:
+                logger.info(f"У пользователя {user_id} еще нет настроенных отслеживаний для создания группы результатов")
+                return True, False
+        else:
+            # Проверяем, существует ли группа и доступен ли в ней бот
+            try:
+                await bot.get_chat(group_id)
+            except (TelegramForbiddenError, TelegramBadRequest) as chat_err:
+                logger.warning(f"⚠️ Группа результатов {group_id} недоступна ({chat_err}). Пересоздаем группу результатов...")
+                need_recreate = True
+
+        if need_recreate:
+            # Определяем заголовок создаваемой группы
+            target_title = "Персональная группа"
+            if user_groups:
+                g0 = user_groups[0]
+                raw_title = getattr(g0, 'name_group', None) or getattr(g0, 'username_group', None) or "Отслеживание"
+                target_title = str(raw_title).replace("https://t.me/", "@")[:20]
+            group_title = f"Отслеживание: {target_title}"
+
+            try:
+                created_channel = await client(CreateChannelRequest(
+                    title=group_title,
+                    about="Группа персонального отслеживания",
+                    megagroup=True
+                ))
+                new_chat = created_channel.chats[0]
+                group_id = utils.get_peer_id(new_chat)
+
+                # Добавляем бота администратором с правом назначать других администраторов
+                admin_rights = ChatAdminRights(
+                    change_info=True,
+                    post_messages=True,
+                    edit_messages=True,
+                    delete_messages=True,
+                    ban_users=True,
+                    invite_users=True,
+                    pin_messages=True,
+                    add_admins=True,
+                    manage_topics=True
+                )
+                await client(EditAdminRequest(
+                    channel=new_chat,
+                    user_id=username_bot,
+                    admin_rights=admin_rights,
+                    rank="AlertBot"
+                ))
+
+                # Бот создает постоянную ссылку-приглашение без ограничений
+                bot_invite = await bot.create_chat_invite_link(
+                    chat_id=group_id,
+                    name="PermanentAlertGroup",
+                    expire_date=None,
+                    member_limit=None,
+                    creates_join_request=False
+                )
+                invite_link = bot_invite.invite_link
+
+                # Сохраняем новую группу в профиль пользователя
+                pt_rec.created_group_id = group_id
+                pt_rec.created_group_link = invite_link
+                pt_rec.last_changed_at = datetime.now()
+                pt_rec.save()
+
+                logger.info(f"✅ Новая группа результатов для user_id={user_id} пересоздана: ID={group_id}, Link={invite_link}")
+
+                # Оповещаем пользователя в ЛС бота о новой созданной группе результатов
+                try:
+                    user_lang = determines_user_language(message_or_callback=user_id)
+                    notify_text = (
+                        f"🎉 <b>Группа для результатов успешно создана!</b>\n\n"
+                        f"🔗 <b>Ссылка для вступления:</b> <a href='{invite_link}'>Перейти в группу</a>\n\n"
+                        f"<i>Все найденные совпадения по ключевым словам будут отправляться туда.</i>"
+                    ) if user_lang == "ru" else (
+                        f"🎉 <b>Results group successfully created!</b>\n\n"
+                        f"🔗 <b>Invite link:</b> <a href='{invite_link}'>Go to group</a>\n\n"
+                        f"<i>All keyword match alerts will be sent there.</i>"
+                    )
+                    await bot.send_message(chat_id=user_id, text=notify_text, parse_mode="HTML")
+                except Exception as notify_err:
+                    logger.debug(f"Не удалось отправить уведомление о новой группе: {notify_err}")
+
+                return True, False
+            except Exception as cr_err:
+                logger.error(f"❌ Ошибка пересоздания группы результатов: {cr_err}")
+                return False, False
+
         invite_link = (pt_rec.created_group_link or "").strip()
 
         # Разбаниваем аккаунт в группе через бота на случай, если он ранее был исключен
