@@ -228,15 +228,10 @@
     - Удалён несуществующий класс `UserAccountsTable`. Поиск и удаление переведены на модель `UsersAccounts` по полям `user_id` и `phone_number_session_string`, с очисткой `personal_account` в `UsersPersonalTrackings` и отключением клиента.
 - [x] **[11.11.2026] Исправление списка подключенных аккаунтов (`GET /api/accounts` в `web/server.py:685`)**:
     - Запрос переведён напрямую на таблицу `UsersAccounts` с получением `phone_number_session_string` и `date_added`, устранён `KeyError: 'phone_number'`.
-- [ ] **Краш списка отслеживаемых каналов (`GET /api/channels` в `web/server.py:450`)**:
-    - **Проблема**: Обращение `ch.username` падает с `AttributeError: 'UsersGroups' object has no attribute 'username'`.
-      В модели поле называется `username_group`.
-    - **Что сделать**: Заменить `ch.username` на `ch.username_group`.
-- [ ] **Посимвольный цикл при загрузке каналов из TXT (`POST /api/channels/upload` в `web/server.py:488-496`)**:
-    - **Проблема**: Массив строк `username_group` внутри цикла перезаписывается строкой
-      `username_group = f"@{username}"`. Со второй итерации цикл начинает перебирать имя канала по отдельным буквам.
-    - **Что сделать**: Использовать отдельную переменную для форматированного имени канала (например,
-      `target_username`).
+- [x] **[11.11.2026] Краш списка отслеживаемых каналов (`GET /api/channels` в `web/server.py:573`)**:
+    - Заменено `ch.username` на `ch.username_group`.
+- [x] **[11.11.2026] Посимвольный цикл при загрузке каналов из TXT (`POST /api/channels/upload` в `web/server.py:625-649`)**:
+    - Переменная списка переименована в `channel_lines`, целевое имя вынесено в `target_username`, добавлена поддержка кодировки `utf-8-sig`.
 - [ ] **Лишний аргумент при запуске трекинга из веба (`POST /api/tracking/start` в `web/server.py:389`)**:
     - **Проблема**: Вызов `background_tasks.add_task(filter_messages, message=mock_msg, user_id=..., user=user)` падает
       с `TypeError: filter_messages() got an unexpected keyword argument 'user'`.

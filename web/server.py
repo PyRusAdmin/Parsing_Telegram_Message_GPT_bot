@@ -570,7 +570,7 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     # user_id = user_data["id"]
     records = list(
         UsersGroups.select().where(UsersGroups.user_id == user_data["id"]).order_by(UsersGroups.date_added.desc()))
-    return [{"id": ch.id, "username": ch.username, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
+    return [{"id": ch.id, "username": ch.username_group, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
             records]
 
 
@@ -625,16 +625,18 @@ async def upload_channels_file(file: UploadFile = File(...), user_data: dict = D
     if not file.filename.endswith(".txt"):
         raise HTTPException(status_code=400, detail="Only .txt files are supported")
     contents = await file.read()
-    text = contents.decode("utf-8")
-    username_group = [line.strip() for line in text.splitlines() if line.strip()]
+    try:
+        text = contents.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = contents.decode("utf-8", errors="ignore")
+    channel_lines = [line.strip() for line in text.splitlines() if line.strip()]
     added_count = 0
     skipped_count = 0
     errors_count = 0
-    for username in username_group:
-        if not username.startswith("@"):
-            username_group = f"@{username}"
+    for channel in channel_lines:
+        target_username = channel if channel.startswith("@") else f"@{channel}"
         try:
-            UsersGroups.create(user_id=user_data["id"], username_group=username_group)
+            UsersGroups.create(user_id=user_data["id"], username_group=target_username)
             added_count += 1
         except Exception as e:
             if "UNIQUE constraint failed" in str(e):
