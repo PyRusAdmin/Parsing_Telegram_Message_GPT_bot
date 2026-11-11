@@ -215,43 +215,72 @@
 
 - [x] **[11.11.2026] Защита переменной `tuna_cmd` и изоляция консольного вывода в `main.py`**:
     - Задано дефолтное значение `tuna_cmd = "tuna"` до проверок путей, исключив `UnboundLocalError`.
-    - Добавлен флаг `--log logs/tuna.log` и перенаправление потоков вывода туннеля в `subprocess.DEVNULL`, что восстановило вывод логов бота и FastAPI в консоль.
+    - Добавлен флаг `--log logs/tuna.log` и перенаправление потоков вывода туннеля в `subprocess.DEVNULL`, что
+      восстановило вывод логов бота и FastAPI в консоль.
 - [x] **[11.11.2026] Проверка прав администратора без падения типов `TypeError: in <string>`**:
-    - В `core/config.py` значение `ADMIN_USER_ID` приведено к типу `int`. Во всех проверках прав (`keyboards/`, `handlers/admin/`, `handlers/user/personal_tracking.py`, `web/server.py`) условие переведено на прямое целочисленное сравнение `int(user_id) == int(ADMIN_USER_ID)`.
+    - В `core/config.py` значение `ADMIN_USER_ID` приведено к типу `int`. Во всех проверках прав (`keyboards/`,
+      `handlers/admin/`, `handlers/user/personal_tracking.py`, `web/server.py`) условие переведено на прямое
+      целочисленное сравнение `int(user_id) == int(ADMIN_USER_ID)`.
 - [x] **[11.11.2026] Замена `Account` на `UsersAccounts` в эндпоинте админки (`web/server.py:1172`)**:
     - Количество аккаунтов считается напрямую через `UsersAccounts.select().count()`.
 - [x] **[11.11.2026] Исправление удаления аккаунтов (`web/server.py:783`)**:
-    - Удалён несуществующий класс `UserAccountsTable`. Поиск и удаление переведены на модель `UsersAccounts` по полям `user_id` и `phone_number_session_string`, с очисткой `personal_account` в `UsersPersonalTrackings` и отключением клиента.
+    - Удалён несуществующий класс `UserAccountsTable`. Поиск и удаление переведены на модель `UsersAccounts` по полям
+      `user_id` и `phone_number_session_string`, с очисткой `personal_account` в `UsersPersonalTrackings` и отключением
+      клиента.
 - [x] **[11.11.2026] Исправление списка подключенных аккаунтов (`GET /api/accounts` в `web/server.py:685`)**:
-    - Запрос переведён напрямую на таблицу `UsersAccounts` с получением `phone_number_session_string` и `date_added`, устранён `KeyError: 'phone_number'`.
+    - Запрос переведён напрямую на таблицу `UsersAccounts` с получением `phone_number_session_string` и `date_added`,
+      устранён `KeyError: 'phone_number'`.
 - [x] **[11.11.2026] Краш списка отслеживаемых каналов (`GET /api/channels` в `web/server.py:573`)**:
     - Заменено обращение `ch.username` на `ch.username_group`.
-- [x] **[11.11.2026] Посимвольный цикл при загрузке каналов из TXT (`POST /api/channels/upload` в `web/server.py:625-649`)**:
-    - Переменная списка переименована в `channel_lines`, целевое имя вынесено в `target_username`, добавлена поддержка кодировки `utf-8-sig`.
+- [x] **[11.11.2026] Посимвольный цикл при загрузке каналов из TXT (`POST /api/channels/upload` в
+  `web/server.py:625-649`)**:
+    - Переменная списка переименована в `channel_lines`, целевое имя вынесено в `target_username`, добавлена поддержка
+      кодировки `utf-8-sig`.
 - [x] **[11.11.2026] Лишний аргумент при запуске трекинга из веба (`POST /api/tracking/start` в `web/server.py:485`)**:
-    - Убран лишний аргумент `user=user`, вызов приведен в строгое соответствие с сигнатурой `filter_messages(message, user_id)`.
-- [x] **[11.11.2026] Свойства пользователя `user.username`, `user.first_name`, `user.last_name` (`database/users_personal_trackings.py`)**:
-    - В модель `UsersPersonalTrackings` добавлены свойства `@property` (`username`, `first_name`, `last_name`), возвращающие значения колонок `user_username`, `user_firstname`, `user_last_name` с защитой от `None`.
-- [x] **[11.11.2026] Защита от `KeyError` в AI-поиске групп (`POST /api/searchs/ai` и `/api/search/ai` в `web/server.py`)**:
-    - Прямое обращение `user_data["last_name"]`, `user_data["first_name"]`, `user_data["username"]` заменено на безопасные `.get()`.
-- [x] **[11.11.2026] Нехватка аргументов в фоновой задаче проверки аккаунтов (`bg_check_accounts` в `web/server.py:1210`)**:
-    - Передаются `user_id=ADMIN_USER_ID` и `user_lang="ru"`, а в методе `verify_account` заданы значения по умолчанию (`user_id=0`, `user_lang="ru"`).
+    - Убран лишний аргумент `user=user`, вызов приведен в строгое соответствие с сигнатурой
+      `filter_messages(message, user_id)`.
+- [x] **[11.11.2026] Свойства пользователя `user.username`, `user.first_name`, `user.last_name` (
+  `database/users_personal_trackings.py`)**:
+    - В модель `UsersPersonalTrackings` добавлены свойства `@property` (`username`, `first_name`, `last_name`),
+      возвращающие значения колонок `user_username`, `user_firstname`, `user_last_name` с защитой от `None`.
+- [x] **[11.11.2026] Защита от `KeyError` в AI-поиске групп (`POST /api/searchs/ai` и `/api/search/ai` в
+  `web/server.py`)**:
+    - Прямое обращение `user_data["last_name"]`, `user_data["first_name"]`, `user_data["username"]` заменено на
+      безопасные `.get()`.
+- [x] **[11.11.2026] Нехватка аргументов в фоновой задаче проверки аккаунтов (`bg_check_accounts` в
+  `web/server.py:1210`)**:
+    - Передаются `user_id=ADMIN_USER_ID` и `user_lang="ru"`, а в методе `verify_account` заданы значения по умолчанию
+      (`user_id=0`, `user_lang="ru"`).
 - [x] **[11.11.2026] Неимпортированная функция `write_account_to_user_table` в `handlers/user/personal_tracking.py`**:
     - Функция `write_account_to_user_table` импортирована из `database.users_accounts`.
 - [x] **[11.11.2026] Ошибка `NameError: message` при бане сессии в `account_manager/auth.py:155`**:
-    - Удалено некорректное обращение к `message.answer`. Отправка уведомления переведена на `bot.send_message(chat_id=user_id, ...)` с безопасной обработкой исключений.
+    - Удалено некорректное обращение к `message.answer`. Отправка уведомления переведена на
+      `bot.send_message(chat_id=user_id, ...)` с безопасной обработкой исключений.
 - [x] **[11.11.2026] Ошибка индексации списка в `find_session_file` (`account_manager/session.py:34`)**:
     - Заменено ошибочное `accounts["session_string"]` на `accounts[0]["session_string"]`.
 - [x] **[11.11.2026] Поддержка приватных инвайт-ссылок в `account_manager/subscription.py`**:
-    - Добавлен разбор хэша инвайт-ссылок (`+hash` и `joinchat/hash`) и прямой вызов `ImportChatInviteRequest` с обработкой `UserAlreadyParticipantError` и `InviteRequestSentError`.
+    - Добавлен разбор хэша инвайт-ссылок (`+hash` и `joinchat/hash`) и прямой вызов `ImportChatInviteRequest` с
+      обработкой `UserAlreadyParticipantError` и `InviteRequestSentError`.
 - [x] **[11.11.2026] Предотвращение `UnboundLocalError` и `@None` в `account_manager/parser.py:103-140`**:
-    - Гарантирована инициализация `chat_entity = None`, безопасное получение `title` и `username`, устранено падение при формировании контекстного сообщения.
+    - Гарантирована инициализация `chat_entity = None`, безопасное получение `title` и `username`, устранено падение при
+      формировании контекстного сообщения.
 - [x] **[11.11.2026] Корректная очистка активных клиентов в `filter_messages` (`account_manager/parser.py:650`)**:
     - Проверка и удаление из `active_clients` и `stop_flags` переведены на строковый ключ `user_key = str(user_id)`.
 - [x] **[11.11.2026] Устранение гигантского хардкод-списка задержек (`account_manager/parser.py:478`)**:
     - Список из 550 чисел заменен на вызов `random.randint(15, 60)`.
 - [x] **[11.11.2026] Устранение дублирования имён хэндлеров в `connect_group.py`**:
-    - Хэндлер callback-запроса переименован в `process_target_link_group_input_cb`, а хэндлер некорректного документа — в `process_non_document_group_file_input`.
+    - Хэндлер callback-запроса переименован в `process_target_link_group_input_cb`, а хэндлер некорректного документа —
+      в `process_non_document_group_file_input`.
+- [x] **[11.11.2026] Единая универсальная функция валидации сессий (`account_manager/auth.py`)**:
+    - Реализована функция `check_and_cleanup_session(session_string, user_id, user_lang)` без использования временных
+      файлов `file.csv`. Проверка сессии потокобезопасна, удаляет невалидные сессии из БД и отправляет уведомление
+      пользователю. Метод `verify_account` переведён на `check_and_cleanup_session`.
+- [x] **[11.11.2026] Оборачивание запуска в функцию и защита `if __name__ == '__main__':` в `main.py`**:
+    - Логика запуска Tuna и `bot.py` вынесена в функцию `run_main()` и защищена блоком `if __name__ == '__main__':`,
+      исключая запуск процессов при импорте.
+- [x] **[11.11.2026] Синхронизация списка моделей классификации с `data/model.json`**:
+    - В `data/model.json` добавлена секция `g4f_models`. Функция `get_best_g4f_model` в
+      `handlers/admin/checking_group_for_ai.py` динамически читает список моделей из конфига.
 
 ---
 
@@ -261,23 +290,7 @@
 
 ---
 
-### 🟡 СРЕДНИЙ ПРИОРИТЕТ: Архитектурные улучшения и надёжность
-
-- [ ] **[Сессии] Единая универсальная функция валидации сессий (`account_manager/auth.py`)**:
-    - **Проблема**: Проверка сессий в `account_manager/auth.py` использует запись и чтение временного файла `file.csv`, что не потокобезопасно при одновременных запросах.
-    - **Что сделать**: Реализовать чистую асинхронную функцию `check_and_cleanup_session(session_string: str, user_id: int) -> tuple[bool, Optional[str]]` без использования временных файлов на диске и перевести на неё метод `verify_account`.
-
-- [ ] **[Точка входа] Оборачивание запуска в функцию и защита `if __name__ == '__main__':` в `main.py`**:
-    - **Проблема**: В `main.py` логика запуска фоновых процессов Tuna и `bot.py` расположена на уровне модуля без проверки `__name__ == '__main__'`. При импорте модуля сторонними скриптами или тестами запускаются рабочие процессы.
-    - **Что сделать**: Обернуть логику в функцию `run_main()` и вызывать её внутри `if __name__ == '__main__':`.
-
----
-
 ### 🟢 НИЗКИЙ ПРИОРИТЕТ / ТЕХНИЧЕСКИЙ ДОЛГ: Очистка и оптимизация
-
-- [ ] **[AI] Синхронизация списка моделей классификации с `data/model.json`**:
-    - **Файл**: `handlers/admin/checking_group_for_ai.py`
-    - **Что сделать**: В функции `get_best_g4f_model` заменить захардкоженный список `["gpt-4o-mini", "mistral-7b"]` на чтение списка моделей из конфигурационного файла `data/model.json`.
 
 - [ ] **[Рефакторинг] Очистка устаревшего закомментированного кода в `web/server.py`**:
     - **Файл**: `web/server.py`
@@ -285,7 +298,8 @@
 
 - [ ] **[База данных] Периодическая проверка целостности базы данных групп**:
     - **Файлы**: `database/database.py`, `web/server.py`
-    - **Что сделать**: Настроить фоновую актуализацию категорий и языков для записей со значением `None` или пустой строкой с соблюдением лимитов AI API.
+    - **Что сделать**: Настроить фоновую актуализацию категорий и языков для записей со значением `None` или пустой
+      строкой с соблюдением лимитов AI API.
 
 ---
 
@@ -294,10 +308,10 @@
 | Блок задач                                                 | Приоритет  | Сложность | Оценка времени | Статус        |
 |------------------------------------------------------------|------------|-----------|----------------|---------------|
 | **2.1. Исправление ошибок FastAPI (`web/server.py`)**      | 🔴 Высокий | Средняя   | ~1–1.5 часа    | ✅ Завершено  |
-| **2.2. Исправление авторизации и сессий Telethon**         | 🔴 Высокий | Средняя   | ~1 час         | 🟡 В процессе |
+| **2.2. Исправление авторизации и сессий Telethon**         | 🔴 Высокий | Средняя   | ~1 час         | ✅ Завершено  |
 | **2.3. Доработка логики подписки и парсера (`parser.py`)** | 🟡 Средний | Средняя   | ~1–1.5 часа    | ✅ Завершено  |
 | **2.4. Исправление дублирования хэндлеров и `main.py`**    | 🟡 Средний | Низкая    | ~30 минут      | ✅ Завершено  |
-| **2.5. Вынос моделей в `model.json` и очистка техдолга**   | 🟢 Низкий  | Низкая    | ~30–45 минут   | ⚪ В плане    |
+| **2.5. Вынос моделей в `model.json` и очистка техдолга**   | 🟢 Низкий  | Низкая    | ~30 минут      | 🟡 В процессе |
 
 > **Итого ориентировочный объём доработок**: ~3–5 рабочих часов для устранения всех дефектов и вывода проекта в
 > полностью рабочее состояние.

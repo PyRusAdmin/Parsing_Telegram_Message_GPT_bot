@@ -42,6 +42,67 @@ async def get_account_info(client: TelegramClient) -> dict:
     }
 
 
+async def check_and_cleanup_session(session_string: str, user_id: int = 0, user_lang: str = "ru") -> tuple[bool, Optional[str]]:
+    """
+    Универсальная потокобезопасная проверка сессии Telethon.
+    При обнаружении невалидности автоматически удаляет запись из базы данных
+    и безопасно уведомляет пользователя через Telegram-бота.
+
+    :param session_string: (str) Строка сессии Telethon (StringSession).
+    :param user_id: (int) Telegram ID пользователя (0, если неизвестен).
+    :param user_lang: (str) Языковой код интерфейса пользователя ('ru' или 'en').
+    :return: (tuple[bool, Optional[str]]) (True, None) если сессия валидна, иначе (False, описание ошибки).
+    """
+    if not session_string:
+        return False, "Empty session string"
+
+    checker = CheckingAccountsValidity()
+    try:
+        client = await checker.client_connect_string_session(session_name=session_string)
+        if client is None:
+            if user_id:
+                delete_account_from_user_table(user_id=user_id, personal_account=session_string)
+            return False, "Failed to connect client"
+
+        try:
+            if not await client.is_user_authorized():
+                logger.warning(f"⚠️ Сессия не авторизована: {session_string[:25]}...")
+                await client.disconnect()
+                if user_id:
+                    delete_account_from_user_table(user_id=user_id, personal_account=session_string)
+                return False, "Session not authorized"
+            else:
+                logger.info(f"✅ Сессия авторизована: {session_string[:25]}...")
+                await client.disconnect()
+                return True, None
+        except (PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
+                AuthKeyUnregisteredError, AuthKeyDuplicatedError) as e:
+            logger.warning(f"❌ Невалидная/заблокированная сессия: {e}")
+            if user_id:
+                delete_account_from_user_table(user_id=user_id, personal_account=session_string)
+                try:
+                    from system.dispatcher import bot
+                    await bot.send_message(
+                        chat_id=user_id,
+                        text=t("session_invalid", lang=user_lang or "ru"),
+                        reply_markup=menu_launch_tracking_keyboard(lang=user_lang or "ru")
+                    )
+                except Exception as notify_err:
+                    logger.warning(
+                        f"Не удалось отправить уведомление о невалидной сессии пользователю {user_id}: {notify_err}")
+            return False, str(e)
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка при проверке авторизации: {e}")
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            return False, str(e)
+    except Exception as e:
+        logger.exception(f"❌ Ошибка в check_and_cleanup_session: {e}")
+        return False, str(e)
+
+
 class CheckingAccountsValidity:
     """Класс для проверки валидности и подключения аккаунтов Telegram"""
 
@@ -123,65 +184,17 @@ class CheckingAccountsValidity:
                         invalid_sessions.append(row[0])
         return invalid_sessions
 
-    # TODO 25.10.2026 Сделать универсальную функцию проверки сессий для всего проекта. Добавить в общий туду лист
-    async def verify_account(self, session_name: str, user_id: int = 0, user_lang: str = "ru") -> None:
+    async def verify_account(self, session_name: str, user_id: int = 0, user_lang: str = "ru") -> bool:
         """
         Проверяет валидность аккаунта и удаляет невалидные сессии из базы данных пользователя.
 
         :param session_name: (str) Строка сессии для проверки.
         :param user_id: (int) Telegram ID пользователя.
         :param user_lang: (str) Языковой код интерфейса пользователя.
+        :return: (bool) True, если аккаунт валиден, иначе False.
         """
-        try:
-            logger.info(f"Проверка аккаунта {session_name}")
-            client: TelegramClient | None = await self.client_connect_string_session(session_name=session_name)
-
-            if client is None:
-                return
-
-            try:
-                if not await client.is_user_authorized():
-                    await client.disconnect()
-                    await asyncio.sleep(5)
-                    await self.write_csv(data=session_name)
-                else:
-                    logger.info(f"Аккаунт {session_name} авторизован")
-                    await client.disconnect()
-            except (PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
-                    AuthKeyUnregisteredError, AuthKeyDuplicatedError) as e:
-                # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
-                if user_id:
-                    delete_account_from_user_table(user_id=user_id, personal_account=session_name)
-                    try:
-                        from system.dispatcher import bot
-                        await bot.send_message(
-                            chat_id=user_id,
-                            text=t("session_invalid", lang=user_lang or "ru"),
-                            reply_markup=menu_launch_tracking_keyboard(lang=user_lang or "ru")
-                        )
-                    except Exception as notify_err:
-                        logger.warning(
-                            f"Не удалось отправить уведомление о невалидной сессии пользователю {user_id}: {notify_err}")
-            except TimedOutError as e:
-                logger.exception(e)
-                await asyncio.sleep(2)
-            except AttributeError:
-                pass
-
-            invalid_sessions = await self.read_invalid_sessions()
-            logger.info(f"❌ Невалидные сессии: {invalid_sessions}")
-            for session in invalid_sessions:
-                # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
-                if user_id:
-                    delete_account_from_user_table(user_id=user_id, personal_account=session)
-
-            try:
-                os.remove("file.csv")
-            except FileNotFoundError:
-                pass
-
-        except Exception as error:
-            logger.exception(error)
+        is_valid, _ = await check_and_cleanup_session(session_string=session_name, user_id=user_id, user_lang=user_lang)
+        return is_valid
 
     async def connect_client(self) -> TelegramClient | None:
         """

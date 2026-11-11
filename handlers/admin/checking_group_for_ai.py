@@ -76,12 +76,16 @@ async def get_best_g4f_model(client: Client) -> str:
     :param client: (Client) Экземпляр клиента g4f.
     :return: (str) Идентификатор доступной модели (например, 'gpt-4o-mini').
     """
-    # Список моделей по приоритету (от быстрой к медленной)
-    # TODO список моделей сделать в отдельном в файле, а не в коде, что бы можно было бы легко удалить не действительную модель
-    models_to_check = [
-        "gpt-4o-mini",
-        "mistral-7b",
-    ]
+    # Список моделей по приоритету (читается из data/model.json с дефолтным откатом)
+    models_to_check = ["gpt-4o-mini", "mistral-7b"]
+    try:
+        import json
+        with open("data/model.json", "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            if "g4f_models" in cfg and isinstance(cfg["g4f_models"], list) and cfg["g4f_models"]:
+                models_to_check = cfg["g4f_models"]
+    except Exception as read_err:
+        logger.warning(f"Не удалось загрузить g4f_models из data/model.json: {read_err}")
 
     test_prompt = [{"role": "user", "content": "Hi"}]
 
