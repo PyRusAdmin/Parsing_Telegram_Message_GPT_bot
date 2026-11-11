@@ -236,7 +236,8 @@ def menu_launch_tracking_keyboard(lang: str = 'ru', user_id: int | None = None) 
 """Клавиатура меню подключения аккаунтов"""
 
 
-def connect_account_keyboard(lang: str = 'ru', has_account: bool = False, is_shared: bool = False) -> InlineKeyboardMarkup:
+def connect_account_keyboard(lang: str = 'ru', has_account: bool = False,
+                             is_shared: bool = False) -> InlineKeyboardMarkup:
     """
     Создает инлайн-клавиатуру для единого меню подключения аккаунтов.
 

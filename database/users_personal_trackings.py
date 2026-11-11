@@ -113,8 +113,9 @@ def get_session_count(user_id: int) -> int:
     return UsersPersonalTrackings.select().where(
         (UsersPersonalTrackings.user_id == user_id) &
         (
-            ((UsersPersonalTrackings.personal_account.is_null(False)) & (UsersPersonalTrackings.personal_account != '')) |
-            ((UsersPersonalTrackings.shared_account.is_null(False)) & (UsersPersonalTrackings.shared_account != ''))
+                ((UsersPersonalTrackings.personal_account.is_null(False)) & (
+                        UsersPersonalTrackings.personal_account != '')) |
+                ((UsersPersonalTrackings.shared_account.is_null(False)) & (UsersPersonalTrackings.shared_account != ''))
         )
     ).count()
 

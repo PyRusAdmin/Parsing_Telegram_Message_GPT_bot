@@ -1,11 +1,11 @@
 import asyncio
-import os
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions, InlineKeyboardMarkup, \
+    InlineKeyboardButton
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.parser import filter_messages, active_clients
@@ -14,11 +14,12 @@ from core.config import version
 from database.database import getting_number_records_database
 from database.users_groups import get_group_count
 from database.users_keywords import get_keywords_count
-from database.users_personal_trackings import get_session_count, UsersPersonalTrackings, get_group_id_with_personal_tracking
+from database.users_personal_trackings import get_session_count, UsersPersonalTrackings, \
+    get_group_id_with_personal_tracking
 from handlers.user.personal_tracking import get_personal_tracking_text_and_kb
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
-    get_lang_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
+    get_lang_keyboard, connect_keyboard_account,
     get_stars_topup_inline_keyboard, menu_user_admin_keyboard, back_button
 )
 from locales.locales import t
