@@ -24,9 +24,8 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import active_clients
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
-from database.database import (
-    write_account_to_db_free
-)
+from database.account_free import write_account_to_db_free
+
 from database.users_accounts import getting_account, write_account_to_user_table
 from database.users_keywords import add_user_keywords
 from database.users_personal_trackings import get_user_accounts, UsersPersonalTrackings, write_account_to_db
@@ -924,18 +923,15 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             )
 
         await state.clear()
-        auth_success_msg = (
-            f"🎉 <b>Аккаунт успешно авторизован и подключен!</b>\n\n"
-            f"👤 <b>Имя:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
-            f"📱 <b>Телефон:</b> +{account_info.get('phone') or ''}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
-            f"✅ Сессия сохранена в базе и готова к отслеживанию."
-        ) if user_lang == "ru" else (
-            f"🎉 <b>Account successfully authorized and connected!</b>\n\n"
-            f"👤 <b>Name:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
-            f"📱 <b>Phone:</b> +{account_info.get('phone') or ''}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
-            f"✅ Session saved in database and ready for tracking."
+        first_name = account_info.get("first_name") or ""
+        last_name = account_info.get("last_name") or ""
+        full_name = f"{first_name} {last_name}".strip()
+        auth_success_msg = t(
+            "pt_auth_success",
+            lang=user_lang,
+            name=full_name,
+            phone=str(account_info.get("phone") or ""),
+            tg_id=str(account_info.get("id") or "")
         )
         await callback.message.edit_text(
             auth_success_msg,
@@ -945,16 +941,10 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         await callback.answer(t("pt_invalid_code_alert", lang=user_lang), show_alert=True)
         await state.update_data(current_code="")
         try:
-            err_code_text = (
-                f"📩 <b>Код подтверждения отправлен в Ваш Telegram!</b>\n\n"
-                f"📱 <b>Номер:</b> <code>{phone}</code>\n"
-                f"🔢 <b>Введенный код:</b> <code>_ _ _ _ _</code>\n\n"
-                f"❌ <b>Ошибка: Неверный код. Попробуйте выбрать цифры заново:</b>"
-            ) if user_lang == "ru" else (
-                f"📩 <b>Verification code sent to your Telegram!</b>\n\n"
-                f"📱 <b>Number:</b> <code>{phone}</code>\n"
-                f"🔢 <b>Entered code:</b> <code>_ _ _ _ _</code>\n\n"
-                f"❌ <b>Error: Invalid code. Please try selecting digits again:</b>"
+            err_code_text = t(
+                "pt_auth_code_invalid_screen",
+                lang=user_lang,
+                phone=str(phone or "")
             )
             await callback.message.edit_text(
                 err_code_text,
@@ -983,13 +973,7 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             pass
 
         try:
-            two_fa_prompt = (
-                "🔐 <b>На Вашем аккаунте включена двухэтапная аутентификация (2FA)!</b>\n\n"
-                "Пожалуйста, введите Ваш облачный пароль текстом в ответном сообщении:"
-            ) if user_lang == "ru" else (
-                "🔐 <b>Two-Step Verification (2FA) is enabled on your account!</b>\n\n"
-                "Please enter your cloud password as text in response:"
-            )
+            two_fa_prompt = t("pt_auth_2fa_prompt", lang=user_lang)
             await callback.message.edit_text(
                 two_fa_prompt,
                 parse_mode="HTML"
@@ -1060,25 +1044,22 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
             )
 
         await state.clear()
-        auth_2fa_done = (
-            f"🎉 <b>Аккаунт успешно авторизован с 2FA паролем!</b>\n\n"
-            f"👤 <b>Имя:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
-            f"📱 <b>Телефон:</b> +{account_info.get('phone') or ''}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
-            f"✅ Сессия успешно сохранена в базе данных."
-        ) if user_lang == "ru" else (
-            f"🎉 <b>Account successfully authorized with 2FA password!</b>\n\n"
-            f"👤 <b>Name:</b> {account_info.get('first_name') or ''} {account_info.get('last_name') or ''}\n"
-            f"📱 <b>Phone:</b> +{account_info.get('phone') or ''}\n"
-            f"🆔 <b>Telegram ID:</b> <code>{account_info.get('id') or ''}</code>\n\n"
-            f"✅ Session successfully saved in database."
+        first_name = account_info.get("first_name") or ""
+        last_name = account_info.get("last_name") or ""
+        full_name = f"{first_name} {last_name}".strip()
+        auth_2fa_done = t(
+            "pt_auth_2fa_success",
+            lang=user_lang,
+            name=full_name,
+            phone=str(account_info.get("phone") or ""),
+            tg_id=str(account_info.get("id") or "")
         )
         await status_msg.edit_text(
             auth_2fa_done,
             parse_mode="HTML"
         )
     except PasswordHashInvalidError:
-        inv_2fa = "❌ <b>Неверный 2FA пароль!</b>\n\nПожалуйста, введите корректный облачный пароль текстом:" if user_lang == "ru" else "❌ <b>Invalid 2FA password!</b>\n\nPlease enter the correct cloud password as text:"
+        inv_2fa = t("pt_auth_2fa_invalid", lang=user_lang)
         await status_msg.edit_text(inv_2fa, parse_mode="HTML")
     except Exception as e:
         logger.exception(f"❌ Ошибка 2FA авторизации: {e}")

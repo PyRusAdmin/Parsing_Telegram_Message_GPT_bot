@@ -763,7 +763,37 @@ pt_invalid_code_alert = ❌ Invalid verification code! Try again.
 pt_code_expired_alert = ❌ Verification code expired! Request code again.
 pt_login_error_alert = ❌ Login error: { $error }
 pt_checking_2fa = 🔄 <i>Verifying 2FA password...</i>
-pt_auth_success = ✅ <b>Authorization successful!</b>\n\nAccount successfully connected.
+pt_auth_success =
+    🎉 <b>Account successfully authorized and connected!</b>
+
+    👤 <b>Name:</b> { $name }
+    📱 <b>Phone:</b> +{ $phone }
+    🆔 <b>Telegram ID:</b> <code>{ $tg_id }</code>
+
+    ✅ Session saved in database and ready for tracking.
+pt_auth_2fa_success =
+    🎉 <b>Account successfully authorized with 2FA password!</b>
+
+    👤 <b>Name:</b> { $name }
+    📱 <b>Phone:</b> +{ $phone }
+    🆔 <b>Telegram ID:</b> <code>{ $tg_id }</code>
+
+    ✅ Session successfully saved in database.
+pt_auth_code_invalid_screen =
+    📩 <b>Verification code sent to your Telegram!</b>
+
+    📱 <b>Number:</b> <code>{ $phone }</code>
+    🔢 <b>Entered code:</b> <code>_ _ _ _ _</code>
+
+    ❌ <b>Error: Invalid code. Please try selecting digits again:</b>
+pt_auth_2fa_prompt =
+    🔐 <b>Two-Step Verification (2FA) is enabled on your account!</b>
+
+    Please enter your cloud password as text in response:
+pt_auth_2fa_invalid =
+    ❌ <b>Invalid 2FA password!</b>
+
+    Please enter the correct cloud password as text:
 pt_auth_error = ❌ Authorization error: { $error }
 pt_auth_cancelled = 🚫 Authorization cancelled.
 pt_phone_prompt = 📱 <b>Connect Telegram Account</b>\n\nEnter your phone number in international format (e.g., <code>+79991234567</code>):
