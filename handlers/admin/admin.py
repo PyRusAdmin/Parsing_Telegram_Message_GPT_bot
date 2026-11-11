@@ -57,7 +57,8 @@ async def export_questions_cb(callback: CallbackQuery):
             for question_data in questions:
                 writer.writerow(question_data)
 
-        await callback.message.answer_document(FSInputFile(file_path), caption=t("questions_export_caption", lang=user_lang))
+        await callback.message.answer_document(FSInputFile(file_path),
+                                               caption=t("questions_export_caption", lang=user_lang))
         os.remove(file_path)
 
     except Exception as e:
@@ -267,14 +268,16 @@ async def broadcast_send_cb(callback: CallbackQuery, state: FSMContext, bot):
         if idx % 25 == 0 or idx == total:
             try:
                 await status_msg.edit_text(
-                    text=t("admin_broadcast_progress", lang=user_lang, current=idx, total=total, sent=sent_count, blocked=blocked_count, errors=error_count),
+                    text=t("admin_broadcast_progress", lang=user_lang, current=idx, total=total, sent=sent_count,
+                           blocked=blocked_count, errors=error_count),
                     parse_mode="HTML"
                 )
             except Exception:
                 pass
 
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    report_text = t("admin_broadcast_report", lang=user_lang, total=total, sent=sent_count, blocked=blocked_count, errors=error_count)
+    report_text = t("admin_broadcast_report", lang=user_lang, total=total, sent=sent_count, blocked=blocked_count,
+                    errors=error_count)
 
     try:
         await status_msg.edit_text(

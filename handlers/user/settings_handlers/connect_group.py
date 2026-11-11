@@ -22,7 +22,7 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == "group_input")
-async def process_target_link_input_group_input(callback: CallbackQuery, state: FSMContext):
+async def process_target_link_group_input_cb(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик инлайн-кнопки "Ввод группы" для отслеживания ключевых слов.
 
@@ -211,7 +211,7 @@ async def handle_group_usernames_file(message: Message, state: FSMContext, bot):
 
 
 @router.message(MyStates.waiting_username_group, ~F.document)
-async def process_non_text_group_input(message: Message, state: FSMContext):
+async def process_non_document_group_file_input(message: Message, state: FSMContext):
     """
     Просит пользователя отправить именно TXT-файл, если прислан другой тип сообщения.
 

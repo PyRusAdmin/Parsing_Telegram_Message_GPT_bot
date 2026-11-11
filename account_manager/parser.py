@@ -102,36 +102,33 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         logger.info(f"📌 Найдено совпадение по ключевому слову '{matched_keyword}'. Пересылаю сообщение ID={message.id}")
         try:
             # Получаем информацию о чате-источнике
+            chat_entity = None
+            chat_title = "Неизвестно"
+            chat_username = ""
             try:
                 chat_entity = await client.get_entity(chat_id)
-                chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "username",
-                                                                            None) or "Неизвестно"
+                chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name", None) or "Неизвестно"
+                chat_username = getattr(chat_entity, "username", None) or ""
             except Exception as e:
-                logger.exception(f"Не удалось получить название чата: {e}")
-                chat_title = "Неизвестно"
+                logger.warning(f"Не удалось получить информацию о чате {chat_id}: {e}")
+
             # Формируем ссылку на сообщение
-            # Для супергрупп/каналов (chat_id начинается с -100)
             if str(chat_id).startswith("-100"):
-                # Удаляем префикс -100 и получаем чистый ID
+                # Для супергрупп/каналов (chat_id начинается с -100)
                 clean_chat_id = str(chat_id)[4:]
                 message_link = f"https://t.me/c/{clean_chat_id}/{message.id}"
+            elif chat_username:
+                message_link = f"https://t.me/{chat_username}/{message.id}"
             else:
-                # Для чатов с username (если есть)
-                try:
-                    chat_entity = await client.get_entity(chat_id)
-                    if chat_entity.username:
-                        message_link = f"https://t.me/{chat_entity.username}/{message.id}"
-                    else:
-                        message_link = "Ссылка недоступна (нет username)"
-                except Exception as e:
-                    logger.exception(f"Не удалось получить ссылку на сообщение: {e}")
-                    message_link = "Ссылка недоступна"
+                message_link = "Ссылка недоступна"
+
+            chat_display = f"@{chat_username}" if chat_username else chat_title
             try:
                 # Формируем итоговое сообщение с контекстом
                 context_text = (
                     f"📥 **Новое сообщение**\n\n"
                     f"**Источник:** {chat_title}\n"
-                    f"**Чат:** @{chat_entity.username}\n"
+                    f"**Чат:** {chat_display}\n"
                     f"**Ссылка:** {message_link}\n\n"
                     f"**Ключевое слово:** `{matched_keyword}`\n\n"
                     f"**Текст сообщения:**\n{message.message}"
@@ -478,31 +475,7 @@ async def join_required_channels(client, user_id, message, already_subscribed):
             t("too_many_channels", lang=user_lang, total=len(list(db_channels - already_subscribed)), limit=500)
         )
     for channel in list(db_channels - already_subscribed)[:500]:  # Ограничиваем до 500 записей
-        random_delay = random.choice(
-            [
-                15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-                41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66,
-                67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
-                93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
-                115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
-                136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156,
-                157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177,
-                178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198,
-                199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
-                310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330,
-                331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351,
-                352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372,
-                373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393,
-                394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414,
-                415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431, 432, 433, 434, 435,
-                436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446, 447, 448, 449, 450, 451, 452, 453, 454, 455, 456,
-                457, 458, 459, 460, 461, 462, 463, 464, 465, 466, 467, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477,
-                478, 479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 496, 497, 498,
-                499, 500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519,
-                520, 521, 522, 523, 524, 525, 526, 527, 528, 529, 530, 531, 532, 533, 534, 535, 536, 537, 538, 539, 540,
-                541, 542, 543, 544, 545, 546, 547, 548, 549, 550, 551, 552, 553, 554, 555, 556, 557, 558, 559,
-            ]
-        )
+        random_delay = random.randint(15, 60)
 
         try:
             logger.info(f"🔗 Попытка подписки на канал {channel}")
@@ -672,14 +645,15 @@ async def filter_messages(message, user_id):
         logger.exception(f"❌ Критическая ошибка в filter_messages: {e}")
     finally:
         # ✅ Очищаем ресурсы
-        if user_id in active_clients:
-            client = active_clients.pop(str(user_id))
+        user_key = str(user_id)
+        if user_key in active_clients:
+            client = active_clients.pop(user_key)
             if client.is_connected():
                 await client.disconnect()
-                logger.info(f"🛑 Клиент для user_id={str(user_id)} отключён.")
-        if user_id in stop_flags:
-            stop_flags.pop(str(user_id))
-            logger.info(f"🗑️ Флаг остановки для user_id={str(user_id)} удалён.")
+                logger.info(f"🛑 Клиент для user_id={user_key} отключён.")
+        if user_key in stop_flags:
+            stop_flags.pop(user_key)
+            logger.info(f"🗑️ Флаг остановки для user_id={user_key} удалён.")
 
 
 async def stop_tracking(user_id, message):

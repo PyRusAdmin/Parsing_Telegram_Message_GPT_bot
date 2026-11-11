@@ -50,6 +50,18 @@ class UsersPersonalTrackings(database.Model):
     # Персональный аккаунт для отслеживания (для обратной совместимости)
     personal_account = CharField(default="", null=True)
 
+    @property
+    def username(self) -> str:
+        return self.user_username or ""
+
+    @property
+    def first_name(self) -> str:
+        return self.user_firstname or ""
+
+    @property
+    def last_name(self) -> str:
+        return self.user_last_name or ""
+
     class Meta:
         """Метаданные таблицы пользователей и персонального отслеживания"""
         table_name = "users_personal_trackings"

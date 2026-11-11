@@ -124,7 +124,7 @@ class CheckingAccountsValidity:
         return invalid_sessions
 
     # TODO 25.10.2026 Сделать универсальную функцию проверки сессий для всего проекта. Добавить в общий туду лист
-    async def verify_account(self, session_name, user_id, user_lang) -> None:
+    async def verify_account(self, session_name: str, user_id: int = 0, user_lang: str = "ru") -> None:
         """
         Проверяет валидность аккаунта и удаляет невалидные сессии из базы данных пользователя.
 
@@ -149,13 +149,19 @@ class CheckingAccountsValidity:
                     await client.disconnect()
             except (PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
                     AuthKeyUnregisteredError, AuthKeyDuplicatedError) as e:
-                # await delete_account_from_db(session_string=session_name)
                 # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
-                delete_account_from_user_table(user_id=user_id, personal_account=session_name)
-                await message.answer(
-                    t("session_invalid", lang=user_lang),
-                    reply_markup=menu_launch_tracking_keyboard()
-                )
+                if user_id:
+                    delete_account_from_user_table(user_id=user_id, personal_account=session_name)
+                    try:
+                        from system.dispatcher import bot
+                        await bot.send_message(
+                            chat_id=user_id,
+                            text=t("session_invalid", lang=user_lang or "ru"),
+                            reply_markup=menu_launch_tracking_keyboard(lang=user_lang or "ru")
+                        )
+                    except Exception as notify_err:
+                        logger.warning(
+                            f"Не удалось отправить уведомление о невалидной сессии пользователю {user_id}: {notify_err}")
             except TimedOutError as e:
                 logger.exception(e)
                 await asyncio.sleep(2)
@@ -166,7 +172,8 @@ class CheckingAccountsValidity:
             logger.info(f"❌ Невалидные сессии: {invalid_sessions}")
             for session in invalid_sessions:
                 # Если аккаунт не валидный, то удаляем не валидный аккаунт из базы данных, персональной таблицы пользователя
-                delete_account_from_user_table(user_id=user_id, personal_account=session)
+                if user_id:
+                    delete_account_from_user_table(user_id=user_id, personal_account=session)
 
             try:
                 os.remove("file.csv")

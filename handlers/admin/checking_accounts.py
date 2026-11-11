@@ -33,7 +33,7 @@ async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
         for session_name in records:
             logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
             checker = CheckingAccountsValidity()
-            await checker.verify_account(session_name)
+            await checker.verify_account(session_name=session_name, user_id=callback.from_user.id, user_lang=user_lang)
 
         await callback.message.answer(
             t("checking_accounts_complete", lang=user_lang)

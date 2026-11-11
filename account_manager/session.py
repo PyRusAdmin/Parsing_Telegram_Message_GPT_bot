@@ -25,13 +25,13 @@ async def find_session_file(user_id: int, message):
         logger.warning(f"⚠️ У пользователя {user_id} нет подключённых аккаунтов в БД")
         await message.answer(
             t("no_accounts", lang=user_lang),
-            reply_markup=menu_launch_tracking_keyboard()
+            reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
         )
         return None
 
     logger.info(f"📦 Найдено {len(accounts)} аккаунтов в БД для пользователя {user_id}")
     # Подключеный аккаунт пользователя
-    session_string = accounts["session_string"]
+    session_string = accounts[0]["session_string"]
 
     checker = CheckingAccountsValidity()
     await checker.verify_account(session_name=session_string, user_id=user_id, user_lang=user_lang)

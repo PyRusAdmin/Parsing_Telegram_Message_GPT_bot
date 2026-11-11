@@ -225,50 +225,37 @@
 - [x] **[11.11.2026] Замена `Account` на `UsersAccounts` в эндпоинте админки (`web/server.py:1172`)**:
     - Заменено на `UsersAccounts.select().count()`.
 - [x] **[11.11.2026] Исправление удаления аккаунтов (`web/server.py:783`)**:
-    - Удалён несуществующий класс `UserAccountsTable`. Поиск и удаление переведены на модель `UsersAccounts` по полям `user_id` и `phone_number_session_string`, с очисткой `personal_account` в `UsersPersonalTrackings` и отключением клиента.
+    - Удалён несуществующий класс `UserAccountsTable`. Поиск и удаление переведены на модель `UsersAccounts` по полям
+      `user_id` и `phone_number_session_string`, с очисткой `personal_account` в `UsersPersonalTrackings` и отключением
+      клиента.
 - [x] **[11.11.2026] Исправление списка подключенных аккаунтов (`GET /api/accounts` в `web/server.py:685`)**:
-    - Запрос переведён напрямую на таблицу `UsersAccounts` с получением `phone_number_session_string` и `date_added`, устранён `KeyError: 'phone_number'`.
+    - Запрос переведён напрямую на таблицу `UsersAccounts` с получением `phone_number_session_string` и `date_added`,
+      устранён `KeyError: 'phone_number'`.
 - [x] **[11.11.2026] Краш списка отслеживаемых каналов (`GET /api/channels` в `web/server.py:573`)**:
     - Заменено `ch.username` на `ch.username_group`.
-- [x] **[11.11.2026] Посимвольный цикл при загрузке каналов из TXT (`POST /api/channels/upload` в `web/server.py:625-649`)**:
-    - Переменная списка переименована в `channel_lines`, целевое имя вынесено в `target_username`, добавлена поддержка кодировки `utf-8-sig`.
-- [ ] **Лишний аргумент при запуске трекинга из веба (`POST /api/tracking/start` в `web/server.py:389`)**:
-    - **Проблема**: Вызов `background_tasks.add_task(filter_messages, message=mock_msg, user_id=..., user=user)` падает
-      с `TypeError: filter_messages() got an unexpected keyword argument 'user'`.
-    - **Что сделать**: Убрать аргумент `user=user`.
-- [ ] **Ошибки атрибутов `user.username` и `user.first_name` (`web/server.py:341-342, 388, 403`)**:
-    - **Проблема**: В `GET /api/status` и при создании `MockMessage` обращение к `user.username` и `user.first_name`
-      падает с `AttributeError`, так как свойства удалены из `UsersPersonalTrackings` (поля в БД: `user_username`,
-      `user_firstname`).
-    - **Что сделать**: Заменить обращения на `user.user_username` и `user.user_firstname` (либо вернуть удобные
-      геттеры-свойства в модель).
-- [ ] **Потенциальный `KeyError` в AI-поиске групп (`POST /api/searchs/ai` в `web/server.py:687`)**:
-    - **Проблема**: `user_data["last_name"]` и `user_data["username"]` вызывают ошибку, если у пользователя Telegram они
-      отсутствуют.
-    - **Что сделать**: Использовать `user_data.get("last_name", "")` и `user_data.get("username", "")`.
-- [ ] **Нехватка аргументов в фоновой задаче проверки аккаунтов (`bg_check_accounts` в `web/server.py:1200`)**:
-    - **Проблема**: Вызов `checker.verify_account(session)` падает с
-      `TypeError: missing 2 required positional arguments: 'user_id' and 'user_lang'`.
-    - **Что сделать**: Передавать `user_id=ADMIN_USER_ID` и язык `user_lang='ru'`.
+- [x] **[11.11.2026] Посимвольный цикл при загрузке каналов из TXT (`POST /api/channels/upload` в
+  `web/server.py:625-649`)**:
+    - Переменная списка переименована в `channel_lines`, целевое имя вынесено в `target_username`, добавлена поддержка
+      кодировки `utf-8-sig`.
+- [x] **[11.11.2026] Лишний аргумент при запуске трекинга из веба (`POST /api/tracking/start` в `web/server.py:485`)**:
+    - Убран лишний аргумент `user=user`, вызов приведен в соответствие с сигнатурой `filter_messages(message, user_id)`.
+- [x] **[11.11.2026] Ошибки атрибутов `user.username` и `user.first_name` (`database/users_personal_trackings.py`)**:
+    - В модель `UsersPersonalTrackings` добавлены свойства `@property` (`username`, `first_name`, `last_name`), возвращающие значения колонок `user_username`, `user_firstname`, `user_last_name` с защитой от `None`.
+- [x] **[11.11.2026] Защита от `KeyError` в AI-поиске групп (`POST /api/searchs/ai` и `/api/search/ai` в `web/server.py`)**:
+    - Прямое обращение `user_data["last_name"]`, `user_data["first_name"]`, `user_data["username"]` заменено на безопасные `.get()`.
+- [x] **[11.11.2026] Нехватка аргументов в фоновой задаче проверки аккаунтов (`bg_check_accounts` в `web/server.py:1210`)**:
+    - Передаются `user_id=ADMIN_USER_ID` и `user_lang="ru"`, а в `verify_account` заданы значения по умолчанию (`user_id=0`, `user_lang="ru"`).
 
 ---
 
 #### 📌 2.2. Ошибки авторизации Telethon и сессий пользователя
 
-- [ ] **Неимпортированная функция `write_account_to_user_table` в `handlers/user/personal_tracking.py:859, 995`**:
-    - **Проблема**: Сохранение сессии после успешного ввода SMS-кода или 2FA-пароля падает с
-      `NameError: name 'write_account_to_user_table' is not defined`.
-    - **Что сделать**: Импортировать `write_account_to_user_table` из `database.users_accounts`.
-- [ ] **Ошибка `NameError: message` при бане сессии в `account_manager/auth.py:155`**:
-    - **Проблема**: В методе `verify_account` при перехвате `PhoneNumberBannedError` / `UserDeactivatedBanError`
-      происходит обращение к непереданному объекту `message.answer(...)` и неимпортированным функциям `t` и
-      `menu_launch_tracking_keyboard`.
-    - **Что сделать**: Убрать прямую отправку сообщения из низкоуровневого валидатора сессий, возвращать статус ошибки
-      на уровень вызывающего хэндлера.
-- [ ] **Ошибка индексации списка в `find_session_file` (`account_manager/session.py:34`)**:
-    - **Проблема**: `get_user_accounts(user_id)` возвращает список `list[dict]`, но строка 34 делает
-      `session_string = accounts["session_string"]` -> `TypeError: list indices must be integers or slices, not str`.
-    - **Что сделать**: Заменить на `session_string = accounts[0]["session_string"]`.
+- [x] **[11.11.2026] Неимпортированная функция `write_account_to_user_table` в `handlers/user/personal_tracking.py`**:
+    - Функция `write_account_to_user_table` импортирована из `database.users_accounts`.
+- [x] **[11.11.2026] Ошибка `NameError: message` при бане сессии в `account_manager/auth.py:155`**:
+    - Удалено некорректное обращение к `message.answer`. Отправка уведомления переведена на `bot.send_message(chat_id=user_id, ...)` с безопасной обработкой исключений.
+- [x] **[11.11.2026] Ошибка индексации списка в `find_session_file` (`account_manager/session.py:34`)**:
+    - Заменено `accounts["session_string"]` на `accounts[0]["session_string"]`.
 - [ ] **Единая универсальная функция валидации сессий (`account_manager/auth.py`)**:
     - **Проблема**: Проверка сессий дублируется в нескольких местах проекта.
     - **Что сделать**: Реализовать чистую функцию
@@ -281,37 +268,27 @@
 
 #### 📌 2.3. Доработка логики подписки и парсинга (`account_manager/`)
 
-- [ ] **Поддержка приватных инвайт-ссылок в `account_manager/subscription.py`**:
-    - **Проблема**: Приватные инвайты (`https://t.me/+hash`, `t.me/joinchat/hash`) передаются в `client.get_entity()`,
-      что падает с `ValueError`.
-    - **Что сделать**: Добавить разбор хеша инвайта и вызов `ImportChatInviteRequest` с перехватом
-      `UserAlreadyParticipantError`.
-- [ ] **Предотвращение `UnboundLocalError` в `account_manager/parser.py:103-131`**:
-    - **Проблема**: Если `client.get_entity(chat_id)` в `process_message` выбрасывает исключение, `chat_entity` остаётся
-      неопределённым, но в строке 131 вызывается `chat_entity.username`.
-    - **Что сделать**: Безопасно инициализировать `chat_entity = None` и выводить username через проверку
-      `getattr(chat_entity, 'username', None)`.
-- [ ] **Корректная очистка активных клиентов в `filter_messages` (`account_manager/parser.py:675`)**:
-    - **Проблема**: `if user_id in active_clients` проверяет `int` в словаре строковых ключей, из-за чего клиент в
-      `finally` не выгружается.
-    - **Что сделать**: Проверять `if str(user_id) in active_clients:`.
-- [ ] **Устранение гигантского хардкод-списка задержек (`account_manager/parser.py:484-508`)**:
-    - **Проблема**: Список из 500 чисел для `random.choice`.
-    - **Что сделать**: Заменить на `random.randint(15, 60)`.
+- [x] **[11.11.2026] Поддержка приватных инвайт-ссылок в `account_manager/subscription.py`**:
+    - Добавлен разбор хэша инвайт-ссылок (`+hash` и `joinchat/hash`) и прямой вызов `ImportChatInviteRequest` с обработкой `UserAlreadyParticipantError` и `InviteRequestSentError`.
+- [x] **[11.11.2026] Предотвращение `UnboundLocalError` и `@None` в `account_manager/parser.py:103-140`**:
+    - Гарантирована инициализация `chat_entity = None`, безопасное получение `title` и `username`, устранено падение при формировании контекстного сообщения.
+- [x] **[11.11.2026] Корректная очистка активных клиентов в `filter_messages` (`account_manager/parser.py:650`)**:
+    - Проверка и удаление из `active_clients` и `stop_flags` переведены на `str(user_id)`.
+- [x] **[11.11.2026] Устранение гигантского хардкод-списка задержек (`account_manager/parser.py:478`)**:
+    - Список из 550 чисел заменен на `random.randint(15, 60)`.
 
 ---
 
 #### 📌 2.4. Исправление дублирования хэндлеров и защита запуска
 
 - [x] **[11.11.2026] Защита переменной `tuna_cmd` и изоляция консольного вывода в `main.py`**:
-    - **Безопасная инициализация**: Задано дефолтное значение `tuna_cmd = "tuna"` до проверок путей, что полностью устранило риск `UnboundLocalError`.
-    - **Восстановление логов в консоли**: Добавлен флаг `--log logs/tuna.log` и перенаправление потоков вывода туннеля в `subprocess.DEVNULL`. Интерактивный TUI-экран Tuna больше не захватывает терминал и не очищает экран — все логи `bot.py` (aiogram, FastAPI, uvicorn, loguru) отображаются прямо в консоли, как раньше.
-- [ ] **Устранение дублирования имён хэндлеров в `connect_group.py`**:
-    - **Файл**: `handlers/user/settings_handlers/connect_group.py`
-    - **Проблема**: Переопределены имена функций: `process_target_link_input_group_input` (строки 25 и 45) и
-      `process_non_text_group_input` (строки 92 и 195).
-    - **Что сделать**: Дать уникальные понятные имена хэндлерам (например, `group_input_cb`, `group_input_text_msg`,
-      `group_input_non_text_msg`).
+    - **Безопасная инициализация**: Задано дефолтное значение `tuna_cmd = "tuna"` до проверок путей, что полностью
+      устранило риск `UnboundLocalError`.
+    - **Восстановление логов в консоли**: Добавлен флаг `--log logs/tuna.log` и перенаправление потоков вывода туннеля в
+      `subprocess.DEVNULL`. Интерактивный TUI-экран Tuna больше не захватывает терминал и не очищает экран — все логи
+      `bot.py` (aiogram, FastAPI, uvicorn, loguru) отображаются прямо в консоли, как раньше.
+- [x] **[11.11.2026] Устранение дублирования имён хэндлеров в `connect_group.py`**:
+    - Хэндлер callback-запроса переименован в `process_target_link_group_input_cb`, а хэндлер некорректного документа — в `process_non_document_group_file_input`.
 
 ---
 

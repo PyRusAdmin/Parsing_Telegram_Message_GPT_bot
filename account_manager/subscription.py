@@ -1,4 +1,5 @@
 import asyncio
+import re
 
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon.errors import (
@@ -6,6 +7,7 @@ from telethon.errors import (
     ChannelInvalidError, UsernameNotOccupiedError, UsernameInvalidError
 )
 from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.messages import ImportChatInviteRequest
 
 from account_manager.utilit import normalize_telegram_link
 
@@ -30,6 +32,42 @@ async def subscription_telegram(client, target_username) -> bool:
     if not normalized:
         logger.warning(f"⚠️ Не удалось распознать ссылку или юзернейм: {target_username}")
         return False
+
+    # Проверяем, является ли ссылка инвайтом в приватную группу (+hash или joinchat/hash)
+    invite_match = re.search(r'(?:joinchat/|\+)([A-Za-z0-9_\-]+)', normalized)
+    if invite_match:
+        invite_hash = invite_match.group(1)
+        try:
+            logger.info(f"🔗 Попытка присоединиться по инвайт-ссылке {normalized}...")
+            await client(ImportChatInviteRequest(invite_hash))
+            logger.success(f"✅ Успешно присоединился к приватной группе {normalized}")
+            return True
+        except UserAlreadyParticipantError:
+            logger.info(f"ℹ️ Вы уже являетесь членом приватной группы {normalized}")
+            return True
+        except InviteRequestSentError:
+            logger.info(f"📩 Запрос на приглашение отправлен для {normalized}, ожидание одобрения")
+            return True
+        except FloodWaitError as e:
+            logger.warning(f"⚠️ Ошибка FloodWait. Ожидание {e.seconds} секунд...")
+            await asyncio.sleep(e.seconds)
+            try:
+                await client(ImportChatInviteRequest(invite_hash))
+                return True
+            except UserAlreadyParticipantError:
+                return True
+            except Exception as retry_error:
+                logger.error(f"❌ Не удалось присоединиться к {normalized} после ожидания: {retry_error}")
+                return False
+        except (ChannelPrivateError, ChannelInvalidError):
+            logger.warning(f"⚠️ Приватная ссылка {normalized} недействительна или срок действия истёк")
+            return False
+        except AuthKeyUnregisteredError:
+            logger.error("❌ Невалидная сессия Telegram. Разорвано соединение")
+            return False
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка при присоединении по инвайт-ссылке {normalized}: {e}")
+            return False
 
     # 1. Получаем сущность канала/группы через get_entity
     try:

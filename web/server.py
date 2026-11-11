@@ -482,7 +482,7 @@ async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict
         return {"status": "already_running"}
     # Начинайте асинхронное отслеживание
     mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"], user=user)
+    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"])
     return {"status": "starting"}
 
 
@@ -570,7 +570,8 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     # user_id = user_data["id"]
     records = list(
         UsersGroups.select().where(UsersGroups.user_id == user_data["id"]).order_by(UsersGroups.date_added.desc()))
-    return [{"id": ch.id, "username": ch.username_group, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for ch in
+    return [{"id": ch.id, "username": ch.username_group, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for
+            ch in
             records]
 
 
@@ -868,7 +869,7 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     :return: (dict) Статус выполнения и список найденных групп.
     """
     logger.info(
-        f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]} {user_data["username"]}: {query}")
+        f"Запрос пользователя {user_data['id']} {user_data.get('last_name', '')} {user_data.get('first_name', '')} {user_data.get('username', '')}: {query}")
     # user = User.get_or_none(User.user_id == user_data["id"])
     # if not user:
     #     raise HTTPException(status_code=404, detail="User not found")
@@ -957,7 +958,8 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус выполнения и список найденных групп.
     """
-    logger.info(f"Запрос пользователя {user_data['id']} {user_data["last_name"]} {user_data["first_name"]}: {query}")
+    logger.info(
+        f"Запрос пользователя {user_data['id']} {user_data.get('last_name', '')} {user_data.get('first_name', '')}: {query}")
     # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
@@ -1205,7 +1207,7 @@ async def bg_check_accounts():
         for idx, session in enumerate(available_sessions, 1):
             admin_task_status["progress"] = idx
             admin_task_status["message"] = f"Checking session {idx}/{total}..."
-            await checker.verify_account(session)
+            await checker.verify_account(session_name=session, user_id=ADMIN_USER_ID, user_lang="ru")
         admin_task_status["status"] = "completed"
         admin_task_status["message"] = "Account check completed successfully!"
     except Exception as e:
