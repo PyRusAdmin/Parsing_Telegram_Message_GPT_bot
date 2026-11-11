@@ -885,7 +885,6 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
             )
         except Exception as e:
             logger.warning(f"Не удалось отправить алерт в группу {pt_rec.created_group_id}: {e}")
-                    logger.warning(f"Не удалось отправить алерт в группу {r.created_group_id}: {e}")
 
 
 async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str):
