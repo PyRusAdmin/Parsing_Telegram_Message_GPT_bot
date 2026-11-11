@@ -204,37 +204,33 @@ def get_lang_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-def main_menu_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+def main_menu_keyboard(lang: str = 'ru', user_id: int | None = None) -> InlineKeyboardMarkup:
     """
     Создаёт инлайн-клавиатуру главного меню бота.
 
     :param lang: (str) Код языка пользователя ('ru', 'en').
+    :param user_id: (int | None) ID пользователя Telegram.
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры главного меню.
     """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            *menu_user_admin_keyboard(lang),
-        ]
-    )
+    return menu_user_admin_keyboard(lang=lang, user_id=user_id)
 
 
-def menu_launch_tracking_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
+def menu_launch_tracking_keyboard(lang: str = 'ru', user_id: int | None = None) -> InlineKeyboardMarkup:
     """
     Создаёт инлайн-клавиатуру во время активного отслеживания.
 
     :param lang: (str) Код языка пользователя ('ru', 'en').
-    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры с кнопкой остановки.
+    :param user_id: (int | None) ID пользователя для определения статуса отслеживания.
+    :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text=t("stop_tracking_button", lang=lang), callback_data="tracking_stop")
-            ],
-            [
-                back_button(lang)  # Кнопка ⬅️ Назад
-            ],
-        ]
-    )
+    is_active = True
+    if user_id is not None:
+        try:
+            from account_manager.parser import active_clients
+            is_active = str(user_id) in active_clients
+        except ImportError:
+            is_active = True
+    return personal_tracking_menu_kb(user_id=user_id or 0, is_active=is_active, lang=lang)
 
 
 """Клавиатура меню подключения аккаунтов"""
@@ -410,13 +406,7 @@ def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
     buttons = [
         [
             InlineKeyboardButton(
-                text=t("launch_tracking_button", lang=lang),  # 🚀 Запуск отслеживания
-                callback_data="menu_launch_tracking"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text=t("btn_personal_tracking", lang=lang),  # 🎯 Персональное отслеживание
+                text=t("btn_personal_tracking", lang=lang),  # 🎯 Отслеживание (единый функционал)
                 callback_data="menu_personal_tracking"
             )
         ],
@@ -445,7 +435,7 @@ def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
     ]
 
     # Добавляем кнопку статистики только для админов
-    if int(user_id) == int(ADMIN_USER_ID):
+    if user_id is not None and int(user_id) == int(ADMIN_USER_ID):
         buttons.append(
             [InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")])
 
@@ -741,33 +731,39 @@ def category_method_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     )
 
 
-def personal_tracking_menu_kb(user_id: int, lang: str = 'ru') -> InlineKeyboardMarkup:
+def personal_tracking_menu_kb(user_id: int, is_active: bool = False, lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Клавиатура меню "Персональное отслеживание ключевых слов".
+    Клавиатура единого меню "Отслеживание ключевых слов".
 
     :param user_id: (int) ID пользователя Telegram.
+    :param is_active: (bool) Флаг активности отслеживания для данного пользователя.
     :param lang: (str) Код языка пользователя ('ru', 'en').
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры.
     """
+    toggle_tracking_btn = (
+        InlineKeyboardButton(text=t("stop_tracking_button", lang=lang), callback_data="tracking_stop")
+        if is_active
+        else InlineKeyboardButton(text=t("launch_tracking_button", lang=lang), callback_data="menu_launch_tracking")
+    )
+
     buttons = [
+        [toggle_tracking_btn],
         [
             InlineKeyboardButton(text=t("btn_pt_add_tracking", lang=lang), callback_data="pt_add_tracking")
         ],
         [
+            InlineKeyboardButton(text=t("btn_pt_my_groups", lang=lang), callback_data="pt_list_tracking"),
             InlineKeyboardButton(text=t("btn_pt_buy_slot", lang=lang), callback_data="pt_buy_slot")
-        ],
-        [
-            InlineKeyboardButton(text=t("btn_pt_my_groups", lang=lang), callback_data="pt_list_tracking")
         ]
     ]
 
     # Добавляем кнопку статистики только для админов
-    if int(user_id) == int(ADMIN_USER_ID):
+    if user_id is not None and int(user_id) == int(ADMIN_USER_ID):
         buttons.append([InlineKeyboardButton(text=t("btn_pt_stats", lang=lang), callback_data="pt_stats")])
 
     buttons.append(
         [
-            back_button(lang)  # Кнопка ⬅️ Назад
+            back_button(lang)  # Кнопка ⬅️ Назад (в главное меню)
         ]
     )
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -840,6 +836,7 @@ def tracking_list_keyboard(records, lang: str = 'ru'):
             ]
         )
 
+    buttons.append([back_button(lang, callback_data="menu_personal_tracking")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 

@@ -1,12 +1,12 @@
+import asyncio
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.parser import stop_tracking
+from handlers.user.personal_tracking import get_personal_tracking_text_and_kb
 from handlers.user_language import determines_user_language
-from keyboards.keyboards import menu_launch_tracking_keyboard
-from locales.locales import t
 
 router = Router(name=__name__)
 
@@ -14,21 +14,33 @@ router = Router(name=__name__)
 @router.callback_query(F.data == "tracking_stop")
 async def handle_stop_tracking_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-команды "Остановить отслеживание".
+    Обработчик инлайн-команды "Остановить отслеживание" из единого меню.
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
-    await callback.answer()
-    # await stop_tracking_internal(callback.message, callback.from_user.id, state)
     await state.clear()
-    # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
 
-    logger.info(f"Пользователь {callback.from_user.id} нажал кнопку остановки отслеживания")
-    await stop_tracking(user_id=callback.from_user.id, message=callback.message)
-
-    await callback.message.answer(
-        text=t("tracking_stopped", lang=user_lang),
-        reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
+    logger.info(f"Пользователь {user_id} нажал кнопку остановки отслеживания")
+    await stop_tracking(user_id=user_id, message=callback.message)
+    await callback.answer(
+        "🛑 Отслеживание остановлено" if user_lang == "ru" else "🛑 Tracking stopped",
+        show_alert=False
     )
+
+    await asyncio.sleep(0.3)
+    text, kb = get_personal_tracking_text_and_kb(user_id=user_id, lang=user_lang)
+    try:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=kb,
+            parse_mode="HTML"
+        )
+    except Exception:
+        await callback.message.answer(
+            text=text,
+            reply_markup=kb,
+            parse_mode="HTML"
+        )

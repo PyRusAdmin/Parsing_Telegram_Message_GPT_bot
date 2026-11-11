@@ -1,23 +1,25 @@
+import asyncio
 import os
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions
+from aiogram.types import CallbackQuery, LabeledPrice, Message, LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from account_manager.parser import filter_messages
+from account_manager.parser import filter_messages, active_clients
 from account_manager.session import find_session_file
 from core.config import version
 from database.database import getting_number_records_database
 from database.users_groups import get_group_count
 from database.users_keywords import get_keywords_count
-from database.users_personal_trackings import get_session_count, UsersPersonalTrackings
+from database.users_personal_trackings import get_session_count, UsersPersonalTrackings, get_group_id_with_personal_tracking
+from handlers.user.personal_tracking import get_personal_tracking_text_and_kb
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     get_lang_keyboard, menu_launch_tracking_keyboard, connect_keyboard_account,
-    get_stars_topup_inline_keyboard, menu_user_admin_keyboard
+    get_stars_topup_inline_keyboard, menu_user_admin_keyboard, back_button
 )
 from locales.locales import t
 
@@ -228,50 +230,88 @@ async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "menu_launch_tracking")
 async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-команды запуска отслеживания сообщений.
+    Обработчик инлайн-команды запуска отслеживания сообщений из единого меню.
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
-    await callback.answer()
-    # await start_tracking_internal(callback.message, callback.from_user, state)
     await state.clear()
     try:
-        # Определяем язык пользователя, который пользователь выбрал при старте бота
-        user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-        # user = User.get(User.user_id == callback.from_user.id)
-        user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == callback.from_user.id)
+        user_id = callback.from_user.id
+        user_lang = determines_user_language(message_or_callback=user_id)
         logger.info(
-            f"Пользователь {callback.from_user.id} {callback.from_user.username} {callback.from_user.first_name} перешел в меню запуска парсинга.")
+            f"Пользователь {user_id} {callback.from_user.username} {callback.from_user.first_name} запросил запуск отслеживания.")
 
-        session_dir = os.path.join("accounts", str(callback.from_user.id))
-        os.makedirs(session_dir, exist_ok=True)
+        # 1. Проверяем, не запущено ли уже
+        if str(user_id) in active_clients:
+            await callback.answer(
+                "⚠️ Отслеживание уже активно!" if user_lang == "ru" else "⚠️ Tracking is already active!",
+                show_alert=True
+            )
+            return
 
+        # 2. Проверяем наличие целевой группы уведомлений
+        target_group_id = get_group_id_with_personal_tracking(user_id)
+        if not target_group_id:
+            create_group_kb = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text=t("btn_pt_create_notification_group", lang=user_lang),
+                            callback_data="pt_add_tracking"
+                        )
+                    ],
+                    [
+                        back_button(user_lang, callback_data="menu_personal_tracking")
+                    ]
+                ]
+            )
+            await callback.message.answer(
+                t("parser_notification_group_missing", lang=user_lang),
+                parse_mode="HTML",
+                reply_markup=create_group_kb
+            )
+            await callback.answer()
+            return
+
+        # 3. Проверяем наличие подключенного аккаунта
         session_path = await find_session_file(
-            user_id=callback.from_user.id,
+            user_id=user_id,
             message=callback.message
         )
-
-        logger.info(session_path)
         if session_path is None:
-            logger.warning("Нет подключенного аккаунта")
+            logger.warning(f"У пользователя {user_id} нет подключенного аккаунта")
             await callback.message.answer(
                 text=t("no_connected_account", lang=user_lang),
                 reply_markup=connect_keyboard_account(lang=user_lang)
             )
+            await callback.answer()
             return
 
-        await callback.message.answer(
-            t("launching_tracking", lang=user_lang),
-            reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
+        await callback.answer(
+            "🚀 Запуск отслеживания..." if user_lang == "ru" else "🚀 Launching tracking...",
+            show_alert=False
         )
 
-        await filter_messages(
-            message=callback.message,
-            user_id=callback.from_user.id,
+        # 4. Запускаем фоновую асинхронную таску отслеживания
+        asyncio.create_task(
+            filter_messages(
+                message=callback.message,
+                user_id=user_id,
+            )
         )
+
+        # Небольшая пауза для инициализации и обновление интерфейса единого меню
+        await asyncio.sleep(0.5)
+        text, kb = get_personal_tracking_text_and_kb(user_id=user_id, lang=user_lang)
+        try:
+            await callback.message.edit_text(text=text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(text=text, reply_markup=kb, parse_mode="HTML")
+
     except Exception as e:
         logger.exception(e)
+        await callback.answer("❌ Ошибка при запуске отслеживания", show_alert=True)
 
 
 @router.callback_query(F.data == "settings_topup_stars")

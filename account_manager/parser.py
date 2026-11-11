@@ -542,7 +542,7 @@ async def filter_messages(message, user_id):
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённого аккаунта в БД")
             await message.answer(
                 t("no_accounts", lang=user_lang),
-                reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
+                reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=int(user_id))
             )
             return None
         # === Подключаем клиент ===
@@ -618,7 +618,7 @@ async def filter_messages(message, user_id):
             logger.info("👂 Бот слушает новые сообщения...")
             await message.answer(
                 text=t("bot_listening", lang=user_lang),
-                reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
+                reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=int(user_id))
             )
             # Держим клиент живым до флага остановки
             await stop_event.wait()
@@ -680,7 +680,7 @@ async def stop_tracking(user_id, message):
         logger.warning(f"⚠️ Отслеживание для user_id={user_id} не активно или уже остановлено.")
         await message.answer(
             t("tracking_not_active", lang=user_lang),
-            reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
+            reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=int(user_id))
         )
         return
     # ✅ Устанавливаем флаг остановки
@@ -689,5 +689,5 @@ async def stop_tracking(user_id, message):
     logger.info(f"✅ Флаг остановки установлен для user_id={user_id}")
     await message.answer(
         t("tracking_stop_requested", lang=user_lang),
-        reply_markup=menu_launch_tracking_keyboard(lang=user_lang)
+        reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=int(user_id))
     )

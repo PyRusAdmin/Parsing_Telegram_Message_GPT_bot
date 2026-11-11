@@ -22,6 +22,7 @@ from telethon.tl.functions.messages import ExportChatInviteRequest
 from telethon.tl.types import ChatAdminRights
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
+from account_manager.parser import active_clients
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
     write_account_to_db_free
@@ -342,7 +343,43 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
 
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
 
-"""Меню персонального отслеживания группы / канала на основе ключевых слов пользователя"""
+"""Единое меню отслеживания группы / канала на основе ключевых слов пользователя"""
+
+
+def get_personal_tracking_text_and_kb(user_id: int, lang: str = 'ru'):
+    """
+    Формирует текст и инлайн-клавиатуру для единого экрана управления отслеживанием.
+
+    :param user_id: (int) ID пользователя Telegram.
+    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :return: (tuple[str, InlineKeyboardMarkup]) Текст сообщения и клавиатура.
+    """
+    allowed = get_user_allowed_slots(user_id)
+    used = get_user_used_slots(user_id)
+    is_active = str(user_id) in active_clients
+
+    status_text = "🟢 <b>Активно</b>" if is_active else "🔴 <b>Остановлено</b>"
+    status_text_en = "🟢 <b>Active</b>" if is_active else "🔴 <b>Stopped</b>"
+
+    if lang == "ru":
+        text = (
+            "🎯 <b>Отслеживание ключевых слов</b>\n\n"
+            f"📡 <b>Статус:</b> {status_text}\n"
+            f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n\n"
+            "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам, а также запускать или останавливать процесс мониторинга в любое время.\n\n"
+            "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars.</i>"
+        )
+    else:
+        text = (
+            "🎯 <b>Keyword Tracking</b>\n\n"
+            f"📡 <b>Status:</b> {status_text_en}\n"
+            f"📊 <b>Your slots:</b> {used} of {allowed} used.\n\n"
+            "You can link a group or channel to track signals based on your keywords, and start or stop monitoring at any time.\n\n"
+            "💡 <i>1 slot is provided for free. An extra slot costs only 2 Telegram Stars.</i>"
+        )
+
+    kb = personal_tracking_menu_kb(user_id=user_id, is_active=is_active, lang=lang)
+    return text, kb
 
 
 @router.callback_query(F.data == "menu_personal_tracking")
@@ -354,36 +391,25 @@ async def cmd_personal_tracking_main(callback: CallbackQuery, state: FSMContext)
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
     try:
+        user_id = callback.from_user.id
         logger.info(
-            f"Пользователь {callback.from_user.last_name} {callback.from_user.first_name} {callback.from_user.username} {callback.from_user.id} перешел в меню 🎯 Персональное отслеживание")
-        # Определяем язык пользователя, который пользователь выбрал при старте бота
-        user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-        await state.clear()  # Сбрасываем состояние, если осталось у пользователя от других действий
-        allowed = get_user_allowed_slots(
-            callback.from_user.id
-        )  # Возвращает количество доступных слотов пользователя (1 бесплатный + купленные)
-        used = get_user_used_slots(callback.from_user.id)  # Возвращает количество задействованных слотов пользователя
-        # Текст для пользователя в меню 🎯 Персональное отслеживание
-        if user_lang == "ru":
-            text = (
-                "🎯 <b>Персональное отслеживание ключевых слов</b>\n\n"
-                "Вы можете привязать группу или канал для отслеживания сигналов по Вашим ключевым словам.\n\n"
-                f"📊 <b>Ваши слоты:</b> {used} из {allowed} занято.\n"
-                "💡 <i>Бесплатно предоставляется 1 слот. Дополнительный слот стоит всего 2 Telegram Stars. Или подключите свой аккаунт для отслеживания ключевых сообщений.</i>"
+            f"Пользователь {callback.from_user.last_name} {callback.from_user.first_name} {callback.from_user.username} {user_id} перешел в единое меню 🎯 Отслеживание")
+        user_lang = determines_user_language(message_or_callback=user_id)
+        await state.clear()
+        text, kb = get_personal_tracking_text_and_kb(user_id=user_id, lang=user_lang)
+        try:
+            await callback.message.edit_text(
+                text=text,
+                reply_markup=kb,
+                parse_mode="HTML"
             )
-        else:
-            text = (
-                "🎯 <b>Personal Keyword Tracking</b>\n\n"
-                "You can link a group or channel to track signals based on your keywords.\n\n"
-                f"📊 <b>Your slots:</b> {used} of {allowed} used.\n"
-                "💡 <i>1 slot is provided for free. An extra slot costs only 2 Telegram Stars. Or connect your account to track key messages.</i>"
+        except Exception:
+            await callback.message.answer(
+                text=text,
+                reply_markup=kb,
+                parse_mode="HTML"
             )
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=personal_tracking_menu_kb(user_id=callback.from_user.id, lang=user_lang),
-            parse_mode="HTML"
-        )
-        await callback.answer()  # обязательно: убирает «часики» загрузки у кнопки
+        await callback.answer()
     except Exception as e:
         logger.exception(e)
 
@@ -586,9 +612,10 @@ async def process_successful_payment(message: Message):
             f"🎉 <b>Payment of 2 Telegram Stars was successful!</b>\n\n"
             f"+1 tracking slot added to your account. Slots now available: <b>{allowed}</b>."
         )
+        _, kb = get_personal_tracking_text_and_kb(user_id=user_id, lang=user_lang)
         await message.answer(
             paid_text,
-            reply_markup=personal_tracking_menu_kb(user_id=user_id, lang=user_lang),
+            reply_markup=kb,
             parse_mode="HTML"
         )
 
