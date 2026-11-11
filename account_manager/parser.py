@@ -572,6 +572,7 @@ async def filter_messages(message, user_id):
             return None
         # === Проверка аккаунтов ===
         pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+        is_shared_account = bool(pt_rec and pt_rec.shared_account and not pt_rec.personal_account)
         session_string = (pt_rec.personal_account or pt_rec.shared_account) if pt_rec else None
         if not session_string:
             logger.warning(f"⚠️ У пользователя {user_id} нет подключённого аккаунта в БД")
@@ -584,6 +585,33 @@ async def filter_messages(message, user_id):
         checker = CheckingAccountsValidity()  # ✅ Сохраняем активный клиент
         client = await checker.client_connect_string_session(session_string)
         if not client:
+            if is_shared_account:
+                logger.warning(f"⚠️ Не удалось подключиться к бесплатному аккаунту для user_id={user_id}. Предлагаем переподключение.")
+                reconnect_kb = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text=t("btn_reconnect_free_account", lang=user_lang),
+                                callback_data="account_connect_free"
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                text=t("btn_to_tracking_menu", lang=user_lang),
+                                callback_data="menu_personal_tracking"
+                            )
+                        ]
+                    ]
+                )
+                await message.answer(
+                    "⚠️ <b>Бесплатный аккаунт временно недоступен или ограничен Telegram.</b>\n\n"
+                    "Вы можете прямо сейчас переподключить другой рабочий бесплатный аккаунт нажатием одной кнопки:"
+                    if user_lang == "ru"
+                    else "⚠️ <b>Free account is temporarily unavailable or restricted by Telegram.</b>\n\n"
+                         "You can reconnect a working free account right now by clicking the button below:",
+                    reply_markup=reconnect_kb,
+                    parse_mode="HTML"
+                )
             return
         active_clients[str(user_id)] = client
         already_subscribed = await sync_account_channels(client)  # Получаем список каналов, где аккаунт уже состоит
@@ -596,7 +624,6 @@ async def filter_messages(message, user_id):
             return
         # === 1.1️. Проверка лимитов для общего бесплатного аккаунта (Задача 2.5) ===
         # Если у пользователя используется общий аккаунт, разрешён максимум 1 канал
-        is_shared_account = bool(pt_rec.shared_account and not pt_rec.personal_account)
         if is_shared_account and len(channels) > 1:
             logger.warning(
                 f"⚠️ Пользователь {user_id} использует общий аккаунт и превысил лимит каналов ({len(channels)} > 1)")
@@ -679,6 +706,33 @@ async def filter_messages(message, user_id):
 
     except Exception as e:
         logger.exception(f"❌ Критическая ошибка в filter_messages: {e}")
+        try:
+            pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+            if pt_rec and pt_rec.shared_account and not pt_rec.personal_account:
+                reconnect_kb = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text=t("btn_reconnect_free_account", lang=user_lang),
+                                callback_data="account_connect_free"
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                text=t("btn_to_tracking_menu", lang=user_lang),
+                                callback_data="menu_personal_tracking"
+                            )
+                        ]
+                    ]
+                )
+                await message.answer(
+                    "⚠️ <b>Произошла ошибка связи с бесплатным аккаунтом.</b>\n\n"
+                    "Вы можете легко переподключить другой рабочий бесплатный аккаунт нажатием кнопки ниже:",
+                    reply_markup=reconnect_kb,
+                    parse_mode="HTML"
+                )
+        except Exception:
+            pass
     finally:
         # ✅ Очищаем ресурсы
         user_key = str(user_id)

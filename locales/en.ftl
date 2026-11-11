@@ -465,7 +465,26 @@ account_connect_shared =
     🎁 <b>Current account:</b> <i>Administrator's free account</i>
     ⚠️ <b>Limitation:</b> Keyword tracking is allowed in only <b>1 group</b>.
 
+    🔄 <i>If there are issues with the current account, click "Reconnect free account" below.</i>
     💡 <i>To track multiple groups simultaneously, connect your personal account.</i>
+
+free_account_connected_success =
+    🎉 <b>Free administrator account connected successfully!</b>
+
+    📱 <b>Account:</b> { $phone }
+    👤 <b>Name:</b> { $name }
+    ⚠️ <b>Notice:</b> A limit of <b>1 group/channel</b> applies to this free account.
+
+    💡 <i>If you need to track more channels, you can connect your personal account at any time.</i>
+
+free_account_reconnected_success =
+    🎉 <b>Free account reconnected successfully!</b>
+
+    📱 <b>New account:</b> { $phone }
+    👤 <b>Name:</b> { $name }
+    ✅ <b>Status:</b> Active and ready for tracking.
+
+    ⚠️ <b>Notice:</b> The limit of 1 group applies to this free account.
 
 account_connect_none =
     🔐 <b>Telegram Account Management</b>
@@ -708,6 +727,7 @@ btn_personal_tracking = 🎯 Tracking
 btn_connect_account_session = 📄 Connect account via session (.session)
 btn_connect_account_phone = 📱 Connect personal account (by phone)
 btn_connect_free_account = 🎁 Admin's free account (1 group)
+btn_reconnect_free_account = 🔄 Reconnect free account
 btn_disconnect_account = ❌ Disconnect current account
 btn_to_tracking_menu = 🎯 To Tracking menu
 btn_to_settings_menu = ⚙️ To Settings

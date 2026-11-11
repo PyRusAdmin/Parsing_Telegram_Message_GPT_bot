@@ -276,6 +276,12 @@ def connect_account_keyboard(lang: str = 'ru', has_account: bool = False,
     :param is_shared: (bool) Подключен ли свободный общий аккаунт.
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры выбора метода подключения.
     """
+    free_account_btn_text = (
+        t("btn_reconnect_free_account", lang=lang)
+        if is_shared
+        else t("btn_connect_free_account", lang=lang)
+    )
+
     buttons = [
         [
             InlineKeyboardButton(
@@ -291,7 +297,7 @@ def connect_account_keyboard(lang: str = 'ru', has_account: bool = False,
         ],
         [
             InlineKeyboardButton(
-                text=t("btn_connect_free_account", lang=lang),  # 🎁 Использовать бесплатный аккаунт (1 группа)
+                text=free_account_btn_text,  # 🎁 Использовать бесплатный аккаунт / 🔄 Переподключить
                 callback_data="account_connect_free"
             )
         ],

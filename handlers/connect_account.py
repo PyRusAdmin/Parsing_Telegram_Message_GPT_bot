@@ -9,10 +9,12 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import PhoneNumberInvalidError, FloodWaitError
 from telethon.sessions import StringSession
+from telethon.tl.functions.channels import JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
 from database.account_free import AccountFree
+from database.users_groups import UsersGroups
 from database.users_personal_trackings import (
     UsersPersonalTrackings, write_account_to_db, set_user_shared_account, clear_user_account
 )
@@ -52,7 +54,9 @@ def render_account_connect_text(user_id: int, lang: str = "ru") -> tuple[str, bo
 @router.callback_query(F.data == "account_connect_free")
 async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-кнопки подключения свободного аккаунта от администратора.
+    Обработчик подключения / переподключения свободного аккаунта от администратора.
+    Проверяет валидность сессий, останавливает старое отслеживание при переподключении,
+    выбирает рабочий аккаунт из пула AccountFree и подписывает его на отслеживаемый канал.
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     :param state: (FSMContext) Контекст машины состояний FSM.
@@ -60,6 +64,20 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     await state.clear()
     user_id = callback.from_user.id
     user_lang = determines_user_language(message_or_callback=user_id)
+
+    # Проверяем, переподключение ли это
+    rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+    current_session = (rec.shared_account or "") if rec else ""
+    is_reconnect = bool(rec and rec.shared_account)
+
+    # Если было активно отслеживание — останавливаем старый клиент
+    from account_manager.parser import stop_tracking, active_clients
+    if str(user_id) in active_clients:
+        try:
+            await stop_tracking(user_id=user_id, message=callback.message)
+            logger.info(f"🛑 Предыдущее отслеживание остановлено перед переподключением для user_id={user_id}")
+        except Exception as st_err:
+            logger.warning(f"Ошибка при остановке отслеживания перед переподключением: {st_err}")
 
     free_accounts = list(AccountFree.select())
     if not free_accounts:
@@ -73,33 +91,100 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         await callback.answer()
         return
 
-    # Назначаем пользователю свободный аккаунт от администратора
-    selected_account = free_accounts[0]
+    # При переподключении ставим другие аккаунты из пула в приоритет
+    if is_reconnect and len(free_accounts) > 1:
+        candidates = [acc for acc in free_accounts if acc.session_string != current_session] + [acc for acc in free_accounts if acc.session_string == current_session]
+    else:
+        candidates = free_accounts
+
+    # Ищем первый рабочий и авторизованный аккаунт
+    checker = CheckingAccountsValidity()
+    selected_account = None
+    account_info = None
+
+    for candidate in candidates:
+        try:
+            client = await checker.client_connect_string_session(candidate.session_string)
+            if client and await client.is_user_authorized():
+                account_info = await get_account_info(client)
+                await client.disconnect()
+                selected_account = candidate
+                break
+            else:
+                logger.warning(f"⚠️ Бесплатный аккаунт {candidate.phone_number} не авторизован или заблокирован. Удаляем из пула...")
+                try:
+                    candidate.delete_instance()
+                except Exception:
+                    pass
+        except Exception as conn_err:
+            logger.warning(f"Ошибка проверки аккаунта {candidate.phone_number}: {conn_err}")
+
+    if not selected_account:
+        logger.warning(f"Все свободные аккаунты не прошли проверку валидности для user_id={user_id}")
+        alert_text = t("no_free_accounts_detailed", lang=user_lang)
+        kb = connect_account_keyboard(lang=user_lang, has_account=False, is_shared=False)
+        try:
+            await callback.message.edit_text(text=alert_text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(text=alert_text, reply_markup=kb, parse_mode="HTML")
+        await callback.answer()
+        return
+
     session_string = selected_account.session_string
     phone_number = selected_account.phone_number
-    logger.info(f"Назначаем свободный аккаунт {phone_number} пользователю {user_id}")
+    logger.info(f"{'Переподключаем' if is_reconnect else 'Назначаем'} свободный аккаунт {phone_number} пользователю {user_id}")
 
     set_user_shared_account(user_id=user_id, session_string=session_string)
 
-    success_text = (
-        f"🎉 <b>Свободный аккаунт успешно подключен!</b>\n\n"
-        f"📱 <b>Аккаунт:</b> {phone_number}\n"
-        f"⚠️ <b>Внимание:</b> Для бесплатного аккаунта от администратора действует ограничение — "
-        f"отслеживание ключевых слов разрешено <b>только в 1 группе/канале</b>.\n\n"
-        f"💡 <i>Если вам потребуется отслеживать больше каналов, вы в любой момент сможете подключить свой личный аккаунт.</i>"
-        if user_lang == "ru"
-        else f"🎉 <b>Free administrator account connected successfully!</b>\n\n"
-             f"📱 <b>Account:</b> {phone_number}\n"
-             f"⚠️ <b>Notice:</b> A limit of <b>1 group/channel</b> applies to this free account.\n\n"
-             f"💡 <i>If you need to track more channels, you can connect your personal account at any time.</i>"
-    )
+    # Синхронизируем подписку на отслеживаемый канал пользователя, если он уже настроен
+    user_groups = list(UsersGroups.select().where(UsersGroups.user_id == user_id))
+    if user_groups:
+        for g in user_groups:
+            ch_link = (g.username_group or "").strip()
+            if ch_link:
+                try:
+                    client = await checker.client_connect_string_session(session_string)
+                    if client:
+                        try:
+                            entity = await client.get_entity(ch_link)
+                            await client(JoinChannelRequest(channel=entity))
+                            logger.info(f"✅ Новый бесплатный аккаунт подписан на отслеживаемый объект {ch_link}")
+                        except Exception as join_err:
+                            logger.debug(f"Уведомление при подписке на {ch_link}: {join_err}")
+                        finally:
+                            await client.disconnect()
+                except Exception as sync_err:
+                    logger.warning(f"Ошибка синхронизации канала {ch_link} для нового бесплатного аккаунта: {sync_err}")
+
+    # Формируем имя и телефон для отображения
+    phone_display = f"+{account_info.get('phone')}" if account_info and account_info.get('phone') else phone_number
+    first_name = (account_info.get('first_name') or '') if account_info else ''
+    last_name = (account_info.get('last_name') or '') if account_info else ''
+    name_display = f"{first_name} {last_name}".strip() or "Telegram User"
+
+    if is_reconnect:
+        success_text = t(
+            "free_account_reconnected_success",
+            lang=user_lang,
+            phone=phone_display,
+            name=name_display
+        )
+        answer_text = "🔄 Свободный аккаунт переподключен!" if user_lang == "ru" else "🔄 Free account reconnected!"
+    else:
+        success_text = t(
+            "free_account_connected_success",
+            lang=user_lang,
+            phone=phone_display,
+            name=name_display
+        )
+        answer_text = "✅ Свободный аккаунт подключен!" if user_lang == "ru" else "✅ Free account connected!"
+
     kb = connect_account_keyboard(lang=user_lang, has_account=True, is_shared=True)
     try:
         await callback.message.edit_text(text=success_text, reply_markup=kb, parse_mode="HTML")
     except Exception:
         await callback.message.answer(text=success_text, reply_markup=kb, parse_mode="HTML")
-    await callback.answer("✅ Свободный аккаунт подключен!" if user_lang == "ru" else "✅ Free account connected!",
-                          show_alert=False)
+    await callback.answer(answer_text, show_alert=False)
 
 
 def sanitization_file_name(document, account_id):
