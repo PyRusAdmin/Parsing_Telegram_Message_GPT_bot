@@ -208,26 +208,49 @@ def sanitization_file_name(document, account_id):
         return None, None
 
 
-def delete_directory(folder_path):
+def delete_directory(folder_path, retries: int = 5, delay: float = 0.2):
     """
-    Удаляет директорию и всё её содержимое рекурсивно.
+    Безопасно удаляет директорию и всё её содержимое рекурсивно с повторными попытками
+    для корректного освобождения дескрипторов файлов в Windows.
 
     :param folder_path: (str | Path) Путь к удаляемой папке или файлу.
+    :param retries: (int) Количество повторных попыток при блокировке файлов.
+    :param delay: (float) Задержка между попытками в секундах.
     """
     if not folder_path:
         return
+    import gc
+    import time
+    import stat
+    import os
+
+    gc.collect()
     path = Path(folder_path)
     if path.is_file():
         path = path.parent
-    try:
-        shutil.rmtree(path)
-        logger.info(f"Папка {path} и всё её содержимое удалены.")
-    except FileNotFoundError:
-        logger.warning(f"Ошибка: указанная папка не существует: {path}")
-    except PermissionError:
-        logger.error(f"Ошибка: нет прав на удаление: {path}")
-    except OSError as e:
-        logger.error(f"Произошла ошибка при удалении: {e}")
+    if not path.exists():
+        return
+
+    def _remove_readonly(func, p, excinfo):
+        try:
+            os.chmod(p, stat.S_IWRITE)
+            func(p)
+        except Exception:
+            pass
+
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(path, onerror=_remove_readonly)
+            logger.info(f"Папка {path} и всё её содержимое удалены.")
+            return
+        except FileNotFoundError:
+            return
+        except (PermissionError, OSError) as e:
+            if attempt < retries - 1:
+                time.sleep(delay)
+                gc.collect()
+            else:
+                logger.debug(f"Временная папка {path} временно занята процессом: {e}")
 
 
 """Меню подключения аккаунтов"""
@@ -372,6 +395,8 @@ async def handle_account_file(message: Message, state: FSMContext):
     finally:
         # ✅ Удаляем временную папку и все файлы в ней
         if local_file_path:
+            import gc
+            gc.collect()
             delete_directory(folder_path=local_file_path.parent)
         # ✅ Сбрасываем состояние только в конце
         await state.clear()
@@ -483,6 +508,8 @@ async def receive_session_file(message: Message, state: FSMContext):
     finally:
         # ✅ Удаляем временную папку и все файлы в ней
         if local_file_path:
+            import gc
+            gc.collect()
             delete_directory(folder_path=local_file_path.parent)
         # ✅ Обновляем состояние: файл обработан
         processed_count += 1

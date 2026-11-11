@@ -126,6 +126,9 @@ class CheckingAccountsValidity:
             StringSession(session_name),
             api_id=API_ID,
             api_hash=API_HASH,
+            connection_retries=2,
+            retry_delay=1,
+            timeout=10,
             device_model=mobile_device["device_model"],
             system_version=mobile_device["system_version"],
             app_version=mobile_device["app_version"],
@@ -137,27 +140,42 @@ class CheckingAccountsValidity:
             await client.connect()
 
             if not await client.is_user_authorized():
-                logger.error("❌ Сессия недействительна или аккаунт не авторизован!")
+                logger.warning("⚠️ Сессия недействительна или аккаунт не авторизован")
                 await self.write_csv(data=session_name)
                 try:
                     await client.disconnect()
-                except ValueError:
-                    logger.error("❌ Сессия недействительна или аккаунт не авторизован!")
+                except Exception:
+                    pass
                 return None
 
             account_info = await get_account_info(client)
             return client
 
         except AuthKeyDuplicatedError:
-            logger.error(
-                "❌ AuthKeyDuplicatedError: Повторный ввод ключа авторизации (сессия используется в другом месте)"
+            logger.warning(
+                "⚠️ AuthKeyDuplicatedError: Повторный ввод ключа авторизации (сессия используется в другом месте)"
             )
-            await client.disconnect()
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
             await self.write_csv(data=session_name)
             return None
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"⚠️ Ошибка подключения к Telegram для StringSession: {e}")
+            try:
+                if client.is_connected():
+                    await client.disconnect()
+            except Exception:
+                pass
+            return None
         except Exception as e:
-            logger.exception(f"Ошибка подключения: {e}")
-            await client.disconnect()
+            logger.warning(f"⚠️ Ошибка подключения сессии: {e}")
+            try:
+                if client.is_connected():
+                    await client.disconnect()
+            except Exception:
+                pass
             return None
 
     async def write_csv(self, data):
@@ -204,9 +222,12 @@ class CheckingAccountsValidity:
         :return: (TelegramClient | None) Авторизованный клиент Telegram или None, если сессия невалидна.
         """
         client = TelegramClient(
-            self.path,
+            str(self.path),
             api_id=API_ID,
             api_hash=API_HASH,
+            connection_retries=2,
+            retry_delay=1,
+            timeout=10,
             device_model=mobile_device["device_model"],
             system_version=mobile_device["system_version"],
             app_version=mobile_device["app_version"],
@@ -226,10 +247,19 @@ class CheckingAccountsValidity:
             account_info = await get_account_info(client)
             logger.success(f"✅ Сессия активна: {account_info.get('phone') or account_info.get('id')}")
             return client
-        except Exception as e:
-            logger.exception(f"Ошибка подключения к {self.path}: {e}")
+        except (ConnectionError, TimeoutError, OSError) as ce:
+            logger.warning(f"⚠️ Ошибка подключения к Telegram для сессии {self.path}: {ce}")
             try:
-                await client.disconnect()
+                if client.is_connected():
+                    await client.disconnect()
+            except Exception:
+                pass
+            return None
+        except Exception as e:
+            logger.warning(f"⚠️ Не удалось валидировать сессию {self.path}: {e}")
+            try:
+                if client.is_connected():
+                    await client.disconnect()
             except Exception:
                 pass
             return None
