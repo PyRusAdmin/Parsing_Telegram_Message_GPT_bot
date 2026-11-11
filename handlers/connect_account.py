@@ -39,50 +39,12 @@ def render_account_connect_text(user_id: int, lang: str = "ru") -> tuple[str, bo
     has_shared = bool(rec and rec.shared_account and not rec.personal_account)
     has_account = has_personal or has_shared
 
-    if lang == "ru":
-        header = "🔐 <b>Управление Telegram-аккаунтом</b>\n\n"
-        if has_personal:
-            status = (
-                "📱 <b>Текущий аккаунт:</b> ✅ <i>Личный аккаунт</i>\n"
-                "📊 <b>Режим:</b> Без ограничений на количество каналов (в рамках ваших слотов)\n\n"
-                "Вы можете переподключить аккаунт другим способом или отключить его."
-            )
-        elif has_shared:
-            status = (
-                "🎁 <b>Текущий аккаунт:</b> <i>Бесплатный аккаунт от администратора</i>\n"
-                "⚠️ <b>Ограничение:</b> Отслеживание сигналов разрешено только в <b>1 группе</b>.\n\n"
-                "💡 <i>Для отслеживания в нескольких группах одновременно подключите свой личный аккаунт.</i>"
-            )
-        else:
-            status = (
-                "⚠️ <b>Текущий аккаунт:</b> <i>Не подключен</i>\n\n"
-                "Для мониторинга сообщений и сигналов по ключевым словам выберите способ подключения:\n"
-                "• <b>Личный аккаунт</b> — без ограничений по количеству каналов.\n"
-                "• <b>Свободный аккаунт от админа</b> — бесплатный доступ, отслеживание ограничено 1 группой."
-            )
-        text = header + status
+    if has_personal:
+        text = t("account_connect_personal", lang=lang)
+    elif has_shared:
+        text = t("account_connect_shared", lang=lang)
     else:
-        header = "🔐 <b>Telegram Account Management</b>\n\n"
-        if has_personal:
-            status = (
-                "📱 <b>Current account:</b> ✅ <i>Personal account</i>\n"
-                "📊 <b>Mode:</b> Unlimited channels (within your slots)\n\n"
-                "You can reconnect using another method or disconnect it."
-            )
-        elif has_shared:
-            status = (
-                "🎁 <b>Current account:</b> <i>Administrator's free account</i>\n"
-                "⚠️ <b>Limitation:</b> Keyword tracking is allowed in only <b>1 group</b>.\n\n"
-                "💡 <i>To track multiple groups simultaneously, connect your personal account.</i>"
-            )
-        else:
-            status = (
-                "⚠️ <b>Current account:</b> <i>Not connected</i>\n\n"
-                "To monitor messages and keywords, choose a connection method:\n"
-                "• <b>Personal account</b> — no channel limit.\n"
-                "• <b>Admin's free account</b> — free access, limited to 1 group."
-            )
-        text = header + status
+        text = t("account_connect_none", lang=lang)
 
     return text, has_account, has_shared
 
@@ -136,7 +98,8 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         await callback.message.edit_text(text=success_text, reply_markup=kb, parse_mode="HTML")
     except Exception:
         await callback.message.answer(text=success_text, reply_markup=kb, parse_mode="HTML")
-    await callback.answer("✅ Свободный аккаунт подключен!" if user_lang == "ru" else "✅ Free account connected!", show_alert=False)
+    await callback.answer("✅ Свободный аккаунт подключен!" if user_lang == "ru" else "✅ Free account connected!",
+                          show_alert=False)
 
 
 def sanitization_file_name(document, account_id):

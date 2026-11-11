@@ -451,6 +451,31 @@ log_file_caption =
     📄 Log file with errors.
 
 # === connect_account.py ===
+account_connect_personal =
+    🔐 <b>Telegram Account Management</b>
+
+    📱 <b>Current account:</b> ✅ <i>Personal account</i>
+    📊 <b>Mode:</b> Unlimited channels (within your slots)
+
+    You can reconnect using another method or disconnect it.
+
+account_connect_shared =
+    🔐 <b>Telegram Account Management</b>
+
+    🎁 <b>Current account:</b> <i>Administrator's free account</i>
+    ⚠️ <b>Limitation:</b> Keyword tracking is allowed in only <b>1 group</b>.
+
+    💡 <i>To track multiple groups simultaneously, connect your personal account.</i>
+
+account_connect_none =
+    🔐 <b>Telegram Account Management</b>
+
+    ⚠️ <b>Current account:</b> <i>Not connected</i>
+
+    To monitor messages and keywords, choose a connection method:
+    • <b>Personal account</b> — no channel limit.
+    • <b>Admin's free account</b> — free access, limited to 1 group.
+
 account_connected_free =
     ✅ Account successfully connected
 
