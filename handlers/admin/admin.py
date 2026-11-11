@@ -92,7 +92,8 @@ async def toggle_nightly_check_cb(callback: CallbackQuery):
     from handlers.admin.nightly_check import toggle_nightly_check
     new_state = toggle_nightly_check()
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    alert_msg = t("nightly_check_toggled_on", lang=user_lang) if new_state else t("nightly_check_toggled_off", lang=user_lang)
+    alert_msg = t("nightly_check_toggled_on", lang=user_lang) if new_state else t("nightly_check_toggled_off",
+                                                                                  lang=user_lang)
     await callback.answer(alert_msg, show_alert=True)
     try:
         await callback.message.edit_reply_markup(reply_markup=admin_keyboard(lang=user_lang))

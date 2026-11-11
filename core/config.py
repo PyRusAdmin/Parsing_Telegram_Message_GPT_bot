@@ -56,3 +56,13 @@ ISO_639_1_CODES = {
 version = "0.2.0"
 
 PAGE_SIZE = 5  # Количество элементов на странице
+
+SETTINGS_PATH = "data/settings.json"
+
+DEFAULT_SETTINGS = {
+    "nightly_check_enabled": True,
+    "nightly_check_time": "01:00",
+    "batch_size": 150,
+    "last_run_date": None,
+    "last_report": None,
+}

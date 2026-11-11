@@ -35,12 +35,9 @@ from account_manager.parser import (
 )
 from account_manager.utilit import detect_language
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
-from core.config import (
-    ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
-)
+from core.config import ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 from database.database import (
-    TelegramGroups,
-    get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
+    TelegramGroups, get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
 )
 from database.users_accounts import write_account_to_user_table, getting_account, UsersAccounts

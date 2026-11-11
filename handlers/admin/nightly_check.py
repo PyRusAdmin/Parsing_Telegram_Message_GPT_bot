@@ -2,25 +2,14 @@ import asyncio
 import json
 import os
 from datetime import datetime
-from typing import Optional
 
 from loguru import logger
 
 from account_manager.utilit import detect_language
 from ai.ai import category_assignment
-from core.config import ADMIN_USER_ID
+from core.config import ADMIN_USER_ID, SETTINGS_PATH, DEFAULT_SETTINGS
 from database.database import TelegramGroups
 from system.dispatcher import bot
-
-SETTINGS_PATH = "data/settings.json"
-
-DEFAULT_SETTINGS = {
-    "nightly_check_enabled": True,
-    "nightly_check_time": "01:00",
-    "batch_size": 150,
-    "last_run_date": None,
-    "last_report": None,
-}
 
 
 def get_nightly_check_settings() -> dict:

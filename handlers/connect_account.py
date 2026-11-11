@@ -12,8 +12,8 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
+from database.account_free import AccountFree
 
-from database.database import AccountFree
 from database.users_personal_trackings import UsersPersonalTrackings
 from database.users_accounts import write_account_to_user_table
 from database.users_personal_trackings import write_account_to_db
