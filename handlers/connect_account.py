@@ -9,17 +9,17 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import PhoneNumberInvalidError, FloodWaitError
 from telethon.sessions import StringSession
-from telethon.tl.functions.channels import JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
 from database.account_free import AccountFree, write_account_to_db_free, getting_free_account
-from database.users_groups import UsersGroups
 from database.users_personal_trackings import (
     UsersPersonalTrackings, write_account_to_db, set_user_shared_account, clear_user_account
 )
 from database.users_accounts import write_account_to_user_table
-from handlers.user.personal_tracking import PersonalTrackingState, execute_sign_in
+from handlers.user.personal_tracking import (
+    PersonalTrackingState, execute_sign_in, sync_and_promote_account_for_tracking
+)
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import back_keyboard, connect_account_keyboard, emoji_code_keypad_kb
 from locales.locales import t
@@ -140,25 +140,9 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
 
     set_user_shared_account(user_id=user_id, session_string=session_string)
 
-    # Синхронизируем подписку на отслеживаемый канал пользователя, если он уже настроен
-    user_groups = list(UsersGroups.select().where(UsersGroups.user_id == user_id))
-    if user_groups:
-        for g in user_groups:
-            ch_link = (g.username_group or "").strip()
-            if ch_link:
-                try:
-                    client = await checker.client_connect_string_session(session_string)
-                    if client:
-                        try:
-                            entity = await client.get_entity(ch_link)
-                            await client(JoinChannelRequest(channel=entity))
-                            logger.info(f"✅ Новый бесплатный аккаунт подписан на отслеживаемый объект {ch_link}")
-                        except Exception as join_err:
-                            logger.debug(f"Уведомление при подписке на {ch_link}: {join_err}")
-                        finally:
-                            await client.disconnect()
-                except Exception as sync_err:
-                    logger.warning(f"Ошибка синхронизации канала {ch_link} для нового бесплатного аккаунта: {sync_err}")
+    # Синхронизируем подписку на целевой объект и группу результатов,
+    # и админ-бот выдает новому аккаунту права администратора только на публикацию сообщений
+    await sync_and_promote_account_for_tracking(user_id=user_id, session_string=session_string)
 
     # Формируем имя и телефон для отображения
     phone_display = f"+{account_info.get('phone')}" if account_info and account_info.get('phone') else phone_number
@@ -381,6 +365,12 @@ async def handle_account_file(message: Message, state: FSMContext):
                 user_id=message.from_user.id
             )
             await client.disconnect()
+
+            # Синхронизируем новый личный аккаунт с отслеживанием и группой результатов
+            await sync_and_promote_account_for_tracking(
+                user_id=message.from_user.id,
+                session_string=session_string
+            )
             logger.success(f"✅ Сессия добавлена: {account_info.get('phone')} | {account_info.get('first_name')}")
             await message.answer(
                 t("session_connected_success", lang=user_lang, filename=safe_file_name, phone=account_info.get("phone"),

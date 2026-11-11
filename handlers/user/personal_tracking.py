@@ -15,11 +15,12 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import (
     FloodWaitError, PasswordHashInvalidError, PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError,
-    UsernameNotOccupiedError, UsernameInvalidError, ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError
+    UsernameNotOccupiedError, UsernameInvalidError, ChannelPrivateError, UserRestrictedError, ChannelsTooMuchError,
+    UserAlreadyParticipantError
 )
 from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest, CreateChannelRequest, EditAdminRequest
-from telethon.tl.functions.messages import ExportChatInviteRequest
+from telethon.tl.functions.messages import ExportChatInviteRequest, ImportChatInviteRequest
 from telethon.tl.types import ChatAdminRights
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
@@ -286,6 +287,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                     ban_users=True,
                     invite_users=True,
                     pin_messages=True,
+                    add_admins=True,
                     manage_topics=True
                 )
                 await client(EditAdminRequest(
@@ -360,6 +362,167 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         )
 
     return False, "⚠️ Не удалось подключиться к группе через доступные аккаунты. Попробуйте позже.", None, None, None, None
+
+
+async def sync_and_promote_account_for_tracking(user_id: int, session_string: str) -> bool:
+    """
+    Синхронизирует новый/переподключенный аккаунт с отслеживанием пользователя:
+    1. Подписывает аккаунт на целевые группы/каналы отслеживания из UsersGroups.
+    2. Вступает в персональную группу для пересылки сообщений (created_group_id / created_group_link).
+    3. Бот-администратор (старший в группе) выдает новому аккаунту права администратора:
+       ТОЛЬКО на публикацию сообщений (без прав на изменение инфо, удаление, добавление админов и т.д.),
+       чтобы исключить возможность кражи или захвата группы.
+
+    :param user_id: (int) ID пользователя Telegram.
+    :param session_string: (str) Строка сессии Telethon для подключения.
+    :return: (bool) True при успешной синхронизации, иначе False.
+    """
+    if not session_string:
+        return False
+
+    checker = CheckingAccountsValidity()
+    client: TelegramClient | None = await checker.client_connect_string_session(session_string)
+    if not client:
+        logger.warning(f"⚠️ Не удалось подключить сессию для синхронизации отслеживания user_id={user_id}")
+        return False
+
+    try:
+        account_info = await get_account_info(client)
+        account_tg_id = account_info.get("id")
+        logger.info(f"🔄 Синхронизация аккаунта {account_tg_id} (user_id={user_id}) с отслеживанием...")
+
+        # 1. Подписываем аккаунт на целевой отслеживаемый канал/группу пользователя
+        user_groups = list(UsersGroups.select().where(UsersGroups.user_id == user_id))
+        for g in user_groups:
+            target_link = (g.username_group or "").strip()
+            if not target_link:
+                continue
+            try:
+                entity = await client.get_entity(target_link)
+                await client(JoinChannelRequest(channel=entity))
+                logger.info(f"✅ Аккаунт {account_tg_id} подписан на целевой объект: {target_link}")
+            except Exception as join_err:
+                logger.debug(f"Уведомление при подписке на целевой объект {target_link}: {join_err}")
+
+        # 2. Подписываем аккаунт на группу результатов, куда пересылаются сообщения
+        pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+        if not pt_rec or not pt_rec.created_group_id:
+            logger.info(f"У пользователя {user_id} еще нет созданной группы результатов для синхронизации")
+            return True
+
+        group_id = pt_rec.created_group_id
+        invite_link = (pt_rec.created_group_link or "").strip()
+
+        # Разбаниваем аккаунт в группе через бота на случай, если он ранее был исключен
+        if account_tg_id:
+            try:
+                await bot.unban_chat_member(chat_id=group_id, user_id=account_tg_id, only_if_banned=True)
+            except Exception as unban_err:
+                logger.debug(f"Проверка unban_chat_member в группе {group_id}: {unban_err}")
+
+        # Проверяем участие аккаунта в группе результатов
+        is_participant = False
+        try:
+            await client.get_entity(group_id)
+            is_participant = True
+        except Exception:
+            is_participant = False
+
+        if not is_participant:
+            # Если нет ссылки или она невалидна, бот создает новую
+            if not invite_link or "t.me/" not in invite_link:
+                try:
+                    new_invite = await bot.create_chat_invite_link(chat_id=group_id, name="SyncReconnect")
+                    if new_invite and new_invite.invite_link:
+                        invite_link = new_invite.invite_link
+                        pt_rec.created_group_link = invite_link
+                        pt_rec.save()
+                except Exception as inv_err:
+                    logger.warning(f"Ошибка создания новой инвайт-ссылки ботом для группы {group_id}: {inv_err}")
+
+            # Вступаем по ссылке-приглашению
+            if invite_link:
+                clean_hash = invite_link.split("+")[-1].split("/")[-1]
+                try:
+                    await client(ImportChatInviteRequest(hash=clean_hash))
+                    is_participant = True
+                    logger.info(f"✅ Аккаунт {account_tg_id} вступил в группу результатов {group_id} по инвайт-ссылке")
+                except UserAlreadyParticipantError:
+                    is_participant = True
+                except Exception as import_err:
+                    logger.warning(f"Не удалось вступить в группу {group_id} по хэшу: {import_err}. Пробуем JoinChannelRequest...")
+                    try:
+                        await client(JoinChannelRequest(channel=invite_link))
+                        is_participant = True
+                    except Exception as jc_err:
+                        logger.warning(f"Ошибка вступления через JoinChannelRequest: {jc_err}")
+
+        # 3. Бот-администратор (старший в группе) выдает права администратора новому аккаунту:
+        # ТОЛЬКО на публикацию сообщений, чтобы аккаунт не мог угнать или изменить группу.
+        if account_tg_id:
+            try:
+                await bot.promote_chat_member(
+                    chat_id=group_id,
+                    user_id=account_tg_id,
+                    can_post_messages=True,
+                    can_edit_messages=False,
+                    can_delete_messages=False,
+                    can_invite_users=False,
+                    can_restrict_members=False,
+                    can_pin_messages=False,
+                    can_promote_members=False,
+                    can_change_info=False,
+                    can_manage_video_chats=False,
+                    can_manage_chat=False,
+                    can_manage_topics=False
+                )
+                logger.info(
+                    f"✅ Бот-администратор выдал ограниченные права (только публикация) аккаунту {account_tg_id} в группе {group_id}"
+                )
+            except Exception as prom_err:
+                logger.warning(
+                    f"⚠️ Ошибка promote_chat_member с can_post_messages в группе {group_id} ({prom_err}). Пробуем стандартные права супергруппы..."
+                )
+                try:
+                    await bot.promote_chat_member(
+                        chat_id=group_id,
+                        user_id=account_tg_id,
+                        can_manage_chat=True,
+                        can_change_info=False,
+                        can_delete_messages=False,
+                        can_invite_users=False,
+                        can_restrict_members=False,
+                        can_pin_messages=False,
+                        can_promote_members=False,
+                        can_manage_video_chats=False,
+                        can_manage_topics=False
+                    )
+                    logger.info(
+                        f"✅ Бот-администратор назначил аккаунт {account_tg_id} администратором с ограниченными правами"
+                    )
+                except Exception as fb_prom_err:
+                    logger.warning(f"Не удалось назначить права администратора через бота: {fb_prom_err}")
+
+            # Устанавливаем кастомный титул администратора
+            try:
+                await bot.set_chat_administrator_custom_title(
+                    chat_id=group_id,
+                    user_id=account_tg_id,
+                    custom_title="AlertSender"
+                )
+            except Exception:
+                pass
+
+        return True
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка в sync_and_promote_account_for_tracking для user_id={user_id}: {e}")
+        return False
+    finally:
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
 
 
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
@@ -1035,6 +1198,8 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
                 session_string=final_session,  # Стринг сессия Telegram
                 user_id=user_id,  # ID пользователя Telegram
             )
+            # Синхронизируем новый аккаунт с отслеживанием и группой результатов
+            await sync_and_promote_account_for_tracking(user_id=user_id, session_string=final_session)
 
         await state.clear()
         await callback.message.edit_text(
@@ -1145,6 +1310,8 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
                 session_string=final_session,  # Стринг сессия Telegram
                 user_id=message.from_user.id,  # ID пользователя Telegram
             )
+            # Синхронизируем новый аккаунт с отслеживанием и группой результатов
+            await sync_and_promote_account_for_tracking(user_id=message.from_user.id, session_string=final_session)
 
         await state.clear()
         first_name = account_info.get("first_name") or ""
