@@ -1,3 +1,4 @@
+import asyncio
 import random
 from datetime import datetime
 from html import escape
@@ -22,14 +23,16 @@ from telethon.tl.functions.messages import ExportChatInviteRequest
 from telethon.tl.types import ChatAdminRights
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import active_clients
+from account_manager.parser import active_clients, filter_messages
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.account_free import write_account_to_db_free
 
 from database.users_accounts import getting_account, write_account_to_user_table
 from database.users_groups import UsersGroups, add_user_group
 from database.users_keywords import add_user_keywords, UsersKeywords
-from database.users_personal_trackings import get_user_accounts, UsersPersonalTrackings, write_account_to_db
+from database.users_personal_trackings import (
+    get_user_accounts, UsersPersonalTrackings, write_account_to_db, set_user_shared_account
+)
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import (
     personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb, back_button
@@ -225,16 +228,18 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
     candidate_sessions = []
     for acc in user_accs:
         if acc.get("session_string"):
-            candidate_sessions.append((acc["session_string"], "личный"))
+            candidate_sessions.append((acc["session_string"], "общий" if acc.get("is_shared") else "личный"))
 
     # 2. Общие аккаунты из пула администратора (перемешиваем для распределения нагрузки)
     shared_sessions = getting_account()
     random.shuffle(shared_sessions)
+    existing_sessions = {cs[0] for cs in candidate_sessions}
     for s in shared_sessions:
-        candidate_sessions.append((s, "общий"))
+        if s not in existing_sessions:
+            candidate_sessions.append((s, "общий"))
 
     if not candidate_sessions:
-        return False, "⚠️ Нет доступных рабочих сессий для поиска. Попробуйте позже.", None, None
+        return False, "⚠️ Нет доступных рабочих сессий для поиска. Попробуйте позже.", None, None, None, None
 
     max_attempts = min(5, len(candidate_sessions))
     last_restriction_error = None
@@ -248,6 +253,8 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
         try:
             # Получаем сущность отслеживаемого объекта
             entity = await client.get_entity(clean_target)
+            target_peer_id = utils.get_peer_id(entity)
+            target_title_raw = getattr(entity, 'title', clean_target)
 
             # Проверяем и подписываемся на целевую группу/канал
             try:
@@ -257,7 +264,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 logger.debug(f"Уведомление при подписке на {clean_target}: {join_err}")
 
             # Создаем приватную супергруппу для отправки найденных сообщений
-            target_title = getattr(entity, 'title', clean_target)[:20]
+            target_title = target_title_raw[:20]
             group_title = f"Отслеживание: {target_title}"
 
             created_channel = await client(CreateChannelRequest(
@@ -296,7 +303,13 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
             invite_link = invite_export.link
 
             await client.disconnect()
-            return True, "Успешно", invite_link, chat_id
+
+            # Если у пользователя еще не был сохранен аккаунт в профиле, сохраняем использованный
+            pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+            if not (pt_rec and (pt_rec.personal_account or pt_rec.shared_account)):
+                set_user_shared_account(user_id=user_id, session_string=session_str)
+
+            return True, "Успешно", invite_link, chat_id, target_peer_id, target_title_raw
 
         except (UsernameNotOccupiedError, UsernameInvalidError, ValueError) as e:
             logger.warning(f"⚠️ Целевая группа/канал не существует или неверный юзернейм ({target_input}): {e}")
@@ -304,7 +317,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 await client.disconnect()
             except Exception:
                 pass
-            return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None
+            return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None, None, None
 
         except ChannelPrivateError:
             logger.warning(f"⚠️ Целевая группа/канал {target_input} приватная или доступ ограничен")
@@ -312,7 +325,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 await client.disconnect()
             except Exception:
                 pass
-            return False, "Указанная группа является приватной или к ней нет доступа.", None, None
+            return False, "Указанная группа является приватной или к ней нет доступа.", None, None, None, None
 
         except (UserRestrictedError, ChannelsTooMuchError, FloodWaitError) as re:
             logger.warning(
@@ -333,7 +346,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 pass
             if attempt_idx < max_attempts - 1:
                 continue
-            return False, f"Ошибка подключения к целевой группе: {e}", None, None
+            return False, f"Ошибка подключения к целевой группе: {e}", None, None, None, None
 
     if last_restriction_error:
         return (
@@ -341,10 +354,12 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
             "⚠️ Доступные рабочие аккаунты временно ограничены Telegram на создание каналов/групп (спам-репорт или лимит). "
             "Пожалуйста, подключите свой личный аккаунт через меню «🎯 Персональное отслеживание» ➔ «Подключить свой аккаунт» или повторите попытку позже.",
             None,
+            None,
+            None,
             None
         )
 
-    return False, "⚠️ Не удалось подключиться к группе через доступные аккаунты. Попробуйте позже.", None, None
+    return False, "⚠️ Не удалось подключиться к группе через доступные аккаунты. Попробуйте позже.", None, None, None, None
 
 
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
@@ -470,6 +485,11 @@ async def cb_add_tracking(callback: CallbackQuery, state: FSMContext):
     # Потом отправляем инструкцию
     await callback.message.edit_text(
         t("pt_ask_link", lang=user_lang),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [back_button(user_lang, callback_data="menu_personal_tracking")]
+            ]
+        ),
         parse_mode="HTML"
     )
     # И только потом подтверждаем callback (чтобы убрать «часики»)
@@ -488,7 +508,14 @@ async def process_target_link_input(message: Message, state: FSMContext):
     target_input = message.text.strip()
     # Проверяем формат ввода (ссылки либо начинается на http(s))
     if not target_input.startswith("http") and not target_input.startswith("@"):
-        await message.answer(t("pt_invalid_link", lang=user_lang))
+        await message.answer(
+            t("pt_invalid_link", lang=user_lang),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [back_button(user_lang, callback_data="menu_personal_tracking")]
+                ]
+            )
+        )
         return
 
     status_msg = await message.answer(
@@ -496,16 +523,28 @@ async def process_target_link_input(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-    success, err_msg, invite_link, chat_id = await connect_target_and_create_group(target_input, message.from_user.id)
+    success, err_msg, invite_link, chat_id, *rest = await connect_target_and_create_group(target_input, message.from_user.id)
     if not success:
-        await status_msg.edit_text(f"❌ {err_msg}")
+        await status_msg.edit_text(
+            f"❌ {err_msg}",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [back_button(user_lang, callback_data="menu_personal_tracking")]
+                ]
+            )
+        )
         await state.clear()
         return
+
+    target_id = rest[0] if rest else None
+    target_name = rest[1] if len(rest) > 1 else ""
 
     await state.update_data(
         target_link=target_input,
         invite_link=invite_link,
-        created_group_id=chat_id
+        created_group_id=chat_id,
+        target_peer_id=target_id,
+        target_name=target_name
     )
 
     await state.set_state(PersonalTrackingState.waiting_for_keywords)
@@ -517,6 +556,11 @@ async def process_target_link_input(message: Message, state: FSMContext):
     )
     await status_msg.edit_text(
         step2_text,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [back_button(user_lang, callback_data="menu_personal_tracking")]
+            ]
+        ),
         parse_mode="HTML",
         disable_web_page_preview=True
     )
@@ -536,6 +580,8 @@ async def process_keywords_input(message: Message, state: FSMContext):
     target_link = data.get("target_link")
     invite_link = data.get("invite_link")
     created_group_id = data.get("created_group_id")
+    target_peer_id = data.get("target_peer_id")
+    target_name = data.get("target_name") or ""
 
     keywords_text = message.text.strip()
     keywords_list = [
@@ -547,13 +593,15 @@ async def process_keywords_input(message: Message, state: FSMContext):
     # Безопасно добавляет список ключевых слов, пропуская дубликаты.
     add_user_keywords(user_id=message.from_user.id, keywords=keywords_list)
 
-    # Сохраняем целевой канал в UsersGroups
+    # Сохраняем целевой канал в UsersGroups с ID группы и названием
     if target_link:
         add_user_group(
             user_id=message.from_user.id,
             group=[target_link],
             user_username=message.from_user.username or "",
-            user_firstname=message.from_user.first_name or ""
+            user_firstname=message.from_user.first_name or "",
+            id_group=target_peer_id,
+            name_group=target_name
         )
 
     # Обновляем профиль пользователя UsersPersonalTrackings (привязку группы уведомлений)
@@ -581,10 +629,43 @@ async def process_keywords_input(message: Message, state: FSMContext):
         keywords=keywords_text,
         link=invite_link
     )
+
+    success_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t("btn_to_tracking_menu", lang=user_lang),
+                    callback_data="menu_personal_tracking"
+                )
+            ],
+            [
+                back_button(user_lang, callback_data="menu_personal_tracking"),
+                InlineKeyboardButton(
+                    text=t("btn_main_menu", lang=user_lang),
+                    callback_data="menu_main"
+                )
+            ]
+        ]
+    )
+
     await message.answer(
         saved_text,
+        reply_markup=success_kb,
         parse_mode="HTML"
     )
+
+    # Автоматически запускаем фоновое отслеживание, если еще не запущено
+    if str(message.from_user.id) not in active_clients:
+        try:
+            asyncio.create_task(
+                filter_messages(
+                    message=message,
+                    user_id=message.from_user.id
+                )
+            )
+            logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id}")
+        except Exception as e:
+            logger.error(f"Не удалось автоматически запустить отслеживание: {e}")
 
 
 # ==================== ОПЛАТА ЗВЕЗДАМИ TELEGRAM (STARS) ====================
@@ -795,7 +876,7 @@ async def process_edit_link(message: Message, state: FSMContext):
         return
 
     status_msg = await message.answer(t("pt_updating_group", lang=user_lang), parse_mode="HTML")
-    success, err_msg, invite_link, chat_id = await connect_target_and_create_group(new_target, message.from_user.id)
+    success, err_msg, invite_link, chat_id, *rest = await connect_target_and_create_group(new_target, message.from_user.id)
 
     if not success:
         await status_msg.edit_text(f"❌ {err_msg}")
@@ -803,6 +884,10 @@ async def process_edit_link(message: Message, state: FSMContext):
         return
 
     rec.username_group = new_target
+    if rest and rest[0]:
+        rec.id_group = rest[0]
+    if len(rest) > 1 and rest[1]:
+        rec.name_group = rest[1]
     rec.date_added = datetime.now()
     rec.save()
 

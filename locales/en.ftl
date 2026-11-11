@@ -711,6 +711,7 @@ btn_connect_free_account = 🎁 Admin's free account (1 group)
 btn_disconnect_account = ❌ Disconnect current account
 btn_to_tracking_menu = 🎯 To Tracking menu
 btn_to_settings_menu = ⚙️ To Settings
+btn_main_menu = 🏠 Main Menu
 btn_add_keywords = ➕ Add Keywords
 btn_keywords_list = 📋 Keywords List
 btn_export_keywords = 📥 Export Keywords

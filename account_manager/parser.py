@@ -53,6 +53,46 @@ async def get_full_info_group(client, entity):
         logger.exception(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
 
 
+def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int) -> bool:
+    """
+    Проверяет, входит ли чат в список отслеживаемых групп/каналов пользователя.
+
+    :param chat_id: (int) ID чата из Telethon.
+    :param chat_username: (str) Username чата (если есть).
+    :param user_id: (int) ID пользователя.
+    :return: (bool) True, если чат отслеживается данным пользователем.
+    """
+    try:
+        from database.users_groups import UsersGroups
+        user_groups = list(UsersGroups.select().where(UsersGroups.user_id == user_id))
+        if not user_groups:
+            return False
+
+        clean_user_chat = (chat_username or "").lower().lstrip("@")
+
+        for g in user_groups:
+            # 1. Проверка по сохраненному id_group
+            if g.id_group and (g.id_group == chat_id or str(g.id_group) == str(chat_id)):
+                return True
+
+            # 2. Проверка по username_group / ссылке
+            stored = (g.username_group or "").strip()
+            if not stored:
+                continue
+
+            if stored == str(chat_id) or f"-100{stored}" == str(chat_id):
+                return True
+
+            stored_clean = stored.split("/")[-1].lower().lstrip("@")
+            if clean_user_chat and stored_clean == clean_user_chat:
+                return True
+
+        return False
+    except Exception as e:
+        logger.error(f"Ошибка проверки отслеживания чата {chat_id}: {e}")
+        return True
+
+
 async def process_message(client, message: Message, chat_id: int, user_id, target_group_id):
     """
     Обрабатывает входящее сообщение, проверяет его на совпадение с ключевыми словами и пересылает в целевую группу с
@@ -61,61 +101,61 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     Контекст включает название источника, ссылку на сообщение и сам текст.
     Использует глобальный set `forwarded_messages` для предотвращения дубликатов.
 
-    - Сообщение пересылается только один раз (проверка по chat_id-message.id).
-    - Ссылка формируется по разным правилам для супергрупп и обычных чатов.
-    - Ключевые слова загружаются динамически из базы данных пользователя.
-    :param client: (TelegramClient) Активный клиент для отправки сообщений.
+    :param client: (TelegramClient) Активный клиент Telethon.
     :param message: (Message) Входящее сообщение для обработки.
     :param chat_id: (int) Идентификатор чата-источника.
-    :param user_id: (int) Идентификатор пользователя, чьи ключевые слова используются.
-    :param target_group_id: (int) Идентификатор целевой группы для пересылки.
+    :param user_id: (int | str) Идентификатор пользователя, чьи ключевые слова используются.
+    :param target_group_id: (int | None) Идентификатор целевой группы для пересылки.
     :return: None
     :raises Exception: Логируется при ошибках отправки сообщения.
-
     """
-
     if not message.message:
         return
 
-    message_text = message.message.lower()
+    # Защита от бесконечного цикла: игнорируем сообщения из группы для уведомлений
+    if not target_group_id:
+        target_group_id = get_group_id_with_personal_tracking(int(user_id))
+    if target_group_id and (chat_id == target_group_id or str(chat_id) == str(target_group_id)):
+        return
 
+    # Получаем информацию о чате-источнике
+    chat_entity = None
+    chat_title = "Неизвестно"
+    chat_username = ""
+    try:
+        chat_entity = await client.get_entity(chat_id)
+        chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name", None) or "Неизвестно"
+        chat_username = getattr(chat_entity, "username", None) or ""
+    except Exception as e:
+        logger.debug(f"Не удалось получить сущность для чата {chat_id}: {e}")
+
+    # Проверяем, отслеживает ли пользователь данный чат
+    if not is_chat_monitored_by_user(chat_id=chat_id, chat_username=chat_username, user_id=int(user_id)):
+        return
+
+    message_text = message.message.lower()
     msg_key = f"{chat_id}-{message.id}"
 
     if msg_key in forwarded_messages:
         return
 
-    keywords_count = get_keywords_count(user_id=user_id)  # Ключевые слова
-
+    keywords_count = get_keywords_count(user_id=int(user_id))
     if keywords_count == 0:
         logger.info(f"У пользователя {user_id} нет ключевых слов")
-
         return
 
     # Получаем ключевые слова из базы данных для данного пользователя
-
-    keywords = get_user_keywords(user_id=user_id)
-
+    keywords = get_user_keywords(user_id=int(user_id))
     keywords_lower = [keyword.lower() for keyword in keywords]
-    # Используем ключевые слова из базы данных
     matched_keyword = next((keyword for keyword in keywords_lower if keyword in message_text), None)
-    if matched_keyword:
-        logger.info(f"📌 Найдено совпадение по ключевому слову '{matched_keyword}'. Пересылаю сообщение ID={message.id}")
-        try:
-            # Получаем информацию о чате-источнике
-            chat_entity = None
-            chat_title = "Неизвестно"
-            chat_username = ""
-            try:
-                chat_entity = await client.get_entity(chat_id)
-                chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name",
-                                                                            None) or "Неизвестно"
-                chat_username = getattr(chat_entity, "username", None) or ""
-            except Exception as e:
-                logger.warning(f"Не удалось получить информацию о чате {chat_id}: {e}")
 
+    if matched_keyword:
+        logger.info(f"📌 Найдено совпадение по ключевому слову '{matched_keyword}'. Сообщение ID={message.id}")
+        forwarded_messages.add(msg_key)
+
+        try:
             # Формируем ссылку на сообщение
             if str(chat_id).startswith("-100"):
-                # Для супергрупп/каналов (chat_id начинается с -100)
                 clean_chat_id = str(chat_id)[4:]
                 message_link = f"https://t.me/c/{clean_chat_id}/{message.id}"
             elif chat_username:
@@ -123,35 +163,30 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
             else:
                 message_link = "Ссылка недоступна"
 
-            chat_display = f"@{chat_username}" if chat_username else chat_title
+            # 1. Отправляем форматированное уведомление через бота напрямую в созданную группу
             try:
-                # Формируем итоговое сообщение с контекстом
-                context_text = (
-                    f"📥 **Новое сообщение**\n\n"
-                    f"**Источник:** {chat_title}\n"
-                    f"**Чат:** {chat_display}\n"
-                    f"**Ссылка:** {message_link}\n\n"
-                    f"**Ключевое слово:** `{matched_keyword}`\n\n"
-                    f"**Текст сообщения:**\n{message.message}"
+                from handlers.user.personal_tracking import send_personal_tracking_alert
+                await send_personal_tracking_alert(
+                    user_id=int(user_id),
+                    matched_keyword=matched_keyword,
+                    message_text=message.message,
+                    message_link=message_link
                 )
-                # Отправляем в целевую группу
-                await client.send_message(target_group_id, context_text)
-            except MessageTooLongError:
-                logger.warning(
-                    f"Не удалось отправить сообщение с контекстом, так как оно слишком длинное ({len(context_text)})"
-                )
-            try:
-                await client.forward_messages(target_group_id, message)
-                logger.info(f"✅ Сообщение переслано в целевую группу (ID={target_group_id})")
-            except MessageIdInvalidError:
-                logger.warning(
-                    f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего сообщение было удалено")
-            except ChatForwardsRestrictedError:
-                logger.warning(
-                    f"Не удалось переслать сообщение в целевую группу (ID={target_group_id}), скорей всего запрещено пересылать сообщения")
-            forwarded_messages.add(msg_key)
+                logger.info(f"✅ Алерт отправлен ботом в группу уведомлений пользователя {user_id}")
+            except Exception as alert_err:
+                logger.error(f"❌ Ошибка отправки алерта ботом: {alert_err}")
+
+            # 2. Также пытаемся переслать сообщение через клиент Telethon (если сессия в целевой группе)
+            if target_group_id:
+                try:
+                    target_entity = await client.get_input_entity(int(target_group_id))
+                    await client.forward_messages(target_entity, message)
+                    logger.info(f"✅ Сообщение переслано клиентом Telethon в целевую группу (ID={target_group_id})")
+                except Exception as fwd_err:
+                    logger.debug(f"Пересылка сообщения Telethon пропущена или недоступна: {fwd_err}")
+
         except Exception as e:
-            logger.exception(f"❌ Ошибка при отправке сообщения с контекстом: {e}")
+            logger.exception(f"❌ Ошибка при отправке уведомления о сообщении: {e}")
 
 
 def determine_telegram_chat_type(entity):
@@ -597,7 +632,7 @@ async def filter_messages(message, user_id):
             Запускает прослушивание входящих сообщений в отслеживаемых чатах до срабатывания флага остановки.
             """
 
-            @client.on(events.NewMessage(chats=already_subscribed))
+            @client.on(events.NewMessage())
             async def handle_new_message(event: events.NewMessage.Event):
                 """
                 Обрабатывает новое входящее сообщение из отслеживаемого чата.
@@ -609,8 +644,8 @@ async def filter_messages(message, user_id):
                         client=client,
                         message=event.message,
                         chat_id=event.chat_id,
-                        user_id=str(user_id),
-                        target_group_id=get_group_id_with_personal_tracking(str(user_id))
+                        user_id=int(user_id),
+                        target_group_id=target_group_id
                     )
                 except Exception as e:
                     logger.exception(f"Не удалось обработать сообщение: {e}")

@@ -36,20 +36,16 @@ def generate_welcome_message(user_language: str, user_tg_id: int) -> str:
     :param user_tg_id: (int) Telegram ID пользователя.
     :return: (str) Сформированный текст приветственного сообщения.
     """
-    groups_count = getting_number_records_database()  # Общее число найденных групп с помощью Ai.
-    count = get_session_count(user_id=user_tg_id)  # Сессии пользователя дял отслеживания групп / каналов
-    group_count = get_group_count(user_id=user_tg_id)  # Группы для для отслеживания
-    keywords_count = get_keywords_count(user_id=user_tg_id)  # Ключевые слова
 
     return t(
         "welcome_message_template",
         lang=user_language,
         version=version,
-        groups_count=groups_count,
-        count=count,
-        group_count=group_count,
+        groups_count=getting_number_records_database(),  # Общее число найденных групп с помощью Ai.
+        count=get_session_count(user_id=user_tg_id),  # Сессии пользователя дял отслеживания групп / каналов
+        group_count=get_group_count(user_id=user_tg_id),  # Группы для для отслеживания
         # get_groups=get_groups,
-        keywords_count=keywords_count
+        keywords_count=get_keywords_count(user_id=user_tg_id)  # Ключевые слова
     )
 
 

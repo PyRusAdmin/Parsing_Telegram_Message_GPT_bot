@@ -702,6 +702,7 @@ btn_connect_free_account = 🎁 Бесплатный аккаунт от адм�
 btn_disconnect_account = ❌ Отключить текущий аккаунт
 btn_to_tracking_menu = 🎯 В меню отслеживания
 btn_to_settings_menu = ⚙️ В настройки
+btn_main_menu = 🏠 В главное меню
 btn_add_keywords = ➕ Добавить ключевые слова
 btn_keywords_list = 📋 Список ключевых слов
 btn_export_keywords = 📥 Экспорт ключевых слов
