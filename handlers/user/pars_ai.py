@@ -13,7 +13,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from peewee import IntegrityError, fn
 
-# from database.database import User, TelegramGroups
 from database.database import TelegramGroups
 from database.users_personal_trackings import UsersPersonalTrackings
 from handlers.user_language import determines_user_language

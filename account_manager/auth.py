@@ -1,13 +1,13 @@
-import asyncio
 import csv
 import os
 import random
 from pathlib import Path
+from typing import Optional
 
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
 from telethon.errors import (
-    AuthKeyDuplicatedError, TimedOutError, PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
+    AuthKeyDuplicatedError, PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
     AuthKeyUnregisteredError
 )
 from telethon.sessions import StringSession
@@ -42,7 +42,8 @@ async def get_account_info(client: TelegramClient) -> dict:
     }
 
 
-async def check_and_cleanup_session(session_string: str, user_id: int = 0, user_lang: str = "ru") -> tuple[bool, Optional[str]]:
+async def check_and_cleanup_session(session_string: str, user_id: int = 0, user_lang: str = "ru") -> tuple[
+    bool, Optional[str]]:
     """
     Универсальная потокобезопасная проверка сессии Telethon.
     При обнаружении невалидности автоматически удаляет запись из базы данных

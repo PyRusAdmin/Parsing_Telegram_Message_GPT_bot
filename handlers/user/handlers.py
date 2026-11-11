@@ -10,10 +10,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from account_manager.parser import filter_messages
 from account_manager.session import find_session_file
 from core.config import version
-from database.database import (
-    # User,  # Таблица User объединена с users_personal_trackings
-    getting_number_records_database
-)
+from database.database import getting_number_records_database
 from database.users_groups import get_group_count
 from database.users_keywords import get_keywords_count
 from database.users_personal_trackings import get_session_count, UsersPersonalTrackings

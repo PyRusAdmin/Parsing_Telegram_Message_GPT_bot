@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from core.config import PAGE_SIZE
 from database.users_groups import (
     dell_group, clear_all_user_groups, get_user_groups_paginated, get_user_channel_usernames,
 )
@@ -17,8 +18,6 @@ from keyboards.keyboards import (
 from locales.locales import t
 
 router = Router(name=__name__)
-
-PAGE_SIZE = 5  # Количество элементов на странице
 
 
 # ==================== ГЛАВНОЕ МЕНЮ НАСТРОЕК ====================

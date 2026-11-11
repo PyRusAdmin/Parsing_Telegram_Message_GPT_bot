@@ -39,7 +39,7 @@ from core.config import (
     ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
 )
 from database.database import (
-    TelegramGroups,  # User (объединен с UsersPersonalTrackings),
+    TelegramGroups,
     get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
 )
@@ -376,19 +376,9 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
         client_ip = get_client_ip(request)
         logger.info(f"User {user_data['id']} connected from {client_ip}")
         # Получить пользователя
-        # user = User.get_or_none(User.user_id == user_data["id"])
         user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
         if not user:
             detected_lang = await detect_language_by_ip(client_ip, request.headers.get("accept-language"))
-            # Зарегистрировать пользователя в базе данных
-
-            # user = User.create(
-            #     user_id=user_data["id"],
-            #     username=user_data.get("username"),
-            #     first_name=user_data.get("first_name"),
-            #     last_name=user_data.get("last_name"),
-            #     language=detected_lang
-            # )
             user = UsersPersonalTrackings.create(
                 user_id=user_data["id"],
                 user_username=user_data.get("username"),
@@ -454,8 +444,6 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
     """
     if lang not in ["ru", "en"]:
         raise HTTPException(status_code=400, detail="Invalid language code")
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -473,8 +461,6 @@ async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус запуска отслеживания.
     """
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -494,8 +480,6 @@ async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус остановки отслеживания.
     """
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -567,7 +551,6 @@ async def list_channels(user_data: dict = Depends(get_current_tg_user)):
     :return: Список словарей с информацией об отслеживаемых каналах.
     """
     # Управление отслеживаемыми каналами
-    # user_id = user_data["id"]
     records = list(
         UsersGroups.select().where(UsersGroups.user_id == user_data["id"]).order_by(UsersGroups.date_added.desc()))
     return [{"id": ch.id, "username": ch.username_group, "date_added": ch.date_added.strftime("%Y-%m-%d %H:%M:%S")} for
@@ -607,7 +590,6 @@ async def delete_channel(ch_id: int, user_data: dict = Depends(get_current_tg_us
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус выполнения операции.
     """
-    # user_id = user_data["id"]
     deleted = UsersGroups.delete().where(UsersGroups.user_id == user_data["id"], UsersGroups.id == ch_id).execute()
     if deleted:
         return {"status": "ok"}
@@ -716,8 +698,6 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус подключения и информация об аккаунте.
     """
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -836,8 +816,6 @@ async def create_topup_invoice(amount: int = Query(...), user_data: dict = Depen
     :return: (dict) Словарь со ссылкой на оплату инвойса.
     """
     # Ссылка на счет пополнения Stars
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -870,9 +848,6 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     """
     logger.info(
         f"Запрос пользователя {user_data['id']} {user_data.get('last_name', '')} {user_data.get('first_name', '')} {user_data.get('username', '')}: {query}")
-    # user = User.get_or_none(User.user_id == user_data["id"])
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User not found")
     all_saved_groups = []
     words = re.findall(r'\w+', query)
     for word in words:
@@ -930,7 +905,6 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     if all_saved_groups:
         # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
         try:
-            # user = User.get_or_none(User.user_id == user_data["id"])
             user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
             # Определяем язык пользователя, который пользователь выбрал при старте бота
             user_lang = determines_user_language(message_or_callback=user_data["id"])
@@ -960,7 +934,6 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     """
     logger.info(
         f"Запрос пользователя {user_data['id']} {user_data.get('last_name', '')} {user_data.get('first_name', '')}: {query}")
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1011,8 +984,6 @@ async def export_search_results_excel(telegram_ids: str = Form(...), user_data: 
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (Response) HTTP-ответ с файлом таблицы Excel.
     """
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1056,8 +1027,6 @@ async def check_export_status(user_data: dict = Depends(get_current_tg_user)):
     :return: (dict) Данные о бесплатной выгрузке, оставшемся времени и балансе звезд.
     """
     # Получить базу данных / Экспортировать XLSX Endpoint
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1083,8 +1052,6 @@ async def download_database(
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (Response) HTTP-ответ с файлом выгрузки Excel.
     """
-    # user_id = user_data["id"]
-    # user = User.get_or_none(User.user_id == user_data["id"])
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1155,7 +1122,6 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (int) Идентификатор администратора.
     """
-    # user_id = user_data["id"]
     is_admin = int(user_data["id"]) == int(ADMIN_USER_ID)
     if not is_admin:
         raise HTTPException(status_code=403, detail="Access denied: Admin only")
@@ -1304,11 +1270,6 @@ async def bg_actualize_db():
                 try:
                     account_info = await get_account_info(client)
                     if account_info:
-                        # acc_id = account_info.get("id")
-                        # acc_phone = data_telegram.get("phone")
-                        # acc_first = account_info.get("first_name")
-                        # acc_last = account_info.get("last_name")
-                        # acc_user = account_info.get("username")
                         logger.info(
                             f"Используется аккаунт: {account_info.get('id')}, {account_info.get('phone')}, {account_info.get('first_name')}, {account_info.get('last_name')}, @{account_info.get('username')}")
                         admin_task_status[
@@ -1326,7 +1287,6 @@ async def bg_actualize_db():
                 except ValueError:
                     logger.error(f"Не валидный username {group['username']}")
                 except FloodWaitError as e:
-                    # wait_time = e.seconds
                     logger.warning(f"FloodWait для {group['username']}: нужно подождать {e.seconds} секунд.")
                 except AuthKeyUnregisteredError:
                     logger.error(f"Не валидная сессия для проверки группы {group['username']}")
