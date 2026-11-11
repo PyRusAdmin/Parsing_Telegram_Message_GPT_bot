@@ -119,7 +119,7 @@ async def broadcast_start_cb(callback: CallbackQuery, state: FSMContext):
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    if callback.from_user.id not in ADMIN_USER_ID:
+    if int(callback.from_user.id) != int(ADMIN_USER_ID):
         await callback.answer(t("admin_access_denied", lang=user_lang), show_alert=True)
         return
 
@@ -142,7 +142,7 @@ async def broadcast_message_received(message: Message, state: FSMContext):
     :param message: (Message) Объект входящего сообщения от администратора с контентом рассылки.
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
-    if message.from_user.id not in ADMIN_USER_ID:
+    if int(message.from_user.id) != int(ADMIN_USER_ID):
         return
 
     user_lang = determines_user_language(message_or_callback=message.from_user.id)
@@ -197,7 +197,7 @@ async def broadcast_send_cb(callback: CallbackQuery, state: FSMContext, bot):
     :param bot: Экземпляр бота Aiogram для отправки сообщений.
     """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
-    if callback.from_user.id not in ADMIN_USER_ID:
+    if int(callback.from_user.id) != int(ADMIN_USER_ID):
         await callback.answer(t("admin_access_denied", lang=user_lang), show_alert=True)
         return
 

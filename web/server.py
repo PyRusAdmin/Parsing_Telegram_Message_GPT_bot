@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from aiogram.client import bot
 from aiogram.types import BufferedInputFile, LabeledPrice
 from asgiref.sync import sync_to_async
 from fastapi import (
@@ -44,10 +43,10 @@ from database.database import (
     get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
 )
-from database.users_accounts import write_account_to_user_table, getting_account
+from database.users_accounts import write_account_to_user_table, getting_account, UsersAccounts
 from database.users_groups import UsersGroups, get_group_count
 from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords
-from database.users_personal_trackings import get_session_count, get_user_accounts, UsersPersonalTrackings
+from database.users_personal_trackings import get_session_count, UsersPersonalTrackings
 from database.users_questions import get_all_questions
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
 from handlers.admin.language_detection import ai_llama_fri
@@ -414,8 +413,7 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
         target_group = pt.created_group_link if pt else None
 
         tracking_active = str(user_data["id"]) in active_clients
-        is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID, (list, set, tuple)) else user_data[
-                                                                                                                  "id"] in ADMIN_USER_ID
+        is_admin = int(user_data["id"]) == int(ADMIN_USER_ID)
         session_key = (user_data["id"], client_ip)
         if session_key not in logged_user_sessions:
             logged_user_sessions.add(session_key)
@@ -691,16 +689,18 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: Список словарей с номерами телефонов и датами добавления аккаунтов.
     """
-    # Управление аккаунтами Telegram
-    # user_id = user_data["id"]
-    # accounts = get_user_accounts(user_data["id"])
-    # Возвращать сериализируемый дикт (исключая полную сессионную строку)
+    # Управление аккаунтами Telegram: получаем записи из таблицы users_accounts
+    records = list(
+        UsersAccounts.select()
+        .where(UsersAccounts.user_id == user_data["id"])
+        .order_by(UsersAccounts.date_added.desc())
+    )
     return [
         {
-            "phone_number": acc["phone_number"],
-            "created_at": acc["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+            "phone_number": acc.phone_number_session_string or "unknown",
+            "created_at": acc.date_added.strftime("%Y-%m-%d %H:%M:%S") if acc.date_added else ""
         }
-        for acc in get_user_accounts(user_data["id"])
+        for acc in records
     ]
 
 
@@ -790,24 +790,28 @@ async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_us
     :return: (dict) Статус выполнения операции.
     """
     user_id = user_data["id"]
-    # Получите список пользовательских аккаунтов, чтобы найти сессионную строку, соответствующую этому телефону
-    accounts = get_user_accounts(user_id)
-    session_to_delete = None
-    for acc in accounts:
-        if acc["phone_number"] == phone:
-            session_to_delete = acc["session_string"]
-            break
+    # Ищем аккаунт в таблице users_accounts пользователя
+    account = UsersAccounts.get_or_none(
+        (UsersAccounts.user_id == user_id) &
+        (UsersAccounts.phone_number_session_string == phone)
+    )
 
-    if not session_to_delete:
+    if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    # Удаление из таблицы учетных записей пользователей
-    deleted = UserAccountsTable.delete().where(
-        UserAccountsTable.user_id == user_id,
-        UserAccountsTable.phone_number == phone
+    session_to_delete = account.user_session_string
+
+    # Удаление из таблицы users_accounts
+    deleted = account.delete_instance()
+
+    # Очищаем сессию в таблице users_personal_trackings, если там был привязан этот аккаунт
+    UsersPersonalTrackings.update(personal_account="").where(
+        (UsersPersonalTrackings.user_id == user_id) &
+        (UsersPersonalTrackings.personal_account == session_to_delete)
     ).execute()
+
     if deleted:
-        # Также чисто от глобальных активных клиентов, если подключены
+        # Также отключаем от глобальных активных клиентов, если подключен
         if str(user_id) in active_clients:
             # Нужно отключить активного клиента
             client = active_clients.pop(str(user_id))
@@ -1148,9 +1152,7 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
     :return: (int) Идентификатор администратора.
     """
     # user_id = user_data["id"]
-    is_admin = user_data["id"] == ADMIN_USER_ID if not isinstance(ADMIN_USER_ID,
-                                                                  (list, set, tuple)) else user_data[
-                                                                                               "id"] in ADMIN_USER_ID
+    is_admin = int(user_data["id"]) == int(ADMIN_USER_ID)
     if not is_admin:
         raise HTTPException(status_code=403, detail="Access denied: Admin only")
     return user_data["id"]
@@ -1169,7 +1171,7 @@ async def get_admin_status():
         (TelegramGroups.category == '')
     ).count()
     # Получить общее количество счетов
-    total_accounts = Account.select().count()
+    total_accounts = UsersAccounts.select().count()
     return {
         "uncategorized_count": uncategorized_count,
         "total_accounts": total_accounts,
@@ -1560,7 +1562,12 @@ static_router = APIRouter()
 
 @static_router.get("/")
 async def serve_index(request: Request):
-    """Отдает главную HTML-страницу веб-интерфейса Mini App"""
+    """
+    Отдает главную HTML-страницу веб-интерфейса Mini App.
+
+    :param request: (Request) Входящий HTTP-запрос.
+    :return: (FileResponse) HTML-страница приложения.
+    """
     user_str = "Анонимный пользователь"
     auth_header = request.headers.get("Authorization")
     query_params = dict(request.query_params)
@@ -1610,7 +1617,12 @@ async def serve_index(request: Request):
 
 @static_router.get("/{file_path:path}")
 async def serve_static(file_path: str):
-    """Отдает статические файлы веб-интерфейса Mini App"""
+    """
+    Отдает статические файлы веб-интерфейса Mini App.
+
+    :param file_path: (str) Путь к запрашиваемому статическому файлу.
+    :return: (FileResponse) Статический файл или index.html для SPA маршрутизации.
+    """
     target_path = os.path.join("web/static", file_path)
     if os.path.isfile(target_path):
         return FileResponse(target_path)

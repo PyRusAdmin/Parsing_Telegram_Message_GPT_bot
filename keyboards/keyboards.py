@@ -445,7 +445,7 @@ def menu_user_admin_keyboard(lang: str = 'ru', user_id: int | None = None):
     ]
 
     # Добавляем кнопку статистики только для админов
-    if user_id in ADMIN_USER_ID:
+    if int(user_id) == int(ADMIN_USER_ID):
         buttons.append(
             [InlineKeyboardButton(text=t("admin_panel_button", lang=lang), callback_data="menu_admin_panel")])
 
@@ -752,7 +752,7 @@ def personal_tracking_menu_kb(user_id: int, lang: str = 'ru') -> InlineKeyboardM
     ]
 
     # Добавляем кнопку статистики только для админов
-    if user_id in ADMIN_USER_ID:
+    if int(user_id) == int(ADMIN_USER_ID):
         buttons.append([InlineKeyboardButton(text=t("btn_pt_stats", lang=lang), callback_data="pt_stats")])
 
     buttons.append(

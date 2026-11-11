@@ -26,7 +26,7 @@ from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.database import (
     write_account_to_db_free
 )
-from database.users_accounts import getting_account
+from database.users_accounts import getting_account, write_account_to_user_table
 from database.users_keywords import add_user_keywords
 from database.users_personal_trackings import get_user_accounts, UsersPersonalTrackings, write_account_to_db
 from handlers.user_language import determines_user_language
@@ -848,7 +848,7 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         что бы пользовались бесплатно или расширяли свой пакет)
         """
 
-        if user_id in ADMIN_USER_ID:
+        if int(user_id) == int(ADMIN_USER_ID):
             # Сохраняем аккаунт в общую базу бесплатных аккаунтов
             write_account_to_db_free(
                 session_string=final_session,  # Стринг сессия Telegram
@@ -984,7 +984,7 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         final_session = client.session.save()
         await client.disconnect()
 
-        if message.from_user.id in ADMIN_USER_ID:
+        if int(message.from_user.id) == int(ADMIN_USER_ID):
             # Сохраняем аккаунт в общую базу бесплатных аккаунтов
             write_account_to_db_free(
                 session_string=final_session,  # Стринг сессия Telegram

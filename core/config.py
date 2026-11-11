@@ -16,7 +16,7 @@ PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
 
-ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "0").strip()
+ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0").strip() or 0)
 
 mobile_device = {
     "device_model": "Pixel 5",
