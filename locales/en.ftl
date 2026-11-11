@@ -457,6 +457,12 @@ account_connected_free =
 no_free_accounts =
     ❌ No free accounts available. Please try again later or contact the administrator.
 
+no_free_accounts_detailed =
+    ⚠️ <b>No free accounts available</b>
+
+    Currently, no free accounts are available from the administrator.
+    Please connect your personal account (by phone or via session file).
+
 invalid_session_file =
     ❌ This is not a session file! Send a file with `.session` extension
 
@@ -752,6 +758,13 @@ pt_invalid_link = ⚠️ Please enter a valid link (https://t.me/...) or @userna
 pt_checking_group = 🔄 <i>Checking group and retrieving info...</i>
 pt_ask_keywords = 🔑 Enter keywords to track separated by commas:
 pt_saved_success = ✅ <b>Tracking settings saved!</b>
+pt_alert_message =
+    🎯 <b>Keyword matched:</b> <code>{ $keyword }</code>
+
+    💬 <b>Message text:</b>
+    { $text }
+
+    🔗 <a href='{ $link }'>Go to message</a>
 pt_no_active_trackings = ℹ️ You do not have active personal trackings yet.
 pt_record_not_found = Error: Record not found
 pt_edit_prompt = ⚙️ <b>Edit Tracking</b>\n\n🔗 Current link: { $link }\n🔑 Keywords: { $keywords }\n\nSend a new group/channel link:

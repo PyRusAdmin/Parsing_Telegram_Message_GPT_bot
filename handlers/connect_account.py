@@ -102,15 +102,7 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     free_accounts = list(AccountFree.select())
     if not free_accounts:
         logger.warning(f"Нет доступных свободных аккаунтов для пользователя {user_id}")
-        alert_text = (
-            "⚠️ <b>Нет свободных аккаунтов от администратора</b>\n\n"
-            "В данный момент в пуле нет доступных свободных аккаунтов.\n"
-            "Пожалуйста, подключите свой личный аккаунт (по телефону или через сессию)."
-            if user_lang == "ru"
-            else "⚠️ <b>No free accounts available</b>\n\n"
-                 "Currently, no free accounts are available from the administrator.\n"
-                 "Please connect your personal account (by phone or via session file)."
-        )
+        alert_text = t("no_free_accounts_detailed", lang=user_lang)
         kb = connect_account_keyboard(lang=user_lang, has_account=False, is_shared=False)
         try:
             await callback.message.edit_text(text=alert_text, reply_markup=kb, parse_mode="HTML")

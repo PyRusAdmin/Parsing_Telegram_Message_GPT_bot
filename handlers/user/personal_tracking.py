@@ -842,15 +842,18 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
     :param message_text: (str) Текст сообщения из отслеживаемой группы.
     :param message_link: (str) Прямая ссылка на сообщение в Telegram.
     """
+    user_lang = determines_user_language(message_or_callback=user_id)
     records = UsersPersonalTrackings.select().where(UsersPersonalTrackings.user_id == user_id)
     for r in records:
         keywords_list = [k.strip().lower() for k in r.keywords.split(",") if k.strip()]
         if matched_keyword.lower() in keywords_list:
             if r.created_group_id:
-                alert_text = (
-                    f"🎯 <b>Найдено ключевое слово:</b> <code>{matched_keyword}</code>\n\n"
-                    f"💬 <b>Текст сообщения:</b>\n{message_text[:500]}\n\n"
-                    f"🔗 <a href='{message_link}'>Перейти к сообщению</a>"
+                alert_text = t(
+                    "pt_alert_message",
+                    lang=user_lang,
+                    keyword=matched_keyword,
+                    text=message_text[:500],
+                    link=message_link
                 )
                 try:
                     await bot.send_message(
@@ -923,31 +926,21 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             )
 
         await state.clear()
-        first_name = account_info.get("first_name") or ""
-        last_name = account_info.get("last_name") or ""
-        full_name = f"{first_name} {last_name}".strip()
-        auth_success_msg = t(
-            "pt_auth_success",
-            lang=user_lang,
-            name=full_name,
-            phone=str(account_info.get("phone") or ""),
-            tg_id=str(account_info.get("id") or "")
-        )
         await callback.message.edit_text(
-            auth_success_msg,
+            t("pt_auth_success", lang=user_lang,
+              name=f"{account_info.get("first_name") or ""} {account_info.get("last_name") or ""}".strip(),
+              phone=str(account_info.get("phone") or ""),
+              tg_id=str(account_info.get("id") or "")
+              ),
             parse_mode="HTML"
         )
     except PhoneCodeInvalidError:
         await callback.answer(t("pt_invalid_code_alert", lang=user_lang), show_alert=True)
         await state.update_data(current_code="")
         try:
-            err_code_text = t(
-                "pt_auth_code_invalid_screen",
-                lang=user_lang,
-                phone=str(phone or "")
-            )
+            err_code_text = t("pt_auth_code_invalid_screen", lang=user_lang, phone=str(phone or ""))
             await callback.message.edit_text(
-                err_code_text,
+                t("pt_auth_code_invalid_screen", lang=user_lang, phone=str(phone or "")),
                 reply_markup=emoji_code_keypad_kb(lang=user_lang),
                 parse_mode="HTML"
             )
@@ -973,9 +966,8 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             pass
 
         try:
-            two_fa_prompt = t("pt_auth_2fa_prompt", lang=user_lang)
             await callback.message.edit_text(
-                two_fa_prompt,
+                t("pt_auth_2fa_prompt", lang=user_lang),
                 parse_mode="HTML"
             )
         except Exception:
