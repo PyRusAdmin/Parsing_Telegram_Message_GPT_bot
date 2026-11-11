@@ -99,7 +99,7 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     else:
         candidates = free_accounts
 
-    # Ищем первый рабочий и авторизованный аккаунт
+    # Ищем первый рабочий, авторизованный аккаунт, который не является создателем (owner) группы
     checker = CheckingAccountsValidity()
     selected_account = None
     account_info = None
@@ -107,18 +107,40 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     for candidate in candidates:
         try:
             client = await checker.client_connect_string_session(candidate.session_string)
-            if client and await client.is_user_authorized():
-                account_info = await get_account_info(client)
-                await client.disconnect()
-                selected_account = candidate
-                break
-            else:
+            if not client or not await client.is_user_authorized():
                 logger.warning(
                     f"⚠️ Бесплатный аккаунт {candidate.phone_number} не авторизован или заблокирован. Удаляем из пула...")
                 try:
                     candidate.delete_instance()
                 except Exception:
                     pass
+                continue
+
+            candidate_info = await get_account_info(client)
+            await client.disconnect()
+
+            # Если у пользователя уже есть созданная группа результатов, проверяем синхронизацию и права:
+            # аккаунт не должен быть создателем/владельцем группы (чтобы бот оставался старшим и ограничил его права)
+            if rec and rec.created_group_id:
+                sync_ok, is_owner = await sync_and_promote_account_for_tracking(
+                    user_id=user_id,
+                    session_string=candidate.session_string
+                )
+                if not sync_ok:
+                    if is_owner:
+                        logger.warning(
+                            f"⚠️ Аккаунт {candidate.phone_number} (ID: {candidate_info.get('id')}) является создателем группы {rec.created_group_id}. "
+                            f"Бот не может ограничить его права. Подбираем другой аккаунт из пула..."
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ Аккаунт {candidate.phone_number} не удалось подготовить для группы результатов. Пробуем следующий..."
+                        )
+                    continue
+
+            selected_account = candidate
+            account_info = candidate_info
+            break
         except Exception as conn_err:
             logger.warning(f"Ошибка проверки аккаунта {candidate.phone_number}: {conn_err}")
 
@@ -140,9 +162,9 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
 
     set_user_shared_account(user_id=user_id, session_string=session_string)
 
-    # Синхронизируем подписку на целевой объект и группу результатов,
-    # и админ-бот выдает новому аккаунту права администратора только на публикацию сообщений
-    await sync_and_promote_account_for_tracking(user_id=user_id, session_string=session_string)
+    # Если группы результатов еще не было, синхронизируем целевые группы/каналы
+    if not (rec and rec.created_group_id):
+        await sync_and_promote_account_for_tracking(user_id=user_id, session_string=session_string)
 
     # Формируем имя и телефон для отображения
     phone_display = f"+{account_info.get('phone')}" if account_info and account_info.get('phone') else phone_number

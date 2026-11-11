@@ -364,7 +364,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
     return False, "⚠️ Не удалось подключиться к группе через доступные аккаунты. Попробуйте позже.", None, None, None, None
 
 
-async def sync_and_promote_account_for_tracking(user_id: int, session_string: str) -> bool:
+async def sync_and_promote_account_for_tracking(user_id: int, session_string: str) -> tuple[bool, bool]:
     """
     Синхронизирует новый/переподключенный аккаунт с отслеживанием пользователя:
     1. Подписывает аккаунт на целевые группы/каналы отслеживания из UsersGroups.
@@ -375,16 +375,16 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
 
     :param user_id: (int) ID пользователя Telegram.
     :param session_string: (str) Строка сессии Telethon для подключения.
-    :return: (bool) True при успешной синхронизации, иначе False.
+    :return: (tuple[bool, bool]) (успех_синхронизации, является_владельцем_группы).
     """
     if not session_string:
-        return False
+        return False, False
 
     checker = CheckingAccountsValidity()
     client: TelegramClient | None = await checker.client_connect_string_session(session_string)
     if not client:
         logger.warning(f"⚠️ Не удалось подключить сессию для синхронизации отслеживания user_id={user_id}")
-        return False
+        return False, False
 
     try:
         account_info = await get_account_info(client)
@@ -408,7 +408,7 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
         pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
         if not pt_rec or not pt_rec.created_group_id:
             logger.info(f"У пользователя {user_id} еще нет созданной группы результатов для синхронизации")
-            return True
+            return True, False
 
         group_id = pt_rec.created_group_id
         invite_link = (pt_rec.created_group_link or "").strip()
@@ -460,6 +460,19 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
         # 3. Бот-администратор (старший в группе) выдает права администратора новому аккаунту:
         # ТОЛЬКО на публикацию сообщений, чтобы аккаунт не мог угнать или изменить группу.
         if account_tg_id:
+            # Проверяем, не является ли данный аккаунт создателем (owner) группы
+            try:
+                cm = await bot.get_chat_member(chat_id=group_id, user_id=account_tg_id)
+                if getattr(cm, "status", None) == "creator":
+                    logger.warning(
+                        f"⚠️ Аккаунт {account_tg_id} является создателем (owner) группы {group_id}. "
+                        f"Бот не может ограничить его права."
+                    )
+                    return False, True
+            except Exception as cm_err:
+                logger.debug(f"Проверка get_chat_member в группе {group_id}: {cm_err}")
+
+            promoted = False
             try:
                 await bot.promote_chat_member(
                     chat_id=group_id,
@@ -476,10 +489,18 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                     can_manage_chat=False,
                     can_manage_topics=False
                 )
+                promoted = True
                 logger.info(
                     f"✅ Бот-администратор выдал ограниченные права (только публикация) аккаунту {account_tg_id} в группе {group_id}"
                 )
             except Exception as prom_err:
+                err_str = str(prom_err).lower()
+                if "chat owner" in err_str:
+                    logger.warning(
+                        f"⚠️ Аккаунт {account_tg_id} является создателем группы {group_id} ({prom_err}). Бот не может ограничить его права."
+                    )
+                    return False, True
+
                 logger.warning(
                     f"⚠️ Ошибка promote_chat_member с can_post_messages в группе {group_id} ({prom_err}). Пробуем стандартные права супергруппы..."
                 )
@@ -497,27 +518,36 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                         can_manage_video_chats=False,
                         can_manage_topics=False
                     )
+                    promoted = True
                     logger.info(
                         f"✅ Бот-администратор назначил аккаунт {account_tg_id} администратором с ограниченными правами"
                     )
                 except Exception as fb_prom_err:
+                    fb_str = str(fb_prom_err).lower()
+                    if "chat owner" in fb_str:
+                        logger.warning(
+                            f"⚠️ Аккаунт {account_tg_id} является создателем группы {group_id} ({fb_prom_err}). Бот не может ограничить его права."
+                        )
+                        return False, True
                     logger.warning(f"Не удалось назначить права администратора через бота: {fb_prom_err}")
+                    return False, False
 
-            # Устанавливаем кастомный титул администратора
-            try:
-                await bot.set_chat_administrator_custom_title(
-                    chat_id=group_id,
-                    user_id=account_tg_id,
-                    custom_title="AlertSender"
-                )
-            except Exception:
-                pass
+            if promoted:
+                # Устанавливаем кастомный титул администратора
+                try:
+                    await bot.set_chat_administrator_custom_title(
+                        chat_id=group_id,
+                        user_id=account_tg_id,
+                        custom_title="AlertSender"
+                    )
+                except Exception:
+                    pass
 
-        return True
+        return True, False
 
     except Exception as e:
         logger.exception(f"❌ Ошибка в sync_and_promote_account_for_tracking для user_id={user_id}: {e}")
-        return False
+        return False, False
     finally:
         try:
             await client.disconnect()
