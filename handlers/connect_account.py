@@ -196,6 +196,26 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         await callback.message.answer(text=success_text, reply_markup=kb, parse_mode="HTML")
     await callback.answer(answer_text, show_alert=False)
 
+    # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
+    from database.users_groups import UsersGroups
+    from database.users_keywords import UsersKeywords
+    from account_manager.parser import filter_messages, active_clients
+
+    has_groups = UsersGroups.select().where(UsersGroups.user_id == user_id).exists()
+    has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == user_id).exists()
+    if has_groups and has_keywords:
+        if str(user_id) not in active_clients:
+            try:
+                asyncio.create_task(
+                    filter_messages(
+                        message=callback.message,
+                        user_id=user_id
+                    )
+                )
+                logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после смены аккаунта")
+            except Exception as e:
+                logger.error(f"Не удалось автоматически запустить отслеживание после смены аккаунта: {e}")
+
 
 def sanitization_file_name(document, account_id):
     """
@@ -399,6 +419,26 @@ async def handle_account_file(message: Message, state: FSMContext):
                   name=account_info.get("first_name")),
                 parse_mode="HTML"
             )
+
+            # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
+            from database.users_groups import UsersGroups
+            from database.users_keywords import UsersKeywords
+            from account_manager.parser import filter_messages, active_clients
+
+            has_groups = UsersGroups.select().where(UsersGroups.user_id == message.from_user.id).exists()
+            has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == message.from_user.id).exists()
+            if has_groups and has_keywords:
+                if str(message.from_user.id) not in active_clients:
+                    try:
+                        asyncio.create_task(
+                            filter_messages(
+                                message=message,
+                                user_id=message.from_user.id
+                            )
+                        )
+                        logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после добавления личной сессии")
+                    except Exception as e:
+                        logger.error(f"Не удалось запустить отслеживание: {e}")
         else:
             logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {message.from_user.id}")
             await message.answer(

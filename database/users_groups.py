@@ -86,7 +86,7 @@ def add_user_group(user_id: int, group: list[str], user_username: str = "", user
         gr_clean = gr.strip()
         if not gr_clean:
             continue
-        UsersGroups.get_or_create(
+        rec, created = UsersGroups.get_or_create(
             user_id=user_id,
             username_group=gr_clean,
             defaults={
@@ -97,6 +97,19 @@ def add_user_group(user_id: int, group: list[str], user_username: str = "", user
                 "user_session_string": user_session_string,
             }
         )
+        if not created:
+            updated = False
+            if id_group and not rec.id_group:
+                rec.id_group = id_group
+                updated = True
+            if name_group and not rec.name_group:
+                rec.name_group = name_group
+                updated = True
+            if user_session_string and not rec.user_session_string:
+                rec.user_session_string = user_session_string
+                updated = True
+            if updated:
+                rec.save()
 
 
 def dell_group(user_id: int, username_group: str):

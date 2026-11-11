@@ -460,10 +460,21 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                 continue
             try:
                 entity = await client.get_entity(target_link)
-                await client(JoinChannelRequest(channel=entity))
-                logger.info(f"✅ Аккаунт {account_tg_id} подписан на целевой объект: {target_link}")
-            except Exception as join_err:
-                logger.debug(f"Уведомление при подписке на целевой объект {target_link}: {join_err}")
+                try:
+                    await client(JoinChannelRequest(channel=entity))
+                    logger.info(f"✅ Аккаунт {account_tg_id} подписан на целевой объект: {target_link}")
+                except Exception as join_err:
+                    logger.debug(f"Уведомление при подписке на целевой объект {target_link}: {join_err}")
+
+                peer_id = utils.get_peer_id(entity)
+                if peer_id:
+                    g.id_group = peer_id
+                    if hasattr(entity, "title") and entity.title:
+                        g.name_group = entity.title
+                    g.save()
+                    logger.info(f"💾 Обновлен id_group={peer_id} для {target_link} (user_id={user_id})")
+            except Exception as e:
+                logger.warning(f"Не удалось получить сущность для {target_link}: {e}")
 
         # 2. Проверяем наличие и доступность группы результатов
         pt_rec, _ = UsersPersonalTrackings.get_or_create(user_id=user_id)
@@ -1408,6 +1419,21 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             # Синхронизируем новый аккаунт с отслеживанием и группой результатов
             await sync_and_promote_account_for_tracking(user_id=user_id, session_string=final_session)
 
+            # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
+            has_groups = UsersGroups.select().where(UsersGroups.user_id == user_id).exists()
+            has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == user_id).exists()
+            if has_groups and has_keywords and str(user_id) not in active_clients:
+                try:
+                    asyncio.create_task(
+                        filter_messages(
+                            message=callback.message,
+                            user_id=user_id
+                        )
+                    )
+                    logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после авторизации")
+                except Exception as e:
+                    logger.error(f"Не удалось запустить отслеживание после авторизации: {e}")
+
         await state.clear()
         await callback.message.edit_text(
             t("pt_auth_success", lang=user_lang,
@@ -1519,6 +1545,21 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
             )
             # Синхронизируем новый аккаунт с отслеживанием и группой результатов
             await sync_and_promote_account_for_tracking(user_id=message.from_user.id, session_string=final_session)
+
+            # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
+            has_groups = UsersGroups.select().where(UsersGroups.user_id == message.from_user.id).exists()
+            has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == message.from_user.id).exists()
+            if has_groups and has_keywords and str(message.from_user.id) not in active_clients:
+                try:
+                    asyncio.create_task(
+                        filter_messages(
+                            message=message,
+                            user_id=message.from_user.id
+                        )
+                    )
+                    logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после ввода 2FA")
+                except Exception as e:
+                    logger.error(f"Не удалось запустить отслеживание после 2FA: {e}")
 
         await state.clear()
         first_name = account_info.get("first_name") or ""

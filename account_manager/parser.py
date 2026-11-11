@@ -53,13 +53,26 @@ async def get_full_info_group(client, entity):
         logger.exception(f"⚠️ Не удалось получить полные данные для {entity.username or entity.id}: {e}")
 
 
-def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int) -> bool:
+def _clean_tg_id(val) -> str:
+    """Нормализует Telegram ID, удаляя префиксы -100 и -."""
+    if val is None:
+        return ""
+    s = str(val).strip()
+    if s.startswith("-100"):
+        return s[4:]
+    if s.startswith("-"):
+        return s[1:]
+    return s
+
+
+def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, entity=None) -> bool:
     """
     Проверяет, входит ли чат в список отслеживаемых групп/каналов пользователя.
 
     :param chat_id: (int) ID чата из Telethon.
     :param chat_username: (str) Username чата (если есть).
     :param user_id: (int) ID пользователя.
+    :param entity: Сущность чата (если доступна).
     :return: (bool) True, если чат отслеживается данным пользователем.
     """
     try:
@@ -68,23 +81,43 @@ def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int) ->
         if not user_groups:
             return False
 
+        clean_chat_id = _clean_tg_id(chat_id)
+        entity_clean_id = _clean_tg_id(getattr(entity, 'id', None)) if entity else ""
         clean_user_chat = (chat_username or "").lower().lstrip("@")
 
         for g in user_groups:
             # 1. Проверка по сохраненному id_group
-            if g.id_group and (g.id_group == chat_id or str(g.id_group) == str(chat_id)):
-                return True
+            if g.id_group:
+                clean_g_id = _clean_tg_id(g.id_group)
+                if clean_g_id and (clean_g_id == clean_chat_id or (entity_clean_id and clean_g_id == entity_clean_id)):
+                    return True
 
             # 2. Проверка по username_group / ссылке
             stored = (g.username_group or "").strip()
             if not stored:
                 continue
 
-            if stored == str(chat_id) or f"-100{stored}" == str(chat_id):
+            stored_target = stored.rstrip("/").split("/")[-1].lower().lstrip("@")
+
+            # 2.1 Проверка по юзернейму
+            if clean_user_chat and stored_target == clean_user_chat:
+                if not g.id_group and chat_id:
+                    try:
+                        g.id_group = chat_id
+                        g.save()
+                    except Exception:
+                        pass
                 return True
 
-            stored_clean = stored.split("/")[-1].lower().lstrip("@")
-            if clean_user_chat and stored_clean == clean_user_chat:
+            # 2.2 Проверка по числовому ID
+            stored_id = _clean_tg_id(stored_target)
+            if stored_id and (stored_id == clean_chat_id or (entity_clean_id and stored_id == entity_clean_id)):
+                if not g.id_group and chat_id:
+                    try:
+                        g.id_group = chat_id
+                        g.save()
+                    except Exception:
+                        pass
                 return True
 
         return False
@@ -118,19 +151,22 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     if target_group_id and (chat_id == target_group_id or str(chat_id) == str(target_group_id)):
         return
 
-    # Получаем информацию о чате-источнике
-    chat_entity = None
+    # Получаем информацию о чате-источнике (сначала из message.chat, затем через client.get_entity)
+    chat_entity = getattr(message, "chat", None)
+    if not chat_entity:
+        try:
+            chat_entity = await client.get_entity(chat_id)
+        except Exception as e:
+            logger.debug(f"Не удалось получить сущность для чата {chat_id}: {e}")
+
     chat_title = "Неизвестно"
     chat_username = ""
-    try:
-        chat_entity = await client.get_entity(chat_id)
+    if chat_entity:
         chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name", None) or "Неизвестно"
         chat_username = getattr(chat_entity, "username", None) or ""
-    except Exception as e:
-        logger.debug(f"Не удалось получить сущность для чата {chat_id}: {e}")
 
     # Проверяем, отслеживает ли пользователь данный чат
-    if not is_chat_monitored_by_user(chat_id=chat_id, chat_username=chat_username, user_id=int(user_id)):
+    if not is_chat_monitored_by_user(chat_id=chat_id, chat_username=chat_username, user_id=int(user_id), entity=chat_entity):
         return
 
     message_text = message.message.lower()
@@ -154,12 +190,12 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         forwarded_messages.add(msg_key)
 
         try:
-            # Формируем ссылку на сообщение
-            if str(chat_id).startswith("-100"):
+            # Формируем ссылку на сообщение (предпочитаем публичный username, иначе приватный /c/)
+            if chat_username:
+                message_link = f"https://t.me/{chat_username}/{message.id}"
+            elif str(chat_id).startswith("-100"):
                 clean_chat_id = str(chat_id)[4:]
                 message_link = f"https://t.me/c/{clean_chat_id}/{message.id}"
-            elif chat_username:
-                message_link = f"https://t.me/{chat_username}/{message.id}"
             else:
                 message_link = "Ссылка недоступна"
 
@@ -235,9 +271,15 @@ async def sync_account_channels(client):
                 # Проверяем, является ли супергруппой или каналом
                 if not getattr(entity, 'megagroup', False) and not getattr(entity, 'broadcast', False):
                     continue
-                # Собираем username
+                # Собираем username и идентификаторы
                 if entity.username:
-                    subscribed_usernames.add(f"@{entity.username.lower()}")
+                    u_clean = entity.username.lower().lstrip("@")
+                    subscribed_usernames.add(f"@{u_clean}")
+                    subscribed_usernames.add(f"https://t.me/{u_clean}")
+                    subscribed_usernames.add(u_clean)
+                if getattr(entity, 'id', None):
+                    subscribed_usernames.add(str(entity.id))
+                    subscribed_usernames.add(f"-100{entity.id}")
                 # Получаем полную информацию через GetFullChannelRequest
                 data = await get_full_info_group(client, entity)
                 if data:
@@ -495,7 +537,7 @@ async def join_required_channels(client, user_id, message, already_subscribed):
     """
     # user = User.get(User.user_id == message.from_user.id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=int(user_id))
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
     # ✅ Приводим к set для операции вычитания
     db_channels = set(db_channels)
@@ -761,7 +803,7 @@ async def stop_tracking(user_id, message):
     """
     # user = User.get(User.user_id == message.from_user.id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
-    user_lang = determines_user_language(message_or_callback=message.from_user.id)
+    user_lang = determines_user_language(message_or_callback=int(user_id))
     user_id = str(user_id)  # <-- ✅ преобразуем в строку
     logger.info(f"🛑 Запрос на остановку отслеживания для user_id={user_id}")
     # ✅ Проверяем, есть ли активное отслеживание для этого пользователя
