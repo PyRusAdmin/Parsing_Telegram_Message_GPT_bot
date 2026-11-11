@@ -1519,6 +1519,48 @@ async def admin_download_logs():
     return FileResponse(log_path, media_type="text/plain", filename="bot_log.txt")
 
 
+@app.get("/api/admin/nightly-check")
+async def get_admin_nightly_check(_: int = Depends(require_admin)):
+    """
+    Возвращает текущие настройки и статус ночной проверки базы данных.
+    """
+    from handlers.admin.nightly_check import get_nightly_check_settings
+    settings = get_nightly_check_settings()
+    remaining_no_cat = TelegramGroups.select().where(
+        (TelegramGroups.category.is_null()) | (TelegramGroups.category == '')
+    ).count()
+    remaining_no_lang = TelegramGroups.select().where(
+        (TelegramGroups.language.is_null()) | (TelegramGroups.language == '')
+    ).count()
+    return {
+        "status": "ok",
+        "settings": settings,
+        "remaining_no_cat": remaining_no_cat,
+        "remaining_no_lang": remaining_no_lang
+    }
+
+
+@app.post("/api/admin/nightly-check/toggle")
+async def toggle_admin_nightly_check(_: int = Depends(require_admin)):
+    """
+    Включает или выключает автоматическую ночную проверку базы данных в 01:00.
+    """
+    from handlers.admin.nightly_check import toggle_nightly_check, get_nightly_check_settings
+    new_state = toggle_nightly_check()
+    settings = get_nightly_check_settings()
+    return {"status": "ok", "enabled": new_state, "settings": settings}
+
+
+@app.post("/api/admin/nightly-check/run")
+async def trigger_admin_nightly_check(background_tasks: BackgroundTasks, _: int = Depends(require_admin)):
+    """
+    Запускает проверку и актуализацию базы данных прямо сейчас в фоновом режиме.
+    """
+    from handlers.admin.nightly_check import run_database_integrity_check
+    background_tasks.add_task(run_database_integrity_check, manual=True)
+    return {"status": "started", "message": "Проверка базы данных запущена в фоне"}
+
+
 # Роутер для статичных файлов и веб-интерфейса
 
 static_router = APIRouter()

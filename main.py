@@ -5,6 +5,7 @@ import sys
 
 from loguru import logger  # https://github.com/Delgan/loguru
 
+
 def run_main():
     """
     Запуск связки туннеля Tuna, Telegram-бота и FastAPI веб-сервера.

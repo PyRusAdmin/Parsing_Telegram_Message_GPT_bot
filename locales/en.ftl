@@ -795,4 +795,11 @@ excel_export_caption = 📊 Group search results in Excel
 db_export_caption = 📊 Database export in Excel
 found_groups_caption = 📊 Found { $count } groups/channels
 
+# Nightly database integrity check
+nightly_check_btn = Nightly check (01:00)
+nightly_check_on = ON
+nightly_check_off = OFF
+nightly_check_toggled_on = 🔔 Automatic nightly database check at 01:00 is ENABLED.
+nightly_check_toggled_off = 🔕 Automatic nightly database check is DISABLED.
+
 

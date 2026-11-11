@@ -82,6 +82,24 @@ async def admin_panel_cb(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+@router.callback_query(F.data == "admin_toggle_nightly_check")
+async def toggle_nightly_check_cb(callback: CallbackQuery):
+    """
+    Переключает активность автоматической ночной проверки базы данных в 01:00.
+
+    :param callback: (CallbackQuery) Объект входящего callback-запроса от администратора.
+    """
+    from handlers.admin.nightly_check import toggle_nightly_check
+    new_state = toggle_nightly_check()
+    user_lang = determines_user_language(message_or_callback=callback.from_user.id)
+    alert_msg = t("nightly_check_toggled_on", lang=user_lang) if new_state else t("nightly_check_toggled_off", lang=user_lang)
+    await callback.answer(alert_msg, show_alert=True)
+    try:
+        await callback.message.edit_reply_markup(reply_markup=admin_keyboard(lang=user_lang))
+    except Exception:
+        pass
+
+
 @router.message((F.text == t('check_accounts_button', 'ru')) | (F.text == t('check_accounts_button', 'en')))
 async def checking_accounts_handler(message: Message, state: FSMContext):
     """

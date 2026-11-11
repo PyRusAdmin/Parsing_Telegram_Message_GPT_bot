@@ -786,6 +786,13 @@ excel_export_caption = 📊 Результаты поиска групп в Exce
 db_export_caption = 📊 Экспорт базы данных в Excel
 found_groups_caption = 📊 Найдено { $count } групп/каналов
 
+# Ночная проверка базы данных
+nightly_check_btn = Ночная проверка (01:00)
+nightly_check_on = ВКЛ
+nightly_check_off = ВЫКЛ
+nightly_check_toggled_on = 🔔 Автоматическая ночная проверка базы данных в 01:00 ВКЛЮЧЕНА.
+nightly_check_toggled_off = 🔕 Автоматическая ночная проверка базы данных ВЫКЛЮЧЕНА.
+
 
 
 

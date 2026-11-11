@@ -661,10 +661,20 @@ def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     :param lang: (str) Код языка пользователя ('ru', 'en').
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры админ-панели.
     """
+    from handlers.admin.nightly_check import get_nightly_check_settings
+    settings = get_nightly_check_settings()
+    is_on = settings.get("nightly_check_enabled", True)
+    status_icon = "🔔" if is_on else "🔕"
+    status_text = t("nightly_check_on", lang=lang) if is_on else t("nightly_check_off", lang=lang)
+    nightly_btn_text = f"{status_icon} {t('nightly_check_btn', lang=lang)}: {status_text}"
+
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(text=t("btn_broadcast_users", lang=lang), callback_data="admin_broadcast_start"),
+            ],
+            [
+                InlineKeyboardButton(text=nightly_btn_text, callback_data="admin_toggle_nightly_check"),
             ],
             [
                 InlineKeyboardButton(text=t("get_log_file_button", lang=lang), callback_data="admin_get_log"),

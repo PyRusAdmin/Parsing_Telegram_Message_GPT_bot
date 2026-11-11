@@ -116,6 +116,10 @@ const translations = {
         admin_feedback_desc: "Загрузка запросов пользователей из базы данных (CSV)",
         admin_logs_title: "Журналы приложений",
         admin_logs_desc: "Просмотр сырого файла журналирования следов бота (logs/log.log)",
+        admin_nightly_title: "Ночная проверка базы данных (01:00)",
+        admin_nightly_desc: "Автоматическое заполнение категорий и языков для необработанных групп каждые сутки в 01:00 с отчётом администратору в Telegram.",
+        admin_nightly_toggle_title: "Статус автозапуска",
+        run_now: "Запустить сейчас",
         download: "Загрузка",
         nav_home: "Домой",
         nav_channels: "Каналы",
@@ -289,6 +293,10 @@ const translations = {
         admin_feedback_desc: "Download user queries from database (CSV)",
         admin_logs_title: "Application Logs",
         admin_logs_desc: "View raw bot tracing log file (logs/log.log)",
+        admin_nightly_title: "Nightly Database Check (01:00)",
+        admin_nightly_desc: "Automatic category and language completion for unclassified groups every night at 01:00 with Telegram report.",
+        admin_nightly_toggle_title: "Auto-run Status",
+        run_now: "Run Now",
         download: "Download",
         nav_home: "Home",
         nav_channels: "Channels",
@@ -555,6 +563,7 @@ function switchTab(tabId) {
         loadAccountsList();
     } else if (tabId === "admin") {
         refreshStatusAndTasks();
+        loadNightlyCheckStatus();
     }
 }
 
@@ -1580,4 +1589,85 @@ if (notifCloseBtn) {
         const banner = document.getElementById("notification-banner");
         if (banner) banner.classList.add("hidden");
     });
+}
+
+// ==================== НОЧНАЯ ПРОВЕРКА БАЗЫ ДАННЫХ ====================
+
+async function loadNightlyCheckStatus() {
+    try {
+        const res = await apiRequest("/api/admin/nightly-check");
+        if (res.ok) {
+            const data = await res.json();
+            const settings = data.settings || {};
+            const isEnabled = !!settings.nightly_check_enabled;
+
+            const btn = document.getElementById("btn-toggle-nightly-check");
+            const icon = document.getElementById("nightly-toggle-icon");
+            const label = document.getElementById("nightly-toggle-label");
+            const statusDesc = document.getElementById("nightly-status-desc");
+            const remainingCount = document.getElementById("nightly-remaining-count");
+            const lastRunInfo = document.getElementById("nightly-last-run-info");
+
+            if (btn && label && icon) {
+                if (isEnabled) {
+                    btn.className = "btn-success";
+                    icon.className = "fa-solid fa-bell";
+                    label.innerText = userLanguage === "ru" ? "ВКЛ" : "ON";
+                    if (statusDesc) {
+                        statusDesc.innerText = userLanguage === "ru" ? "Каждую ночь в 01:00 (Активно)" : "Every night at 01:00 (Active)";
+                    }
+                } else {
+                    btn.className = "btn-secondary";
+                    icon.className = "fa-solid fa-bell-slash";
+                    label.innerText = userLanguage === "ru" ? "ВЫКЛ" : "OFF";
+                    if (statusDesc) {
+                        statusDesc.innerText = userLanguage === "ru" ? "Автозапуск отключён" : "Auto-run disabled";
+                    }
+                }
+            }
+
+            if (remainingCount) {
+                remainingCount.innerText = `${data.remaining_no_cat || 0} / ${data.remaining_no_lang || 0}`;
+            }
+
+            if (lastRunInfo && settings.last_run_date) {
+                lastRunInfo.innerText = `${userLanguage === "ru" ? "Последний запуск:" : "Last run:"} ${settings.last_run_date}`;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load nightly check status:", e);
+    }
+}
+
+async function toggleNightlyCheck() {
+    try {
+        const res = await apiRequest("/api/admin/nightly-check/toggle", { method: "POST" });
+        if (res.ok) {
+            const data = await res.json();
+            const isEnabled = data.enabled;
+            showNotification(
+                isEnabled
+                    ? (userLanguage === "ru" ? "🔔 Ночная проверка базы данных в 01:00 ВКЛЮЧЕНА" : "🔔 Nightly check at 01:00 ENABLED")
+                    : (userLanguage === "ru" ? "🔕 Ночная проверка базы данных ВЫКЛЮЧЕНА" : "🔕 Nightly check DISABLED"),
+                "success"
+            );
+            loadNightlyCheckStatus();
+        } else {
+            showNotification(i18n("admin_op_failed"), "danger");
+        }
+    } catch (e) {
+        showNotification(i18n("admin_op_failed"), "danger");
+    }
+}
+
+async function runNightlyCheckNow() {
+    try {
+        showNotification(userLanguage === "ru" ? "🚀 Запуск проверки базы данных в фоне..." : "🚀 Starting database check in background...", "success");
+        const res = await apiRequest("/api/admin/nightly-check/run", { method: "POST" });
+        if (res.ok) {
+            setTimeout(loadNightlyCheckStatus, 3000);
+        }
+    } catch (e) {
+        showNotification(i18n("admin_op_failed"), "danger");
+    }
 }

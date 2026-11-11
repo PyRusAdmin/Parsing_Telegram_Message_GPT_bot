@@ -94,14 +94,16 @@ async def main() -> None:
             port = int(port_env)
 
         logger.info(f"🌐 Starting FastAPI Web Server on http://0.0.0.0:{port}")
-        config = uvicorn.Config(app, host="0.0.0.0", port=port, loop="asyncio")
-        server = uvicorn.Server(config)
+        server = uvicorn.Server(uvicorn.Config(app, host="0.0.0.0", port=port, loop="asyncio"))
 
         await bot.delete_webhook(drop_pending_updates=True)
 
+        from handlers.admin.nightly_check import nightly_scheduler_loop
+
         await asyncio.gather(
             dp.start_polling(bot),
-            server.serve()
+            server.serve(),
+            nightly_scheduler_loop()
         )
 
     except Exception as e:
