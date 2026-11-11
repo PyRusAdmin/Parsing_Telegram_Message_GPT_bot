@@ -411,6 +411,9 @@ connect_account_file_queued =
 connect_account_success =
     ✅ <b>{ $filename }</b> — success!
     📱 { $phone } | 👤 { $name }
+connect_free_account_success =
+    ✅ <b>{ $filename }</b> — added to free accounts pool!
+    📱 { $phone } | 👤 { $name } | 🆔 <code>{ $account_id }</code>
 connect_account_failed =
     ❌ <b>{ $filename }</b> — failed validation
 connect_account_error =

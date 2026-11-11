@@ -736,7 +736,10 @@ def admin_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("check_accounts_button", lang=lang), callback_data="admin_check_accounts")
             ],
             [
-                InlineKeyboardButton(text=t("connect_account_button", lang=lang), callback_data="admin_connect_account")
+                InlineKeyboardButton(
+                    text=t("connect_account_button", lang=lang),  # 🔐 Подключение аккаунта
+                    callback_data="admin_connect_account"
+                )
             ],
             [
                 back_button(lang)  # Кнопка ⬅️ Назад

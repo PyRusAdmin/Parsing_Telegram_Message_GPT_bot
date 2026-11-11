@@ -13,7 +13,7 @@ from account_manager.auth import CheckingAccountsValidity
 from core.config import ADMIN_USER_ID
 
 from database.users_personal_trackings import UsersPersonalTrackings
-from database.users_accounts import getting_account
+from database.account_free import getting_free_account
 from database.users_questions import get_all_questions
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import admin_keyboard, broadcast_preview_keyboard, back_keyboard
@@ -113,17 +113,31 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
         await state.clear()  # Сбрасываем текущее состояние FSM
         # Определяем язык пользователя, который пользователь выбрал при старте бота
         user_lang = determines_user_language(message_or_callback=message.from_user.id)
-        records = getting_account()  # Получаем все аккаунты в базе данных
-        logger.info(f"Получено аккаунтов: {len(records)}")
+        records = getting_free_account()  # Получаем все свободные аккаунты в базе данных
+        logger.info(f"Получено свободных аккаунтов: {len(records)}")
         await message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
+        checker = CheckingAccountsValidity()
+        valid_count = 0
+        banned_count = 0
         for session_name in records:
-            logger.info(f"✅ Проверка аккаунта на валидность: {session_name}")
-            # ✅ Проверка аккаунтов на валидность
-            checker = CheckingAccountsValidity()
-            await checker.verify_account(session_name=session_name, user_id=message.from_user.id, user_lang=user_lang)
-        await message.answer(
-            t("checking_accounts_complete", lang=user_lang)
+            logger.info(f"🔍 Проверка свободного аккаунта на валидность...")
+            is_valid = await checker.verify_free_account(session_name=session_name, user_lang=user_lang)
+            if is_valid:
+                valid_count += 1
+            else:
+                banned_count += 1
+        result_text = (
+            f"✅ <b>Проверка свободных аккаунтов завершена!</b>\n\n"
+            f"📊 Всего проверено: <b>{len(records)}</b>\n"
+            f"🟢 Активных: <b>{valid_count}</b>\n"
+            f"🔴 Невалидных/забаненных (удалены из базы): <b>{banned_count}</b>"
+            if user_lang == "ru"
+            else f"✅ <b>Free accounts verification completed!</b>\n\n"
+                 f"📊 Total checked: <b>{len(records)}</b>\n"
+                 f"🟢 Active: <b>{valid_count}</b>\n"
+                 f"🔴 Invalid/banned (removed from database): <b>{banned_count}</b>"
         )
+        await message.answer(result_text, parse_mode="HTML")
     except Exception as e:
         logger.exception(e)
 

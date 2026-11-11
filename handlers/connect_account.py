@@ -13,7 +13,7 @@ from telethon.tl.functions.channels import JoinChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
-from database.account_free import AccountFree
+from database.account_free import AccountFree, write_account_to_db_free, getting_free_account
 from database.users_groups import UsersGroups
 from database.users_personal_trackings import (
     UsersPersonalTrackings, write_account_to_db, set_user_shared_account, clear_user_account
@@ -93,7 +93,9 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
 
     # При переподключении ставим другие аккаунты из пула в приоритет
     if is_reconnect and len(free_accounts) > 1:
-        candidates = [acc for acc in free_accounts if acc.session_string != current_session] + [acc for acc in free_accounts if acc.session_string == current_session]
+        candidates = [acc for acc in free_accounts if acc.session_string != current_session] + [acc for acc in
+                                                                                                free_accounts if
+                                                                                                acc.session_string == current_session]
     else:
         candidates = free_accounts
 
@@ -111,7 +113,8 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
                 selected_account = candidate
                 break
             else:
-                logger.warning(f"⚠️ Бесплатный аккаунт {candidate.phone_number} не авторизован или заблокирован. Удаляем из пула...")
+                logger.warning(
+                    f"⚠️ Бесплатный аккаунт {candidate.phone_number} не авторизован или заблокирован. Удаляем из пула...")
                 try:
                     candidate.delete_instance()
                 except Exception:
@@ -132,7 +135,8 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
 
     session_string = selected_account.session_string
     phone_number = selected_account.phone_number
-    logger.info(f"{'Переподключаем' if is_reconnect else 'Назначаем'} свободный аккаунт {phone_number} пользователю {user_id}")
+    logger.info(
+        f"{'Переподключаем' if is_reconnect else 'Назначаем'} свободный аккаунт {phone_number} пользователю {user_id}")
 
     set_user_shared_account(user_id=user_id, session_string=session_string)
 
@@ -462,38 +466,46 @@ async def receive_session_file(message: Message, state: FSMContext):
     local_file_path = None
     try:
         # ✅ Создаём папку для временного хранения
-
         # ✅ Санитизация имени файла
         local_file_path, safe_file_name = sanitization_file_name(document=document, account_id=message.from_user.id)
         # ✅ Скачиваем файл
         # ToDo проверить в будущем document.file_id вместо document
         await message.bot.download(document, destination=local_file_path)
         # ✅ Извлекаем путь без расширения для Telethon
-        session_path_without_ext = str(local_file_path.with_suffix(""))
         # ✅ Проверяем валидность аккаунта
-        checker = CheckingAccountsValidity(path=session_path_without_ext)
+        checker = CheckingAccountsValidity(path=str(local_file_path.with_suffix("")))
         client = await checker.connect_client()
         if client:
             account_info = await get_account_info(client)
             phone = account_info.get("phone") or "unknown"
             first_name = account_info.get("first_name") or ""
-            # ✅ Конвертируем в StringSession и сохраняем в БД
+            last_name = account_info.get("last_name") or ""
+            account_id = account_info.get("id") or 0
+            # ✅ Конвертируем в StringSession и сохраняем в пул свободных аккаунтов account_free
             session_string = StringSession.save(client.session)
-            write_account_to_user_table(
-                user_id=message.from_user.id,
+            write_account_to_db_free(
                 session_string=session_string,
                 phone_number=phone,
-                user_username=message.from_user.username or "",
-                user_firstname=message.from_user.first_name or ""
+                first_name=first_name,
+                last_name=last_name,
+                account_id=account_id
             )
-            write_account_to_db(session_string=session_string, user_id=message.from_user.id)
             await client.disconnect()
             # ✅ Обновляем статистику
             success_count += 1
-            logger.success(f"✅ Сессия добавлена: {phone} | {first_name}")
+            full_name = f"{first_name} {last_name}".strip() or "Telegram User"
+            phone_display = f"+{phone.lstrip('+')}" if phone != "unknown" else phone
+            logger.success(f"✅ Сессия добавлена в account_free: {phone_display} | {full_name} (ID: {account_id})")
             # ✅ Отправляем результат для этого файла
             await message.answer(
-                t("connect_account_success", lang=user_lang, filename=safe_file_name, phone=phone, name=first_name),
+                t(
+                    "connect_free_account_success",
+                    lang=user_lang,
+                    filename=safe_file_name,
+                    phone=phone_display,
+                    name=full_name,
+                    account_id=account_id
+                ),
                 parse_mode="HTML"
             )
         else:

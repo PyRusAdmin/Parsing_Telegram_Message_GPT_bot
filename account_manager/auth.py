@@ -13,7 +13,6 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 from core.config import API_ID, API_HASH, mobile_device
-from database.users_accounts import getting_account
 from database.users_personal_trackings import delete_account_from_user_table
 from keyboards.keyboards import menu_launch_tracking_keyboard
 from locales.locales import t
@@ -59,10 +58,12 @@ async def check_and_cleanup_session(session_string: str, user_id: int = 0, user_
 
     checker = CheckingAccountsValidity()
     try:
+        from database.account_free import delete_account_from_free_db
         client = await checker.client_connect_string_session(session_name=session_string)
         if client is None:
             if user_id:
                 delete_account_from_user_table(user_id=user_id, personal_account=session_string)
+            delete_account_from_free_db(session_string)
             return False, "Failed to connect client"
 
         try:
@@ -71,6 +72,7 @@ async def check_and_cleanup_session(session_string: str, user_id: int = 0, user_
                 await client.disconnect()
                 if user_id:
                     delete_account_from_user_table(user_id=user_id, personal_account=session_string)
+                delete_account_from_free_db(session_string)
                 return False, "Session not authorized"
             else:
                 logger.info(f"✅ Сессия авторизована: {session_string[:25]}...")
@@ -79,6 +81,7 @@ async def check_and_cleanup_session(session_string: str, user_id: int = 0, user_
         except (PhoneNumberBannedError, UserDeactivatedBanError, AuthKeyNotFound,
                 AuthKeyUnregisteredError, AuthKeyDuplicatedError) as e:
             logger.warning(f"❌ Невалидная/заблокированная сессия: {e}")
+            delete_account_from_free_db(session_string)
             if user_id:
                 delete_account_from_user_table(user_id=user_id, personal_account=session_string)
                 try:
@@ -264,26 +267,39 @@ class CheckingAccountsValidity:
                 pass
             return None
 
-    # TODO данная функция, это только для поиска групп и аккаунтов. Пользователь использует только свой аккаунт или
-    #  аккаунт, который подключил администратор бота, для поиска групп и аккаунтов
+    async def verify_free_account(self, session_name: str, user_lang: str = "ru") -> bool:
+        """
+        Проверяет валидность аккаунта из пула свободных (AccountFree) и при невалидности/бане
+        автоматически удаляет его из таблицы account_free.
+
+        :param session_name: (str) Строка сессии.
+        :param user_lang: (str) Язык для сообщений.
+        :return: (bool) True, если аккаунт валиден, иначе False.
+        """
+        from database.account_free import delete_account_from_free_db
+        is_valid, _ = await check_and_cleanup_session(session_string=session_name, user_id=0, user_lang=user_lang)
+        if not is_valid:
+            delete_account_from_free_db(session_name)
+        return is_valid
+
     async def start_random_client(self):
         """
-        Запускает клиент Telethon, выбирая случайную сессию из подключенных аккаунтов администратора.
+        Запускает клиент Telethon, выбирая случайную сессию из свободных аккаунтов администратора (account_free).
 
         :return: (TelegramClient | None) Авторизованный TelegramClient или None при ошибке.
         """
         try:
-            # records = getting_account()
-            chosen_session_name = random.choice(getting_account())
-
-            if not chosen_session_name or not isinstance(chosen_session_name, str):
-                logger.error(f"❌ Неверный формат сессии: {type(chosen_session_name)}")
+            from database.account_free import getting_free_account
+            records = getting_free_account()
+            if not records:
+                logger.error("❌ В таблице account_free нет доступных аккаунтов для поиска!")
                 return None
 
-            logger.info(f"Используется сессия: {chosen_session_name[:30]}...")
+            chosen_session_name = random.choice(records)
+            logger.info(f"Используется сессия из account_free: {chosen_session_name[:30]}...")
 
             return await self.client_connect_string_session(chosen_session_name)
 
         except Exception as e:
-            logger.exception(f"❌ Ошибка запуска клиента: {e}")
+            logger.exception(f"❌ Ошибка запуска клиента из account_free: {e}")
             return None

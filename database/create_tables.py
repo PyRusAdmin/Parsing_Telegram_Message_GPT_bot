@@ -1,6 +1,6 @@
 from loguru import logger  # https://github.com/Delgan/loguru
 
-from database.account_free import AccountFree
+from database.account_free import AccountFree, ensure_account_free_columns
 from database.database import database, TelegramGroups
 from database.users_accounts import UsersAccounts
 from database.users_groups import UsersGroups
@@ -30,6 +30,9 @@ def init_database():
         ],
         safe=True
     )
+
+    # Проверяем и при необходимости добавляем недостающие колонки в таблицы
+    ensure_account_free_columns()
 
     logger.info(
         "✅ База данных инициализирована. Проверены/созданы таблицы:\n"

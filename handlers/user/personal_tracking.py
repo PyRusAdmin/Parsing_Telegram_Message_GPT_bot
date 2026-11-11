@@ -25,9 +25,9 @@ from telethon.tl.types import ChatAdminRights
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import active_clients, filter_messages
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
-from database.account_free import write_account_to_db_free
+from database.account_free import write_account_to_db_free, getting_free_account
 
-from database.users_accounts import getting_account, write_account_to_user_table
+from database.users_accounts import write_account_to_user_table
 from database.users_groups import UsersGroups, add_user_group
 from database.users_keywords import add_user_keywords, UsersKeywords
 from database.users_personal_trackings import (
@@ -231,7 +231,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
             candidate_sessions.append((acc["session_string"], "общий" if acc.get("is_shared") else "личный"))
 
     # 2. Общие аккаунты из пула администратора (перемешиваем для распределения нагрузки)
-    shared_sessions = getting_account()
+    shared_sessions = getting_free_account()
     random.shuffle(shared_sessions)
     existing_sessions = {cs[0] for cs in candidate_sessions}
     for s in shared_sessions:

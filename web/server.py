@@ -40,7 +40,8 @@ from database.database import (
     TelegramGroups, get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
 )
-from database.users_accounts import write_account_to_user_table, getting_account, UsersAccounts
+from database.account_free import getting_free_account
+from database.users_accounts import write_account_to_user_table, UsersAccounts
 from database.users_groups import UsersGroups, get_group_count
 from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords
 from database.users_personal_trackings import get_session_count, UsersPersonalTrackings
@@ -1151,7 +1152,7 @@ async def get_admin_status():
 
 async def bg_check_accounts():
     """
-    Фоновая задача проверки аккаунтов на валидность.
+    Фоновая задача проверки свободных аккаунтов на валидность.
 
     :return: None
     """
@@ -1162,15 +1163,14 @@ async def bg_check_accounts():
     admin_task_status["progress"] = 0
     admin_task_status["message"] = "Starting account verification..."
     try:
-        available_sessions = getting_account()
+        available_sessions = getting_free_account()
         total = len(available_sessions)
         admin_task_status["total"] = total
-        mock_msg = MockMessage(user_id=ADMIN_USER_ID)
         checker = CheckingAccountsValidity()
         for idx, session in enumerate(available_sessions, 1):
             admin_task_status["progress"] = idx
             admin_task_status["message"] = f"Checking session {idx}/{total}..."
-            await checker.verify_account(session_name=session, user_id=ADMIN_USER_ID, user_lang="ru")
+            await checker.verify_free_account(session_name=session, user_lang="ru")
         admin_task_status["status"] = "completed"
         admin_task_status["message"] = "Account check completed successfully!"
     except Exception as e:
@@ -1190,7 +1190,7 @@ async def bg_actualize_db():
     admin_task_status["progress"] = 0
     admin_task_status["message"] = "Initializing database actualization..."
     try:
-        available_sessions = getting_account()  # Получение аккаунтов из базы данных
+        available_sessions = getting_free_account()  # Получение свободных аккаунтов из базы данных
         if not available_sessions:
             raise Exception("Нет активных сеансов Telegram.")
         # Получение всех данных из таблицы telegram_groups, что бы в дальнейшем, актуализировать весь список и
