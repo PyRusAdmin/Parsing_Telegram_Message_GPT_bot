@@ -86,16 +86,48 @@ async def parse_group_for_keywords(url, keyword, message: Message):
         user_id = message.from_user.id  # Получаем ID пользователя
         user_lang = determines_user_language(message_or_callback=message.from_user.id)
 
-        # ✅ Создаем checker БЕЗ path (он не нужен для работы с БД)
-        checker = CheckingAccountsValidity()  # path=None по умолчанию
-        client = await checker.start_random_client()
-        if not client:
+        # Получаем свободные аккаунты и перемешиваем их для случайного выбора
+        from database.account_free import getting_free_account
+        import random
+
+        sessions = getting_free_account()
+        if not sessions:
             await message.answer("⚠️ Нет доступных рабочих сессий для проверки.")
             return
 
-        subscribed = await subscription_telegram(client, url)
-        if not subscribed:
-            await message.answer("❌ Не удалось найти или подписаться на указанную группу/канал.")
+        random.shuffle(sessions)
+        checker = CheckingAccountsValidity()
+        client = None
+        subscribed = False
+
+        # Перебираем до 5 случайных аккаунтов на случай, если какой-то из них заблокирован в этой группе
+        for session_idx, session_str in enumerate(sessions[:5], start=1):
+            candidate_client = await checker.client_connect_string_session(session_str)
+            if not candidate_client:
+                continue
+
+            try:
+                sub_ok = await subscription_telegram(candidate_client, url)
+                if sub_ok:
+                    client = candidate_client
+                    subscribed = True
+                    logger.info(f"✅ Аккаунт #{session_idx} успешно подключился к {url}")
+                    break
+                else:
+                    logger.warning(
+                        f"⚠️ Аккаунт #{session_idx} не смог присоединиться к {url} (возможно, заблокирован в этом чате). "
+                        f"Пробуем следующий случайный аккаунт..."
+                    )
+                    await candidate_client.disconnect()
+            except Exception as join_err:
+                logger.warning(f"Ошибка проверки группы через аккаунт #{session_idx}: {join_err}")
+                try:
+                    await candidate_client.disconnect()
+                except Exception:
+                    pass
+
+        if not client or not subscribed:
+            await message.answer("❌ Не удалось найти или подписаться на указанную группу/канал через доступные аккаунты.")
             return
 
         try:

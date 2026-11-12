@@ -340,13 +340,18 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 pass
             return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None, None, None
 
-        except ChannelPrivateError:
-            logger.warning(f"⚠️ Целевая группа/канал {target_input} приватная или доступ ограничен")
+        except ChannelPrivateError as cpe:
+            logger.warning(
+                f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) получил ChannelPrivateError для {clean_target} "
+                f"(возможно, заблокирован в этой группе/канале). Пробуем следующий аккаунт..."
+            )
             try:
                 await client.disconnect()
             except Exception:
                 pass
-            return False, "Указанная группа является приватной или к ней нет доступа.", None, None, None, None
+            if attempt_idx < max_attempts - 1:
+                continue
+            return False, "Указанная группа является приватной, не существует или все доступные аккаунты заблокированы в ней.", None, None, None, None
 
         except (UserRestrictedError, ChannelsTooMuchError, FloodWaitError) as re:
             logger.warning(
