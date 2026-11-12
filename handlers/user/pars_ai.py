@@ -1,6 +1,6 @@
 import io
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from aiogram import F, Router
 from aiogram.filters import StateFilter
@@ -122,7 +122,7 @@ def save_group_to_db(group_data: dict):
 
     except IntegrityError as e:
         if "telegram_groups.telegram_id" in str(e):
-            logger.warning(f"Попытка создать дубль по telegram_id. Уже обработано выше.")
+            logger.warning("Попытка создать дубль по telegram_id. Уже обработано выше.")
             # На всякий случай пробуем обновить ещё раз
             return save_group_to_db(group_data)  # рекурсия 1 раз — безопасно
         else:
@@ -211,9 +211,6 @@ def create_excel_file(groups, lang='ru'):
     wb.save(output)
     output.seek(0)
     return output.getvalue()
-
-
-from datetime import timedelta
 
 
 # def can_user_download_free(user: User) -> tuple[bool, int]:
@@ -439,7 +436,7 @@ async def perform_download(message: Message, user_id: int, download_type: str, c
                     try:
                         if len(str(cell.value)) > max_length:
                             max_length = len(str(cell.value))
-                    except:
+                    except Exception:
                         pass
                 adjusted_width = min(max_length + 2, 50)
                 ws.column_dimensions[column].width = adjusted_width
@@ -800,7 +797,7 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
     """
     logger.info(f"💰 PreCheckoutQuery от {pre_checkout_query.from_user.id}, ID={pre_checkout_query.id}")
     await pre_checkout_query.answer(ok=True)
-    logger.info(f"✅ PreCheckoutQuery одобрен")
+    logger.info("✅ PreCheckoutQuery одобрен")
 
 
 @router.message(F.successful_payment, StateFilter("*"))

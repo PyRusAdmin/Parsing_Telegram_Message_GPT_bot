@@ -35,7 +35,7 @@ from account_manager.parser import (
 )
 from account_manager.utilit import detect_language
 from ai.ai import category_assignment, get_groq_response, search_groups_in_telegram
-from core.config import ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY
+from core.config import ADMIN_USER_ID, BOT_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, OPENROUTER_BASE_URL
 from database.database import (
     TelegramGroups, get_all_data_telegram_groups, get_groups_without_category, getting_number_records_database,
     database
@@ -903,7 +903,6 @@ async def trigger_ai_searchs(query: str = Form(...), user_data: dict = Depends(g
     if all_saved_groups:
         # 📤 Формируем и отправляем Excel-файл пользователю в Telegram чат
         try:
-            user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
             # Определяем язык пользователя, который пользователь выбрал при старте бота
             user_lang = determines_user_language(message_or_callback=user_data["id"])
             excel_bytes = create_excel_file(all_saved_groups, lang=user_lang)
@@ -936,7 +935,6 @@ async def trigger_ai_search(query: str = Form(...), user_data: dict = Depends(ge
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     try:
-        mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
         answer = await get_groq_response(query)
         group_names = parse_ai_group_names(answer)
         if not group_names:
@@ -1127,7 +1125,7 @@ def require_admin(user_data: dict = Depends(get_current_tg_user)):
 
 
 @app.get("/api/admin/status")
-async def get_admin_status():
+async def get_admin_status(_: int = Depends(require_admin)):
     """
     Возвращает статус фоновых административных задач и системную статистику.
 
@@ -1136,7 +1134,7 @@ async def get_admin_status():
     # Рассчитать группы без категории
     uncategorized_count = TelegramGroups.select().where(
         (TelegramGroups.username.is_null(False)) &
-        (TelegramGroups.category == '')
+        ((TelegramGroups.category == '') | (TelegramGroups.category.is_null()))
     ).count()
     # Получить общее количество счетов
     total_accounts = UsersAccounts.select().count()
@@ -1225,9 +1223,12 @@ async def bg_actualize_db():
                 if result.get("success") and result.get("category"):
                     # ✅ Сразу пишем в БД (в нижнем регистре)
                     category_lower = result["category"].lower()
-                    await sync_to_async(lambda: TelegramGroups.update(category=category_lower)
-                                        .where(TelegramGroups.telegram_id == result["telegram_id"])
-                                        .execute(), thread_sensitive=True)()
+                    await sync_to_async(
+                        lambda cat=category_lower, tid=result["telegram_id"]: TelegramGroups.update(category=cat)
+                        .where(TelegramGroups.telegram_id == tid)
+                        .execute(),
+                        thread_sensitive=True
+                    )()
                     logger.info(f"✅ {group['name']} → {category_lower}")
                 else:
                     logger.warning(f"❌ {group['name']} — AI не определил")
@@ -1245,8 +1246,8 @@ async def bg_actualize_db():
                     logger.info(f"Определён язык для группы {group['username']}: {lang_code}")
                     # ✅ Сразу пишем в БД (в нижнем регистре)
                     await sync_to_async(
-                        lambda: TelegramGroups.update(language=lang_code)
-                        .where(TelegramGroups.telegram_id == group['telegram_id'])
+                        lambda lcode=lang_code, tid=group['telegram_id']: TelegramGroups.update(language=lcode)
+                        .where(TelegramGroups.telegram_id == tid)
                         .execute(),
                         thread_sensitive=True
                     )()
@@ -1258,7 +1259,6 @@ async def bg_actualize_db():
             """
             if group['group_type'] == '':  # Проверка наличия типа в группах / каналах
                 logger.info(f"Найдена группа {group['username']} без типа, определяем тип")
-                mock_msg = MockMessage(user_id=ADMIN_USER_ID)
                 checker = CheckingAccountsValidity()  # path=None по умолчанию
                 client = await checker.start_random_client()
                 if not client:
@@ -1417,7 +1417,7 @@ async def bg_detect_language():
 
 
 @app.post("/api/admin/check-accounts")
-async def admin_check_accounts(background_tasks: BackgroundTasks):
+async def admin_check_accounts(background_tasks: BackgroundTasks, _: int = Depends(require_admin)):
     """
     Запускает административную задачу проверки валидности всех аккаунтов.
 
@@ -1431,7 +1431,7 @@ async def admin_check_accounts(background_tasks: BackgroundTasks):
 
 
 @app.post("/api/admin/actualize")
-async def admin_actualize_db(background_tasks: BackgroundTasks):
+async def admin_actualize_db(background_tasks: BackgroundTasks, _: int = Depends(require_admin)):
     """
     Запускает административную задачу актуализации базы групп через Telegram.
 
@@ -1445,7 +1445,11 @@ async def admin_actualize_db(background_tasks: BackgroundTasks):
 
 
 @app.post("/api/admin/categorize")
-async def admin_categorize_db(method: str = Query("fast"), background_tasks: BackgroundTasks = None):
+async def admin_categorize_db(
+    method: str = Query("fast"),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    _: int = Depends(require_admin)
+):
     """
     Запускает административную задачу категоризации групп с помощью AI.
 
@@ -1460,7 +1464,7 @@ async def admin_categorize_db(method: str = Query("fast"), background_tasks: Bac
 
 
 @app.post("/api/admin/detect-language")
-async def admin_detect_language(background_tasks: BackgroundTasks):
+async def admin_detect_language(background_tasks: BackgroundTasks, _: int = Depends(require_admin)):
     """
     Запускает административную задачу определения языков групп через AI.
 
@@ -1474,7 +1478,7 @@ async def admin_detect_language(background_tasks: BackgroundTasks):
 
 
 @app.get("/api/admin/export-questions")
-async def admin_export_questions():
+async def admin_export_questions(_: int = Depends(require_admin)):
     """
     Экспортирует вопросы пользователей из базы данных в CSV-файл.
 
@@ -1504,7 +1508,7 @@ async def admin_export_questions():
 
 
 @app.get("/api/admin/logs")
-async def admin_download_logs():
+async def admin_download_logs(_: int = Depends(require_admin)):
     """
     Отдает файл логов бота администратору.
 

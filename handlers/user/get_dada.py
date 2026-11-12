@@ -57,7 +57,7 @@ def create_excel_file(data: list, headers: list, filename: str, sheet_name: str)
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except Exception:
                 pass
         adjusted_width = min(max_length + 2, 50)  # ограничиваем ширину 50 символами
         sheet.column_dimensions[column_letter].width = adjusted_width

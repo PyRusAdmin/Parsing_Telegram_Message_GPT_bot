@@ -151,7 +151,7 @@ class CheckingAccountsValidity:
                     pass
                 return None
 
-            account_info = await get_account_info(client)
+            await get_account_info(client)
             return client
 
         except AuthKeyDuplicatedError:

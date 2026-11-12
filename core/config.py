@@ -8,7 +8,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 
 """Работа с Telethon (Telegram api)"""
 
-API_ID = os.getenv("ID")
+_raw_id = os.getenv("ID", "").strip()
+API_ID = int(_raw_id) if _raw_id.isdigit() else None
 API_HASH = os.getenv("HASH")
 
 """Работа с OpenRouter API"""
@@ -26,7 +27,8 @@ PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
 PROXY_PORT = os.getenv("PROXY_PORT")
 PROXY_IP = os.getenv("PROXY_IP")
 
-ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0").strip() or 0)
+_raw_admin_id = os.getenv("ADMIN_USER_ID", "0").strip()
+ADMIN_USER_ID = int(_raw_admin_id) if _raw_admin_id.isdigit() else 0
 
 mobile_device = {
     "device_model": "Pixel 5",

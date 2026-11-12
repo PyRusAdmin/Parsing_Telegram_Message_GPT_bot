@@ -134,7 +134,7 @@ async def get_groups_without_category() -> list[dict]:
 
         groups = TelegramGroups.select().where(
             (TelegramGroups.username.is_null(False)) &
-            (TelegramGroups.category == '')
+            ((TelegramGroups.category == '') | (TelegramGroups.category.is_null()))
         )
 
         return [

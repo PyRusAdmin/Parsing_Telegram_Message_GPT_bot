@@ -271,9 +271,12 @@ async def assign_categories(message: Message, client, model):
                 if result.get("success") and result.get("category"):
                     # ✅ Сразу пишем в БД (в нижнем регистре)
                     category_lower = result["category"].lower()
-                    await sync_to_async(lambda: TelegramGroups.update(category=category_lower)
-                                        .where(TelegramGroups.telegram_id == result["telegram_id"])
-                                        .execute(), thread_sensitive=True)()
+                    await sync_to_async(
+                        lambda cat=category_lower, tid=result["telegram_id"]: TelegramGroups.update(category=cat)
+                        .where(TelegramGroups.telegram_id == tid)
+                        .execute(),
+                        thread_sensitive=True
+                    )()
                     logger.info(f"[{i}/{total}] ✅ {group_data['name']} → {category_lower}")
                 else:
                     logger.warning(f"[{i}/{total}] ❌ {group_data['name']} — AI не определил")

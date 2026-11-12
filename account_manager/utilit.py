@@ -83,7 +83,7 @@ def read_json(file_name):
     :param file_name: (str) Путь к файлу JSON.
     :return: (Any) Данные, распарсенные из JSON.
     """
-    with open(file_name, "r") as f:
+    with open(file_name, "r", encoding="utf-8") as f:
         return json.load(f)
 
 

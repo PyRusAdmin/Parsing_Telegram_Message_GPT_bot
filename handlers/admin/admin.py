@@ -125,7 +125,7 @@ async def checking_accounts_handler(message: Message, state: FSMContext):
         valid_count = 0
         banned_count = 0
         for session_name in records:
-            logger.info(f"🔍 Проверка свободного аккаунта на валидность...")
+            logger.info("🔍 Проверка свободного аккаунта на валидность...")
             is_valid = await checker.verify_free_account(session_name=session_name, user_lang=user_lang)
             if is_valid:
                 valid_count += 1

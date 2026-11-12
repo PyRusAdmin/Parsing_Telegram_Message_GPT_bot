@@ -69,16 +69,17 @@ class UsersPersonalTrackings(database.Model):
 
 def delete_account_from_user_table(user_id: int, personal_account: str) -> None:
     """
-    Удаляет невалидную или отозванную сессию Telegram-аккаунта пользователя.
+    Сбрасывает невалидную или отозванную персональную сессию Telegram-аккаунта пользователя.
+    Не удаляет сам профиль пользователя.
 
     :param user_id: (int) Уникальный Telegram ID пользователя — владельца сессии.
-    :param personal_account: (str) Строка сессии Telethon (StringSession), подлежащая удалению.
+    :param personal_account: (str) Строка сессии Telethon (StringSession), подлежащая очистке.
     """
-    query = UsersPersonalTrackings.delete().where(
+    query = UsersPersonalTrackings.update(personal_account="").where(
         (UsersPersonalTrackings.user_id == user_id) & (UsersPersonalTrackings.personal_account == personal_account)
     )
-    deleted_count = query.execute()
-    logger.info(f"🗑️ Удалено {deleted_count} невалидных записей из UsersPersonalTrackings для user_id={user_id}")
+    updated_count = query.execute()
+    logger.info(f"🗑️ Сброшена невалидная сессия для {updated_count} записей в UsersPersonalTrackings для user_id={user_id}")
 
 
 def get_user_accounts(user_id: int):
