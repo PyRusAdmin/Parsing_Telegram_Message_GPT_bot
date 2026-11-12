@@ -219,16 +219,34 @@ def get_categories_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
 
 def get_lang_keyboard(lang: str = 'ru') -> InlineKeyboardMarkup:
     """
-    Создаёт инлайн-клавиатуру для выбора языка интерфейса.
+    Создаёт инлайн-клавиатуру для выбора языка интерфейса из всех 9 поддерживаемых языков.
 
-    :param lang: (str) Код языка пользователя ('ru', 'en').
+    :param lang: (str) Код языка пользователя.
     :return: (InlineKeyboardMarkup) Объект инлайн-клавиатуры смены языка.
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=t("russian_language_button", lang=lang), callback_data="lang_ru"),
-                InlineKeyboardButton(text=t("english_language_button", lang=lang), callback_data="lang_en")
+                InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru"),
+                InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en")
+            ],
+            [
+                InlineKeyboardButton(text="🇨🇳 中文", callback_data="lang_zh"),
+                InlineKeyboardButton(text="🇮🇳 हिन्दी", callback_data="lang_hi")
+            ],
+            [
+                InlineKeyboardButton(text="🇪🇸 Español", callback_data="lang_es"),
+                InlineKeyboardButton(text="🇫🇷 Français", callback_data="lang_fr")
+            ],
+            [
+                InlineKeyboardButton(text="🇸🇦 العربية", callback_data="lang_ar"),
+                InlineKeyboardButton(text="🇧🇩 বাংলা", callback_data="lang_bn")
+            ],
+            [
+                InlineKeyboardButton(text="🇵🇹 Português", callback_data="lang_pt")
+            ],
+            [
+                back_button(lang)
             ]
         ]
     )

@@ -436,11 +436,12 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
     """
     Обновляет языковые настройки текущего пользователя.
 
-    :param lang: (str) Код выбранного языка ('ru' или 'en').
+    :param lang: (str) Код выбранного языка (из SUPPORTED_LANGUAGES).
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Результат операции и установленный язык.
     """
-    if lang not in ["ru", "en"]:
+    from locales.locales import SUPPORTED_LANGUAGES
+    if lang not in SUPPORTED_LANGUAGES:
         raise HTTPException(status_code=400, detail="Invalid language code")
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
@@ -452,9 +453,9 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
 
 @app.post("/api/tracking/start")
 async def start_user_tracking(
-    background_tasks: BackgroundTasks,
-    account_id: Optional[int] = Query(None),
-    user_data: dict = Depends(get_current_tg_user)
+        background_tasks: BackgroundTasks,
+        account_id: Optional[int] = Query(None),
+        user_data: dict = Depends(get_current_tg_user)
 ):
     """
     Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс.
@@ -480,8 +481,8 @@ async def start_user_tracking(
 
 @app.post("/api/tracking/stop")
 async def stop_user_tracking(
-    account_id: Optional[int] = Query(None),
-    user_data: dict = Depends(get_current_tg_user)
+        account_id: Optional[int] = Query(None),
+        user_data: dict = Depends(get_current_tg_user)
 ):
     """
     Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс.
@@ -708,10 +709,10 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
 
 @app.post("/api/accounts/{account_id}/settings")
 async def update_account_web_settings(
-    account_id: int,
-    account_title: Optional[str] = Form(None),
-    track_all_chats: Optional[bool] = Form(None),
-    user_data: dict = Depends(get_current_tg_user)
+        account_id: int,
+        account_title: Optional[str] = Form(None),
+        track_all_chats: Optional[bool] = Form(None),
+        user_data: dict = Depends(get_current_tg_user)
 ):
     """
     Обновляет параметры кампании (название/тему и режим отслеживания всех чатов).
@@ -732,8 +733,8 @@ async def update_account_web_settings(
 
 @app.post("/api/accounts/{account_id}/sync-dialogs")
 async def sync_account_web_dialogs(
-    account_id: int,
-    user_data: dict = Depends(get_current_tg_user)
+        account_id: int,
+        user_data: dict = Depends(get_current_tg_user)
 ):
     """
     Синхронизирует диалоги (включая приватные и закрытые группы) из аккаунта в список отслеживания.
@@ -1536,9 +1537,9 @@ async def admin_actualize_db(background_tasks: BackgroundTasks, _: int = Depends
 
 @app.post("/api/admin/categorize")
 async def admin_categorize_db(
-    method: str = Query("fast"),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-    _: int = Depends(require_admin)
+        method: str = Query("fast"),
+        background_tasks: BackgroundTasks = BackgroundTasks(),
+        _: int = Depends(require_admin)
 ):
     """
     Запускает административную задачу категоризации групп с помощью AI.

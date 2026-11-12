@@ -112,6 +112,9 @@ You can test the latest features via the link: https://t.me/AutoParseAlertBot
   - Автоматическое восстановление мониторинга всех активных аккаунтов при старте бота (`restore_all_user_trackings`).
   - Устранена критическая ошибка удаления профиля пользователя при невалидности сессии (теперь сессия безопасно сбрасывается без потери данных и баланса).
   - Защита административных маршрутов Web API с обязательной авторизацией администратора.
+- **Глобальная мультиязычность (9 языков):**
+  - Созданы и подключены файлы локализации Fluent (.ftl) для всех языков проекта: Русский (ru), English (en), 中文 (zh), हिन्दी (hi), Español (es), Français (fr), العربية (ar), বাংলা (bn), Português (pt).
+  - Обновлена клавиатура выбора языка и сохранение в профиль пользователя.
 
 **English version**
 
@@ -132,5 +135,8 @@ You can test the latest features via the link: https://t.me/AutoParseAlertBot
   - Automatic tracking restoration for all active accounts on bot restart (`restore_all_user_trackings`).
   - Fixed critical user profile deletion bug on session failure (session is now cleared safely without losing profile or stars balance).
   - Web API admin routes secured with strict administrator authorization.
+- **Global Multi-Language (9 Languages):**
+  - Full Fluent (.ftl) localization packages created and connected for all project languages: Russian (ru), English (en), Chinese (zh), Hindi (hi), Spanish (es), French (fr), Arabic (ar), Bengali (bn), Portuguese (pt).
+  - Interactive multi-language selector keyboard and Web API language integration.
 
 You can test the latest features via the link: https://t.me/AutoParseAlertBot

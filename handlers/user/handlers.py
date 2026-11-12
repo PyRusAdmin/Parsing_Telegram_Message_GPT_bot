@@ -147,18 +147,21 @@ async def handle_back_to_main_menu_cb(callback: CallbackQuery, state: FSMContext
     )
 
 
-@router.callback_query(F.data.in_({"lang_ru", "lang_en"}))
+@router.callback_query(F.data.startswith("lang_"))
 async def handle_language_selection_cb(callback: CallbackQuery, state: FSMContext):
     """
-    Обработчик инлайн-выбора языка интерфейса (русский / английский).
+    Обработчик инлайн-выбора языка интерфейса (поддержка всех 9 языков).
 
     :param callback: (CallbackQuery) Объект входящего callback-запроса от пользователя.
     :param state: (FSMContext) Контекст машины состояний FSM.
     """
     try:
         await state.clear()
+        from locales.locales import SUPPORTED_LANGUAGES
+        raw_lang = callback.data.replace("lang_", "")
+        selected_lang = raw_lang if raw_lang in SUPPORTED_LANGUAGES else "ru"
+
         user = get_or_create_user(callback.from_user)
-        selected_lang = "ru" if callback.data == "lang_ru" else "en"
         user.language = selected_lang
         user.save()
         welcome_text = generate_welcome_message(user_language=user.language, user_tg_id=callback.from_user.id)
