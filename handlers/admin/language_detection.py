@@ -3,7 +3,8 @@ from asgiref.sync import sync_to_async
 from loguru import logger  # https://github.com/Delgan/loguru
 from openai import OpenAI
 
-from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES, OPENROUTER_BASE_URL, POLZA_BASE_URL, POLZA_AI_API_KEY
+from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES, OPENROUTER_BASE_URL, POLZA_BASE_URL, POLZA_AI_API_KEY, \
+    HTTP_TIMEOUT
 from database.database import TelegramGroups, database
 from locales.locales import t
 
@@ -22,7 +23,7 @@ def ai_llama_fri(group_data: dict, lang: str = 'ru'):
         client = OpenAI(
             base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
-            timeout=15
+            timeout=HTTP_TIMEOUT
         )
 
         data_parts = []

@@ -76,3 +76,5 @@ DEFAULT_SETTINGS = {
     "last_run_date": None,
     "last_report": None,
 }
+
+HTTP_TIMEOUT = 15
