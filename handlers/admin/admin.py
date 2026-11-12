@@ -38,7 +38,9 @@ async def export_questions_cb(callback: CallbackQuery):
     try:
         questions = get_all_questions()
         if not questions:
-            await callback.message.answer(t("no_questions_in_db", lang=user_lang))
+            await callback.message.answer(
+                t("no_questions_in_db", lang=user_lang), parse_mode="HTML"
+            )
             return
 
         if not os.path.exists("exports"):
@@ -63,7 +65,7 @@ async def export_questions_cb(callback: CallbackQuery):
 
     except Exception as e:
         logger.exception(e)
-        await callback.message.answer(t("export_error", lang=user_lang, error=str(e)))
+        await callback.message.answer(t("export_error", lang=user_lang, error=str(e)), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "menu_admin_panel")
@@ -77,8 +79,11 @@ async def admin_panel_cb(callback: CallbackQuery, state: FSMContext):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text(text=t("admin_panel_message", lang=user_lang), parse_mode="HTML",
-                                     reply_markup=admin_keyboard(lang=user_lang))
+    await callback.message.edit_text(
+        text=t("admin_panel_message", lang=user_lang),
+        parse_mode="HTML",
+        reply_markup=admin_keyboard(lang=user_lang)
+    )
     await callback.answer()
 
 

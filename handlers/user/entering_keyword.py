@@ -29,7 +29,7 @@ async def handle_enter_keyword_menu_cb(callback: CallbackQuery, state: FSMContex
 
     await callback.message.answer(
         t("enter_keyword", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_keywords")
+        reply_markup=back_keyboard(lang=user_lang, callback_data="settings_section_keywords"), parse_mode="HTML"
     )
     await state.set_state(MyStates.entering_keyword)
     await callback.answer()

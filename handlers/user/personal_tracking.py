@@ -1,5 +1,6 @@
 import asyncio
 import random
+import re
 from datetime import datetime
 from html import escape
 
@@ -23,7 +24,7 @@ from telethon.tl.functions.messages import ExportChatInviteRequest, ImportChatIn
 from telethon.tl.types import ChatAdminRights
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from account_manager.parser import active_clients, filter_messages
+from account_manager.parser import active_clients, filter_messages, stop_tracking
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.account_free import write_account_to_db_free, getting_free_account
 
@@ -340,9 +341,9 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 pass
             return False, "Указанная группа или канал не существует. Проверьте правильность ссылки/юзернейма.", None, None, None, None
 
-        except ChannelPrivateError as cpe:
+        except ChannelPrivateError as cpe_err:
             logger.warning(
-                f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) получил ChannelPrivateError для {clean_target} "
+                f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) получил ChannelPrivateError ({cpe_err}) для {clean_target} "
                 f"(возможно, заблокирован в этой группе/канале). Пробуем следующий аккаунт..."
             )
             try:
@@ -353,9 +354,9 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 continue
             return False, "Указанная группа является приватной, не существует или все доступные аккаунты заблокированы в ней.", None, None, None, None
 
-        except (UserRestrictedError, ChannelsTooMuchError, FloodWaitError) as re:
+        except (UserRestrictedError, ChannelsTooMuchError, FloodWaitError) as tg_err:
             logger.warning(
-                f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) имеет ограничение Telegram: {re}. Пробуем следующий аккаунт..."
+                f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) имеет ограничение Telegram: {tg_err}. Пробуем следующий аккаунт..."
             )
             last_restriction_error = str(re)
             try:
@@ -470,7 +471,8 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
             if invite_match:
                 invite_hash = invite_match.group(1)
                 try:
-                    logger.info(f"🔗 Попытка вступления в приватную целевую группу {target_link} по хэшу {invite_hash}...")
+                    logger.info(
+                        f"🔗 Попытка вступления в приватную целевую группу {target_link} по хэшу {invite_hash}...")
                     res = await client(ImportChatInviteRequest(hash=invite_hash))
                     logger.info(f"✅ Аккаунт {account_tg_id} успешно вступил в приватную группу: {target_link}")
                     if hasattr(res, 'chats') and res.chats:
@@ -479,7 +481,8 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                     logger.info(f"ℹ️ Аккаунт {account_tg_id} уже является участником приватной группы {target_link}")
                     try:
                         async for dialog in client.iter_dialogs(limit=50):
-                            if g.id_group and (dialog.id == g.id_group or utils.get_peer_id(dialog.entity) == g.id_group):
+                            if g.id_group and (
+                                    dialog.id == g.id_group or utils.get_peer_id(dialog.entity) == g.id_group):
                                 entity = dialog.entity
                                 break
                     except Exception:
@@ -1204,7 +1207,7 @@ async def cb_list_tracking(callback: CallbackQuery):
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text=t("btn_pt_add_tracking", lang=user_lang), callback_data="pt_add_tracking")],
                 [back_button(user_lang, callback_data="menu_personal_tracking")]
-            ])
+            ]), parse_mode="HTML"
         )
         await callback.answer()
         return
@@ -1515,7 +1518,6 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
         await callback.answer(t("pt_invalid_code_alert", lang=user_lang), show_alert=True)
         await state.update_data(current_code="")
         try:
-            err_code_text = t("pt_auth_code_invalid_screen", lang=user_lang, phone=str(phone or ""))
             await callback.message.edit_text(
                 t("pt_auth_code_invalid_screen", lang=user_lang, phone=str(phone or "")),
                 reply_markup=emoji_code_keypad_kb(lang=user_lang),
@@ -1551,11 +1553,11 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             pass
     except Exception as e:
         logger.exception(f"❌ Ошибка входа Telethon по коду: {e}")
-        await callback.answer(t("pt_login_error_alert", lang=user_lang, error=str(e)), show_alert=True)
-        try:
-            await client.disconnect()
-        except Exception:
-            pass
+        # await callback.answer(t("pt_login_error_alert", lang=user_lang, error=str(e)), show_alert=True)
+        # try:
+        await client.disconnect()
+        # except Exception:
+        #     pass
 
 
 @router.message(PersonalTrackingState.waiting_for_2fa_password)
@@ -1653,11 +1655,11 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
         await status_msg.edit_text(inv_2fa, parse_mode="HTML")
     except Exception as e:
         logger.exception(f"❌ Ошибка 2FA авторизации: {e}")
-        await status_msg.edit_text(t("pt_auth_error", lang=user_lang, error=str(e)))
-        try:
-            await client.disconnect()
-        except Exception:
-            pass
+        # await status_msg.edit_text(t("pt_auth_error", lang=user_lang, error=str(e)))
+        # try:
+        await client.disconnect()
+        # except Exception:
+        #     pass
 
 
 @router.callback_query(F.data == "pt_cancel_auth")
@@ -1670,5 +1672,5 @@ async def cb_cancel_auth(callback: CallbackQuery, state: FSMContext):
     """
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text(t("pt_auth_cancelled", lang=user_lang))
+    await callback.message.edit_text(t("pt_auth_cancelled", lang=user_lang), parse_mode="HTML")
     await callback.answer()

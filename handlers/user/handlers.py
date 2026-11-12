@@ -196,7 +196,8 @@ async def handle_change_language_cb(callback: CallbackQuery, state: FSMContext):
         user_lang = determines_user_language(message_or_callback=callback.from_user.id)
         await callback.message.edit_text(
             text=t("welcome_ask_language", lang=user_lang),
-            reply_markup=get_lang_keyboard(lang=user_lang)
+            reply_markup=get_lang_keyboard(lang=user_lang),
+            parse_mode="HTML"
         )
         await callback.answer()
     except Exception as e:
@@ -259,7 +260,7 @@ async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
             logger.warning(f"У пользователя {user_id} нет подключенного аккаунта")
             await callback.message.answer(
                 text=t("no_connected_account", lang=user_lang),
-                reply_markup=connect_keyboard_account(lang=user_lang)
+                reply_markup=connect_keyboard_account(lang=user_lang), parse_mode="HTML"
             )
             await callback.answer()
             return

@@ -95,10 +95,10 @@ async def send_instruction_cb(callback: CallbackQuery, state: FSMContext):
         # Устанавливаем состояние для ожидания вопроса
         await state.set_state(MyStates.waiting_for_instruction_question)
     except FileNotFoundError:
-        await callback.message.answer(t("instruction_file_not_found", lang=user_lang))
+        await callback.message.answer(t("instruction_file_not_found", lang=user_lang), parse_mode="HTML")
     except Exception as e:
         logger.exception(e)
-        await callback.message.answer(t("instruction_send_error", lang=user_lang))
+        await callback.message.answer(t("instruction_send_error", lang=user_lang), parse_mode="HTML")
     await callback.answer()
 
 

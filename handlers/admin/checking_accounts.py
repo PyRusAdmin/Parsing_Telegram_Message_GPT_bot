@@ -28,7 +28,7 @@ async def checking_accounts_cb(callback: CallbackQuery, state: FSMContext):
         records = getting_free_account()
         logger.info(f"Получено свободных аккаунтов для проверки: {len(records)}")
 
-        await callback.message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)))
+        await callback.message.answer(t("checking_accounts_start", lang=user_lang, count=len(records)), parse_mode="HTML")
 
         checker = CheckingAccountsValidity()
         valid_count = 0

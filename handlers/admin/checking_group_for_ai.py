@@ -212,7 +212,7 @@ async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMC
     if method == "fast":
         await state.clear()
         client = Client()
-        status_msg = await callback.message.answer(t("ai_category_checking_models", lang=user_lang))
+        status_msg = await callback.message.answer(t("ai_category_checking_models", lang=user_lang), parse_mode="HTML")
         model = await get_best_g4f_model(client)
         await status_msg.edit_text(t("ai_category_model_selected", lang=user_lang, model=model))
         await asyncio.sleep(1)

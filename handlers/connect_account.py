@@ -370,7 +370,7 @@ async def handle_connect_account_cb(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.answer(
         text=t("connect_account", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="account_connect_menu")
+        reply_markup=back_keyboard(lang=user_lang, callback_data="account_connect_menu"), parse_mode="HTML"
     )
     await state.set_state(MyStates.waiting_for_session_file_user)
 
@@ -435,7 +435,7 @@ async def handle_account_file(message: Message, state: FSMContext):
             # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
             from database.users_groups import UsersGroups
             from database.users_keywords import UsersKeywords
-            from account_manager.parser import filter_messages, active_clients
+            from account_manager.parser import filter_messages, active_clients, stop_tracking
 
             has_groups = UsersGroups.select().where(UsersGroups.user_id == message.from_user.id).exists()
             has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == message.from_user.id).exists()
@@ -490,7 +490,7 @@ async def admin_connecting_account_cb(callback: CallbackQuery, state: FSMContext
     await state.set_state(MyStates.waiting_for_session_file)
     await callback.message.answer(
         t("connect_account_ask_session", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_admin_panel")
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_admin_panel"), parse_mode="HTML"
     )
     logger.info(f"Админ {callback.from_user.id} начал добавление новых сессий")
 

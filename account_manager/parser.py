@@ -4,7 +4,7 @@ import random
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async
 from loguru import logger  # https://github.com/Delgan/loguru
-from telethon import events, types, TelegramClient
+from telethon import events, types
 from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
@@ -12,7 +12,7 @@ from account_manager.subscription import subscription_telegram
 from account_manager.utilit import detect_language
 from core.config import forwarded_messages, active_clients, stop_flags
 from database.database import TelegramGroups
-from database.users_groups import get_user_channel_usernames, dell_group, get_user_channels_or_notify
+from database.users_groups import get_user_channel_usernames, get_user_channels_or_notify
 from database.users_keywords import get_keywords_count, get_user_keywords
 from database.users_personal_trackings import get_group_id_with_personal_tracking, UsersPersonalTrackings
 from handlers.user_language import determines_user_language
@@ -548,7 +548,7 @@ async def _send_msg(message, user_id, text, reply_markup=None, parse_mode="HTML"
         if message and hasattr(message, "answer"):
             return await message.answer(text=text, reply_markup=reply_markup, parse_mode=parse_mode)
         elif user_id:
-            from core.bot import bot
+            from system.dispatcher import bot
             return await bot.send_message(chat_id=int(user_id), text=text, reply_markup=reply_markup, parse_mode=parse_mode)
     except Exception as e:
         logger.debug(f"Не удалось отправить сообщение пользователю {user_id}: {e}")

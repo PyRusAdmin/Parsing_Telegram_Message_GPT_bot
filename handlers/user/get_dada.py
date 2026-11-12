@@ -112,7 +112,7 @@ async def get_keywords_list_cb(callback: types.CallbackQuery, state: FSMContext)
         document = types.FSInputFile(filepath)
         await callback.message.answer_document(
             document=document,
-            caption=t("keywords_export_caption", lang=user_lang, count=len(data))
+            caption=t("keywords_export_caption", lang=user_lang, count=len(data)), parse_mode="HTML"
         )
 
         os.remove(filepath)
@@ -162,7 +162,7 @@ async def get_tracking_links_list_cb(callback: types.CallbackQuery, state: FSMCo
         document = types.FSInputFile(filepath)
         await callback.message.answer_document(
             document=document,
-            caption=t("tracking_links_export_caption", lang=user_lang, count=total_count)
+            caption=t("tracking_links_export_caption", lang=user_lang, count=total_count), parse_mode="HTML"
         )
 
         os.remove(filepath)

@@ -29,7 +29,7 @@ async def delete_group_from_database_cb(callback: CallbackQuery, state: FSMConte
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
     await callback.message.answer(
         t("delete_group_prompt", lang=user_lang),
-        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings")
+        reply_markup=back_keyboard(lang=user_lang, callback_data="menu_settings"), parse_mode="HTML"
     )
     await state.set_state(MyStates.del_username_groups)
     await callback.answer()

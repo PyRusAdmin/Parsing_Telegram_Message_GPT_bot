@@ -623,12 +623,13 @@ async def start_category_export_cb(callback: CallbackQuery, state: FSMContext):
     try:
         await callback.message.edit_text(
             t("select_category_prompt", lang=user_lang),
-            reply_markup=get_categories_keyboard(lang=user_lang)
+            reply_markup=get_categories_keyboard(lang=user_lang),
+            parse_mode="HTML"
         )
     except Exception:
         await callback.message.answer(
             t("select_category_prompt", lang=user_lang),
-            reply_markup=get_categories_keyboard(lang=user_lang)
+            reply_markup=get_categories_keyboard(lang=user_lang), parse_mode="HTML"
         )
     await state.set_state(ExportStates.waiting_for_category)
     await callback.answer()
@@ -736,7 +737,9 @@ async def handle_pay_db_balance(callback: CallbackQuery, state: FSMContext):
     user.save()
     logger.info(f"Списано 5 звезд у {callback.from_user.id}. Новый баланс: {user.stars}")
 
-    await callback.message.edit_text(t("download_paid_success", lang=user_lang))
+    await callback.message.edit_text(
+        t("download_paid_success", lang=user_lang), parse_mode="HTML"
+    )
 
     data = await state.get_data()
     download_type = data.get("download_type", "all")
@@ -782,7 +785,8 @@ async def handle_pay_db_cancel(callback: CallbackQuery, state: FSMContext):
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=callback.from_user.id)
 
-    await callback.message.edit_text(t("action_cancelled", lang=user_lang))
+    await callback.message.edit_text(
+        t("action_cancelled", lang=user_lang), parse_mode="HTML")
     await state.clear()
     await callback.answer()
 
