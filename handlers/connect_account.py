@@ -91,13 +91,12 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         await callback.answer()
         return
 
-    # При переподключении ставим другие аккаунты из пула в приоритет
-    if is_reconnect and len(free_accounts) > 1:
-        candidates = [acc for acc in free_accounts if acc.session_string != current_session] + [acc for acc in
-                                                                                                free_accounts if
-                                                                                                acc.session_string == current_session]
-    else:
-        candidates = free_accounts
+    # Выбираем случайные аккаунты из пула свободных (с приоритетом других аккаунтов при переподключении)
+    import random
+    other_accounts = [acc for acc in free_accounts if acc.session_string != current_session]
+    random.shuffle(other_accounts)
+    same_accounts = [acc for acc in free_accounts if acc.session_string == current_session]
+    candidates = other_accounts + same_accounts
 
     # Ищем первый рабочий, авторизованный аккаунт, который не является создателем (owner) группы
     checker = CheckingAccountsValidity()
