@@ -91,12 +91,23 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         await callback.answer()
         return
 
-    # Выбираем случайные аккаунты из пула свободных (с приоритетом других аккаунтов при переподключении)
+    # Выбираем случайные аккаунты из пула свободных (с приоритетом незанятых другими пользователями)
     import random
-    other_accounts = [acc for acc in free_accounts if acc.session_string != current_session]
-    random.shuffle(other_accounts)
+    other_used_sessions = set(
+        p.shared_account for p in UsersPersonalTrackings.select(UsersPersonalTrackings.shared_account)
+        .where(
+            (UsersPersonalTrackings.user_id != user_id) &
+            (UsersPersonalTrackings.shared_account.is_null(False))
+        )
+        if p.shared_account
+    )
+
+    unused_other = [acc for acc in free_accounts if acc.session_string != current_session and acc.session_string not in other_used_sessions]
+    random.shuffle(unused_other)
+    used_other = [acc for acc in free_accounts if acc.session_string != current_session and acc.session_string in other_used_sessions]
+    random.shuffle(used_other)
     same_accounts = [acc for acc in free_accounts if acc.session_string == current_session]
-    candidates = other_accounts + same_accounts
+    candidates = unused_other + used_other + same_accounts
 
     # Ищем первый рабочий, авторизованный аккаунт, который не является создателем (owner) группы
     checker = CheckingAccountsValidity()

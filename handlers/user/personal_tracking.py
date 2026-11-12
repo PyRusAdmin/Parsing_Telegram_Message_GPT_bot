@@ -460,23 +460,59 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
             target_link = (g.username_group or "").strip()
             if not target_link:
                 continue
-            try:
-                entity = await client.get_entity(target_link)
-                try:
-                    await client(JoinChannelRequest(channel=entity))
-                    logger.info(f"✅ Аккаунт {account_tg_id} подписан на целевой объект: {target_link}")
-                except Exception as join_err:
-                    logger.debug(f"Уведомление при подписке на целевой объект {target_link}: {join_err}")
 
+            entity = None
+            peer_id = None
+            title = ""
+
+            # Проверяем, является ли ссылка инвайтом в приватную группу (+hash или joinchat/hash)
+            invite_match = re.search(r'(?:joinchat/|\+)([A-Za-z0-9_\-]+)', target_link)
+            if invite_match:
+                invite_hash = invite_match.group(1)
+                try:
+                    logger.info(f"🔗 Попытка вступления в приватную целевую группу {target_link} по хэшу {invite_hash}...")
+                    res = await client(ImportChatInviteRequest(hash=invite_hash))
+                    logger.info(f"✅ Аккаунт {account_tg_id} успешно вступил в приватную группу: {target_link}")
+                    if hasattr(res, 'chats') and res.chats:
+                        entity = res.chats[0]
+                except UserAlreadyParticipantError:
+                    logger.info(f"ℹ️ Аккаунт {account_tg_id} уже является участником приватной группы {target_link}")
+                    try:
+                        async for dialog in client.iter_dialogs(limit=50):
+                            if g.id_group and (dialog.id == g.id_group or utils.get_peer_id(dialog.entity) == g.id_group):
+                                entity = dialog.entity
+                                break
+                    except Exception:
+                        pass
+                except Exception as inv_err:
+                    logger.warning(f"⚠️ Ошибка вступления в приватную целевую группу {target_link}: {inv_err}")
+            else:
+                # Публичный канал или супергруппа
+                clean_target = target_link.replace("https://t.me/", "@")
+                try:
+                    entity = await client.get_entity(clean_target)
+                    try:
+                        await client(JoinChannelRequest(channel=entity))
+                        logger.info(f"✅ Аккаунт {account_tg_id} подписан на целевой объект: {target_link}")
+                    except UserAlreadyParticipantError:
+                        logger.info(f"ℹ️ Аккаунт {account_tg_id} уже подписан на: {target_link}")
+                    except Exception as join_err:
+                        logger.debug(f"Уведомление при подписке на целевой объект {target_link}: {join_err}")
+                except Exception as ent_err:
+                    logger.warning(f"⚠️ Не удалось получить сущность для {target_link}: {ent_err}")
+
+            if entity:
                 peer_id = utils.get_peer_id(entity)
-                if peer_id:
-                    g.id_group = peer_id
-                    if hasattr(entity, "title") and entity.title:
-                        g.name_group = entity.title
-                    g.save()
-                    logger.info(f"💾 Обновлен id_group={peer_id} для {target_link} (user_id={user_id})")
-            except Exception as e:
-                logger.warning(f"Не удалось получить сущность для {target_link}: {e}")
+                title = getattr(entity, 'title', '')
+            elif g.id_group:
+                peer_id = g.id_group
+
+            if peer_id:
+                g.id_group = peer_id
+                if title:
+                    g.name_group = title
+                g.save()
+                logger.info(f"💾 Обновлен id_group={peer_id} для {target_link} (user_id={user_id})")
 
         # 2. Проверяем наличие и доступность группы результатов
         pt_rec, _ = UsersPersonalTrackings.get_or_create(user_id=user_id)
@@ -671,24 +707,25 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
 
             promoted = False
             try:
+                # В супергруппе Telegram для назначения администратором ТРЕБУЕТСЯ хотя бы одно валидное супергрупповое право.
+                # Выдаем can_pin_messages=True (закрепление сообщений),
+                # при этом ВСЕ опасные права (изменение инфо, удаление, бан, назначение админов) отключены!
                 await bot.promote_chat_member(
                     chat_id=group_id,
                     user_id=account_tg_id,
-                    can_post_messages=True,
-                    can_edit_messages=False,
+                    can_pin_messages=True,
+                    can_change_info=False,
                     can_delete_messages=False,
                     can_invite_users=False,
                     can_restrict_members=False,
-                    can_pin_messages=False,
                     can_promote_members=False,
-                    can_change_info=False,
                     can_manage_video_chats=False,
                     can_manage_chat=False,
                     can_manage_topics=False
                 )
                 promoted = True
                 logger.info(
-                    f"✅ Бот-администратор выдал ограниченные права (только публикация) аккаунту {account_tg_id} в группе {group_id}"
+                    f"✅ Бот-администратор успешно назначил аккаунт {account_tg_id} администратором в группе {group_id}"
                 )
             except Exception as prom_err:
                 err_str = str(prom_err).lower()
@@ -699,25 +736,25 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                     return False, True
 
                 logger.warning(
-                    f"⚠️ Ошибка promote_chat_member с can_post_messages в группе {group_id} ({prom_err}). Пробуем стандартные права супергруппы..."
+                    f"⚠️ Первая попытка promote_chat_member в группе {group_id} ({prom_err}). Пробуем с can_manage_chat=True..."
                 )
                 try:
                     await bot.promote_chat_member(
                         chat_id=group_id,
                         user_id=account_tg_id,
                         can_manage_chat=True,
+                        can_pin_messages=True,
                         can_change_info=False,
                         can_delete_messages=False,
                         can_invite_users=False,
                         can_restrict_members=False,
-                        can_pin_messages=False,
                         can_promote_members=False,
                         can_manage_video_chats=False,
                         can_manage_topics=False
                     )
                     promoted = True
                     logger.info(
-                        f"✅ Бот-администратор назначил аккаунт {account_tg_id} администратором с ограниченными правами"
+                        f"✅ Бот-администратор назначил аккаунт {account_tg_id} администратором (can_manage_chat)"
                     )
                 except Exception as fb_prom_err:
                     fb_str = str(fb_prom_err).lower()
@@ -727,7 +764,6 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                         )
                         return False, True
                     logger.warning(f"Не удалось назначить права администратора через бота: {fb_prom_err}")
-                    return False, False
 
             if promoted:
                 # Устанавливаем кастомный титул администратора
@@ -737,8 +773,9 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                         user_id=account_tg_id,
                         custom_title="AlertSender"
                     )
-                except Exception:
-                    pass
+                    logger.info(f"✅ Установлен титул 'AlertSender' для аккаунта {account_tg_id} в группе {group_id}")
+                except Exception as tit_err:
+                    logger.debug(f"Не удалось установить кастомный титул: {tit_err}")
 
         return True, False
 
@@ -747,9 +784,11 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
         return False, False
     finally:
         try:
-            await client.disconnect()
+            if client and client.is_connected():
+                await client.disconnect()
         except Exception:
             pass
+        await asyncio.sleep(0.3)  # Пауза для корректного освобождения сессии и избежания AuthKeyDuplicatedError
 
 
 # ==================== ОБРАБОТЧИКИ (HANDLERS) ====================
