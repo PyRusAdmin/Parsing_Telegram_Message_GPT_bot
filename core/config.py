@@ -65,7 +65,7 @@ ISO_639_1_CODES = {
     "uk", "ur", "uz", "ve", "vi", "vo", "wa", "wo", "xh", "yi", "yo", "za", "zh", "zu"
 }
 
-version = "0.2.0"
+version = "0.3.0"
 
 PAGE_SIZE = 5  # Количество элементов на странице
 

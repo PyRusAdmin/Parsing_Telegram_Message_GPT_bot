@@ -158,10 +158,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         except Exception as e:
             logger.debug(f"Не удалось получить сущность для чата {chat_id}: {e}")
 
-    chat_title = "Неизвестно"
     chat_username = ""
     if chat_entity:
-        chat_title = getattr(chat_entity, "title", None) or getattr(chat_entity, "first_name", None) or "Неизвестно"
         chat_username = getattr(chat_entity, "username", None) or ""
 
     # Проверяем, отслеживает ли пользователь данный чат
@@ -231,7 +229,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                         )
                         fwd_ok = True
                     except Exception as fwd_err1:
-                        logger.debug(f"Попытка пересылки по ID не удалась ({fwd_err1}). Пробуем через объект сообщения...")
+                        logger.debug(
+                            f"Попытка пересылки по ID не удалась ({fwd_err1}). Пробуем через объект сообщения...")
                         try:
                             await client.forward_messages(
                                 entity=target_entity,
@@ -239,12 +238,15 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                             )
                             fwd_ok = True
                         except Exception as fwd_err2:
-                            logger.warning(f"⚠️ Не удалось переслать сообщение через Telethon в группу {target_group_id}: {fwd_err2}")
+                            logger.warning(
+                                f"⚠️ Не удалось переслать сообщение через Telethon в группу {target_group_id}: {fwd_err2}")
 
                     if fwd_ok:
-                        logger.info(f"✅ Сообщение {message.id} успешно переслано клиентом Telethon в целевую группу (ID={target_group_id})")
+                        logger.info(
+                            f"✅ Сообщение {message.id} успешно переслано клиентом Telethon в целевую группу (ID={target_group_id})")
                 except Exception as ent_err:
-                    logger.warning(f"⚠️ Не удалось разрешить целевую группу {target_group_id} для пересылки через Telethon: {ent_err}")
+                    logger.warning(
+                        f"⚠️ Не удалось разрешить целевую группу {target_group_id} для пересылки через Telethon: {ent_err}")
 
         except Exception as e:
             logger.exception(f"❌ Ошибка при отправке уведомления о сообщении: {e}")
@@ -549,7 +551,8 @@ async def _send_msg(message, user_id, text, reply_markup=None, parse_mode="HTML"
             return await message.answer(text=text, reply_markup=reply_markup, parse_mode=parse_mode)
         elif user_id:
             from system.dispatcher import bot
-            return await bot.send_message(chat_id=int(user_id), text=text, reply_markup=reply_markup, parse_mode=parse_mode)
+            return await bot.send_message(chat_id=int(user_id), text=text, reply_markup=reply_markup,
+                                          parse_mode=parse_mode)
     except Exception as e:
         logger.debug(f"Не удалось отправить сообщение пользователю {user_id}: {e}")
     return None
@@ -718,7 +721,8 @@ async def filter_messages(message=None, user_id=None, notify=True):
             logger.debug(f"Ошибка предварительной загрузки диалогов: {dial_err}")
 
         # === 1. Читаем каналы из БД ===
-        channels = await get_user_channels_or_notify(user_id=user_id, message=message, client=client, user_lang=user_lang)
+        channels = await get_user_channels_or_notify(user_id=user_id, message=message, client=client,
+                                                     user_lang=user_lang)
         if not channels:
             return None
 
@@ -744,7 +748,8 @@ async def filter_messages(message=None, user_id=None, notify=True):
                         ]
                     ]
                 )
-                await _send_msg(message, user_id, t("parser_free_account_limit", lang=user_lang), reply_markup=buy_stars_kb)
+                await _send_msg(message, user_id, t("parser_free_account_limit", lang=user_lang),
+                                reply_markup=buy_stars_kb)
             return None
 
         # === Функция прослушивания — стартует сразу ===
@@ -752,6 +757,7 @@ async def filter_messages(message=None, user_id=None, notify=True):
             """
             Запускает прослушивание входящих сообщений в отслеживаемых чатах до срабатывания флага остановки.
             """
+
             @client.on(events.NewMessage())
             async def handle_new_message(event: events.NewMessage.Event):
                 """
