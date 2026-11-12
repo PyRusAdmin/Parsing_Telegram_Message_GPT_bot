@@ -1,6 +1,7 @@
 import json
 import random
 import re
+from functools import cache
 from typing import Optional
 
 
@@ -99,7 +100,16 @@ def choosing_random_ai_model():
     return model
 
 
-_language_detector = None
+
+
+
+@cache
+def _get_language_detector():
+    """
+    Ленивая инициализация детектора языка (кэшируется в памяти).
+    """
+    from lingua import LanguageDetectorBuilder
+    return LanguageDetectorBuilder.from_all_spoken_languages().build()
 
 
 def detect_language(text: str) -> Optional[str]:
@@ -109,16 +119,12 @@ def detect_language(text: str) -> Optional[str]:
     :param text: (str) Анализируемый текст.
     :return: (Optional[str]) Двухбуквенный ISO 639-1 код языка (например, 'ru', 'en') или None.
     """
-    global _language_detector
     if not text or not isinstance(text, str) or not text.strip():
         return None
 
     try:
-        if _language_detector is None:
-            from lingua import LanguageDetectorBuilder
-            _language_detector = LanguageDetectorBuilder.from_all_spoken_languages().build()
-
-        result = _language_detector.detect_language_of(text.strip())
+        detector = _get_language_detector()
+        result = detector.detect_language_of(text.strip())
         if result is not None:
             code = result.iso_code_639_1.name.lower()
             from core.config import ISO_639_1_CODES

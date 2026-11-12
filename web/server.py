@@ -1155,7 +1155,7 @@ async def download_database(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     # Проверьте, бесплатная ли загрузка или требуется ли звёздочки.
-    is_free, remaining = can_user_download_free(user)
+    is_free, _remaining = can_user_download_free(user)
     if not is_free:
         # Нужно вычесть 5 звёзд из баланса
         if user.stars < 5:
@@ -1258,7 +1258,6 @@ async def bg_check_accounts():
     :return: None
     """
     logger.info("Начинаем проверку аккаунтов...")
-    global admin_task_status
     admin_task_status["action"] = "check_accounts"
     admin_task_status["status"] = "running"
     admin_task_status["progress"] = 0
@@ -1413,7 +1412,6 @@ async def bg_categorize_db(method: str):
     :param method: (str) Выбранный метод классификации ("fast", "openrouter" или "groq").
     :return: None
     """
-    global admin_task_status
     admin_task_status["action"] = "categorize"
     admin_task_status["status"] = "running"
     admin_task_status["progress"] = 0
@@ -1477,7 +1475,6 @@ async def bg_detect_language():
 
     :return: None
     """
-    global admin_task_status
     admin_task_status["action"] = "lang_detect"
     admin_task_status["status"] = "running"
     admin_task_status["progress"] = 0

@@ -47,7 +47,7 @@ class UsersKeywords(database.Model):
         )
 
 
-def get_user_keywords_with_id(user_id: int, user_session_string: str = None) -> list:
+def get_user_keywords_with_id(user_id: int, user_session_string: str | None = None) -> list:
     """
     Возвращает список словарей ключевых слов пользователя с их идентификаторами.
 
@@ -98,7 +98,7 @@ def add_user_keywords(user_id: int, keywords: list[str], user_username: str = ""
         )
 
 
-def get_user_keywords(user_id: int, user_session_string: str = None) -> list[str]:
+def get_user_keywords(user_id: int, user_session_string: str | None = None) -> list[str]:
     """
     Возвращает список ключевых слов пользователя в виде строк (с поддержкой фильтрации по аккаунту).
 
@@ -120,7 +120,7 @@ def get_user_keywords(user_id: int, user_session_string: str = None) -> list[str
     return [row.user_keyword for row in query]
 
 
-def get_keywords_count(user_id: int, user_session_string: str = None) -> int:
+def get_keywords_count(user_id: int, user_session_string: str | None = None) -> int:
     """
     Получение количества ключевых слов пользователя для отслеживания.
 

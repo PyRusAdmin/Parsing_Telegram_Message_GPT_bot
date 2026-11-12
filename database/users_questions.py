@@ -45,9 +45,9 @@ class UsersQuestions(database.Model):
         table_name = 'users_questions'
 
 
-def add_question(user_id: int, user_question: str = None, answer_ai: str = None, user_username: str = None,
-                 user_firstname: str = None, status_question: str = "Не проверен", question: str = None,
-                 answer: str = None, status: str = None):
+def add_question(user_id: int, user_question: str | None = None, answer_ai: str | None = None, user_username: str | None = None,
+                 user_firstname: str | None = None, status_question: str = "Не проверен", question: str | None = None,
+                 answer: str | None = None, status: str | None = None):
     """
     Добавляет вопрос пользователя и ответ ИИ в базу данных users_questions.
 

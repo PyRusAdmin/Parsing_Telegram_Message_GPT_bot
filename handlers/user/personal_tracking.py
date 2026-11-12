@@ -1155,11 +1155,12 @@ async def process_keywords_input(message: Message, state: FSMContext):
     # Автоматически запускаем фоновое отслеживание, если еще не запущено
     if str(message.from_user.id) not in active_clients:
         try:
-            asyncio.create_task(
+            create_background_task(
                 filter_messages(
                     message=message,
                     user_id=message.from_user.id
-                )
+                ),
+                name=f"auto_track_{message.from_user.id}"
             )
             logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id}")
         except Exception as e:
@@ -1825,20 +1826,13 @@ async def cb_accounts_list(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("pt_acc_"))
-async def cb_account_details(callback: CallbackQuery, state: FSMContext):
+def get_account_details_text_and_kb(user_id: int, acc_id: int, user_lang: str):
     """
-    Детальная карточка управления конкретным аккаунтом/кампанией (диваны, холодильники).
+    Формирует текст карточки кампании и инлайн-клавиатуру управления.
     """
-    await state.clear()
-    user_id = callback.from_user.id
-    user_lang = determines_user_language(message_or_callback=user_id)
-    acc_id = int(callback.data.replace("pt_acc_", ""))
     acc = get_account_by_id(acc_id)
-
     if not acc or acc.user_id != user_id:
-        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
-        return
+        return None, None
 
     is_running = f"{user_id}_{acc.id}" in active_clients
     status_str = "🟢 <b>Активно</b>" if is_running else "🔴 <b>Остановлено</b>"
@@ -1908,6 +1902,23 @@ async def cb_account_details(callback: CallbackQuery, state: FSMContext):
             back_button(user_lang, callback_data="pt_accounts_list")
         ]
     ])
+    return card_text, kb
+
+
+@router.callback_query(F.data.startswith("pt_acc_"))
+async def cb_account_details(callback: CallbackQuery, state: FSMContext):
+    """
+    Детальная карточка управления конкретным аккаунтом/кампанией (диваны, холодильники).
+    """
+    await state.clear()
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_acc_", ""))
+    card_text, kb = get_account_details_text_and_kb(user_id, acc_id, user_lang)
+
+    if not card_text:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
 
     try:
         await callback.message.edit_text(card_text, reply_markup=kb, parse_mode="HTML")
@@ -1934,7 +1945,12 @@ async def cb_toggle_all_chats(callback: CallbackQuery, state: FSMContext):
 
     status_str = "ВКЛЮЧЕН" if acc.track_all_chats else "ВЫКЛЮЧЕН"
     await callback.answer(t("pt_toggle_all_chats_done", lang=user_lang, title=acc.account_title or "", status=status_str), show_alert=True)
-    await cb_account_details(callback, state)
+    card_text, kb = get_account_details_text_and_kb(user_id, acc_id, user_lang)
+    if card_text:
+        try:
+            await callback.message.edit_text(card_text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data.startswith("pt_rename_acc_"))
@@ -1982,15 +1998,10 @@ async def process_rename_acc_input(message: Message, state: FSMContext):
             acc.save()
             await message.answer(t("pt_acc_renamed", lang=user_lang, title=new_title), parse_mode="HTML")
 
-    # Возвращаемся к карточке аккаунта
-    mock_cb = CallbackQuery(
-        id="0",
-        from_user=message.from_user,
-        chat_instance="0",
-        message=message,
-        data=f"pt_acc_{acc_id}"
-    )
-    await cb_account_details(mock_cb, state)
+    # Отображаем обновленную карточку аккаунта напрямую сообщением
+    card_text, kb = get_account_details_text_and_kb(user_id, acc_id, user_lang)
+    if card_text:
+        await message.answer(card_text, reply_markup=kb, parse_mode="HTML")
 
 
 @router.callback_query(F.data.startswith("pt_acc_keywords_"))
@@ -2045,14 +2056,10 @@ async def process_acc_keywords_input(message: Message, state: FSMContext):
         title = acc.account_title or f"Аккаунт #{acc.id}"
         await message.answer(t("pt_acc_keywords_saved", lang=user_lang, title=title, count=len(keywords)), parse_mode="HTML")
 
-    mock_cb = CallbackQuery(
-        id="0",
-        from_user=message.from_user,
-        chat_instance="0",
-        message=message,
-        data=f"pt_acc_{acc_id}"
-    )
-    await cb_account_details(mock_cb, state)
+    # Отображаем обновленную карточку аккаунта напрямую сообщением
+    card_text, kb = get_account_details_text_and_kb(user_id, acc_id, user_lang)
+    if card_text:
+        await message.answer(card_text, reply_markup=kb, parse_mode="HTML")
 
 
 @router.callback_query(F.data.startswith("pt_sync_dialogs_"))
@@ -2096,7 +2103,12 @@ async def cb_sync_dialogs(callback: CallbackQuery, state: FSMContext):
         await status_msg.edit_text(f"❌ Ошибка: {e}")
 
     await asyncio.sleep(1)
-    await cb_account_details(callback, state)
+    card_text, kb = get_account_details_text_and_kb(user_id, acc_id, user_lang)
+    if card_text:
+        try:
+            await callback.message.edit_text(card_text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(card_text, reply_markup=kb, parse_mode="HTML")
 
 
 @router.callback_query(F.data.startswith("pt_toggle_run_"))
@@ -2131,7 +2143,12 @@ async def cb_toggle_run_acc(callback: CallbackQuery, state: FSMContext):
         await callback.answer(f"🚀 Аккаунт {acc.account_title or acc.id} запущен", show_alert=False)
 
     await asyncio.sleep(0.5)
-    await cb_account_details(callback, state)
+    card_text, kb = get_account_details_text_and_kb(user_id, acc_id, user_lang)
+    if card_text:
+        try:
+            await callback.message.edit_text(card_text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data.startswith("pt_disconnect_acc_"))

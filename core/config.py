@@ -48,7 +48,7 @@ active_tasks = {}  # {user_key: asyncio.Task}
 _background_tasks = set()  # Сильные ссылки для защиты от сборщика мусора (GC) в Python 3.12-3.14+
 
 
-def create_background_task(coro, name: str = None):
+def create_background_task(coro, name: str | None = None):
     """
     Создает фоновую задачу asyncio с сохранением сильной ссылки,
     исключая 'Task was destroyed but it is pending!' при срабатывании сборщика мусора.

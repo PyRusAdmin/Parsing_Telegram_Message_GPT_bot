@@ -230,8 +230,8 @@ def can_user_download_free(user: UsersPersonalTrackings) -> tuple[bool, int]:
     return False, remaining
 
 
-async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str = None,
-                                   user_id: int = None):
+async def check_and_start_download(message: Message, state: FSMContext, download_type: str, category: str | None = None,
+                                   user_id: int | None = None):
     """
     Проверяет лимиты бесплатной выгрузки базы и запускает скачивание или запрос оплаты.
 
@@ -279,7 +279,7 @@ async def check_and_start_download(message: Message, state: FSMContext, download
         )
 
 
-async def perform_download(message: Message, user_id: int, download_type: str, category: str = None):
+async def perform_download(message: Message, user_id: int, download_type: str, category: str | None = None):
     """
     Формирует и отправляет пользователю файл выгрузки базы данных в формате CSV.
 

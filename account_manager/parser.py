@@ -64,7 +64,7 @@ def _clean_tg_id(val) -> str:
     return s
 
 
-def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, entity=None, session_string: str = None, track_all_chats: bool = False) -> bool:
+def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, entity=None, session_string: str | None = None, track_all_chats: bool = False) -> bool:
     """
     Проверяет, входит ли чат в список отслеживаемых групп/каналов пользователя (с поддержкой закрытых групп и мульти-аккаунтов).
 
@@ -449,8 +449,8 @@ async def ensure_group_category(group_data: dict) -> str | None:
     return None
 
 
-def ensure_group_language(telegram_id: int = None, name: str = None, description: str = None,
-                          username: str = None) -> str | None:
+def ensure_group_language(telegram_id: int | None = None, name: str | None = None, description: str | None = None,
+                          username: str | None = None) -> str | None:
     """
     Проверяет наличие языка группы в базе данных и определяет его через lingua-py при отсутствии.
 
@@ -1145,7 +1145,7 @@ async def restore_all_user_trackings():
 
         # 1. Запуск всех активных аккаунтов из таблицы users_accounts
         try:
-            active_accs = list(UsersAccounts.select().where(UsersAccounts.is_active == True))
+            active_accs = list(UsersAccounts.select().where(UsersAccounts.is_active == 1))
             for acc in active_accs:
                 user_key = f"{acc.user_id}_{acc.id}"
                 if user_key in active_clients or user_key in active_tasks:

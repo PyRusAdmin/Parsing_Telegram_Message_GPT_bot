@@ -148,7 +148,7 @@ class CategoryAssignment:
 
             # Если ответ содержит переносы строк — берём последнюю непустую строку (где обычно и находится итоговый ответ)
             if '\n' in category:
-                lines = [l.strip() for l in category.split('\n') if l.strip()]
+                lines = [line.strip() for line in category.split('\n') if line.strip()]
                 if lines:
                     category = lines[-1]
 

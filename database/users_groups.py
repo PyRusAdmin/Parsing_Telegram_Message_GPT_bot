@@ -43,7 +43,7 @@ class UsersGroups(database.Model):
         )
 
 
-def get_user_channel_usernames(user_id: int, user_session_string: str = None) -> tuple[list[str], int]:
+def get_user_channel_usernames(user_id: int, user_session_string: str | None = None) -> tuple[list[str], int]:
     """
     Получает все username каналов и групп пользователя по его user_id (с поддержкой фильтрации по сессии).
 
