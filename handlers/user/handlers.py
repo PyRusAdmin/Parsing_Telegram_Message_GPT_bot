@@ -11,7 +11,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 
 from account_manager.parser import filter_messages, active_clients
 from account_manager.session import find_session_file
-from core.config import version
+from core.config import version, create_background_task
 from database.database import getting_number_records_database
 from database.users_groups import get_group_count
 from database.users_keywords import get_keywords_count
@@ -274,11 +274,12 @@ async def handle_start_tracking_cb(callback: CallbackQuery, state: FSMContext):
         )
 
         # 4. Запускаем фоновую асинхронную таску отслеживания
-        asyncio.create_task(
+        create_background_task(
             filter_messages(
                 message=callback.message,
                 user_id=user_id,
-            )
+            ),
+            name=f"launch_tracking_{user_id}"
         )
 
         # Небольшая пауза для инициализации и обновление интерфейса единого меню

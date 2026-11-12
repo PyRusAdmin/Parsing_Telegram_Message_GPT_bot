@@ -25,7 +25,7 @@ from telethon.tl.types import ChatAdminRights
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from account_manager.parser import active_clients, filter_messages, stop_tracking
-from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
+from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID, create_background_task, active_tasks
 from database.account_free import write_account_to_db_free, getting_free_account
 
 from database.users_accounts import (
@@ -1568,12 +1568,13 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
                 if str(user_id) in active_clients:
                     await stop_tracking(user_id=user_id, message=None)
                 try:
-                    asyncio.create_task(
+                    create_background_task(
                         filter_messages(
                             message=callback.message,
                             user_id=user_id,
                             notify=True
-                        )
+                        ),
+                        name=f"auth_track_{user_id}"
                     )
                     logger.info(
                         f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после авторизации")
@@ -1698,12 +1699,13 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
                 if str(message.from_user.id) in active_clients:
                     await stop_tracking(user_id=message.from_user.id, message=None)
                 try:
-                    asyncio.create_task(
+                    create_background_task(
                         filter_messages(
                             message=message,
                             user_id=message.from_user.id,
                             notify=True
-                        )
+                        ),
+                        name=f"2fa_track_{message.from_user.id}"
                     )
                     logger.info(
                         f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после ввода 2FA")
@@ -2115,14 +2117,17 @@ async def cb_toggle_run_acc(callback: CallbackQuery, state: FSMContext):
         await stop_tracking(user_id=user_id, message=callback.message, account_id=acc.id)
         await callback.answer(f"🛑 Аккаунт {acc.account_title or acc.id} остановлен", show_alert=False)
     else:
-        asyncio.create_task(
+        user_key = f"{user_id}_{acc.id}"
+        task = create_background_task(
             filter_messages(
                 message=callback.message,
                 user_id=user_id,
                 notify=True,
                 account_id=acc.id
-            )
+            ),
+            name=f"task_{user_key}"
         )
+        active_tasks[user_key] = task
         await callback.answer(f"🚀 Аккаунт {acc.account_title or acc.id} запущен", show_alert=False)
 
     await asyncio.sleep(0.5)
@@ -2154,12 +2159,13 @@ async def cb_start_all_accs(callback: CallbackQuery, state: FSMContext):
     Запускает мониторинг по всем настроенным аккаунтам пользователя.
     """
     user_id = callback.from_user.id
-    asyncio.create_task(
+    create_background_task(
         filter_messages(
             message=callback.message,
             user_id=user_id,
             notify=True
-        )
+        ),
+        name=f"start_all_{user_id}"
     )
     await callback.answer("🚀 Все аккаунты запущены!", show_alert=False)
     await asyncio.sleep(0.5)

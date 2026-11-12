@@ -10,7 +10,7 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from account_manager.auth import CheckingAccountsValidity
 from account_manager.subscription import subscription_telegram
 from account_manager.utilit import detect_language
-from core.config import forwarded_messages, active_clients, stop_flags
+from core.config import forwarded_messages, active_clients, stop_flags, active_tasks, create_background_task
 from database.database import TelegramGroups
 from database.users_groups import get_user_channel_usernames, get_user_channels_or_notify
 from database.users_keywords import get_user_keywords
@@ -771,12 +771,29 @@ async def filter_messages_for_account(user_id: int, account_record, message=None
                 except Exception as sub_err:
                     logger.debug(f"Фоновая подписка для аккаунта #{acc_id}: {sub_err}")
 
-        await asyncio.gather(listen(), subscribe())
+        # 🚀 Запускаем задачи с сильными ссылками против сборщика мусора (GC)
+        listen_task = create_background_task(listen(), name=f"listen_{user_key}")
+        sub_task = create_background_task(subscribe(), name=f"sub_{user_key}")
 
+        try:
+            await listen_task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if not sub_task.done():
+                sub_task.cancel()
+                try:
+                    await sub_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+
+    except asyncio.CancelledError:
+        logger.info(f"Фоновый процесс отслеживания отменен для аккаунта #{acc_id}")
     except Exception as e:
         logger.exception(f"❌ Ошибка в filter_messages_for_account #{acc_id}: {e}")
     finally:
         user_key = f"{user_id}_{acc_id}"
+        active_tasks.pop(user_key, None)
         if user_key in active_clients:
             c = active_clients.pop(user_key)
             try:
@@ -811,17 +828,27 @@ async def filter_messages(message=None, user_id=None, notify=True, account_id=No
     if account_id:
         acc = UsersAccounts.get_or_none((UsersAccounts.id == account_id) & (UsersAccounts.user_id == user_id))
         if acc:
-            return await filter_messages_for_account(user_id=user_id, account_record=acc, message=message, notify=notify)
+            user_key = f"{user_id}_{acc.id}"
+            if user_key in active_clients or user_key in active_tasks:
+                return None
+            task = create_background_task(
+                filter_messages_for_account(user_id=user_id, account_record=acc, message=message, notify=notify),
+                name=f"task_{user_key}"
+            )
+            active_tasks[user_key] = task
+            return task
 
     # 2. Проверяем, есть ли зарегистрированные аккаунты в UsersAccounts
     user_accs = list(UsersAccounts.select().where(UsersAccounts.user_id == user_id))
     if user_accs:
         for acc in user_accs:
             user_key = f"{user_id}_{acc.id}"
-            if user_key not in active_clients:
-                asyncio.create_task(
-                    filter_messages_for_account(user_id=user_id, account_record=acc, message=message, notify=notify)
+            if user_key not in active_clients and user_key not in active_tasks:
+                task = create_background_task(
+                    filter_messages_for_account(user_id=user_id, account_record=acc, message=message, notify=notify),
+                    name=f"task_{user_key}"
                 )
+                active_tasks[user_key] = task
         return None
 
     # 3. Fallback: Одиночный режим / общий бесплатный аккаунт
@@ -997,12 +1024,28 @@ async def filter_messages(message=None, user_id=None, notify=True, account_id=No
             except Exception as sub_err:
                 logger.debug(f"Фоновая подписка завершилась с ошибкой: {sub_err}")
 
-        await asyncio.gather(listen(), subscribe())
+        listen_task = create_background_task(listen(), name=f"listen_{user_key}")
+        sub_task = create_background_task(subscribe(), name=f"sub_{user_key}")
 
+        try:
+            await listen_task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if not sub_task.done():
+                sub_task.cancel()
+                try:
+                    await sub_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+
+    except asyncio.CancelledError:
+        logger.info(f"Фоновый процесс отслеживания отменен для user_id={user_id}")
     except Exception as e:
         logger.exception(f"❌ Критическая ошибка в filter_messages для user_id={user_id}: {e}")
     finally:
         user_key = str(user_id)
+        active_tasks.pop(user_key, None)
         if user_key in active_clients:
             c = active_clients.pop(user_key)
             try:
@@ -1042,6 +1085,9 @@ async def stop_tracking(user_id, message=None, account_id=None):
                     await client.disconnect()
             except Exception:
                 pass
+        task = active_tasks.pop(user_key, None)
+        if task and not task.done():
+            task.cancel()
         stop_flags.pop(user_key, None)
         UsersAccounts.update(is_active=False).where(UsersAccounts.id == account_id).execute()
         if message:
@@ -1051,7 +1097,10 @@ async def stop_tracking(user_id, message=None, account_id=None):
     # Останавливаем все аккаунты пользователя
     logger.info(f"🛑 Запрос на остановку всех потоков отслеживания для user_id={user_id}")
     keys_to_stop = [k for k in list(active_clients.keys()) if k == str(user_id) or k.startswith(f"{user_id}_")]
-    for k in keys_to_stop:
+    task_keys_to_stop = [k for k in list(active_tasks.keys()) if k == str(user_id) or k.startswith(f"{user_id}_")]
+    all_keys = set(keys_to_stop) | set(task_keys_to_stop)
+
+    for k in all_keys:
         if k in stop_flags:
             try:
                 stop_flags[k].set()
@@ -1064,6 +1113,9 @@ async def stop_tracking(user_id, message=None, account_id=None):
                     await client.disconnect()
             except Exception:
                 pass
+        task = active_tasks.pop(k, None)
+        if task and not task.done():
+            task.cancel()
         stop_flags.pop(k, None)
 
     UsersAccounts.update(is_active=False).where(UsersAccounts.user_id == user_id).execute()
@@ -1089,27 +1141,31 @@ async def restore_all_user_trackings():
         from database.users_keywords import UsersKeywords
 
         started_count = 0
+        launched_user_ids = set()
 
         # 1. Запуск всех активных аккаунтов из таблицы users_accounts
         try:
             active_accs = list(UsersAccounts.select().where(UsersAccounts.is_active == True))
             for acc in active_accs:
                 user_key = f"{acc.user_id}_{acc.id}"
-                if user_key in active_clients:
+                if user_key in active_clients or user_key in active_tasks:
                     continue
                 target_gid = acc.target_group_id or get_group_id_with_personal_tracking(acc.user_id)
                 if not target_gid:
                     continue
                 try:
                     logger.info(f"🚀 Авто-восстановление отслеживания для аккаунта #{acc.id} ({acc.account_title or acc.phone_number_session_string})...")
-                    asyncio.create_task(
+                    task = create_background_task(
                         filter_messages_for_account(
                             user_id=acc.user_id,
                             account_record=acc,
                             message=None,
                             notify=False
-                        )
+                        ),
+                        name=f"task_{user_key}"
                     )
+                    active_tasks[user_key] = task
+                    launched_user_ids.add(acc.user_id)
                     started_count += 1
                 except Exception as acc_err:
                     logger.error(f"❌ Ошибка авто-запуска аккаунта #{acc.id}: {acc_err}")
@@ -1125,8 +1181,9 @@ async def restore_all_user_trackings():
 
         for rec in candidates:
             uid = rec.user_id
-            # Если для пользователя уже работают аккаунты из users_accounts, пропускаем
-            if any(k == str(uid) or k.startswith(f"{uid}_") for k in active_clients):
+            if uid in launched_user_ids:
+                continue
+            if any(k == str(uid) or k.startswith(f"{uid}_") for k in active_clients) or any(k == str(uid) or k.startswith(f"{uid}_") for k in active_tasks):
                 continue
 
             session_str = rec.personal_account or rec.shared_account
@@ -1140,13 +1197,15 @@ async def restore_all_user_trackings():
 
             try:
                 logger.info(f"🚀 Авто-восстановление одиночного отслеживания для user_id={uid}...")
-                asyncio.create_task(
+                task = create_background_task(
                     filter_messages(
                         message=None,
                         user_id=uid,
                         notify=False
-                    )
+                    ),
+                    name=f"legacy_task_{uid}"
                 )
+                active_tasks[str(uid)] = task
                 started_count += 1
             except Exception as u_err:
                 logger.error(f"❌ Ошибка авто-запуска отслеживания для user_id={uid}: {u_err}")

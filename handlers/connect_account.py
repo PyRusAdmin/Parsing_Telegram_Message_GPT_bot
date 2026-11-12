@@ -1,4 +1,3 @@
-import asyncio
 import shutil
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from telethon.errors import PhoneNumberInvalidError, FloodWaitError
 from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
-from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
+from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID, create_background_task
 from database.account_free import AccountFree, write_account_to_db_free
 from database.users_accounts import write_account_to_user_table
 from database.users_personal_trackings import (
@@ -217,12 +216,13 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
         if str(user_id) in active_clients:
             await stop_tracking(user_id=user_id, message=None)
         try:
-            asyncio.create_task(
+            create_background_task(
                 filter_messages(
                     message=callback.message,
                     user_id=user_id,
                     notify=True
-                )
+                ),
+                name=f"switch_track_{user_id}"
             )
             logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после смены аккаунта")
         except Exception as e:
@@ -443,12 +443,13 @@ async def handle_account_file(message: Message, state: FSMContext):
                 if str(message.from_user.id) in active_clients:
                     await stop_tracking(user_id=message.from_user.id, message=None)
                 try:
-                    asyncio.create_task(
+                    create_background_task(
                         filter_messages(
                             message=message,
                             user_id=message.from_user.id,
                             notify=True
-                        )
+                        ),
+                        name=f"connect_track_{message.from_user.id}"
                     )
                     logger.info(
                         f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после добавления личной сессии")

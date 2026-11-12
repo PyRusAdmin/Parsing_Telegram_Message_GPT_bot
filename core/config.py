@@ -44,6 +44,20 @@ forwarded_messages = set()
 # 🛑 Словарь активных клиентов и флагов остановки
 active_clients = {}  # {user_id: client}
 stop_flags = {}  # {user_id: asyncio.Event}
+active_tasks = {}  # {user_key: asyncio.Task}
+_background_tasks = set()  # Сильные ссылки для защиты от сборщика мусора (GC) в Python 3.12-3.14+
+
+
+def create_background_task(coro, name: str = None):
+    """
+    Создает фоновую задачу asyncio с сохранением сильной ссылки,
+    исключая 'Task was destroyed but it is pending!' при срабатывании сборщика мусора.
+    """
+    import asyncio
+    task = asyncio.create_task(coro, name=name)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 MAX_SESSIONS_PER_BATCH = 10  # Максимум файлов за одну сессию
 

@@ -101,13 +101,12 @@ async def main() -> None:
         from handlers.admin.nightly_check import nightly_scheduler_loop
         from account_manager.parser import restore_all_user_trackings
 
-        # 🚀 Автоматически восстанавливаем и запускаем отслеживание для всех пользователей при старте
-        asyncio.create_task(restore_all_user_trackings())
-
+        # 🚀 Запускаем polling бота, веб-сервер, ночной планировщик и восстановление отслеживания
         await asyncio.gather(
             dp.start_polling(bot),
             server.serve(),
-            nightly_scheduler_loop()
+            nightly_scheduler_loop(),
+            restore_all_user_trackings()
         )
 
     except Exception as e:
