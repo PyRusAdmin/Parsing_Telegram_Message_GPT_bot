@@ -451,40 +451,52 @@ async def update_language(lang: str, user_data: dict = Depends(get_current_tg_us
 
 
 @app.post("/api/tracking/start")
-async def start_user_tracking(background_tasks: BackgroundTasks, user_data: dict = Depends(get_current_tg_user)):
+async def start_user_tracking(
+    background_tasks: BackgroundTasks,
+    account_id: Optional[int] = Query(None),
+    user_data: dict = Depends(get_current_tg_user)
+):
     """
     Запускает процесс отслеживания сообщений для пользователя через веб-интерфейс.
+    Поддерживает запуск конкретного аккаунта/кампании.
 
     :param background_tasks: (BackgroundTasks) Менеджер фоновых задач FastAPI.
+    :param account_id: (Optional[int]) ID аккаунта (если запускается конкретная кампания).
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус запуска отслеживания.
     """
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if str(user_data["id"]) in active_clients:
+
+    user_key = f"{user_data['id']}_{account_id}" if account_id else str(user_data["id"])
+    if user_key in active_clients:
         return {"status": "already_running"}
-    # Начинайте асинхронное отслеживание
+
     mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"])
+    background_tasks.add_task(filter_messages, message=mock_msg, user_id=user_data["id"], account_id=account_id)
     return {"status": "starting"}
 
 
 @app.post("/api/tracking/stop")
-async def stop_user_tracking(user_data: dict = Depends(get_current_tg_user)):
+async def stop_user_tracking(
+    account_id: Optional[int] = Query(None),
+    user_data: dict = Depends(get_current_tg_user)
+):
     """
     Останавливает процесс отслеживания сообщений для пользователя через веб-интерфейс.
+    Поддерживает остановку конкретного аккаунта/кампании.
 
+    :param account_id: (Optional[int]) ID аккаунта для остановки.
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус остановки отслеживания.
     """
     user = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if str(user_data["id"]) not in stop_flags:
-        return {"status": "not_active"}
+
     mock_msg = MockMessage(user_id=user_data["id"], username=user.username)
-    await stop_tracking(user_id=user_data["id"], message=mock_msg)
+    await stop_tracking(user_id=user_data["id"], message=mock_msg, account_id=account_id)
     return {"status": "stopping"}
 
 
@@ -667,24 +679,94 @@ async def set_target_group(username: str = Form(...), user_data: dict = Depends(
 @app.get("/api/accounts")
 async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
     """
-    Возвращает список подключенных Telegram-аккаунтов пользователя.
+    Возвращает список подключенных Telegram-аккаунтов и кампаний пользователя.
 
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
-    :return: Список словарей с номерами телефонов и датами добавления аккаунтов.
+    :return: Список словарей с подробными данными аккаунтов.
     """
-    # Управление аккаунтами Telegram: получаем записи из таблицы users_accounts
     records = list(
         UsersAccounts.select()
         .where(UsersAccounts.user_id == user_data["id"])
         .order_by(UsersAccounts.date_added.desc())
     )
-    return [
-        {
+    result = []
+    for acc in records:
+        user_key = f"{user_data['id']}_{acc.id}"
+        is_running = user_key in active_clients or (bool(acc.is_active) and str(user_data['id']) in active_clients)
+        result.append({
+            "id": acc.id,
             "phone_number": acc.phone_number_session_string or "unknown",
+            "account_title": acc.account_title or f"Аккаунт {acc.phone_number_session_string or acc.id}",
+            "target_group_id": acc.target_group_id,
+            "target_group_link": acc.target_group_link or "",
+            "track_all_chats": bool(acc.track_all_chats),
+            "is_active": is_running,
             "created_at": acc.date_added.strftime("%Y-%m-%d %H:%M:%S") if acc.date_added else ""
-        }
-        for acc in records
-    ]
+        })
+    return result
+
+
+@app.post("/api/accounts/{account_id}/settings")
+async def update_account_web_settings(
+    account_id: int,
+    account_title: Optional[str] = Form(None),
+    track_all_chats: Optional[bool] = Form(None),
+    user_data: dict = Depends(get_current_tg_user)
+):
+    """
+    Обновляет параметры кампании (название/тему и режим отслеживания всех чатов).
+    """
+    acc = UsersAccounts.get_or_none(
+        (UsersAccounts.id == account_id) & (UsersAccounts.user_id == user_data["id"])
+    )
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    if account_title is not None:
+        acc.account_title = account_title.strip()
+    if track_all_chats is not None:
+        acc.track_all_chats = track_all_chats
+    acc.save()
+    return {"status": "ok", "account_title": acc.account_title, "track_all_chats": acc.track_all_chats}
+
+
+@app.post("/api/accounts/{account_id}/sync-dialogs")
+async def sync_account_web_dialogs(
+    account_id: int,
+    user_data: dict = Depends(get_current_tg_user)
+):
+    """
+    Синхронизирует диалоги (включая приватные и закрытые группы) из аккаунта в список отслеживания.
+    """
+    acc = UsersAccounts.get_or_none(
+        (UsersAccounts.id == account_id) & (UsersAccounts.user_id == user_data["id"])
+    )
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    checker = CheckingAccountsValidity()
+    client = await checker.client_connect_string_session(acc.user_session_string)
+    if not client:
+        raise HTTPException(status_code=400, detail="Failed to connect to Telegram account")
+
+    try:
+        from database.users_groups import sync_account_dialogs_to_db
+        synced = await sync_account_dialogs_to_db(
+            client=client,
+            user_id=user_data["id"],
+            user_session_string=acc.user_session_string,
+            user_username=user_data.get("username") or "",
+            user_firstname=user_data.get("first_name") or ""
+        )
+        await client.disconnect()
+        return {"status": "ok", "count": len(synced), "synced": synced}
+    except Exception as e:
+        logger.error(f"Error syncing dialogs via web: {e}")
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/accounts/upload")
@@ -761,26 +843,34 @@ async def upload_account_session(file: UploadFile = File(...), user_data: dict =
                 logger.warning(f"Could not delete temporary session file {temp_path}: {pe}")
 
 
-@app.delete("/api/accounts/{phone}")
-async def delete_account(phone: str, user_data: dict = Depends(get_current_tg_user)):
+@app.delete("/api/accounts/{account_id_or_phone}")
+async def delete_account(account_id_or_phone: str, user_data: dict = Depends(get_current_tg_user)):
     """
-    Удаляет подключенный аккаунт пользователя по номеру телефона.
+    Удаляет подключенный аккаунт пользователя по ID или номеру телефона.
 
-    :param phone: (str) Номер телефона удаляемого аккаунта.
+    :param account_id_or_phone: (str) ID или номер телефона удаляемого аккаунта.
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: (dict) Статус выполнения операции.
     """
     user_id = user_data["id"]
-    # Ищем аккаунт в таблице users_accounts пользователя
-    account = UsersAccounts.get_or_none(
-        (UsersAccounts.user_id == user_id) &
-        (UsersAccounts.phone_number_session_string == phone)
-    )
+    account = None
+    if account_id_or_phone.isdigit():
+        account = UsersAccounts.get_or_none(
+            (UsersAccounts.user_id == user_id) & (UsersAccounts.id == int(account_id_or_phone))
+        )
+    if not account:
+        account = UsersAccounts.get_or_none(
+            (UsersAccounts.user_id == user_id) &
+            (UsersAccounts.phone_number_session_string == account_id_or_phone)
+        )
 
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
     session_to_delete = account.user_session_string
+
+    # Останавливаем мониторинг этого аккаунта
+    await stop_tracking(user_id=user_id, account_id=account.id)
 
     # Удаление из таблицы users_accounts
     deleted = account.delete_instance()

@@ -16,8 +16,8 @@
 [![Aiogram](https://img.shields.io/badge/Aiogram-3.x-orange.svg)](https://docs.aiogram.dev/)
 [![Telethon](https://img.shields.io/badge/Telethon-1.x-blueviolet.svg)](https://docs.telethon.dev/)
 
-- **Versión:** 0.1.0
-- **Fecha de actualización:** 04 de septiembre de 2026
+- **Versión:** 0.2.0
+- **Fecha de actualización:** 12 de noviembre de 2026
 
 El bot analiza nuevos mensajes en grupos y canales de Telegram especificados en tiempo real, notificando al instante
 sobre coincidencias de palabras clave. Además, utiliza IA (Groq, OpenRouter) para descubrir de manera inteligente nuevas
@@ -25,15 +25,16 @@ comunidades temáticas de Telegram.
 
 ## ✨ Características clave
 
-- 🚀 **Monitoreo en tiempo real:** Reenvío instantáneo de mensajes que coinciden con palabras clave a su grupo de
-  destino.
+- 🚀 **Monitoreo en tiempo real:** Reenvío instantáneo de mensajes que coinciden con palabras clave a su grupo técnico de destino.
+- 🔒 **Soporte para grupos cerrados/privados:** Monitoreo de grupos unidos mediante tdata o manualmente, enlaces de invitación (`+hash`), ID o título, e importación automática de chats.
+- 🏢 **Multicuenta y campañas independientes:** Flujos de monitoreo dedicados por nicho (p. ej., Cuenta 1 para «Sofás» envía a grupo de muebles, Cuenta 2 para «Neveras» a grupo de electrodomésticos).
+- 🌐 **Modo «Todos los chats de la cuenta»:** Activación en 1 clic para monitorear todos los chats abiertos y cerrados de la cuenta.
 - 🤖 **Búsqueda con IA de dos niveles:** Búsqueda en la base de datos local y búsqueda global en todo Telegram.
 - 📊 **Exportación a XLSX:** Descarga de resultados de búsqueda y monitoreo a Excel con filtrado por categoría y
   actividad.
-- 🛡️ **Panel de administración:** Herramientas para actualizar la BD, categorización masiva mediante IA y detección de
-  idioma de los chats.
+- 🛡️ **Panel de administración:** Verificación nocturna automática a las 01:00, categorización masiva con IA y detección de idiomas.
 - 🌍 **Multilingüe:** Soporte completo para español, ruso, inglés y otros idiomas (Fluent i18n).
-- 🔐 **Multicuenta:** Soporte para múltiples archivos `.session` (StringSession) para evitar límites de Telegram.
+- 🔐 **Multicuenta y concurrencia:** Ejecución paralela de múltiples sesiones Telethon por usuario.
 - 💰 **Límites y Telegram Stars:** Límite de exportación gratuita de la base de datos (1 vez cada 24 horas). Descargas
   adicionales disponibles por 5 Telegram Stars.
 

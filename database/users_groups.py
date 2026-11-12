@@ -43,20 +43,78 @@ class UsersGroups(database.Model):
         )
 
 
-def get_user_channel_usernames(user_id: int) -> tuple[list[str], int]:
+def get_user_channel_usernames(user_id: int, user_session_string: str = None) -> tuple[list[str], int]:
     """
-    Получает все username каналов и групп пользователя по его user_id.
+    Получает все username каналов и групп пользователя по его user_id (с поддержкой фильтрации по сессии).
 
     :param user_id: (int) Telegram ID пользователя.
+    :param user_session_string: (str | None) Фильтр по строке сессии конкретного аккаунта.
     :return: (tuple[list[str], int]) Кортеж (список username, общее количество).
     """
-    records = (UsersGroups
-               .select(UsersGroups.username_group)
-               .where(UsersGroups.user_id == user_id)
-               .order_by(UsersGroups.date_added.desc()))
+    query = (UsersGroups
+             .select(UsersGroups.username_group)
+             .where(UsersGroups.user_id == user_id)
+             .order_by(UsersGroups.date_added.desc()))
 
-    usernames = [row.username_group for row in records]
+    if user_session_string:
+        acc_specific = [row.username_group for row in query.where(UsersGroups.user_session_string == user_session_string)]
+        if acc_specific:
+            return acc_specific, len(acc_specific)
+        general = [row.username_group for row in query.where(
+            (UsersGroups.user_session_string == '') | (UsersGroups.user_session_string.is_null())
+        )]
+        if general:
+            return general, len(general)
+
+    usernames = [row.username_group for row in query]
     return usernames, len(usernames)
+
+
+async def sync_account_dialogs_to_db(client, user_id: int, user_session_string: str = "", user_username: str = "", user_firstname: str = "") -> list[dict]:
+    """
+    Синхронизирует все доступные диалоги аккаунта (включая приватные и закрытые группы/каналы,
+    в которые пользователь вступил вручную или через tdata) и сохраняет их в UsersGroups.
+
+    :param client: Клиент Telethon.
+    :param user_id: ID пользователя Telegram.
+    :param user_session_string: Строка сессии Telethon.
+    :param user_username: Username пользователя.
+    :param user_firstname: Имя пользователя.
+    :return: Список словарей найденных и сохраненных чатов.
+    """
+    from telethon import types
+    imported = []
+    try:
+        async for dialog in client.iter_dialogs(limit=250):
+            entity = dialog.entity
+            if isinstance(entity, types.User):
+                continue
+            is_group = getattr(entity, 'megagroup', False) or getattr(entity, 'group', False) or isinstance(entity, (types.Chat, types.Channel))
+            if not is_group:
+                continue
+
+            chat_id = getattr(entity, 'id', None)
+            title = getattr(entity, 'title', None) or "Без названия"
+            username = getattr(entity, 'username', None)
+
+            target_val = f"https://t.me/{username}" if username else str(chat_id)
+            if not target_val:
+                continue
+
+            add_user_group(
+                user_id=user_id,
+                group=[target_val],
+                user_username=user_username,
+                user_firstname=user_firstname,
+                id_group=chat_id,
+                name_group=title,
+                user_session_string=user_session_string
+            )
+            imported.append({"id": chat_id, "title": title, "username": username, "target": target_val})
+        logger.info(f"📥 Синхронизировано {len(imported)} чатов/групп для user_id={user_id} (сессия {user_session_string[:20]}...)")
+    except Exception as e:
+        logger.error(f"Ошибка при синхронизации диалогов аккаунта: {e}")
+    return imported
 
 
 def get_group_count(user_id: int):

@@ -914,4 +914,41 @@ nightly_check_off = OFF
 nightly_check_toggled_on = 🔔 Automatic nightly database check at 01:00 is ENABLED.
 nightly_check_toggled_off = 🔕 Automatic nightly database check is DISABLED.
 
+# Multi-accounts and tracking campaigns (sofas, refrigerators, etc.)
+btn_pt_accounts = 👥 My Campaigns / Accounts
+btn_pt_rename_acc = ✏️ Change Title/Topic
+btn_pt_tech_group = 📣 Technical Group
+btn_pt_sync_dialogs = 📥 Import Account Chats
+btn_pt_toggle_all_chats = 🌐 All Account Chats: { $status }
+btn_pt_acc_keywords = 🔑 Topic Keywords
+btn_pt_acc_groups = 👥 Topic Groups
+btn_pt_start_acc = ▶️ Start This Account
+btn_pt_stop_acc = ⏹️ Stop This Account
+btn_pt_start_all = 🚀 Start All Accounts
+btn_pt_stop_all = 🛑 Stop All Accounts
+pt_acc_card =
+    📱 <b>Campaign:</b> «{ $title }» ({ $phone })
+    📡 <b>Status:</b> { $status }
+    📣 <b>Tech Group:</b> { $tech_group }
+    🔑 <b>Keywords:</b> { $keywords_count } pcs.
+    👥 <b>Target Chats:</b> { $groups_count } pcs.
+    🌐 <b>All Account Chats mode:</b> { $all_chats_mode }
+
+    💡 <i>In «All Account Chats» mode, the bot tracks all open and closed groups that the account joined via tdata or manually.</i>
+pt_ask_rename_acc = Enter a new title or topic for this campaign (for example: <b>Sofas</b> or <b>Refrigerators</b>):
+pt_acc_renamed = ✅ Campaign title successfully updated to: <b>{ $title }</b>
+pt_ask_acc_keywords =
+    Enter keywords for campaign «{ $title }» separated by commas or on new lines:
+    <i>(Example: sofa, couch, furniture)</i>
+pt_acc_keywords_saved = ✅ Keywords for campaign «{ $title }» saved! Added: <b>{ $count }</b> pcs.
+pt_dialogs_syncing = ⏳ Scanning account dialogs via Telethon...
+pt_dialogs_synced = ✅ Synchronization finished! Found and linked groups/channels: <b>{ $count }</b> pcs.
+pt_toggle_all_chats_done = «All Account Chats» mode for campaign «{ $title }»: <b>{ $status }</b>
+pt_closed_group_hint =
+    💡 <b>Closed Groups Support:</b>
+    • Send invite link: <code>https://t.me/+hash</code>
+    • Send numeric ID of closed chat: <code>-100...</code>
+    • Send exact title of closed chat (where account is already a member)
+    • Or click <b>«📥 Import Account Chats»</b> to instantly load all chats from tdata!
+
 

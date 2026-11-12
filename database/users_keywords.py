@@ -47,19 +47,29 @@ class UsersKeywords(database.Model):
         )
 
 
-def get_user_keywords_with_id(user_id: int) -> list:
+def get_user_keywords_with_id(user_id: int, user_session_string: str = None) -> list:
     """
     Возвращает список словарей ключевых слов пользователя с их идентификаторами.
 
     :param user_id: (int) Telegram ID пользователя.
+    :param user_session_string: (str | None) Фильтр по конкретной сессии аккаунта.
     :return: (list[dict]) Список словарей вида [{'id': 1, 'keyword': 'слово'}, ...].
     """
-    query = (
-        UsersKeywords.select(UsersKeywords.id, UsersKeywords.user_keyword.alias("keyword"))
-        .where(UsersKeywords.user_id == user_id)
-        .dicts()
+    query = UsersKeywords.select(UsersKeywords.id, UsersKeywords.user_keyword.alias("keyword")).where(
+        UsersKeywords.user_id == user_id
     )
-    return list(query)
+    if user_session_string:
+        acc_specific = list(query.where(UsersKeywords.user_session_string == user_session_string).dicts())
+        if acc_specific:
+            return acc_specific
+        # Fallback на общие ключевые слова
+        general = list(query.where(
+            (UsersKeywords.user_session_string == '') | (UsersKeywords.user_session_string.is_null())
+        ).dicts())
+        if general:
+            return general
+
+    return list(query.dicts())
 
 
 def add_user_keywords(user_id: int, keywords: list[str], user_username: str = "", user_firstname: str = "",
@@ -88,25 +98,37 @@ def add_user_keywords(user_id: int, keywords: list[str], user_username: str = ""
         )
 
 
-def get_user_keywords(user_id: int) -> list[str]:
+def get_user_keywords(user_id: int, user_session_string: str = None) -> list[str]:
     """
-    Возвращает список ключевых слов пользователя в виде строк.
+    Возвращает список ключевых слов пользователя в виде строк (с поддержкой фильтрации по аккаунту).
 
     :param user_id: (int) Telegram ID пользователя.
+    :param user_session_string: (str | None) Фильтр по строке сессии конкретного аккаунта.
     :return: (list[str]) Список ключевых слов.
     """
     query = UsersKeywords.select(UsersKeywords.user_keyword).where(UsersKeywords.user_id == user_id)
+    if user_session_string:
+        acc_specific = [row.user_keyword for row in query.where(UsersKeywords.user_session_string == user_session_string)]
+        if acc_specific:
+            return acc_specific
+        general = [row.user_keyword for row in query.where(
+            (UsersKeywords.user_session_string == '') | (UsersKeywords.user_session_string.is_null())
+        )]
+        if general:
+            return general
+
     return [row.user_keyword for row in query]
 
 
-def get_keywords_count(user_id: int) -> int:
+def get_keywords_count(user_id: int, user_session_string: str = None) -> int:
     """
     Получение количества ключевых слов пользователя для отслеживания.
 
     :param user_id: (int) Telegram ID пользователя.
+    :param user_session_string: (str | None) Фильтр по строке сессии.
     :return: (int) Количество ключевых слов.
     """
-    return UsersKeywords.select().where(UsersKeywords.user_id == user_id).count()
+    return len(get_user_keywords(user_id=user_id, user_session_string=user_session_string))
 
 
 # def clear_all_user_keywords(user_id: int) -> int:

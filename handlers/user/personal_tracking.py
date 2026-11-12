@@ -28,9 +28,12 @@ from account_manager.parser import active_clients, filter_messages, stop_trackin
 from core.config import API_ID, API_HASH, mobile_device, ADMIN_USER_ID
 from database.account_free import write_account_to_db_free, getting_free_account
 
-from database.users_accounts import write_account_to_user_table
-from database.users_groups import UsersGroups, add_user_group
-from database.users_keywords import add_user_keywords, UsersKeywords
+from database.users_accounts import (
+    write_account_to_user_table, get_user_accounts_list,
+    get_account_by_id, delete_account_by_id, UsersAccounts
+)
+from database.users_groups import UsersGroups, add_user_group, sync_account_dialogs_to_db
+from database.users_keywords import add_user_keywords, UsersKeywords, get_user_keywords
 from database.users_personal_trackings import (
     get_user_accounts, UsersPersonalTrackings, write_account_to_db, set_user_shared_account
 )
@@ -162,6 +165,10 @@ class PersonalTrackingState(StatesGroup):
     waiting_for_auth_code = State()  # Ожидание ввода 5-значного кода из SMS/пуш-уведомления Telegram
     waiting_for_2fa_password = State()  # Ожидание ввода облачного пароля (если включена 2FA)
 
+    # --- Управление мульти-аккаунтами и кампаниями (диваны, холодильники...) ---
+    waiting_for_acc_title = State()  # Ожидание ввода названия/темы для кампании
+    waiting_for_acc_keywords = State()  # Ожидание ввода ключевых слов конкретной кампании
+
 
 # ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
@@ -250,8 +257,56 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
             continue
 
         try:
-            # Получаем сущность отслеживаемого объекта
-            entity = await client.get_entity(clean_target)
+            entity = None
+
+            # 1. Проверяем, является ли ссылка инвайтом в закрытую группу (+hash или joinchat/hash)
+            invite_match = re.search(r'(?:joinchat/|\+)([A-Za-z0-9_\-]+)', clean_target)
+            if invite_match:
+                invite_hash = invite_match.group(1)
+                try:
+                    logger.info(f"🔗 Попытка вступления в закрытую группу по инвайт-хэшу {invite_hash}...")
+                    res = await client(ImportChatInviteRequest(hash=invite_hash))
+                    if hasattr(res, 'chats') and res.chats:
+                        entity = res.chats[0]
+                        logger.info(f"✅ Успешно вступили в закрытую группу по ссылке: {getattr(entity, 'title', '')}")
+                except UserAlreadyParticipantError:
+                    logger.info("ℹ️ Аккаунт уже состоит в этой закрытой группе")
+                    async for dialog in client.iter_dialogs(limit=100):
+                        if getattr(dialog.entity, 'megagroup', False) or getattr(dialog.entity, 'broadcast', False):
+                            entity = dialog.entity
+                            break
+                except Exception as inv_err:
+                    logger.warning(f"Ошибка вступления по инвайт-ссылке {invite_hash}: {inv_err}")
+
+            # 2. Проверяем ввод по числовому ID закрытой группы (-100... или ...)
+            if not entity:
+                clean_num = clean_target.replace("https://t.me/", "").lstrip("@")
+                if clean_num.lstrip("-").isdigit():
+                    try:
+                        int_id = int(clean_num)
+                        entity = await client.get_entity(int_id)
+                        logger.info(f"✅ Найдена закрытая группа по ID {int_id}: {getattr(entity, 'title', '')}")
+                    except Exception:
+                        pass
+
+            # 3. Проверяем ввод по точному названию закрытого чата (когда аккаунт зашел через tdata)
+            if not entity:
+                clean_name = clean_target.strip().lower()
+                async for dialog in client.iter_dialogs(limit=150):
+                    d_title = (getattr(dialog.entity, 'title', '') or "").strip().lower()
+                    if d_title and d_title == clean_name:
+                        entity = dialog.entity
+                        logger.info(f"✅ Найдена закрытая группа по названию «{clean_target}» в диалогах аккаунта")
+                        break
+
+            # 4. Публичный канал или супергруппа
+            if not entity:
+                clean_pub = clean_target.replace("https://t.me/", "@")
+                entity = await client.get_entity(clean_pub)
+
+            if not entity:
+                raise ValueError("Целевая сущность не найдена")
+
             target_peer_id = utils.get_peer_id(entity)
             target_title_raw = getattr(entity, 'title', clean_target)
 
@@ -358,7 +413,7 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
             logger.warning(
                 f"⚠️ Аккаунт {attempt_idx + 1}/{max_attempts} ({acc_type}) имеет ограничение Telegram: {tg_err}. Пробуем следующий аккаунт..."
             )
-            last_restriction_error = str(re)
+            last_restriction_error = str(tg_err)
             try:
                 await client.disconnect()
             except Exception:
@@ -779,6 +834,16 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                     logger.info(f"✅ Установлен титул 'AlertSender' для аккаунта {account_tg_id} в группе {group_id}")
                 except Exception as tit_err:
                     logger.debug(f"Не удалось установить кастомный титул: {tit_err}")
+
+        # Привязываем созданную/проверенную группу результатов к записи в users_accounts
+        try:
+            acc = UsersAccounts.get_or_none(UsersAccounts.user_session_string == session_string)
+            if acc:
+                acc.target_group_id = group_id
+                acc.target_group_link = invite_link or acc.target_group_link
+                acc.save()
+        except Exception as acc_save_err:
+            logger.debug(f"Привязка тех-группы к UsersAccounts: {acc_save_err}")
 
         return True, False
 
@@ -1395,18 +1460,26 @@ async def cb_stats(callback: CallbackQuery):
 
 # ==================== ОПУБЛИКОВАНИЕ УВЕДОМЛЕНИЙ БОТОМ ====================
 
-async def send_personal_tracking_alert(user_id: int, matched_keyword: str, message_text: str, message_link: str):
+async def send_personal_tracking_alert(user_id: int, matched_keyword: str, message_text: str, message_link: str, target_group_id: int | None = None, account_title: str = ""):
     """
-    Отправляет уведомление бота в персональную группу пользователя при нахождении ключевого слова.
+    Отправляет уведомление бота в персональную группу пользователя при нахождении ключевого слова
+    (с поддержкой конкретной технической группы кампании и тега темы).
 
     :param user_id: (int) ID пользователя Telegram.
     :param matched_keyword: (str) Найденное ключевое слово.
     :param message_text: (str) Текст сообщения из отслеживаемой группы.
     :param message_link: (str) Прямая ссылка на сообщение в Telegram.
+    :param target_group_id: (int | None) ID конкретной технической группы для данного аккаунта/темы.
+    :param account_title: (str) Название кампании (например, "Диваны", "Холодильники").
     """
     user_lang = determines_user_language(message_or_callback=user_id)
-    pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-    if pt_rec and pt_rec.created_group_id:
+    dest_chat_id = target_group_id
+    if not dest_chat_id:
+        pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+        if pt_rec:
+            dest_chat_id = pt_rec.created_group_id
+
+    if dest_chat_id:
         alert_text = t(
             "pt_alert_message",
             lang=user_lang,
@@ -1414,15 +1487,17 @@ async def send_personal_tracking_alert(user_id: int, matched_keyword: str, messa
             text=message_text[:500],
             link=message_link
         )
+        if account_title:
+            alert_text = f"🏷️ <b>[{account_title}]</b>\n{alert_text}"
         try:
             await bot.send_message(
-                chat_id=pt_rec.created_group_id,
+                chat_id=dest_chat_id,
                 text=alert_text,
                 parse_mode="HTML",
                 disable_web_page_preview=False
             )
         except Exception as e:
-            logger.warning(f"Не удалось отправить алерт в группу {pt_rec.created_group_id}: {e}")
+            logger.warning(f"Не удалось отправить алерт в группу {dest_chat_id}: {e}")
 
 
 async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str):
@@ -1674,3 +1749,430 @@ async def cb_cancel_auth(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text(t("pt_auth_cancelled", lang=user_lang), parse_mode="HTML")
     await callback.answer()
+
+
+# ==================== МУЛЬТИ-АККАУНТЫ И КАМПАНИИ (ДИВАНЫ, ХОЛОДИЛЬНИКИ) ====================
+
+@router.callback_query(F.data == "pt_accounts_list")
+async def cb_accounts_list(callback: CallbackQuery, state: FSMContext):
+    """
+    Отображает список всех подключенных аккаунтов / кампаний пользователя.
+    """
+    await state.clear()
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    accounts = get_user_accounts_list(user_id)
+
+    if not accounts:
+        text = (
+            "📱 <b>Ваши кампании и аккаунты</b>\n\n"
+            "У вас пока нет подключенных личных аккаунтов.\n"
+            "Подключите аккаунт через файл <code>.session</code> или номер телефона, чтобы настроить индивидуальные кампании (например, «Диваны», «Холодильники»)."
+            if user_lang == "ru"
+            else "📱 <b>Your Campaigns & Accounts</b>\n\nYou don't have any personal accounts connected yet.\nConnect an account via <code>.session</code> or phone number to set up individual campaigns (e.g. «Sofas», «Refrigerators»)."
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=t("connect_account_button", lang=user_lang), callback_data="account_connect_menu")],
+            [back_button(user_lang, callback_data="menu_personal_tracking")]
+        ])
+        try:
+            await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
+        await callback.answer()
+        return
+
+    buttons = []
+    text_lines = [
+        "📱 <b>Ваши кампании и аккаунты</b>\n\n"
+        "Выберите нужный аккаунт для настройки отдельной тех-группы, ключевых слов и списка чатов:\n"
+        if user_lang == "ru"
+        else "📱 <b>Your Campaigns & Accounts</b>\n\nSelect an account to configure its technical group, keywords, and chats:\n"
+    ]
+
+    for acc in accounts:
+        is_active = f"{user_id}_{acc.id}" in active_clients
+        status_ico = "🟢" if is_active else "🔴"
+        title = acc.account_title or f"Аккаунт {acc.phone_number_session_string or acc.id}"
+        phone = acc.phone_number_session_string or "без номера"
+
+        text_lines.append(f"{status_ico} <b>{title}</b> ({phone})")
+        btn_text = f"{status_ico} {title}"
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"pt_acc_{acc.id}")])
+
+    text_lines.append(
+        "\n💡 <i>Каждый аккаунт может мониторить свою нишу (например, один — диваны, другой — холодильники) и отправлять сигналы в свою тех-группу.</i>"
+        if user_lang == "ru"
+        else "\n💡 <i>Each account can monitor its own niche (e.g., one for sofas, another for refrigerators) and forward alerts to its own tech group.</i>"
+    )
+
+    buttons.append([
+        InlineKeyboardButton(text=t("btn_pt_start_all", lang=user_lang), callback_data="pt_start_all_accs"),
+        InlineKeyboardButton(text=t("btn_pt_stop_all", lang=user_lang), callback_data="pt_stop_all_accs")
+    ])
+    buttons.append([
+        InlineKeyboardButton(text=t("connect_account_button", lang=user_lang), callback_data="account_connect_menu")
+    ])
+    buttons.append([back_button(user_lang, callback_data="menu_personal_tracking")])
+
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+    try:
+        await callback.message.edit_text("\n".join(text_lines), reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        await callback.message.answer("\n".join(text_lines), reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("pt_acc_"))
+async def cb_account_details(callback: CallbackQuery, state: FSMContext):
+    """
+    Детальная карточка управления конкретным аккаунтом/кампанией (диваны, холодильники).
+    """
+    await state.clear()
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_acc_", ""))
+    acc = get_account_by_id(acc_id)
+
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    is_running = f"{user_id}_{acc.id}" in active_clients
+    status_str = "🟢 <b>Активно</b>" if is_running else "🔴 <b>Остановлено</b>"
+    if user_lang != "ru":
+        status_str = "🟢 <b>Active</b>" if is_running else "🔴 <b>Stopped</b>"
+
+    title = acc.account_title or f"Аккаунт {acc.phone_number_session_string or acc.id}"
+    phone = acc.phone_number_session_string or "без номера"
+
+    # Считаем слова именно для этого аккаунта
+    kw_list = get_user_keywords(user_id=user_id, user_session_string=acc.user_session_string)
+    kw_count = len(kw_list)
+
+    # Считаем группы
+    groups_count = UsersGroups.select().where(
+        (UsersGroups.user_id == user_id) &
+        ((UsersGroups.user_session_string == acc.user_session_string) | (UsersGroups.user_session_string == '') | (UsersGroups.user_session_string.is_null()))
+    ).count()
+
+    all_chats_mode = "✅ ВКЛЮЧЕН" if acc.track_all_chats else "❌ ВЫКЛЮЧЕН (по списку)"
+    if user_lang != "ru":
+        all_chats_mode = "✅ ENABLED" if acc.track_all_chats else "❌ DISABLED (by list)"
+
+    tech_group_display = f"<a href='{acc.target_group_link}'>Перейти в группу</a>" if acc.target_group_link else f"ID: {acc.target_group_id or 'не назначена'}"
+    if not acc.target_group_id and not acc.target_group_link:
+        pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
+        if pt_rec and pt_rec.created_group_id:
+            tech_group_display = f"Общая тех-группа (ID: {pt_rec.created_group_id})"
+
+    card_text = t(
+        "pt_acc_card",
+        lang=user_lang,
+        title=title,
+        phone=phone,
+        status=status_str,
+        tech_group=tech_group_display,
+        keywords_count=kw_count,
+        groups_count=groups_count,
+        all_chats_mode=all_chats_mode
+    )
+
+    toggle_btn = (
+        InlineKeyboardButton(text=t("btn_pt_stop_acc", lang=user_lang), callback_data=f"pt_toggle_run_{acc.id}")
+        if is_running
+        else InlineKeyboardButton(text=t("btn_pt_start_acc", lang=user_lang), callback_data=f"pt_toggle_run_{acc.id}")
+    )
+
+    all_chats_btn_text = t("btn_pt_toggle_all_chats", lang=user_lang, status="ВЫКЛ" if acc.track_all_chats else "ВКЛ")
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [toggle_btn],
+        [
+            InlineKeyboardButton(text=t("btn_pt_rename_acc", lang=user_lang), callback_data=f"pt_rename_acc_{acc.id}"),
+            InlineKeyboardButton(text=all_chats_btn_text, callback_data=f"pt_toggle_all_chats_{acc.id}")
+        ],
+        [
+            InlineKeyboardButton(text=t("btn_pt_sync_dialogs", lang=user_lang), callback_data=f"pt_sync_dialogs_{acc.id}")
+        ],
+        [
+            InlineKeyboardButton(text=t("btn_pt_acc_keywords", lang=user_lang), callback_data=f"pt_acc_keywords_{acc.id}"),
+            InlineKeyboardButton(text=t("btn_pt_acc_groups", lang=user_lang), callback_data="pt_list_tracking")
+        ],
+        [
+            InlineKeyboardButton(text=t("btn_disconnect_account", lang=user_lang), callback_data=f"pt_disconnect_acc_{acc.id}")
+        ],
+        [
+            back_button(user_lang, callback_data="pt_accounts_list")
+        ]
+    ])
+
+    try:
+        await callback.message.edit_text(card_text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        await callback.message.answer(card_text, reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("pt_toggle_all_chats_"))
+async def cb_toggle_all_chats(callback: CallbackQuery, state: FSMContext):
+    """
+    Переключает режим "Все чаты аккаунта" (отслеживать открытые + закрытые чаты, где состоит аккаунт).
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_toggle_all_chats_", ""))
+    acc = get_account_by_id(acc_id)
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    acc.track_all_chats = not acc.track_all_chats
+    acc.save()
+
+    status_str = "ВКЛЮЧЕН" if acc.track_all_chats else "ВЫКЛЮЧЕН"
+    await callback.answer(t("pt_toggle_all_chats_done", lang=user_lang, title=acc.account_title or "", status=status_str), show_alert=True)
+    await cb_account_details(callback, state)
+
+
+@router.callback_query(F.data.startswith("pt_rename_acc_"))
+async def cb_rename_acc(callback: CallbackQuery, state: FSMContext):
+    """
+    Запрашивает новое название/тему кампании (например, "Диваны", "Холодильники").
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_rename_acc_", ""))
+    acc = get_account_by_id(acc_id)
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    await state.update_data(editing_account_id=acc_id)
+    await state.set_state(PersonalTrackingState.waiting_for_acc_title)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [back_button(user_lang, callback_data=f"pt_acc_{acc_id}")]
+    ])
+    await callback.message.edit_text(t("pt_ask_rename_acc", lang=user_lang), reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.message(PersonalTrackingState.waiting_for_acc_title)
+async def process_rename_acc_input(message: Message, state: FSMContext):
+    """
+    Сохраняет новое название/тему кампании.
+    """
+    user_id = message.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    data = await state.get_data()
+    acc_id = data.get("editing_account_id")
+    await state.clear()
+
+    if not acc_id:
+        return
+
+    acc = get_account_by_id(acc_id)
+    if acc and acc.user_id == user_id:
+        new_title = (message.text or "").strip()
+        if new_title:
+            acc.account_title = new_title
+            acc.save()
+            await message.answer(t("pt_acc_renamed", lang=user_lang, title=new_title), parse_mode="HTML")
+
+    # Возвращаемся к карточке аккаунта
+    mock_cb = CallbackQuery(
+        id="0",
+        from_user=message.from_user,
+        chat_instance="0",
+        message=message,
+        data=f"pt_acc_{acc_id}"
+    )
+    await cb_account_details(mock_cb, state)
+
+
+@router.callback_query(F.data.startswith("pt_acc_keywords_"))
+async def cb_acc_keywords(callback: CallbackQuery, state: FSMContext):
+    """
+    Запрашивает ввод ключевых слов конкретно для этой кампании.
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_acc_keywords_", ""))
+    acc = get_account_by_id(acc_id)
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    await state.update_data(editing_account_id=acc_id)
+    await state.set_state(PersonalTrackingState.waiting_for_acc_keywords)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [back_button(user_lang, callback_data=f"pt_acc_{acc_id}")]
+    ])
+    title = acc.account_title or f"Аккаунт #{acc.id}"
+    await callback.message.edit_text(t("pt_ask_acc_keywords", lang=user_lang, title=title), reply_markup=kb, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.message(PersonalTrackingState.waiting_for_acc_keywords)
+async def process_acc_keywords_input(message: Message, state: FSMContext):
+    """
+    Сохраняет ключевые слова с привязкой к сессии конкретного аккаунта.
+    """
+    user_id = message.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    data = await state.get_data()
+    acc_id = data.get("editing_account_id")
+    await state.clear()
+
+    if not acc_id:
+        return
+
+    acc = get_account_by_id(acc_id)
+    if acc and acc.user_id == user_id:
+        raw_text = (message.text or "").strip()
+        keywords = [k.strip() for k in raw_text.replace("\n", ",").split(",") if k.strip()]
+        add_user_keywords(
+            user_id=user_id,
+            keywords=keywords,
+            user_username=message.from_user.username or "",
+            user_firstname=message.from_user.first_name or "",
+            user_session_string=acc.user_session_string
+        )
+        title = acc.account_title or f"Аккаунт #{acc.id}"
+        await message.answer(t("pt_acc_keywords_saved", lang=user_lang, title=title, count=len(keywords)), parse_mode="HTML")
+
+    mock_cb = CallbackQuery(
+        id="0",
+        from_user=message.from_user,
+        chat_instance="0",
+        message=message,
+        data=f"pt_acc_{acc_id}"
+    )
+    await cb_account_details(mock_cb, state)
+
+
+@router.callback_query(F.data.startswith("pt_sync_dialogs_"))
+async def cb_sync_dialogs(callback: CallbackQuery, state: FSMContext):
+    """
+    Сканирует все диалоги аккаунта (включая приватные и закрытые группы из tdata) и синхронизирует их в базу данных.
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_sync_dialogs_", ""))
+    acc = get_account_by_id(acc_id)
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    await callback.answer(t("pt_dialogs_syncing", lang=user_lang), show_alert=False)
+    status_msg = await callback.message.answer(t("pt_dialogs_syncing", lang=user_lang))
+
+    checker = CheckingAccountsValidity()
+    client = await checker.client_connect_string_session(acc.user_session_string)
+    if not client:
+        await status_msg.edit_text("❌ Не удалось подключить клиент для синхронизации диалогов.")
+        return
+
+    try:
+        synced = await sync_account_dialogs_to_db(
+            client=client,
+            user_id=user_id,
+            user_session_string=acc.user_session_string,
+            user_username=callback.from_user.username or "",
+            user_firstname=callback.from_user.first_name or ""
+        )
+        await client.disconnect()
+        await status_msg.edit_text(t("pt_dialogs_synced", lang=user_lang, count=len(synced)), parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Ошибка синхронизации: {e}")
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+        await status_msg.edit_text(f"❌ Ошибка: {e}")
+
+    await asyncio.sleep(1)
+    await cb_account_details(callback, state)
+
+
+@router.callback_query(F.data.startswith("pt_toggle_run_"))
+async def cb_toggle_run_acc(callback: CallbackQuery, state: FSMContext):
+    """
+    Запускает или останавливает мониторинг конкретного аккаунта/кампании.
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_toggle_run_", ""))
+    acc = get_account_by_id(acc_id)
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    user_key = f"{user_id}_{acc.id}"
+    if user_key in active_clients:
+        await stop_tracking(user_id=user_id, message=callback.message, account_id=acc.id)
+        await callback.answer(f"🛑 Аккаунт {acc.account_title or acc.id} остановлен", show_alert=False)
+    else:
+        asyncio.create_task(
+            filter_messages(
+                message=callback.message,
+                user_id=user_id,
+                notify=True,
+                account_id=acc.id
+            )
+        )
+        await callback.answer(f"🚀 Аккаунт {acc.account_title or acc.id} запущен", show_alert=False)
+
+    await asyncio.sleep(0.5)
+    await cb_account_details(callback, state)
+
+
+@router.callback_query(F.data.startswith("pt_disconnect_acc_"))
+async def cb_disconnect_specific_acc(callback: CallbackQuery, state: FSMContext):
+    """
+    Отключает и удаляет конкретный аккаунт пользователя.
+    """
+    user_id = callback.from_user.id
+    user_lang = determines_user_language(message_or_callback=user_id)
+    acc_id = int(callback.data.replace("pt_disconnect_acc_", ""))
+    acc = get_account_by_id(acc_id)
+    if not acc or acc.user_id != user_id:
+        await callback.answer(t("pt_record_not_found", lang=user_lang), show_alert=True)
+        return
+
+    await stop_tracking(user_id=user_id, account_id=acc.id)
+    delete_account_by_id(acc.id)
+    await callback.answer("✅ Аккаунт отключен", show_alert=True)
+    await cb_accounts_list(callback, state)
+
+
+@router.callback_query(F.data == "pt_start_all_accs")
+async def cb_start_all_accs(callback: CallbackQuery, state: FSMContext):
+    """
+    Запускает мониторинг по всем настроенным аккаунтам пользователя.
+    """
+    user_id = callback.from_user.id
+    asyncio.create_task(
+        filter_messages(
+            message=callback.message,
+            user_id=user_id,
+            notify=True
+        )
+    )
+    await callback.answer("🚀 Все аккаунты запущены!", show_alert=False)
+    await asyncio.sleep(0.5)
+    await cb_accounts_list(callback, state)
+
+
+@router.callback_query(F.data == "pt_stop_all_accs")
+async def cb_stop_all_accs(callback: CallbackQuery, state: FSMContext):
+    """
+    Останавливает мониторинг по всем аккаунтам пользователя.
+    """
+    user_id = callback.from_user.id
+    await stop_tracking(user_id=user_id, message=callback.message)
+    await callback.answer("🛑 Все аккаунты остановлены!", show_alert=False)
+    await asyncio.sleep(0.5)
+    await cb_accounts_list(callback, state)

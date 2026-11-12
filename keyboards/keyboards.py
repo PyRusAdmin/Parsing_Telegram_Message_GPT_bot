@@ -817,6 +817,9 @@ def personal_tracking_menu_kb(user_id: int, is_active: bool = False, lang: str =
     buttons = [
         [toggle_tracking_btn],
         [
+            InlineKeyboardButton(text=t("btn_pt_accounts", lang=lang), callback_data="pt_accounts_list"),
+        ],
+        [
             InlineKeyboardButton(text=t("btn_pt_add_tracking", lang=lang), callback_data="pt_add_tracking")
         ],
         [

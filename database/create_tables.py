@@ -2,7 +2,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 
 from database.account_free import AccountFree, ensure_account_free_columns
 from database.database import database, TelegramGroups
-from database.users_accounts import UsersAccounts
+from database.users_accounts import UsersAccounts, ensure_users_accounts_columns
 from database.users_groups import UsersGroups
 from database.users_keywords import UsersKeywords
 from database.users_personal_trackings import UsersPersonalTrackings
@@ -33,6 +33,7 @@ def init_database():
 
     # Проверяем и при необходимости добавляем недостающие колонки в таблицы
     ensure_account_free_columns()
+    ensure_users_accounts_columns()
 
     logger.info(
         "✅ База данных инициализирована. Проверены/созданы таблицы:\n"

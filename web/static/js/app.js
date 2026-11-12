@@ -1380,20 +1380,111 @@ async function loadAccountsList() {
             data.forEach((item) => {
                 const el = document.createElement("div");
                 el.className = "list-item";
+                const isRunning = item.is_active;
+                const statusBadge = isRunning
+                    ? `<span style="color: #10b981; font-weight: bold; font-size: 12px;"><i class="fa-solid fa-circle"></i> ${userLanguage === 'ru' ? 'Активен' : 'Active'}</span>`
+                    : `<span style="color: #ef4444; font-size: 12px;"><i class="fa-regular fa-circle"></i> ${userLanguage === 'ru' ? 'Остановлен' : 'Stopped'}</span>`;
+                const allChatsChecked = item.track_all_chats ? "checked" : "";
+
                 el.innerHTML = `
-                    <div class="item-main">
-                        <span class="item-title"><i class="fa-solid fa-phone icon-inline"></i> ${item.phone_number}</span>
-                        <span class="item-desc">${i18n("connected_on")} ${item.created_at}</span>
+                    <div class="item-main" style="width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span class="item-title" style="font-size: 15px;">
+                                <i class="fa-solid fa-user-tag icon-inline"></i> <b>${item.account_title || item.phone_number}</b>
+                                <button class="btn-sm" style="background: none; border: none; cursor: pointer; color: #888; margin-left: 6px;" onclick="editAccountTitle(${item.id}, '${item.account_title || ''}')" title="Сменить название">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                            </span>
+                            ${statusBadge}
+                        </div>
+                        <div style="font-size: 12px; color: #aaa; margin-bottom: 6px;">
+                            <span><i class="fa-solid fa-phone"></i> ${item.phone_number}</span> · 
+                            <span>${i18n("connected_on")} ${item.created_at}</span>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px;">
+                            <button class="btn btn-sm ${isRunning ? 'btn-danger' : 'btn-primary'}" onclick="toggleAccountTracking(${item.id}, ${isRunning})" style="padding: 4px 10px; font-size: 12px;">
+                                <i class="fa-solid ${isRunning ? 'fa-stop' : 'fa-play'}"></i> ${isRunning ? (userLanguage === 'ru' ? 'Остановить' : 'Stop') : (userLanguage === 'ru' ? 'Запустить' : 'Start')}
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="syncAccountDialogs(${item.id})" style="padding: 4px 10px; font-size: 12px;" title="Синхронизировать закрытые и открытые чаты из tdata/Telegram">
+                                <i class="fa-solid fa-rotate"></i> ${userLanguage === 'ru' ? 'Импорт чатов' : 'Import chats'}
+                            </button>
+                            <label style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-left: auto;">
+                                <input type="checkbox" ${allChatsChecked} onchange="toggleAccountAllChats(${item.id}, this.checked)">
+                                <span>${userLanguage === 'ru' ? 'Все чаты' : 'All chats'}</span>
+                            </label>
+                            <button class="delete-btn" style="margin-left: 6px;" onclick="deleteAccount('${item.id}')" title="Отключить">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteAccount('${item.phone_number}')">
-                        <i class="fa-solid fa-unlink"></i>
-                    </button>
                 `;
                 list.appendChild(el);
             });
         }
     } catch (e) {
         list.innerHTML = `<div class="empty-state text-danger">${i18n("error_load")}</div>`;
+    }
+}
+
+async function toggleAccountTracking(id, isRunning) {
+    try {
+        const endpoint = isRunning ? `/api/tracking/stop?account_id=${id}` : `/api/tracking/start?account_id=${id}`;
+        const res = await apiRequest(endpoint, { method: "POST" });
+        if (res.ok) {
+            showNotification(isRunning ? (userLanguage === 'ru' ? 'Мониторинг остановлен' : 'Monitoring stopped') : (userLanguage === 'ru' ? 'Мониторинг запущен' : 'Monitoring started'), "success");
+            loadAccountsList();
+        }
+    } catch (e) {
+        showNotification(i18n("operation_failed"), "danger");
+    }
+}
+
+async function editAccountTitle(id, currentTitle) {
+    const newTitle = prompt(userLanguage === 'ru' ? "Введите новое название/тему кампании (например, Диваны):" : "Enter new campaign title (e.g., Sofas):", currentTitle);
+    if (newTitle === null) return;
+    try {
+        const formData = new FormData();
+        formData.append("account_title", newTitle.trim());
+        const res = await apiRequest(`/api/accounts/${id}/settings`, {
+            method: "POST",
+            body: formData
+        });
+        if (res.ok) {
+            showNotification(userLanguage === 'ru' ? "Название обновлено" : "Title updated", "success");
+            loadAccountsList();
+        }
+    } catch (e) {
+        showNotification(i18n("operation_failed"), "danger");
+    }
+}
+
+async function toggleAccountAllChats(id, checked) {
+    try {
+        const formData = new FormData();
+        formData.append("track_all_chats", checked);
+        const res = await apiRequest(`/api/accounts/${id}/settings`, {
+            method: "POST",
+            body: formData
+        });
+        if (res.ok) {
+            showNotification(userLanguage === 'ru' ? `Режим «Все чаты»: ${checked ? 'ВКЛ' : 'ВЫКЛ'}` : `All chats mode: ${checked ? 'ON' : 'OFF'}`, "success");
+        }
+    } catch (e) {
+        showNotification(i18n("operation_failed"), "danger");
+    }
+}
+
+async function syncAccountDialogs(id) {
+    showNotification(userLanguage === 'ru' ? "Сканирование закрытых и открытых чатов..." : "Scanning closed and open chats...", "info");
+    try {
+        const res = await apiRequest(`/api/accounts/${id}/sync-dialogs`, { method: "POST" });
+        if (res.ok) {
+            const data = await res.json();
+            showNotification(userLanguage === 'ru' ? `Синхронизировано чатов: ${data.count}` : `Chats synced: ${data.count}`, "success");
+            loadChannelsList();
+        }
+    } catch (e) {
+        showNotification(i18n("operation_failed"), "danger");
     }
 }
 

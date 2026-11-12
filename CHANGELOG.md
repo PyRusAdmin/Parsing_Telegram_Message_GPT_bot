@@ -90,3 +90,47 @@ You can test the latest features via the link: https://t.me/AutoParseAlertBot
 * Integrated Telegram Stars payment for database export cooldown bypass.
 
 You can test the latest features via the link: https://t.me/AutoParseAlertBot
+
+12.11.2026
+
+**Русский язык**
+
+* Версия: 0.2.0
+* Дата выхода: 12 ноября 2026 года
+
+- **Поддержка закрытых и приватных групп:**
+  - Реализован пересыл сообщений из закрытых групп, в которые аккаунт вступил вручную (через tdata / Telegram Desktop).
+  - Внедрён режим «Все чаты аккаунта» (`track_all_chats`): моментальное включение прослушивания всех открытых и закрытых чатов аккаунта в 1 клик.
+  - Добавлена функция «📥 Импортировать чаты аккаунта» для автоматического сканирования диалогов аккаунта и добавления их в базу с реальными ID и названиями.
+  - Поддержка закрытых групп по инвайт-ссылкам (`+hash`, `joinchat/hash`), числовым ID (`-100...`) и точным названиям.
+- **Мульти-аккаунты и независимые кампании:**
+  - Реализована изоляция потоков мониторинга под разные ниши: например, акк №1 по «диванам» шлёт лиды в тех-группу по мебели, акк №2 по «холодильникам» — в тех-группу по технике.
+  - Для каждого аккаунта задаются свои индивидуальные ключевые слова, свои целевые группы и персональная техническая группа.
+  - Одновременный параллельный запуск независимых клиентов Telethon для одного пользователя.
+- **Отказоустойчивость и фоновые службы:**
+  - Планировщик ночной проверки базы данных в 01:00 (`nightly_check`) с управлением тумблером в боте и Web UI.
+  - Автоматическое восстановление мониторинга всех активных аккаунтов при старте бота (`restore_all_user_trackings`).
+  - Устранена критическая ошибка удаления профиля пользователя при невалидности сессии (теперь сессия безопасно сбрасывается без потери данных и баланса).
+  - Защита административных маршрутов Web API с обязательной авторизацией администратора.
+
+**English version**
+
+* Version: 0.2.0
+* Release date: November 12, 2026
+
+- **Closed & Private Groups Support:**
+  - Implemented message forwarding from private/closed groups joined manually (via tdata / Telegram Desktop).
+  - Added «All Account Chats» mode (`track_all_chats`): 1-click toggle to monitor all open and closed groups the account participates in.
+  - Added «📥 Import Account Chats» to scan account dialogs via Telethon and register them in the database with IDs and titles.
+  - Added support for closed groups via invite links (`+hash`, `joinchat/hash`), numeric IDs (`-100...`), and exact titles.
+- **Multi-Accounts & Independent Campaigns:**
+  - Independent monitoring streams by niche (e.g. Account 1 for "Sofas" sends leads to Furniture Tech Group; Account 2 for "Refrigerators" sends leads to Appliances Tech Group).
+  - Each account can have its own isolated keywords, target groups, and destination technical notification group.
+  - Concurrent background execution of multiple Telethon sessions per user.
+- **Reliability & System Services:**
+  - Nightly database integrity check at 01:00 (`nightly_check`) manageable via Telegram bot and Web UI.
+  - Automatic tracking restoration for all active accounts on bot restart (`restore_all_user_trackings`).
+  - Fixed critical user profile deletion bug on session failure (session is now cleared safely without losing profile or stars balance).
+  - Web API admin routes secured with strict administrator authorization.
+
+You can test the latest features via the link: https://t.me/AutoParseAlertBot

@@ -16,20 +16,23 @@
 [![Aiogram](https://img.shields.io/badge/Aiogram-3.x-orange.svg)](https://docs.aiogram.dev/)
 [![Telethon](https://img.shields.io/badge/Telethon-1.x-blueviolet.svg)](https://docs.telethon.dev/)
 
-- **Version:** 0.1.0
-- **Release Date:** September 04, 2026
+- **Version:** 0.2.0
+- **Release Date:** November 12, 2026
 
 The bot analyzes new messages in specified Telegram groups and channels in real-time, instantly notifying about keyword
 matches. It also leverages AI (Groq, OpenRouter) for intelligent discovery of new niche Telegram communities.
 
 ## ✨ Key Features
 
-- 🚀 **Real-time Monitoring:** Instant forwarding of keyword-matched messages to your destination group.
+- 🚀 **Real-time Monitoring:** Instant forwarding of keyword-matched messages to your destination technical group.
+- 🔒 **Closed Groups Support:** Monitor closed/private groups joined via tdata/manually, by invite link (`+hash`), ID, or title, plus 1-click dialogs auto-import.
+- 🏢 **Multi-Accounts & Independent Campaigns:** Dedicated niche monitoring streams (e.g. Account 1 for "Sofas" forwards to Furniture Tech Group; Account 2 for "Refrigerators" forwards to Appliances Tech Group).
+- 🌐 **«All Account Chats» Mode:** 1-click toggle to monitor all open and closed chats the account is participating in.
 - 🤖 **Two-level AI Search:** Local database search and global search across Telegram.
 - 📊 **XLSX Export:** Export search results and monitored channels to Excel with filtering by category and activity.
-- 🛡️ **Admin Panel:** Tools for database updates, bulk AI categorization, and chat language detection.
-- 🌍 **Multi-language:** Full support for Russian and English (Fluent i18n).
-- 🔐 **Multi-account:** Support for multiple `.session` files (StringSession) to bypass Telegram limits.
+- 🛡️ **Admin Panel:** Automatic nightly database check at 01:00, bulk AI categorization, and chat language detection.
+- 🌍 **Multi-language:** Full support for internationalization (Fluent i18n).
+- 🔐 **Concurrent Telethon Sessions:** Run multiple independent Telethon client sessions concurrently per user.
 - 💰 **Limits & Telegram Stars:** Free database export limit (once every 24 hours). Additional downloads available for 5
   Telegram Stars (balance deduction or direct payment).
 

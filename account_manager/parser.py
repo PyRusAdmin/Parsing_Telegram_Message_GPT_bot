@@ -13,7 +13,7 @@ from account_manager.utilit import detect_language
 from core.config import forwarded_messages, active_clients, stop_flags
 from database.database import TelegramGroups
 from database.users_groups import get_user_channel_usernames, get_user_channels_or_notify
-from database.users_keywords import get_keywords_count, get_user_keywords
+from database.users_keywords import get_user_keywords
 from database.users_personal_trackings import get_group_id_with_personal_tracking, UsersPersonalTrackings
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import menu_launch_tracking_keyboard
@@ -64,41 +64,64 @@ def _clean_tg_id(val) -> str:
     return s
 
 
-def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, entity=None) -> bool:
+def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, entity=None, session_string: str = None, track_all_chats: bool = False) -> bool:
     """
-    Проверяет, входит ли чат в список отслеживаемых групп/каналов пользователя.
+    Проверяет, входит ли чат в список отслеживаемых групп/каналов пользователя (с поддержкой закрытых групп и мульти-аккаунтов).
 
     :param chat_id: (int) ID чата из Telethon.
     :param chat_username: (str) Username чата (если есть).
     :param user_id: (int) ID пользователя.
     :param entity: Сущность чата (если доступна).
+    :param session_string: (str | None) Фильтр по строке сессии конкретного аккаунта.
+    :param track_all_chats: (bool) Если True, отслеживаются ВСЕ чаты/группы аккаунта (открытые и закрытые).
     :return: (bool) True, если чат отслеживается данным пользователем.
     """
+    if track_all_chats:
+        return True
+
     try:
         from database.users_groups import UsersGroups
-        user_groups = list(UsersGroups.select().where(UsersGroups.user_id == user_id))
+        query = UsersGroups.select().where(UsersGroups.user_id == user_id)
+        if session_string:
+            acc_groups = list(query.where(UsersGroups.user_session_string == session_string))
+            user_groups = acc_groups if acc_groups else list(query)
+        else:
+            user_groups = list(query)
+
         if not user_groups:
             return False
 
         clean_chat_id = _clean_tg_id(chat_id)
         entity_clean_id = _clean_tg_id(getattr(entity, 'id', None)) if entity else ""
         clean_user_chat = (chat_username or "").lower().lstrip("@")
+        chat_title = (getattr(entity, 'title', None) or "").strip().lower()
 
         for g in user_groups:
-            # 1. Проверка по сохраненному id_group
+            # 1. Проверка по сохраненному id_group (для закрытых чатов)
             if g.id_group:
                 clean_g_id = _clean_tg_id(g.id_group)
                 if clean_g_id and (clean_g_id == clean_chat_id or (entity_clean_id and clean_g_id == entity_clean_id)):
                     return True
 
-            # 2. Проверка по username_group / ссылке
+            # 2. Проверка по названию закрытой группы (когда аккаунт зашел через tdata без инвайт-ссылки)
+            if g.name_group and chat_title:
+                if g.name_group.strip().lower() == chat_title:
+                    if not g.id_group and chat_id:
+                        try:
+                            g.id_group = chat_id
+                            g.save()
+                        except Exception:
+                            pass
+                    return True
+
+            # 3. Проверка по username_group / ссылке
             stored = (g.username_group or "").strip()
             if not stored:
                 continue
 
             stored_target = stored.rstrip("/").split("/")[-1].lower().lstrip("@")
 
-            # 2.1 Проверка по юзернейму
+            # 3.1 Проверка по юзернейму
             if clean_user_chat and stored_target == clean_user_chat:
                 if not g.id_group and chat_id:
                     try:
@@ -108,7 +131,7 @@ def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, en
                         pass
                 return True
 
-            # 2.2 Проверка по числовому ID
+            # 3.2 Проверка по числовому ID
             stored_id = _clean_tg_id(stored_target)
             if stored_id and (stored_id == clean_chat_id or (entity_clean_id and stored_id == entity_clean_id)):
                 if not g.id_group and chat_id:
@@ -125,21 +148,20 @@ def is_chat_monitored_by_user(chat_id: int, chat_username: str, user_id: int, en
         return True
 
 
-async def process_message(client, message: Message, chat_id: int, user_id, target_group_id):
+async def process_message(client, message: Message, chat_id: int, user_id, target_group_id=None, session_string=None, track_all_chats=False, account_title=""):
     """
     Обрабатывает входящее сообщение, проверяет его на совпадение с ключевыми словами и пересылает в целевую группу с
-    контекстом при совпадении.
-
-    Контекст включает название источника, ссылку на сообщение и сам текст.
-    Использует глобальный set `forwarded_messages` для предотвращения дубликатов.
+    контекстом при совпадении (с поддержкой закрытых групп и мульти-кампаний).
 
     :param client: (TelegramClient) Активный клиент Telethon.
     :param message: (Message) Входящее сообщение для обработки.
     :param chat_id: (int) Идентификатор чата-источника.
     :param user_id: (int | str) Идентификатор пользователя, чьи ключевые слова используются.
     :param target_group_id: (int | None) Идентификатор целевой группы для пересылки.
+    :param session_string: (str | None) Фильтр по сессии для персональных ключевых слов.
+    :param track_all_chats: (bool) Флаг отслеживания всех чатов аккаунта.
+    :param account_title: (str) Название кампании (например, "Диваны", "Холодильники").
     :return: None
-    :raises Exception: Логируется при ошибках отправки сообщения.
     """
     if not message.message:
         return
@@ -163,8 +185,14 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         chat_username = getattr(chat_entity, "username", None) or ""
 
     # Проверяем, отслеживает ли пользователь данный чат
-    if not is_chat_monitored_by_user(chat_id=chat_id, chat_username=chat_username, user_id=int(user_id),
-                                     entity=chat_entity):
+    if not is_chat_monitored_by_user(
+        chat_id=chat_id,
+        chat_username=chat_username,
+        user_id=int(user_id),
+        entity=chat_entity,
+        session_string=session_string,
+        track_all_chats=track_all_chats
+    ):
         return
 
     message_text = message.message.lower()
@@ -173,13 +201,11 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
     if msg_key in forwarded_messages:
         return
 
-    keywords_count = get_keywords_count(user_id=int(user_id))
-    if keywords_count == 0:
-        logger.info(f"У пользователя {user_id} нет ключевых слов")
+    # Получаем ключевые слова из базы данных для данного пользователя (с привязкой к сессии аккаунта)
+    keywords = get_user_keywords(user_id=int(user_id), user_session_string=session_string)
+    if not keywords:
         return
 
-    # Получаем ключевые слова из базы данных для данного пользователя
-    keywords = get_user_keywords(user_id=int(user_id))
     keywords_lower = [keyword.lower() for keyword in keywords]
     matched_keyword = next((keyword for keyword in keywords_lower if keyword in message_text), None)
 
@@ -195,7 +221,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                 clean_chat_id = str(chat_id)[4:]
                 message_link = f"https://t.me/c/{clean_chat_id}/{message.id}"
             else:
-                message_link = "Ссылка недоступна"
+                clean_chat_id = str(chat_id).lstrip("-")
+                message_link = f"https://t.me/c/{clean_chat_id}/{message.id}"
 
             # 1. Отправляем форматированное уведомление через бота напрямую в созданную группу
             try:
@@ -204,7 +231,9 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
                     user_id=int(user_id),
                     matched_keyword=matched_keyword,
                     message_text=message.message,
-                    message_link=message_link
+                    message_link=message_link,
+                    target_group_id=target_group_id,
+                    account_title=account_title
                 )
                 logger.info(f"✅ Алерт отправлен ботом в группу уведомлений пользователя {user_id}")
             except Exception as alert_err:
@@ -606,24 +635,198 @@ async def join_required_channels(client, user_id, message, already_subscribed):
             logger.exception(f"❌ Ошибка в цикле подписки на {channel}: {e}")
 
 
-async def filter_messages(message=None, user_id=None, notify=True):
+async def filter_messages_for_account(user_id: int, account_record, message=None, notify=True):
     """
-    Основная функция запуска процесса отслеживания сообщений в Telegram.
+    Запускает независимый мониторинг сообщений для конкретного аккаунта пользователя
+    (с его собственной технической группой, персональными ключевыми словами и целевыми чатами).
 
-    1. Читает каналы из БД — мгновенно, без запросов к Telegram.
-    2. Быстро предзагружает диалоги в кэш Telethon (0.2 сек) для мгновенного приема обновлений.
-    3. Параллельно запускает:
-        - прослушивание новых сообщений (стартует немедленно)
-        - фоновую проверку подписок (в фоне)
-
-    :param message: (Message | None) Объект сообщения aiogram (может быть None при авто-запуске после перезагрузки).
-    :param user_id: (int | str) Идентификатор пользователя Telegram.
-    :param notify: (bool) Отправлять ли пользователю сервисные сообщения о старте/остановке.
-    :return: None
+    :param user_id: (int) ID пользователя в Telegram.
+    :param account_record: (UsersAccounts) Запись аккаунта из БД.
+    :param message: (Message | None) Объект сообщения aiogram для ответов.
+    :param notify: (bool) Отправлять ли пользователю уведомление о старте/остановке.
     """
     user_id = int(user_id)
+    acc_id = account_record.id
+    user_key = f"{user_id}_{acc_id}"
+    acc_title = account_record.account_title or f"Аккаунт {account_record.phone_number_session_string or acc_id}"
+    logger.info(f"🚀 Запуск отслеживания для user_id={user_id}, аккаунт #{acc_id} ({acc_title})...")
+    client = None
+    user_lang = determines_user_language(message_or_callback=user_id)
+
+    try:
+        session_string = account_record.user_session_string
+        if not session_string:
+            logger.warning(f"⚠️ У аккаунта #{acc_id} нет session_string")
+            return None
+
+        target_group_id = account_record.target_group_id or get_group_id_with_personal_tracking(user_id)
+        if not target_group_id:
+            logger.warning(f"⚠️ У аккаунта #{acc_id} ({acc_title}) нет целевой группы уведомлений в БД")
+            if notify:
+                create_group_kb = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text=t("btn_pt_create_notification_group", lang=user_lang),
+                                callback_data="menu_personal_tracking"
+                            )
+                        ]
+                    ]
+                )
+                await _send_msg(
+                    message, user_id,
+                    t("parser_notification_group_missing", lang=user_lang),
+                    reply_markup=create_group_kb
+                )
+            return None
+
+        checker = CheckingAccountsValidity()
+        client = await checker.client_connect_string_session(session_string)
+        if not client:
+            logger.warning(f"⚠️ Не удалось подключить клиент для аккаунта #{acc_id} ({acc_title})")
+            if notify:
+                await _send_msg(
+                    message, user_id,
+                    f"⚠️ <b>Не удалось подключить аккаунт «{acc_title}».</b>\nПроверьте валидность сессии."
+                    if user_lang == "ru"
+                    else f"⚠️ <b>Failed to connect account «{acc_title}».</b>\nPlease check session validity."
+                )
+            return None
+
+        active_clients[user_key] = client
+        stop_event = asyncio.Event()
+        stop_flags[user_key] = stop_event
+        account_record.is_active = True
+        account_record.save()
+
+        # Предзагрузка диалогов
+        already_subscribed = set()
+        try:
+            dialogs = await client.get_dialogs(limit=250)
+            for d in dialogs:
+                ent = d.entity
+                if getattr(ent, 'username', None):
+                    u_clean = ent.username.lower().lstrip("@")
+                    already_subscribed.add(f"@{u_clean}")
+                    already_subscribed.add(f"https://t.me/{u_clean}")
+                    already_subscribed.add(u_clean)
+                if getattr(ent, 'id', None):
+                    already_subscribed.add(str(ent.id))
+                    already_subscribed.add(f"-100{ent.id}")
+            logger.info(f"✅ Диалоги загружены в кэш Telethon ({len(already_subscribed)} записей) для аккаунта #{acc_id}")
+        except Exception as dial_err:
+            logger.debug(f"Ошибка предварительной загрузки диалогов: {dial_err}")
+
+        track_all = bool(account_record.track_all_chats)
+
+        async def listen():
+            @client.on(events.NewMessage())
+            async def handle_new_message(event: events.NewMessage.Event):
+                try:
+                    await process_message(
+                        client=client,
+                        message=event.message,
+                        chat_id=event.chat_id,
+                        user_id=user_id,
+                        target_group_id=target_group_id,
+                        session_string=session_string,
+                        track_all_chats=track_all,
+                        account_title=acc_title
+                    )
+                except Exception as e:
+                    logger.exception(f"Не удалось обработать сообщение: {e}")
+
+            logger.info(f"👂 Бот слушает новые сообщения для аккаунта #{acc_id} ({acc_title})...")
+            if notify:
+                start_txt = (
+                    f"🚀 <b>Мониторинг запущен для аккаунта:</b> {acc_title}\n\n"
+                    f"📣 <b>Тех-группа:</b> ID {target_group_id}\n"
+                    f"🌐 <b>Все чаты аккаунта:</b> {'ВКЛ (открытые + закрытые)' if track_all else 'По списку групп'}"
+                    if user_lang == "ru"
+                    else f"🚀 <b>Monitoring started for account:</b> {acc_title}\n\n"
+                         f"📣 <b>Tech group:</b> ID {target_group_id}\n"
+                         f"🌐 <b>All account chats:</b> {'ON (open + closed)' if track_all else 'By group list'}"
+                )
+                await _send_msg(message, user_id, start_txt)
+
+            await stop_event.wait()
+            logger.info(f"🛑 Прослушивание остановлено для аккаунта #{acc_id} ({acc_title})")
+            if notify:
+                stop_txt = (
+                    f"🛑 Мониторинг остановлен для аккаунта: {acc_title}"
+                    if user_lang == "ru"
+                    else f"🛑 Monitoring stopped for account: {acc_title}"
+                )
+                await _send_msg(message, user_id, stop_txt)
+
+        async def subscribe():
+            if not track_all:
+                try:
+                    await join_required_channels(
+                        client=client,
+                        user_id=str(user_id),
+                        message=message,
+                        already_subscribed=already_subscribed
+                    )
+                except Exception as sub_err:
+                    logger.debug(f"Фоновая подписка для аккаунта #{acc_id}: {sub_err}")
+
+        await asyncio.gather(listen(), subscribe())
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка в filter_messages_for_account #{acc_id}: {e}")
+    finally:
+        user_key = f"{user_id}_{acc_id}"
+        if user_key in active_clients:
+            c = active_clients.pop(user_key)
+            try:
+                if c and c.is_connected():
+                    await c.disconnect()
+            except Exception:
+                pass
+        stop_flags.pop(user_key, None)
+        try:
+            account_record.is_active = False
+            account_record.save()
+        except Exception:
+            pass
+        logger.info(f"🛑 Сессия Telethon завершена для аккаунта #{acc_id}")
+
+
+async def filter_messages(message=None, user_id=None, notify=True, account_id=None):
+    """
+    Основная функция запуска процесса отслеживания сообщений в Telegram.
+    Поддерживает как мульти-аккаунтный режим (кампании), так и одиночный режим.
+
+    :param message: (Message | None) Объект сообщения aiogram.
+    :param user_id: (int | str) Идентификатор пользователя Telegram.
+    :param notify: (bool) Отправлять ли пользователю сервисные сообщения о старте/остановке.
+    :param account_id: (int | None) ID конкретного аккаунта из UsersAccounts (если запускается один аккаунт).
+    :return: None
+    """
+    from database.users_accounts import UsersAccounts
+    user_id = int(user_id)
+
+    # 1. Если передан конкретный account_id, запускаем только его
+    if account_id:
+        acc = UsersAccounts.get_or_none((UsersAccounts.id == account_id) & (UsersAccounts.user_id == user_id))
+        if acc:
+            return await filter_messages_for_account(user_id=user_id, account_record=acc, message=message, notify=notify)
+
+    # 2. Проверяем, есть ли зарегистрированные аккаунты в UsersAccounts
+    user_accs = list(UsersAccounts.select().where(UsersAccounts.user_id == user_id))
+    if user_accs:
+        for acc in user_accs:
+            user_key = f"{user_id}_{acc.id}"
+            if user_key not in active_clients:
+                asyncio.create_task(
+                    filter_messages_for_account(user_id=user_id, account_record=acc, message=message, notify=notify)
+                )
+        return None
+
+    # 3. Fallback: Одиночный режим / общий бесплатный аккаунт
     user_key = str(user_id)
-    logger.info(f"🚀 Запуск отслеживания для user_id={user_id} (notify={notify})...")
+    logger.info(f"🚀 Запуск одиночного отслеживания для user_id={user_id} (notify={notify})...")
     client = None
     user_lang = determines_user_language(message_or_callback=user_id)
 
@@ -702,7 +905,7 @@ async def filter_messages(message=None, user_id=None, notify=True):
         stop_event = asyncio.Event()
         stop_flags[user_key] = stop_event
 
-        # Быстро загружаем диалоги в кэш Telethon (0.2 сек), чтобы сразу активировать получение обновлений
+        # Быстро загружаем диалоги в кэш Telethon (0.2 сек)
         already_subscribed = set()
         try:
             dialogs = await client.get_dialogs(limit=200)
@@ -754,22 +957,17 @@ async def filter_messages(message=None, user_id=None, notify=True):
 
         # === Функция прослушивания — стартует сразу ===
         async def listen():
-            """
-            Запускает прослушивание входящих сообщений в отслеживаемых чатах до срабатывания флага остановки.
-            """
-
             @client.on(events.NewMessage())
             async def handle_new_message(event: events.NewMessage.Event):
-                """
-                Обрабатывает новое входящее сообщение из любого доступного чата.
-                """
                 try:
                     await process_message(
                         client=client,
                         message=event.message,
                         chat_id=event.chat_id,
                         user_id=user_id,
-                        target_group_id=target_group_id
+                        target_group_id=target_group_id,
+                        session_string=session_string,
+                        track_all_chats=False
                     )
                 except Exception as e:
                     logger.exception(f"Не удалось обработать сообщение: {e}")
@@ -782,7 +980,6 @@ async def filter_messages(message=None, user_id=None, notify=True):
                     reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=user_id)
                 )
 
-            # Держим клиент живым до флага остановки
             await stop_event.wait()
             logger.info(f"🛑 Прослушивание остановлено для user_id={user_id}")
             if notify:
@@ -790,9 +987,6 @@ async def filter_messages(message=None, user_id=None, notify=True):
 
         # === Функция подписки — работает параллельно в фоне ===
         async def subscribe():
-            """
-            Выполняет подписку на целевую группу и отслеживаемые каналы в фоне.
-            """
             try:
                 await join_required_channels(
                     client=client,
@@ -803,41 +997,11 @@ async def filter_messages(message=None, user_id=None, notify=True):
             except Exception as sub_err:
                 logger.debug(f"Фоновая подписка завершилась с ошибкой: {sub_err}")
 
-        # 🚀 Запускаем одновременно: прослушивание + подписка
         await asyncio.gather(listen(), subscribe())
 
     except Exception as e:
         logger.exception(f"❌ Критическая ошибка в filter_messages для user_id={user_id}: {e}")
-        try:
-            pt_rec = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id)
-            if pt_rec and pt_rec.shared_account and not pt_rec.personal_account and notify:
-                reconnect_kb = InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [
-                            InlineKeyboardButton(
-                                text=t("btn_reconnect_free_account", lang=user_lang),
-                                callback_data="account_connect_free"
-                            )
-                        ],
-                        [
-                            InlineKeyboardButton(
-                                text=t("btn_to_tracking_menu", lang=user_lang),
-                                callback_data="menu_personal_tracking"
-                            )
-                        ]
-                    ]
-                )
-                msg_err = (
-                    "⚠️ <b>Произошла ошибка связи с бесплатным аккаунтом.</b>\n\n"
-                    "Вы можете легко переподключить другой рабочий бесплатный аккаунт нажатием кнопки ниже:"
-                    if user_lang == "ru"
-                    else "⚠️ <b>Connection error with free account.</b>\n\nYou can reconnect another working account below:"
-                )
-                await _send_msg(message, user_id, msg_err, reply_markup=reconnect_kb)
-        except Exception:
-            pass
     finally:
-        # ✅ Всегда гарантированно очищаем ресурсы
         user_key = str(user_id)
         if user_key in active_clients:
             c = active_clients.pop(user_key)
@@ -850,72 +1014,121 @@ async def filter_messages(message=None, user_id=None, notify=True):
         logger.info(f"🛑 Сессия Telethon завершена и очищена из active_clients для user_id={user_id}")
 
 
-async def stop_tracking(user_id, message=None):
+async def stop_tracking(user_id, message=None, account_id=None):
     """
     Останавливает процесс отслеживания сообщений для пользователя.
-
-    Устанавливает флаг остановки для активной сессии пользователя,
-    отключает клиент Telethon и очищает глобальные словари `active_clients` и `stop_flags`.
+    Поддерживает остановку конкретного аккаунта/кампании или всех аккаунтов пользователя.
 
     :param user_id: (int | str) Идентификатор пользователя Telegram.
     :param message: (Message | None) Объект сообщения aiogram для отправки подтверждения (опционально).
+    :param account_id: (int | None) ID аккаунта из UsersAccounts (если останавливается один аккаунт).
     """
-    user_key = str(user_id)
-    user_lang = determines_user_language(message_or_callback=int(user_id))
-    logger.info(f"🛑 Запрос на остановку отслеживания для user_id={user_key}")
+    from database.users_accounts import UsersAccounts
+    user_id = int(user_id)
+    user_lang = determines_user_language(message_or_callback=user_id)
 
-    # 1. Сигнализируем флагу остановки цикла прослушивания
-    if user_key in stop_flags:
-        try:
-            stop_flags[user_key].set()
-        except Exception:
-            pass
+    if account_id:
+        user_key = f"{user_id}_{account_id}"
+        logger.info(f"🛑 Запрос на остановку отслеживания для аккаунта #{account_id} (user_id={user_id})")
+        if user_key in stop_flags:
+            try:
+                stop_flags[user_key].set()
+            except Exception:
+                pass
+        client = active_clients.pop(user_key, None)
+        if client:
+            try:
+                if client.is_connected():
+                    await client.disconnect()
+            except Exception:
+                pass
+        stop_flags.pop(user_key, None)
+        UsersAccounts.update(is_active=False).where(UsersAccounts.id == account_id).execute()
+        if message:
+            await _send_msg(message, user_id, t("tracking_stopped", lang=user_lang))
+        return
 
-    # 2. Немедленно извлекаем и отключаем клиент Telethon
-    client = active_clients.pop(user_key, None)
-    if client:
-        try:
-            if client.is_connected():
-                await client.disconnect()
-            logger.info(f"🔌 Клиент Telethon отключен для user_id={user_key}")
-        except Exception as e:
-            logger.debug(f"Ошибка при отключении клиента {user_key}: {e}")
+    # Останавливаем все аккаунты пользователя
+    logger.info(f"🛑 Запрос на остановку всех потоков отслеживания для user_id={user_id}")
+    keys_to_stop = [k for k in list(active_clients.keys()) if k == str(user_id) or k.startswith(f"{user_id}_")]
+    for k in keys_to_stop:
+        if k in stop_flags:
+            try:
+                stop_flags[k].set()
+            except Exception:
+                pass
+        client = active_clients.pop(k, None)
+        if client:
+            try:
+                if client.is_connected():
+                    await client.disconnect()
+            except Exception:
+                pass
+        stop_flags.pop(k, None)
 
-    stop_flags.pop(user_key, None)
+    UsersAccounts.update(is_active=False).where(UsersAccounts.user_id == user_id).execute()
 
     if message:
         await _send_msg(
             message, user_id,
             t("tracking_stop_requested", lang=user_lang),
-            reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=int(user_id))
+            reply_markup=menu_launch_tracking_keyboard(lang=user_lang, user_id=user_id)
         )
 
 
 async def restore_all_user_trackings():
     """
-    Автоматически восстанавливает и запускает отслеживание сообщений для всех пользователей
+    Автоматически восстанавливает и запускает отслеживание сообщений для всех пользователей и аккаунтов
     при старте или перезапуске бота.
-
-    Находит всех пользователей, у которых:
-    1. Настроен персональный трекинг в UsersPersonalTrackings (есть аккаунт и группа результатов).
-    2. Добавлена хотя бы 1 целевая группа в UsersGroups.
-    3. Добавлено хотя бы 1 ключевое слово в UsersKeywords.
     """
-    logger.info("🔄 Проверка и автоматический запуск отслеживания для всех пользователей при старте бота...")
+    logger.info("🔄 Проверка и автоматический запуск отслеживания для всех пользователей и аккаунтов...")
     try:
+        from database.users_accounts import UsersAccounts
         from database.users_personal_trackings import UsersPersonalTrackings
         from database.users_groups import UsersGroups
         from database.users_keywords import UsersKeywords
 
+        started_count = 0
+
+        # 1. Запуск всех активных аккаунтов из таблицы users_accounts
+        try:
+            active_accs = list(UsersAccounts.select().where(UsersAccounts.is_active == True))
+            for acc in active_accs:
+                user_key = f"{acc.user_id}_{acc.id}"
+                if user_key in active_clients:
+                    continue
+                target_gid = acc.target_group_id or get_group_id_with_personal_tracking(acc.user_id)
+                if not target_gid:
+                    continue
+                try:
+                    logger.info(f"🚀 Авто-восстановление отслеживания для аккаунта #{acc.id} ({acc.account_title or acc.phone_number_session_string})...")
+                    asyncio.create_task(
+                        filter_messages_for_account(
+                            user_id=acc.user_id,
+                            account_record=acc,
+                            message=None,
+                            notify=False
+                        )
+                    )
+                    started_count += 1
+                except Exception as acc_err:
+                    logger.error(f"❌ Ошибка авто-запуска аккаунта #{acc.id}: {acc_err}")
+        except Exception as e:
+            logger.debug(f"Проверка active_accs: {e}")
+
+        # 2. Обратная совместимость с UsersPersonalTrackings (одиночный/общий аккаунт)
         candidates = list(
             UsersPersonalTrackings.select().where(
                 UsersPersonalTrackings.created_group_id.is_null(False)
             )
         )
 
-        started_count = 0
         for rec in candidates:
             uid = rec.user_id
+            # Если для пользователя уже работают аккаунты из users_accounts, пропускаем
+            if any(k == str(uid) or k.startswith(f"{uid}_") for k in active_clients):
+                continue
+
             session_str = rec.personal_account or rec.shared_account
             if not session_str:
                 continue
@@ -925,11 +1138,8 @@ async def restore_all_user_trackings():
             if not (has_groups and has_keywords):
                 continue
 
-            if str(uid) in active_clients:
-                continue
-
             try:
-                logger.info(f"🚀 Авто-восстановление отслеживания для user_id={uid}...")
+                logger.info(f"🚀 Авто-восстановление одиночного отслеживания для user_id={uid}...")
                 asyncio.create_task(
                     filter_messages(
                         message=None,
@@ -941,6 +1151,6 @@ async def restore_all_user_trackings():
             except Exception as u_err:
                 logger.error(f"❌ Ошибка авто-запуска отслеживания для user_id={uid}: {u_err}")
 
-        logger.info(f"✅ Авто-запуск отслеживания завершен. Запущено для {started_count} пользователей.")
+        logger.info(f"✅ Авто-запуск отслеживания завершен. Запущено потоков: {started_count}")
     except Exception as e:
         logger.exception(f"❌ Критическая ошибка в restore_all_user_trackings: {e}")
