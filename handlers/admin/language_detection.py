@@ -1,12 +1,9 @@
-import os
-
 from aiogram import Router
 from asgiref.sync import sync_to_async
 from loguru import logger  # https://github.com/Delgan/loguru
 from openai import OpenAI
 
-from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES
-
+from core.config import OPENROUTER_API_KEY, ISO_639_1_CODES, OPENROUTER_BASE_URL, POLZA_BASE_URL, POLZA_AI_API_KEY
 from database.database import TelegramGroups, database
 from locales.locales import t
 
@@ -23,7 +20,7 @@ def ai_llama_fri(group_data: dict, lang: str = 'ru'):
     """
     try:
         client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
             timeout=15
         )
@@ -84,11 +81,10 @@ def ai_llama(group_data: dict, lang: str = 'ru') -> dict:
     :param lang: (str) Код языка интерфейса для локализации промпта.
     :return: (dict) Словарь с ключами group_hash, name, language, success, error.
     """
-    api_key = os.getenv("POLZA_AI_API_KEY")
     try:
         client = OpenAI(
-            base_url="https://api.polza.ai/api/v1",
-            api_key=api_key,
+            base_url=POLZA_BASE_URL,
+            api_key=POLZA_AI_API_KEY,
         )
 
         data_parts = []
