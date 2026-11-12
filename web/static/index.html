@@ -95,11 +95,11 @@
                         <p data-i18n="connected_sessions">Связанные сеансы</p>
                     </div>
                 </div>
-                <div class="stat-card glass-panel">
+                <div class="stat-card glass-panel" onclick="switchTab('search')">
                     <div class="stat-icon icon-orange"><i class="fa-solid fa-database"></i></div>
                     <div class="stat-data">
                         <h4 id="stat-db-groups">0</h4>
-                        <p data-i18n="groups_db">База данных групп Telegram</p>
+                        <p data-i18n="groups_db">Общая база AI</p>
                     </div>
                 </div>
             </div>
@@ -353,14 +353,13 @@
 
             <!-- Результаты поиска ИИ -->
             <div class="card glass-panel hidden" id="search-results-card">
-                <div class="card-header">
-                    <div>
+                <div class="card-header search-results-header">
+                    <div class="search-results-title-group">
                         <h3 data-i18n="search_results">Результаты поиска</h3>
                         <span id="results-count" class="badge">0</span>
                     </div>
-                    <button id="btn-export-search-results" class="btn-success"
-                            style="padding: 8px 16px; font-size: 0.9rem; cursor: pointer;">
-                        <i class="fa-solid fa-file-excel"></i> <span data-i18n="download_results_excel">Скачать результаты в Excel</span>
+                    <button id="btn-export-search-results" class="btn-success btn-export-excel-responsive">
+                        <i class="fa-solid fa-file-excel"></i> <span data-i18n="download_results_excel">Скачать в Excel</span>
                     </button>
                 </div>
                 <div class="table-container scrollable">
@@ -492,11 +491,11 @@
         </button>
         <button class="nav-item" onclick="switchTab('keywords')">
             <i class="fa-solid fa-tag"></i>
-            <span data-i18n="nav_keywords">Ключевые слова</span>
+            <span data-i18n="nav_keywords">Слова</span>
         </button>
         <button class="nav-item" onclick="switchTab('accounts')">
             <i class="fa-solid fa-user-shield"></i>
-            <span data-i18n="nav_accounts">Подключенные аккаунты</span>
+            <span data-i18n="nav_accounts">Аккаунты</span>
         </button>
         <button class="nav-item" onclick="switchTab('search')">
             <i class="fa-solid fa-robot"></i>
@@ -504,7 +503,7 @@
         </button>
         <button class="nav-item hidden" id="nav-admin" onclick="switchTab('admin')">
             <i class="fa-solid fa-shield-halved"></i>
-            <span data-i18n="nav_admin">Администратор</span>
+            <span data-i18n="nav_admin">Админ</span>
         </button>
     </nav>
 </div>

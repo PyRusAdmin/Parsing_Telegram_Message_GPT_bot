@@ -1,13 +1,4 @@
-# Spanish localization (es)
-
-Here is the translated content in Spanish (es):
-
-CRITICAL REQUIREMENTS:
-1. Keep ALL keys on the left side of '=' EXACTLY as they are. Never translate key names.
-2. Keep ALL variables in braces like { $version }, { $count }, { $title }, etc. EXACTLY as they are.
-3. Keep ALL HTML tags (<b>, </b>, <i>, </i>, <code>, </code>, <a href="...">, </a>) intact.
-4. Keep the Fluent multiline indentation format (subsequent lines indented by 4 spaces).
-5. Return ONLY the translated .ftl content. Do NOT include markdown code fences (no ``` or ```ftl), no explanations.
+# ES localization
 
 welcome_ask_language =
     🌍 ¡Hola! Por favor, elige el idioma de interfaz:

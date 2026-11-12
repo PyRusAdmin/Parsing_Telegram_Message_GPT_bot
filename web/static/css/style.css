@@ -1129,9 +1129,9 @@ header {
     max-width: 600px;
     margin: 0 auto;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    padding: 8px 12px 14px 12px;
+    padding: 6px 4px 10px 4px;
     z-index: 10000;
     background: var(--md-sys-color-surface);
     backdrop-filter: blur(20px);
@@ -1145,22 +1145,35 @@ header {
     border: none;
     color: var(--md-sys-color-on-surface-variant);
     font-family: var(--font-main);
-    font-size: 0.725rem;
-    font-weight: 500;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 3px;
     cursor: pointer;
-    width: 20%;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 2px 1px;
     transition: color 0.2s ease;
 }
 
 .nav-item i {
-    font-size: 1.25rem;
-    padding: 4px 16px;
+    font-size: 1.15rem;
+    padding: 3px 8px;
     border-radius: 100px;
     transition: all 0.2s ease;
+}
+
+.nav-item span {
+    font-size: 0.65rem;
+    font-weight: 500;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+    display: block;
 }
 
 .nav-item:hover {
@@ -1170,6 +1183,57 @@ header {
 .nav-item.active {
     color: var(--md-sys-color-primary);
     font-weight: 700;
+}
+
+.nav-item.active i {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+/* Responsive AI search results header */
+.search-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.search-results-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-export-excel-responsive {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    border: none;
+}
+
+@media (max-width: 520px) {
+    .search-results-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-results-header .search-results-title-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .btn-export-excel-responsive {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
 }
 
 .nav-item.active i {

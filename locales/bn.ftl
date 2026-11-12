@@ -1,4 +1,4 @@
-# Bengali localization (bn)
+# BN localization
 
 welcome_ask_language =
     🌍 আপনার ইন্টারফেস ভাষা বেছে নিন:

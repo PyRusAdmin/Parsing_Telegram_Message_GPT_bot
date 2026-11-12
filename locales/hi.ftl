@@ -1,4 +1,4 @@
-# Hindi localization (hi)
+# HI localization
 
 welcome_ask_language = 
     🌍 हाय! कृपया अपनी इंटरफ़ेस भाषा चुनें:

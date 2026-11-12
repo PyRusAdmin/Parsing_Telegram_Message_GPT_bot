@@ -1,4 +1,4 @@
-# Portuguese localization (pt)
+# PT localization
 
 welcome_ask_language =
     🌍 Olá! Por favor, escolha o seu idioma de interface:

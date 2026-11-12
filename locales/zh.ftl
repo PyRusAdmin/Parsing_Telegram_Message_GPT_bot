@@ -1,13 +1,4 @@
-# Simplified Chinese localization (zh)
-
-Here is the translated content in Simplified Chinese (zh):
-
-CRITICAL REQUIREMENTS:
-1. Keep ALL keys on the left side of '=' EXACTLY as they are. Never translate key names.
-2. Keep ALL variables in braces like { $version }, { $count }, { $title }, etc. EXACTLY as they are.
-3. Keep ALL HTML tags intact.
-4. Keep the Fluent multiline indentation format.
-5. Return ONLY the translated .ftl content. Do NOT include markdown code fences (no ``` or ```ftl), no explanations.
+# ZH localization
 
 welcome_ask_language =
     🌍 Hi! 请选择您的界面语言：

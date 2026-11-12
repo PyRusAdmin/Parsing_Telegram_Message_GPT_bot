@@ -43,7 +43,7 @@ from database.database import (
 from database.account_free import getting_free_account
 from database.users_accounts import write_account_to_user_table, UsersAccounts
 from database.users_groups import UsersGroups, get_group_count
-from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords
+from database.users_keywords import get_keywords_count, get_user_keywords_with_id, UsersKeywords, get_user_keywords
 from database.users_personal_trackings import get_session_count, UsersPersonalTrackings
 from database.users_questions import get_all_questions
 from handlers.admin.checking_group_for_ai import get_best_g4f_model
@@ -390,17 +390,18 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
             user.language = detected_lang
             user.save()
 
+        user_id_int = int(user_data["id"])
         # Получите статистику
         groups_count = getting_number_records_database()
-        session_count = get_session_count(user_id=user_data["id"])
-        tracked_channels = get_group_count(user_id=user_data["id"])  # Отслеживаемые каналы
-        keywords_count = get_keywords_count(user_id=user_data["id"])
+        session_count = get_session_count(user_id=user_id_int)
+        tracked_channels = get_group_count(user_id=user_id_int)  # Отслеживаемые каналы строго текущего пользователя
+        keywords_count = get_keywords_count(user_id=user_id_int)
 
         # Получите целевую группу (группу уведомлений) пользователя
-        pt = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_data["id"])
+        pt = UsersPersonalTrackings.get_or_none(UsersPersonalTrackings.user_id == user_id_int)
         target_group = pt.created_group_link if pt else None
 
-        tracking_active = str(user_data["id"]) in active_clients
+        tracking_active = any(k == str(user_id_int) or k.startswith(f"{user_id_int}_") for k in active_clients)
         is_admin = int(user_data["id"]) == int(ADMIN_USER_ID)
         session_key = (user_data["id"], client_ip)
         if session_key not in logged_user_sessions:
@@ -416,7 +417,7 @@ async def get_status(request: Request, user_data: dict = Depends(get_current_tg_
             "stars": user.stars,
             "is_admin": is_admin,
             "stats": {
-                "version": "0.1.0",
+                "version": "0.2.0",
                 "db_total_groups": groups_count,
                 "connected_accounts": session_count,
                 "target_groups": 1 if target_group else 0,
@@ -685,15 +686,24 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
     :param user_data: (dict) Данные авторизованного пользователя Telegram.
     :return: Список словарей с подробными данными аккаунтов.
     """
+    user_id_int = int(user_data["id"])
     records = list(
         UsersAccounts.select()
-        .where(UsersAccounts.user_id == user_data["id"])
+        .where(UsersAccounts.user_id == user_id_int)
         .order_by(UsersAccounts.date_added.desc())
     )
     result = []
     for acc in records:
-        user_key = f"{user_data['id']}_{acc.id}"
-        is_running = user_key in active_clients or (bool(acc.is_active) and str(user_data['id']) in active_clients)
+        user_key = f"{user_id_int}_{acc.id}"
+        is_running = user_key in active_clients or (bool(acc.is_active) and str(user_id_int) in active_clients)
+
+        # Считаем каналы строго этого пользователя и аккаунта
+        acc_channels = UsersGroups.select().where(
+            (UsersGroups.user_id == user_id_int) &
+            ((UsersGroups.user_session_string == acc.user_session_string) | (UsersGroups.user_session_string == '') | (UsersGroups.user_session_string.is_null()))
+        ).count()
+        acc_keywords = len(get_user_keywords(user_id=user_id_int, user_session_string=acc.user_session_string))
+
         result.append({
             "id": acc.id,
             "phone_number": acc.phone_number_session_string or "unknown",
@@ -701,6 +711,8 @@ async def list_accounts(user_data: dict = Depends(get_current_tg_user)):
             "target_group_id": acc.target_group_id,
             "target_group_link": acc.target_group_link or "",
             "track_all_chats": bool(acc.track_all_chats),
+            "channels_count": acc_channels,
+            "keywords_count": acc_keywords,
             "is_active": is_running,
             "created_at": acc.date_added.strftime("%Y-%m-%d %H:%M:%S") if acc.date_added else ""
         })

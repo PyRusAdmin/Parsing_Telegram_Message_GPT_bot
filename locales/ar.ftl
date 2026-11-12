@@ -1,4 +1,4 @@
-# Arabic localization (ar)
+# AR localization
 
 welcome_ask_language =
     🌍 مرحبا! يُرجى اختيار لغة التطبيق:

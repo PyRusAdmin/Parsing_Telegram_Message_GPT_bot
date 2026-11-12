@@ -1,13 +1,4 @@
-# French localization (fr)
-
-Here is the translated content in French (fr):
-
-CRITICAL REQUIREMENTS:
-1. Garder TOUTES les clés du côté gauche de '=' EXACTEMENT comme elles sont. Ne traduire jamais les noms de clés.
-2. Garder TOUTES les variables entre accolades comme { $version }, { $count }, { $title }, etc. EXACTEMENT comme elles sont.
-3. Garder TOUTES les balises HTML intactes.
-4. Garder la mise en page de format de multi-lignes Fluent intacte.
-5. Retourner SEULEMENT le contenu .ftl traduit. NE PAS inclure les murs de code (pas ``` ou ```ftl), ni les explications.
+# FR localization
 
 welcome_ask_language =
     🌍 Salut ! Choisissez votre langue d'interface :

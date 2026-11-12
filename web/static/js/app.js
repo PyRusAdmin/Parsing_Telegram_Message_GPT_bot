@@ -31,7 +31,7 @@ const translations = {
         monitored_channels: "Контролируемые каналы",
         active_keywords: "Активные ключевые слова",
         connected_sessions: "Связанные сеансы",
-        groups_db: "База данных групп Telegram",
+        groups_db: "Общая база AI",
         target_group_title: "Настройки переадресации",
         target_channel_subtitle: "Целевой канал оповещения",
         target_channel_desc: "Сообщения с ключевыми словами будут пересылаться сюда",
@@ -96,7 +96,7 @@ const translations = {
         export_limit_warning: "Достигнут лимит бесплатного скачивания (1/24 часа). Следующая загрузка вычитает 5 звёзд.",
         export_excel: "Экспорт в Excel",
         search_results: "Результаты поиска",
-        download_results_excel: "Скачать результаты в Excel",
+        download_results_excel: "Скачать в Excel",
         th_name: "Название",
         th_username: "Юзернейм",
         th_type: "Тип",
@@ -123,10 +123,10 @@ const translations = {
         download: "Загрузка",
         nav_home: "Домой",
         nav_channels: "Каналы",
-        nav_keywords: "Ключевые слова",
+        nav_keywords: "Слова",
         nav_accounts: "Аккаунты",
         nav_ai_search: "AI поиск",
-        nav_admin: "Администратор",
+        nav_admin: "Админ",
         modal_buy_stars_title: "Купить Telegram Stars",
         modal_buy_stars_desc: "Выберите количество звездочек, которые вы хотите приобрести для своего баланса:",
         stars_10: "10 звезд",
@@ -208,7 +208,7 @@ const translations = {
         monitored_channels: "Monitored Channels",
         active_keywords: "Active Keywords",
         connected_sessions: "Connected Sessions",
-        groups_db: "Telegram Groups DB",
+        groups_db: "Global AI Database",
         target_group_title: "Forwarding Settings",
         target_channel_subtitle: "Target Alert Channel",
         target_channel_desc: "Keyword messages will be forwarded here",
@@ -273,7 +273,7 @@ const translations = {
         export_limit_warning: "Free download limit reached (1/24 hours). Next export costs 5 stars.",
         export_excel: "Export to Excel",
         search_results: "Search Results",
-        download_results_excel: "Download results in Excel",
+        download_results_excel: "Export to Excel",
         th_name: "Name",
         th_username: "Username",
         th_type: "Type",
@@ -1397,9 +1397,10 @@ async function loadAccountsList() {
                             </span>
                             ${statusBadge}
                         </div>
-                        <div style="font-size: 12px; color: #aaa; margin-bottom: 6px;">
-                            <span><i class="fa-solid fa-phone"></i> ${item.phone_number}</span> · 
-                            <span>${i18n("connected_on")} ${item.created_at}</span>
+                        <div style="font-size: 12px; color: #aaa; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 10px;">
+                            <span><i class="fa-solid fa-phone"></i> ${item.phone_number}</span>
+                            <span><i class="fa-solid fa-tower-broadcast"></i> ${userLanguage === 'ru' ? 'Каналов' : 'Channels'}: <b>${item.channels_count || 0}</b></span>
+                            <span><i class="fa-solid fa-tag"></i> ${userLanguage === 'ru' ? 'Слов' : 'Keywords'}: <b>${item.keywords_count || 0}</b></span>
                         </div>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px;">
                             <button class="btn btn-sm ${isRunning ? 'btn-danger' : 'btn-primary'}" onclick="toggleAccountTracking(${item.id}, ${isRunning})" style="padding: 4px 10px; font-size: 12px;">
