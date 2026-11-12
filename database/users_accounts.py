@@ -73,17 +73,17 @@ def write_account_to_user_table(user_id: int, session_string: str, phone_number:
         return None
 
 
-def getting_account():
-    """
-    Получение списка сессий всех аккаунтов пользователей из базы данных.
-
-    :return: (list[str]) Список строк сессий пользователей.
-    """
-    records = []
-    for record in UsersAccounts.select(UsersAccounts.user_session_string):
-        records.append(record.user_session_string)
-
-    return records
+# def getting_account():
+#     """
+#     Получение списка сессий всех аккаунтов пользователей из базы данных.
+#
+#     :return: (list[str]) Список строк сессий пользователей.
+#     """
+#     records = []
+#     for record in UsersAccounts.select(UsersAccounts.user_session_string):
+#         records.append(record.user_session_string)
+#
+#     return records
 
 
 async def delete_account_from_db(session_string: str) -> None:

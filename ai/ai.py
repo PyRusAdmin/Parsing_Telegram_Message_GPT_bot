@@ -12,7 +12,7 @@ from telethon.sync import functions
 
 from account_manager.parser import determine_telegram_chat_type
 from account_manager.utilit import choosing_random_ai_model, detect_language
-from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY
+from core.config import GROQ_API_KEY, ADMIN_USER_ID, OPENROUTER_API_KEY, OPENROUTER_BASE_URL
 from core.proxy import setup_proxy
 from database.database import TelegramGroups
 from system.dispatcher import bot
@@ -35,7 +35,7 @@ class CategoryAssignment:
         Инициализирует клиент и модель для присвоения категорий через нейросеть.
         """
         self.client = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
         )  # g4f.client.Client | AsyncGroq | OpenAI
         self.model = ["deepseek/deepseek-v4-flash"]  # название модели. Например: "deepseek/deepseek-v4-flash"

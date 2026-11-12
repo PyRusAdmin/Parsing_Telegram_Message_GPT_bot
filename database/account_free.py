@@ -50,11 +50,11 @@ def ensure_account_free_columns() -> None:
 
 
 def write_account_to_db_free(
-    session_string: str,
-    phone_number: str = "",
-    first_name: str = "",
-    last_name: str = "",
-    account_id: int | None = None
+        session_string: str,
+        phone_number: str = "",
+        first_name: str = "",
+        last_name: str = "",
+        account_id: int | None = None
 ) -> None:
     """
     Запись сессии бесплатного аккаунта администратора в базу данных.
@@ -121,9 +121,8 @@ def getting_free_account() -> list[str]:
 
     return records
 
-
-def get_free_accounts_count() -> int:
-    """
-    Возвращает общее количество свободных аккаунтов в пуле.
-    """
-    return AccountFree.select().count()
+# def get_free_accounts_count() -> int:
+#     """
+#     Возвращает общее количество свободных аккаунтов в пуле.
+#     """
+#     return AccountFree.select().count()

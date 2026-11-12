@@ -5,10 +5,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+
+"""Работа с Telethon (Telegram api)"""
+
 API_ID = os.getenv("ID")
 API_HASH = os.getenv("HASH")
 
+"""Работа с OpenRouter API"""
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+"""Работа с Polza AI API"""
+POLZA_AI_API_KEY = os.getenv("POLZA_AI_API_KEY")
+POLZA_BASE_URL = "https://api.polza.ai/api/v1"
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 PROXY_USER = os.getenv("PROXY_USER")

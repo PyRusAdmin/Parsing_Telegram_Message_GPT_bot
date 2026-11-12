@@ -7,10 +7,8 @@ import telethon.utils as utils
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import (
-    CallbackQuery, LabeledPrice, Message, PreCheckoutQuery,
-    InlineKeyboardMarkup, InlineKeyboardButton
-)
+from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery, InlineKeyboardMarkup, \
+    InlineKeyboardButton
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import TelegramClient
@@ -36,9 +34,7 @@ from database.users_personal_trackings import (
     get_user_accounts, UsersPersonalTrackings, write_account_to_db, set_user_shared_account
 )
 from handlers.user_language import determines_user_language
-from keyboards.keyboards import (
-    personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb, back_button
-)
+from keyboards.keyboards import personal_tracking_menu_kb, tracking_list_keyboard, emoji_code_keypad_kb, back_button
 from locales.locales import t
 from system.dispatcher import bot
 
@@ -314,7 +310,8 @@ async def connect_target_and_create_group(target_input: str, user_id: int):
                 invite_link = bot_invite.invite_link
                 logger.info(f"✅ Создана постоянная ссылка-приглашение без ограничений через бота: {invite_link}")
             except Exception as bot_inv_err:
-                logger.warning(f"Ошибка создания ссылки через бота ({bot_inv_err}). Пробуем через Telethon с usage_limit=None...")
+                logger.warning(
+                    f"Ошибка создания ссылки через бота ({bot_inv_err}). Пробуем через Telethon с usage_limit=None...")
                 try:
                     invite_export = await client(ExportChatInviteRequest(
                         peer=new_chat,
@@ -486,16 +483,19 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
             # но группа результатов отсутствует — нужно пересоздать её при подключении нового аккаунта!
             if user_groups:
                 need_recreate = True
-                logger.info(f"ℹ️ У пользователя {user_id} настроено отслеживание, но отсутствует группа результатов. Пересоздаем...")
+                logger.info(
+                    f"ℹ️ У пользователя {user_id} настроено отслеживание, но отсутствует группа результатов. Пересоздаем...")
             else:
-                logger.info(f"У пользователя {user_id} еще нет настроенных отслеживаний для создания группы результатов")
+                logger.info(
+                    f"У пользователя {user_id} еще нет настроенных отслеживаний для создания группы результатов")
                 return True, False
         else:
             # Проверяем, существует ли группа и доступен ли в ней бот
             try:
                 await bot.get_chat(group_id)
             except (TelegramForbiddenError, TelegramBadRequest) as chat_err:
-                logger.warning(f"⚠️ Группа результатов {group_id} недоступна ({chat_err}). Пересоздаем группу результатов...")
+                logger.warning(
+                    f"⚠️ Группа результатов {group_id} недоступна ({chat_err}). Пересоздаем группу результатов...")
                 need_recreate = True
 
         if need_recreate:
@@ -551,7 +551,8 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                 pt_rec.last_changed_at = datetime.now()
                 pt_rec.save()
 
-                logger.info(f"✅ Новая группа результатов для user_id={user_id} пересоздана: ID={group_id}, Link={invite_link}")
+                logger.info(
+                    f"✅ Новая группа результатов для user_id={user_id} пересоздана: ID={group_id}, Link={invite_link}")
 
                 # Оповещаем пользователя в ЛС бота о новой созданной группе результатов
                 try:
@@ -619,7 +620,8 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                 except UserAlreadyParticipantError:
                     is_participant = True
                 except (InviteHashExpiredError, InviteHashInvalidError) as exp_err:
-                    logger.warning(f"⚠️ Ссылка {invite_link} устарела ({exp_err}). Генерируем новую постоянную ссылку без ограничений через бота...")
+                    logger.warning(
+                        f"⚠️ Ссылка {invite_link} устарела ({exp_err}). Генерируем новую постоянную ссылку без ограничений через бота...")
                     try:
                         new_invite = await bot.create_chat_invite_link(
                             chat_id=group_id,
@@ -639,7 +641,8 @@ async def sync_and_promote_account_for_tracking(user_id: int, session_string: st
                     except Exception as new_inv_err:
                         logger.warning(f"Ошибка вступления по новой постоянной ссылке: {new_inv_err}")
                 except Exception as import_err:
-                    logger.warning(f"Не удалось вступить в группу {group_id} по хэшу: {import_err}. Пробуем JoinChannelRequest...")
+                    logger.warning(
+                        f"Не удалось вступить в группу {group_id} по хэшу: {import_err}. Пробуем JoinChannelRequest...")
                     try:
                         await client(JoinChannelRequest(channel=invite_link))
                         is_participant = True
@@ -905,7 +908,8 @@ async def process_target_link_input(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-    success, err_msg, invite_link, chat_id, *rest = await connect_target_and_create_group(target_input, message.from_user.id)
+    success, err_msg, invite_link, chat_id, *rest = await connect_target_and_create_group(target_input,
+                                                                                          message.from_user.id)
     if not success:
         await status_msg.edit_text(
             f"❌ {err_msg}",
@@ -1257,7 +1261,8 @@ async def process_edit_link(message: Message, state: FSMContext):
         return
 
     status_msg = await message.answer(t("pt_updating_group", lang=user_lang), parse_mode="HTML")
-    success, err_msg, invite_link, chat_id, *rest = await connect_target_and_create_group(new_target, message.from_user.id)
+    success, err_msg, invite_link, chat_id, *rest = await connect_target_and_create_group(new_target,
+                                                                                          message.from_user.id)
 
     if not success:
         await status_msg.edit_text(f"❌ {err_msg}")
@@ -1430,7 +1435,8 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
                             user_id=user_id
                         )
                     )
-                    logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после авторизации")
+                    logger.info(
+                        f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после авторизации")
                 except Exception as e:
                     logger.error(f"Не удалось запустить отслеживание после авторизации: {e}")
 
@@ -1557,7 +1563,8 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
                             user_id=message.from_user.id
                         )
                     )
-                    logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после ввода 2FA")
+                    logger.info(
+                        f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после ввода 2FA")
                 except Exception as e:
                     logger.error(f"Не удалось запустить отслеживание после 2FA: {e}")
 

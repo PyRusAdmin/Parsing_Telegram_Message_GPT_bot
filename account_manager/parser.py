@@ -5,7 +5,6 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from asgiref.sync import sync_to_async
 from loguru import logger  # https://github.com/Delgan/loguru
 from telethon import events, types, TelegramClient
-from telethon.errors import MessageIdInvalidError, ChatForwardsRestrictedError, MessageTooLongError
 from telethon.tl.functions.channels import GetFullChannelRequest
 
 from account_manager.auth import CheckingAccountsValidity
@@ -166,7 +165,8 @@ async def process_message(client, message: Message, chat_id: int, user_id, targe
         chat_username = getattr(chat_entity, "username", None) or ""
 
     # Проверяем, отслеживает ли пользователь данный чат
-    if not is_chat_monitored_by_user(chat_id=chat_id, chat_username=chat_username, user_id=int(user_id), entity=chat_entity):
+    if not is_chat_monitored_by_user(chat_id=chat_id, chat_username=chat_username, user_id=int(user_id),
+                                     entity=chat_entity):
         return
 
     message_text = message.message.lower()
@@ -237,15 +237,10 @@ def determine_telegram_chat_type(entity):
     :param entity: (Channel | Chat) Объект сущности из Telethon.
     :return: (str) Тип чата в виде строки.
     """
-
     if entity.megagroup:
-
         return 'Группа (супергруппа)'
-
     elif entity.broadcast:
-
         return 'Канал'
-
     else:
 
         return 'Обычный чат (группа старого типа)'
@@ -535,7 +530,6 @@ async def join_required_channels(client, user_id, message, already_subscribed):
     :return: None
 
     """
-    # user = User.get(User.user_id == message.from_user.id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=int(user_id))
     db_channels, total_count = get_user_channel_usernames(user_id=user_id)  # Получаем все username из базы данных
@@ -628,7 +622,8 @@ async def filter_messages(message, user_id):
         client = await checker.client_connect_string_session(session_string)
         if not client:
             if is_shared_account:
-                logger.warning(f"⚠️ Не удалось подключиться к бесплатному аккаунту для user_id={user_id}. Предлагаем переподключение.")
+                logger.warning(
+                    f"⚠️ Не удалось подключиться к бесплатному аккаунту для user_id={user_id}. Предлагаем переподключение.")
                 reconnect_kb = InlineKeyboardMarkup(
                     inline_keyboard=[
                         [
@@ -801,7 +796,6 @@ async def stop_tracking(user_id, message):
     :param user_id: (int) Идентификатор пользователя Telegram.
     :param message: (Message) Объект сообщения aiogram для отправки подтверждения.
     """
-    # user = User.get(User.user_id == message.from_user.id)
     # Определяем язык пользователя, который пользователь выбрал при старте бота
     user_lang = determines_user_language(message_or_callback=int(user_id))
     user_id = str(user_id)  # <-- ✅ преобразуем в строку

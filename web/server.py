@@ -1321,7 +1321,7 @@ async def bg_categorize_db(method: str):
             client = Client()
             model = await get_best_g4f_model(client)
         elif method == "openrouter":
-            client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
+            client = AsyncOpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY)
             model = "deepseek/deepseek-v4-flash"
         elif method == "groq":
             client = AsyncGroq(api_key=GROQ_API_KEY)

@@ -5,9 +5,7 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    BufferedInputFile, Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
-)
+from aiogram.types import BufferedInputFile, Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
 from loguru import logger  # https://github.com/Delgan/loguru
 from openpyxl import Workbook
 from openpyxl.styles import Font

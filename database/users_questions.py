@@ -84,25 +84,25 @@ def add_question(user_id: int, user_question: str = None, answer_ai: str = None,
         return None
 
 
-def update_question_status(question_id: int, status_question: str) -> bool:
-    """
-    Обновляет статус обработки вопроса администратором ('Соответствует', 'Не соответствует').
-
-    :param question_id: (int) ID записи в базе данных или номер вопроса.
-    :param status_question: (str) Статус проверки ('Соответствует', 'Не соответствует').
-    :return: (bool) True, если обновлено успешно, иначе False.
-    """
-    try:
-        updated = (
-            UsersQuestions.update(status_question=status_question)
-            .where((UsersQuestions.id == question_id) | (UsersQuestions.question_number == question_id))
-            .execute()
-        )
-        logger.info(f"Статус вопроса #{question_id} изменен на '{status_question}' (обновлено строк: {updated})")
-        return updated > 0
-    except Exception as e:
-        logger.exception(f"❌ Ошибка обновления статуса вопроса #{question_id}: {e}")
-        return False
+# def update_question_status(question_id: int, status_question: str) -> bool:
+#     """
+#     Обновляет статус обработки вопроса администратором ('Соответствует', 'Не соответствует').
+#
+#     :param question_id: (int) ID записи в базе данных или номер вопроса.
+#     :param status_question: (str) Статус проверки ('Соответствует', 'Не соответствует').
+#     :return: (bool) True, если обновлено успешно, иначе False.
+#     """
+#     try:
+#         updated = (
+#             UsersQuestions.update(status_question=status_question)
+#             .where((UsersQuestions.id == question_id) | (UsersQuestions.question_number == question_id))
+#             .execute()
+#         )
+#         logger.info(f"Статус вопроса #{question_id} изменен на '{status_question}' (обновлено строк: {updated})")
+#         return updated > 0
+#     except Exception as e:
+#         logger.exception(f"❌ Ошибка обновления статуса вопроса #{question_id}: {e}")
+#         return False
 
 
 def get_all_questions():

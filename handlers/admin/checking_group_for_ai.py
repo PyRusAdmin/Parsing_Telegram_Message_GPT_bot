@@ -12,7 +12,7 @@ from loguru import logger  # https://github.com/Delgan/loguru
 from openai import AsyncOpenAI
 
 from ai.ai import category_assignment
-from core.config import GROQ_API_KEY, OPENROUTER_API_KEY
+from core.config import GROQ_API_KEY, OPENROUTER_API_KEY, OPENROUTER_BASE_URL
 from database.database import TelegramGroups, get_groups_without_category, database
 from handlers.user_language import determines_user_language
 from keyboards.keyboards import category_method_keyboard, admin_keyboard
@@ -151,7 +151,7 @@ async def process_category_method_choice(message: Message, state: FSMContext):
     elif message.text == t('powerful_method_openrouter_button', lang=user_lang):
         await state.clear()
         client = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
             # timeout=30
         )
@@ -222,7 +222,7 @@ async def process_category_method_choice_cb(callback: CallbackQuery, state: FSMC
     elif method == "openrouter":
         await state.clear()
         client = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=OPENROUTER_BASE_URL,
             api_key=OPENROUTER_API_KEY,
         )
         model = "deepseek/deepseek-v4-flash"

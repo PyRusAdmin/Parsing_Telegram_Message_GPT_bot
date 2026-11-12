@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from loguru import logger
 from peewee import BigIntegerField, AutoField, DateTimeField, CharField
 
 from database.database import database
@@ -110,20 +109,20 @@ def get_keywords_count(user_id: int) -> int:
     return UsersKeywords.select().where(UsersKeywords.user_id == user_id).count()
 
 
-def clear_all_user_keywords(user_id: int) -> int:
-    """
-    Удаляет все ключевые слова пользователя из базы данных.
-
-    :param user_id: (int) Telegram ID пользователя.
-    :return: (int) Количество удалённых записей.
-    """
-    try:
-        deleted = UsersKeywords.delete().where(UsersKeywords.user_id == user_id).execute()
-        logger.info(f'Deleted {deleted} keywords for user {user_id}')
-        return deleted
-    except Exception as e:
-        logger.exception(e)
-        return 0
+# def clear_all_user_keywords(user_id: int) -> int:
+#     """
+#     Удаляет все ключевые слова пользователя из базы данных.
+#
+#     :param user_id: (int) Telegram ID пользователя.
+#     :return: (int) Количество удалённых записей.
+#     """
+#     try:
+#         deleted = UsersKeywords.delete().where(UsersKeywords.user_id == user_id).execute()
+#         logger.info(f'Deleted {deleted} keywords for user {user_id}')
+#         return deleted
+#     except Exception as e:
+#         logger.exception(e)
+#         return 0
 
 
 def get_user_keywords_paginated(user_id: int, page: int = 0, page_size: int = 5) -> tuple:

@@ -1,4 +1,3 @@
-import random
 import shutil
 from pathlib import Path
 
@@ -12,11 +11,11 @@ from telethon.sessions import StringSession
 
 from account_manager.auth import CheckingAccountsValidity, get_account_info
 from core.config import MAX_SESSIONS_PER_BATCH, mobile_device, API_HASH, API_ID
-from database.account_free import AccountFree, write_account_to_db_free, getting_free_account
+from database.account_free import AccountFree, write_account_to_db_free
+from database.users_accounts import write_account_to_user_table
 from database.users_personal_trackings import (
     UsersPersonalTrackings, write_account_to_db, set_user_shared_account, clear_user_account
 )
-from database.users_accounts import write_account_to_user_table
 from handlers.user.personal_tracking import (
     PersonalTrackingState, execute_sign_in, sync_and_promote_account_for_tracking
 )
@@ -436,7 +435,8 @@ async def handle_account_file(message: Message, state: FSMContext):
                                 user_id=message.from_user.id
                             )
                         )
-                        logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после добавления личной сессии")
+                        logger.info(
+                            f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после добавления личной сессии")
                     except Exception as e:
                         logger.error(f"Не удалось запустить отслеживание: {e}")
         else:
