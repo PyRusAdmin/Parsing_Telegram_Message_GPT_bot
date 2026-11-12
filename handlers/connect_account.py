@@ -74,7 +74,7 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     from account_manager.parser import stop_tracking, active_clients
     if str(user_id) in active_clients:
         try:
-            await stop_tracking(user_id=user_id, message=callback.message)
+            await stop_tracking(user_id=user_id, message=None)
             logger.info(f"🛑 Предыдущее отслеживание остановлено перед переподключением для user_id={user_id}")
         except Exception as st_err:
             logger.warning(f"Ошибка при остановке отслеживания перед переподключением: {st_err}")
@@ -204,17 +204,19 @@ async def handle_connect_account_free_cb(callback: CallbackQuery, state: FSMCont
     has_groups = UsersGroups.select().where(UsersGroups.user_id == user_id).exists()
     has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == user_id).exists()
     if has_groups and has_keywords:
-        if str(user_id) not in active_clients:
-            try:
-                asyncio.create_task(
-                    filter_messages(
-                        message=callback.message,
-                        user_id=user_id
-                    )
+        if str(user_id) in active_clients:
+            await stop_tracking(user_id=user_id, message=None)
+        try:
+            asyncio.create_task(
+                filter_messages(
+                    message=callback.message,
+                    user_id=user_id,
+                    notify=True
                 )
-                logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после смены аккаунта")
-            except Exception as e:
-                logger.error(f"Не удалось автоматически запустить отслеживание после смены аккаунта: {e}")
+            )
+            logger.info(f"🚀 Фоновое отслеживание автоматически запущено для user_id={user_id} после смены аккаунта")
+        except Exception as e:
+            logger.error(f"Не удалось автоматически запустить отслеживание после смены аккаунта: {e}")
 
 
 def sanitization_file_name(document, account_id):
@@ -428,18 +430,20 @@ async def handle_account_file(message: Message, state: FSMContext):
             has_groups = UsersGroups.select().where(UsersGroups.user_id == message.from_user.id).exists()
             has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == message.from_user.id).exists()
             if has_groups and has_keywords:
-                if str(message.from_user.id) not in active_clients:
-                    try:
-                        asyncio.create_task(
-                            filter_messages(
-                                message=message,
-                                user_id=message.from_user.id
-                            )
+                if str(message.from_user.id) in active_clients:
+                    await stop_tracking(user_id=message.from_user.id, message=None)
+                try:
+                    asyncio.create_task(
+                        filter_messages(
+                            message=message,
+                            user_id=message.from_user.id,
+                            notify=True
                         )
-                        logger.info(
-                            f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после добавления личной сессии")
-                    except Exception as e:
-                        logger.error(f"Не удалось запустить отслеживание: {e}")
+                    )
+                    logger.info(
+                        f"🚀 Фоновое отслеживание автоматически запущено для user_id={message.from_user.id} после добавления личной сессии")
+                except Exception as e:
+                    logger.error(f"Не удалось запустить отслеживание: {e}")
         else:
             logger.warning(f"❌ Сессия {safe_file_name} не валидна для пользователя {message.from_user.id}")
             await message.answer(

@@ -181,10 +181,11 @@ async def get_user_channels_or_notify(user_id: int, user_lang, message, client):
     if not channels:
         logger.warning(f"⚠️ Список каналов пуст для пользователя {user_id}.")
         await client.disconnect()
-        await message.answer(
-            t("tracking_launch_error", lang=user_lang),
-            reply_markup=menu_launch_tracking_keyboard()
-        )
+        if message and hasattr(message, "answer"):
+            await message.answer(
+                t("tracking_launch_error", lang=user_lang),
+                reply_markup=menu_launch_tracking_keyboard()
+            )
         return None
 
     return channels

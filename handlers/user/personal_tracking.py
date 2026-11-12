@@ -1070,13 +1070,28 @@ async def cb_buy_slot(callback: CallbackQuery):
     label = "Дополнительный слот отслеживания" if user_lang == "ru" else "Extra tracking slot"
     prices = [LabeledPrice(label=label, amount=2)]
 
+    invoice_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⭐ Оплатить 2 XTR" if user_lang == "ru" else "⭐ Pay 2 XTR",
+                    pay=True
+                )
+            ],
+            [
+                back_button(user_lang, callback_data="menu_personal_tracking")
+            ]
+        ]
+    )
+
     await bot.send_invoice(
         chat_id=user_id,
         title=title,
         description=description,
         payload=f"personal_tracking_slot_{user_id}",
         currency="XTR",
-        prices=prices
+        prices=prices,
+        reply_markup=invoice_kb
     )
     await callback.answer()
 
@@ -1427,12 +1442,15 @@ async def execute_sign_in(callback: CallbackQuery, state: FSMContext, code: str)
             # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
             has_groups = UsersGroups.select().where(UsersGroups.user_id == user_id).exists()
             has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == user_id).exists()
-            if has_groups and has_keywords and str(user_id) not in active_clients:
+            if has_groups and has_keywords:
+                if str(user_id) in active_clients:
+                    await stop_tracking(user_id=user_id, message=None)
                 try:
                     asyncio.create_task(
                         filter_messages(
                             message=callback.message,
-                            user_id=user_id
+                            user_id=user_id,
+                            notify=True
                         )
                     )
                     logger.info(
@@ -1555,12 +1573,15 @@ async def process_2fa_password_input(message: Message, state: FSMContext):
             # Автоматически запускаем отслеживание, если у пользователя настроены группы и ключевые слова
             has_groups = UsersGroups.select().where(UsersGroups.user_id == message.from_user.id).exists()
             has_keywords = UsersKeywords.select().where(UsersKeywords.user_id == message.from_user.id).exists()
-            if has_groups and has_keywords and str(message.from_user.id) not in active_clients:
+            if has_groups and has_keywords:
+                if str(message.from_user.id) in active_clients:
+                    await stop_tracking(user_id=message.from_user.id, message=None)
                 try:
                     asyncio.create_task(
                         filter_messages(
                             message=message,
-                            user_id=message.from_user.id
+                            user_id=message.from_user.id,
+                            notify=True
                         )
                     )
                     logger.info(

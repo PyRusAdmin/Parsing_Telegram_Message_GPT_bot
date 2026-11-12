@@ -99,6 +99,10 @@ async def main() -> None:
         await bot.delete_webhook(drop_pending_updates=True)
 
         from handlers.admin.nightly_check import nightly_scheduler_loop
+        from account_manager.parser import restore_all_user_trackings
+
+        # 🚀 Автоматически восстанавливаем и запускаем отслеживание для всех пользователей при старте
+        asyncio.create_task(restore_all_user_trackings())
 
         await asyncio.gather(
             dp.start_polling(bot),
